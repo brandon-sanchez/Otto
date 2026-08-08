@@ -1,6 +1,7 @@
 package otto.telegram;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -40,16 +41,49 @@ public class TelegramClient {
      * @return true when Telegram accepted the message
      */
     public boolean sendMessage(String text) {
+        return post("sendMessage", Map.of("chat_id", chatId, "text", text));
+    }
+
+    /**
+     * Sends one Alert: a text message carrying the inline Done, Ignore,
+     * and Mute buttons. The buttons reference the Alert's short id, so
+     * a tap arrives on the webhook as "done:5" and stays inside
+     * Telegram's 64-byte callback-data limit.
+     *
+     * @return true when Telegram accepted the message
+     */
+    public boolean sendAlert(String text, long alertId) {
+        List<Map<String, String>> buttons = List.of(
+                Map.of("text", "Done", "callback_data", "done:" + alertId),
+                Map.of("text", "Ignore", "callback_data", "ignore:" + alertId),
+                Map.of("text", "Mute", "callback_data", "mute:" + alertId));
+        return post("sendMessage", Map.of(
+                "chat_id", chatId,
+                "text", text,
+                "reply_markup", Map.of("inline_keyboard", List.of(buttons))));
+    }
+
+    /**
+     * Acknowledges one button tap so the user's Telegram client stops
+     * its loading spinner and shows the short ack text.
+     */
+    public boolean answerCallbackQuery(String callbackQueryId, String text) {
+        return post("answerCallbackQuery", Map.of(
+                "callback_query_id", callbackQueryId,
+                "text", text));
+    }
+
+    private boolean post(String method, Map<String, Object> body) {
         try {
             http.post()
-                    .uri("/bot{token}/sendMessage", botToken)
+                    .uri("/bot{token}/{method}", botToken, method)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("chat_id", chatId, "text", text))
+                    .body(body)
                     .retrieve()
                     .toBodilessEntity();
             return true;
         } catch (Exception e) {
-            log.warn("Telegram send failed: {}: {}",
+            log.warn("Telegram {} failed: {}: {}", method,
                     e.getClass().getSimpleName(), redactToken(e.getMessage()));
             return false;
         }
