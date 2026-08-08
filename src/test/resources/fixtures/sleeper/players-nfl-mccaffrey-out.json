@@ -190,5 +190,110 @@
     "team": "KC",
     "status": null,
     "injury_status": null
+  },
+  "9509": {
+    "player_id": "9509",
+    "first_name": "Bijan",
+    "last_name": "Robinson",
+    "full_name": "Bijan Robinson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 24
+  },
+  "6786": {
+    "player_id": "6786",
+    "first_name": "CeeDee",
+    "last_name": "Lamb",
+    "full_name": "CeeDee Lamb",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 27
+  },
+  "8112": {
+    "player_id": "8112",
+    "first_name": "Garrett",
+    "last_name": "Wilson",
+    "full_name": "Garrett Wilson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null,
+    "number": 5,
+    "age": 26
+  },
+  "8138": {
+    "player_id": "8138",
+    "first_name": "James",
+    "last_name": "Cook",
+    "full_name": "James Cook",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null,
+    "number": 4,
+    "age": 27
+  },
+  "5850": {
+    "player_id": "5850",
+    "first_name": "Josh",
+    "last_name": "Jacobs",
+    "full_name": "Josh Jacobs",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null,
+    "number": 8,
+    "age": 28
+  },
+  "6813": {
+    "player_id": "6813",
+    "first_name": "Dallas",
+    "last_name": "Goedert",
+    "full_name": "Dallas Goedert",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 31
+  },
+  "9493": {
+    "player_id": "9493",
+    "first_name": "Puka",
+    "last_name": "Nacua",
+    "full_name": "Puka Nacua",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "LAR",
+    "status": "Active",
+    "injury_status": null,
+    "number": 12,
+    "age": 25
   }
 }

@@ -46,8 +46,11 @@ class SnapshotScenarioTest extends WireSeamTest {
                 .filter(RosterSnapshot::userRoster)
                 .findFirst().orElseThrow();
         assertThat(mine.ownerName()).isEqualTo("SenorMustache");
-        assertThat(mine.starters()).containsExactly("4046", "4034", "6794", "1466");
+        assertThat(mine.starters()).containsExactly(
+                "4046", "4034", "9509", "6794", "6786", "1466", "8112", "8138", "8135");
         assertThat(mine.playerHealth().get("4034")).isEqualTo(PlayerHealth.ACTIVE);
+        assertThat(mine.playerPositions().get("4034")).isEqualTo("RB");
+        assertThat(mine.playerTeams().get("4034")).isEqualTo("SF");
     }
 
     @Test
