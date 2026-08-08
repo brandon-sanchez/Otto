@@ -1,0 +1,28 @@
+[
+  {
+    "roster_id": 1,
+    "owner_id": "777001",
+    "league_id": "1389748403805650944",
+    "players": ["4046", "4034", "6794", "1466", "8135"],
+    "starters": ["4046", "4034", "6794", "1466"],
+    "reserve": [],
+    "settings": {
+      "wins": 1,
+      "losses": 0,
+      "waiver_budget_used": 0
+    }
+  },
+  {
+    "roster_id": 2,
+    "owner_id": "777002",
+    "league_id": "1389748403805650944",
+    "players": ["4866"],
+    "starters": ["4866"],
+    "reserve": [],
+    "settings": {
+      "wins": 0,
+      "losses": 1,
+      "waiver_budget_used": 0
+    }
+  }
+]

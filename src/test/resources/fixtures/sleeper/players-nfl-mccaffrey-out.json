@@ -1,0 +1,194 @@
+{
+  "4046": {
+    "player_id": "4046",
+    "first_name": "Patrick",
+    "last_name": "Mahomes",
+    "full_name": "Patrick Mahomes",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 15,
+    "age": 30
+  },
+  "4034": {
+    "player_id": "4034",
+    "first_name": "Christian",
+    "last_name": "McCaffrey",
+    "full_name": "Christian McCaffrey",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": "Out",
+    "number": 23,
+    "age": 30
+  },
+  "6794": {
+    "player_id": "6794",
+    "first_name": "Justin",
+    "last_name": "Jefferson",
+    "full_name": "Justin Jefferson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null,
+    "number": 18,
+    "age": 27
+  },
+  "1466": {
+    "player_id": "1466",
+    "first_name": "Travis",
+    "last_name": "Kelce",
+    "full_name": "Travis Kelce",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 87,
+    "age": 36
+  },
+  "4866": {
+    "player_id": "4866",
+    "first_name": "Saquon",
+    "last_name": "Barkley",
+    "full_name": "Saquon Barkley",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 26,
+    "age": 29
+  },
+  "8135": {
+    "player_id": "8135",
+    "first_name": "Jordan",
+    "last_name": "Love",
+    "full_name": "Jordan Love",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": "Probable",
+    "number": 10,
+    "age": 27
+  },
+  "2216": {
+    "player_id": "2216",
+    "first_name": "Mike",
+    "last_name": "Evans",
+    "full_name": "Mike Evans",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": "Sus",
+    "number": 13,
+    "age": 33
+  },
+  "5859": {
+    "player_id": "5859",
+    "first_name": "Darrell",
+    "last_name": "Henderson",
+    "full_name": "Darrell Henderson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "LAR",
+    "status": "Physically Unable to Perform",
+    "injury_status": null,
+    "number": 27,
+    "age": 29
+  },
+  "4199": {
+    "player_id": "4199",
+    "first_name": "Aaron",
+    "last_name": "Jones",
+    "full_name": "Aaron Jones",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": null,
+    "status": "Inactive",
+    "injury_status": null,
+    "number": 33,
+    "age": 31
+  },
+  "4029": {
+    "player_id": "4029",
+    "first_name": "Tyler",
+    "last_name": "Lockett",
+    "full_name": "Tyler Lockett",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SEA",
+    "status": "Injured Reserve",
+    "injury_status": "Questionable",
+    "number": 16,
+    "age": 33
+  },
+  "6768": {
+    "player_id": "6768",
+    "first_name": "Jalen",
+    "last_name": "Reagor",
+    "full_name": "Jalen Reagor",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": "Emergency",
+    "number": 18,
+    "age": 27
+  },
+  "3678": {
+    "player_id": "3678",
+    "first_name": "Harrison",
+    "last_name": "Butker",
+    "full_name": "Harrison Butker",
+    "position": "K",
+    "fantasy_positions": [
+      "K"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 31
+  },
+  "KC": {
+    "player_id": "KC",
+    "first_name": "Kansas City",
+    "last_name": "Chiefs",
+    "position": "DEF",
+    "fantasy_positions": [
+      "DEF"
+    ],
+    "team": "KC",
+    "status": null,
+    "injury_status": null
+  }
+}
