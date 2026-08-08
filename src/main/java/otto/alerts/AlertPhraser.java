@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
-import otto.events.Event;
 import otto.storage.OttoJson;
 
 /**
@@ -36,10 +35,10 @@ public class AlertPhraser {
         this.chat = builder.build();
     }
 
-    public String phrase(Event event, Recommendation recommendation) {
+    public String phrase(Map<String, String> eventFacts, Recommendation recommendation) {
         try {
             String facts = OttoJson.MAPPER.writeValueAsString(Map.of(
-                    "event", event.facts(),
+                    "event", eventFacts,
                     "recommendation", recommendation));
             String content = chat.prompt().system(SYSTEM).user(facts).call().content();
             if (content == null || content.isBlank()) {

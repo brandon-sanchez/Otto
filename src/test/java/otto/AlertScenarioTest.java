@@ -106,14 +106,16 @@ class AlertScenarioTest extends WireSeamTest {
         runHealthyBaselineCheck();
         runDeclineCheck();
 
-        // The player recovers, then declines the same way again.
+        // The player recovers: that transition is its own Alert.
         clock.advance(Duration.ofSeconds(61));
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl.json", "players-v3");
+        OutboundStubs.llmPhrases(llm, "McCaffrey is back to Active.");
         checkRunner.runCheck();
 
+        // Then he declines the same way again: no second decline Alert.
         clock.advance(Duration.ofSeconds(61));
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
@@ -121,6 +123,8 @@ class AlertScenarioTest extends WireSeamTest {
                 "sleeper/players-nfl-mccaffrey-out.json", "players-v4");
         checkRunner.runCheck();
 
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(PHRASE))));
+        telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 }
