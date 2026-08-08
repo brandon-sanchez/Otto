@@ -1,0 +1,22 @@
+otto:
+  league-id: "1389748403805650944"
+  username: "SenorMustache"
+  storage-dir: "./data"
+  sleeper:
+    base-url: "https://api.sleeper.app"
+  telegram:
+    base-url: "https://api.telegram.org"
+    bot-token: "${TELEGRAM_BOT_TOKEN:}"
+    chat-id: "${TELEGRAM_CHAT_ID:}"
+  directory-check-interval: 60s
+  pre-draft-check-interval: 24h
+
+spring:
+  application:
+    name: otto
+  ai:
+    openai:
+      api-key: "${OPENAI_API_KEY:unset}"
+      chat:
+        options:
+          model: "gpt-5.6-luna"

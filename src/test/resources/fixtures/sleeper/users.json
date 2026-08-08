@@ -1,0 +1,14 @@
+[
+  {
+    "user_id": "777001",
+    "display_name": "SenorMustache",
+    "is_owner": true,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777002",
+    "display_name": "GridironGoblin",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  }
+]
