@@ -261,8 +261,8 @@
       "RB"
     ],
     "team": "GB",
-    "status": "Active",
-    "injury_status": null,
+    "status": "Injured Reserve",
+    "injury_status": "IR",
     "number": 8,
     "age": 28
   },

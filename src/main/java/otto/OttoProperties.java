@@ -12,7 +12,8 @@ public record OttoProperties(
         Sleeper sleeper,
         Telegram telegram,
         Duration directoryCheckInterval,
-        Duration preDraftCheckInterval) {
+        Duration preDraftCheckInterval,
+        double edgeThreshold) {
 
     public record Sleeper(String baseUrl) {
     }

@@ -10,6 +10,7 @@ otto:
     chat-id: "${TELEGRAM_CHAT_ID:}"
   directory-check-interval: 60s
   pre-draft-check-interval: 24h
+  edge-threshold: 1.0
 
 spring:
   application:

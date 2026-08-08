@@ -43,6 +43,7 @@ public class SnapshotDiffer {
                         Map.of(
                                 "playerId", playerId,
                                 "player", roster.playerNames().getOrDefault(playerId, playerId),
+                                "team", roster.playerTeams().getOrDefault(playerId, ""),
                                 "from", healthBefore.name(),
                                 "to", health.name(),
                                 "starter", String.valueOf(roster.starters().contains(playerId)),

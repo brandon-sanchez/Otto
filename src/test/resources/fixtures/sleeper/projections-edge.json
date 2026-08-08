@@ -1,0 +1,74 @@
+{
+  "4046": {
+    "pass_yd": 280,
+    "pass_td": 1.8,
+    "pts_ppr": 99.9
+  },
+  "4034": {
+    "rush_yd": 80,
+    "rec": 4,
+    "rec_yd": 30,
+    "rush_td": 0.5,
+    "pts_ppr": 99.9
+  },
+  "9509": {
+    "rush_yd": 90,
+    "rec": 3,
+    "rec_yd": 10,
+    "rush_td": 0.5,
+    "pts_ppr": 99.9
+  },
+  "6794": {
+    "rec": 7,
+    "rec_yd": 90,
+    "rec_td": 0.5,
+    "pts_ppr": 99.9
+  },
+  "6786": {
+    "rec": 6.5,
+    "rec_yd": 75,
+    "rec_td": 0.5,
+    "pts_ppr": 99.9
+  },
+  "1466": {
+    "rec": 4,
+    "rec_yd": 50,
+    "pts_ppr": 99.9
+  },
+  "8112": {
+    "rec": 5,
+    "rec_yd": 60,
+    "rec_td": 0.5,
+    "pts_ppr": 99.9
+  },
+  "8138": {
+    "rush_yd": 70,
+    "rec": 3,
+    "rec_yd": 30,
+    "pts_ppr": 99.9
+  },
+  "8135": {
+    "pass_yd": 250,
+    "pass_td": 1.0,
+    "pass_int": 1,
+    "pts_ppr": 99.9
+  },
+  "5850": {
+    "rush_yd": 110,
+    "rec": 3,
+    "rec_yd": 25,
+    "pts_ppr": 99.9
+  },
+  "6813": {
+    "rec": 4,
+    "rec_yd": 45,
+    "pts_ppr": 99.9
+  },
+  "4866": {
+    "rush_yd": 100,
+    "rec": 3,
+    "rec_yd": 20,
+    "rush_td": 0.7,
+    "pts_ppr": 99.9
+  }
+}

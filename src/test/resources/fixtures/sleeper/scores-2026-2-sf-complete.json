@@ -1,0 +1,142 @@
+[
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102MIN",
+    "metadata": {
+      "home_team": "MIN",
+      "away_team": "CHI"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102ATL",
+    "metadata": {
+      "home_team": "ATL",
+      "away_team": "CAR"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102DAL",
+    "metadata": {
+      "home_team": "DAL",
+      "away_team": "NYG"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102NYJ",
+    "metadata": {
+      "home_team": "NYJ",
+      "away_team": "NE"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102BUF",
+    "metadata": {
+      "home_team": "BUF",
+      "away_team": "MIA"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102PHI",
+    "metadata": {
+      "home_team": "PHI",
+      "away_team": "WAS"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789923600000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102TB",
+    "metadata": {
+      "home_team": "TB",
+      "away_team": "NO"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-20",
+    "start_time": 1789935900000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102KC",
+    "metadata": {
+      "home_team": "KC",
+      "away_team": "BAL"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-09-21",
+    "start_time": 1789950000000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102SF",
+    "metadata": {
+      "home_team": "SF",
+      "away_team": "SEA"
+    }
+  },
+  {
+    "status": "pre_game",
+    "date": "2026-09-22",
+    "start_time": 1790036100000,
+    "week": 2,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026102GB",
+    "metadata": {
+      "home_team": "GB",
+      "away_team": "DET"
+    }
+  }
+]

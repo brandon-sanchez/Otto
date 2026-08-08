@@ -14,6 +14,9 @@ public final class SleeperStubs {
     public static final String ROSTERS_PATH = LEAGUE_PATH + "/rosters";
     public static final String USERS_PATH = LEAGUE_PATH + "/users";
     public static final String PLAYERS_PATH = "/v1/players/nfl";
+    public static final String STATE_PATH = "/v1/state/nfl";
+    public static final String PROJECTIONS_PATH = "/v1/projections/nfl/regular/2026/2";
+    public static final String SCORES_PATH = "/scores/nfl/regular/2026/2";
 
     private SleeperStubs() {
     }
@@ -23,6 +26,9 @@ public final class SleeperStubs {
         stubJson(sleeper, LEAGUE_PATH, "sleeper/league-in-season.json", "league-v1");
         stubJson(sleeper, ROSTERS_PATH, "sleeper/rosters.json", "rosters-v1");
         stubJson(sleeper, USERS_PATH, "sleeper/users.json", "users-v1");
+        stubJson(sleeper, STATE_PATH, "sleeper/state-nfl.json", "state-v1");
+        stubJson(sleeper, PROJECTIONS_PATH, "sleeper/projections-2026-2.json", "projections-v1");
+        stubJson(sleeper, SCORES_PATH, "sleeper/scores-2026-2.json", "scores-v1");
     }
 
     public static void stubJson(WireMockServer server, String path, String fixture, String etag) {
@@ -44,5 +50,8 @@ public final class SleeperStubs {
         stubNotModified(server, LEAGUE_PATH, "league-v1");
         stubNotModified(server, ROSTERS_PATH, "rosters-v1");
         stubNotModified(server, USERS_PATH, "users-v1");
+        stubNotModified(server, STATE_PATH, "state-v1");
+        stubNotModified(server, PROJECTIONS_PATH, "projections-v1");
+        stubNotModified(server, SCORES_PATH, "scores-v1");
     }
 }

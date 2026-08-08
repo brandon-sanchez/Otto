@@ -40,10 +40,16 @@ public class SnapshotBuilder {
         String ownerName = namesByUserId.get(roster.ownerId());
         Map<String, PlayerHealth> health = new HashMap<>();
         Map<String, String> names = new HashMap<>();
+        Map<String, String> positions = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
         roster.players().forEach(playerId ->
                 directory.map(dir -> dir.players().get(playerId)).ifPresent(player -> {
                     health.put(playerId, player.health());
                     names.put(playerId, player.fullName());
+                    positions.put(playerId, player.position());
+                    if (player.team() != null) {
+                        teams.put(playerId, player.team());
+                    }
                 }));
         return new RosterSnapshot(
                 roster.rosterId(),
@@ -53,6 +59,8 @@ public class SnapshotBuilder {
                 roster.starters(),
                 roster.players(),
                 health,
-                names);
+                names,
+                positions,
+                teams);
     }
 }
