@@ -1,6 +1,6 @@
 # Otto
 
-A personal fantasy football assistant for one Sleeper league. Deterministic Java computes the facts; an LLM turns them into short Telegram messages. The domain language is in `CONTEXT.md`.
+A personal fantasy football assistant for one Sleeper league. Deterministic Java computes the facts; an LLM turns them into short Telegram messages.
 
 ## Stack
 
