@@ -56,20 +56,23 @@ starts in a league with two flex slots and does not in a league without
 them. It runs the same `LineupOptimizer` the lineup tools already run,
 so a trade and a start-sit call cannot disagree about who starts.
 
-## The fit factor always asks the same question of the same roster
+## One player carries one value, measured against the roster receiving him
 
-The roster a player is measured against is the roster that is judging
-him:
+The spec pins the fit factor "against the receiving roster", and that is
+what is implemented: every player is measured against the roster that
+would receive him, taken after the trade. A player therefore carries one
+value, and both teams read the same two totals from opposite ends - the
+partner's net is the user's net with the sign turned round.
 
-- A player arriving is measured against the receiving roster **after**
-  the trade, because that is the team he would start or sit for.
-- A player leaving is measured against the roster he is on **now**,
-  because what that team gives up is what he is worth there today.
-
-Four fit computations follow, and the trade is priced twice. This is
-what makes "the same math from both teams' perspectives" mean anything:
-a trade can be good for both teams, and the only way to show that is to
-let each team price its own gain and its own loss.
+A second reading was built first and then withdrawn. It measured what a
+team gives up against the roster it holds now, which needs four fit
+computations instead of two and can make a trade come out positive for
+both teams. It is the richer model and it is not what the spec says.
+Two yardsticks for the same player is also what ADR-0004 warned against:
+"valuing them by two different yardsticks would be the fastest way to
+talk the user into a bad one". If the four-factor reading is ever
+wanted, it is a change to the acceptance criteria first and to this ADR
+second, not a quiet difference between the two.
 
 ADR-0004 fixed that a team is judged the same way whichever team it is.
 The leverage note therefore reads both rosters through the same
@@ -85,8 +88,13 @@ the sum would halve every band.
 
 - Inside 5%: even. The lean is stated, because the user asked, but the
   answer says in as many words that a coin flip is not a reason to act.
-- 5% to 15%: a slight edge.
+- 5% to 15%: a slight edge. Both boundaries fall here.
 - Over 15%: a clear edge, at High confidence.
+
+The band is decided from the gap rounded to the one decimal place the
+answer prints, not from the raw quotient. A gap shown as 5.0% must not
+be called even in one trade and a slight edge in the next; the reader
+sees one number, so one number has to decide it.
 
 ADR-0003 fixed that a comparison of two estimates rides at Medium.
 A trade verdict at High is a deliberate exception to that, and the

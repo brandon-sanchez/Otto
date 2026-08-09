@@ -29,10 +29,10 @@ import otto.snapshot.RosterSnapshot;
  * actually holds.
  *
  * <p>One player is worth his rest-of-season projected points, times a
- * positional scarcity multiplier, times how he fits the roster that is
- * judging him. Every part of that is Java arithmetic over the league's
- * own scoring and the Snapshot; the model reads it and writes the
- * sentence, never the numbers.
+ * positional scarcity multiplier, times how he fits the roster that
+ * would receive him. Every part of that is Java arithmetic over the
+ * league's own scoring and the Snapshot; the model reads it and writes
+ * the sentence, never the numbers.
  *
  * <p>ADR-0008 records why each factor is what it is.
  */
@@ -55,11 +55,11 @@ public class TradeEvaluator {
     /** A position nobody prices scarcity for is priced at face value. */
     private static final double NO_SCARCITY = 1.00;
 
-    /** Inside this share of the larger side, the two sides are the same trade. */
-    private static final double EVEN_BAND = 0.05;
+    /** Inside this percentage of the larger side, the two sides are the same trade. */
+    private static final double EVEN_BAND = 5.0;
 
-    /** Past this share, the gap is larger than the math's own error. */
-    private static final double CLEAR_BAND = 0.15;
+    /** Past this percentage, the gap is larger than the math's own error. */
+    private static final double CLEAR_BAND = 15.0;
 
     private final PlayerLookup lookup;
     private final RestOfSeasonProjections restOfSeason;
@@ -80,7 +80,7 @@ public class TradeEvaluator {
      * @param kind player, draft pick or FAAB
      * @param restOfSeasonPoints projected points over the weeks left
      * @param scarcity the positional multiplier applied to them
-     * @param rosterFit the factor for the roster judging him
+     * @param rosterFit the factor for the roster receiving him
      * @param value the three multiplied together
      * @param note why this asset is priced at nothing, when it is
      */
@@ -90,14 +90,14 @@ public class TradeEvaluator {
             String value, String byes, String note) {
     }
 
-    /** One team's half of the trade, priced by that team's own yardstick. */
+    /** One half of the trade, priced by the roster that would receive it. */
     public record SideValue(List<AssetValue> assets, String total) {
     }
 
     /**
-     * The trade as one team reads it. What it gets is priced against
-     * the roster it will have; what it gives up is priced against the
-     * roster it has now, because that is where the loss lands.
+     * The trade as one team reads it. Both halves are priced against the
+     * roster receiving them, so the two teams read the same two totals
+     * from opposite ends and one net is the other with its sign turned.
      */
     public record Perspective(String team, SideValue gets, SideValue gives, String net) {
     }
@@ -212,22 +212,23 @@ public class TradeEvaluator {
         RestOfSeason points = ((SourceResult.Ok<RestOfSeason>) season).value();
         List<Slot> slots = leagueWeek.week().startingSlots();
 
-        // Each team prices what it gains against the roster it would
-        // then hold, and what it loses against the roster it holds now.
-        Roster myNow = Roster.of(mine, positions, points);
-        Roster theirNow = Roster.of(partner, positions, points);
-        Roster myAfter = myNow.without(outgoing).with(incoming, positions, points);
-        Roster theirAfter = theirNow.without(incoming).with(outgoing, positions, points);
+        // A player is priced against the roster that would receive him,
+        // taken after the trade. One player therefore carries one value,
+        // and the two teams read the same two totals from opposite ends.
+        Roster myAfter = Roster.of(mine, positions, points)
+                .without(outgoing).with(incoming, positions, points);
+        Roster theirAfter = Roster.of(partner, positions, points)
+                .without(incoming).with(outgoing, positions, points);
 
-        Priced iGet = side(slots, incoming, points, myAfter);
-        Priced iGive = side(slots, outgoing, points, myNow);
-        Priced theyGet = side(slots, outgoing, points, theirAfter);
-        Priced theyGive = side(slots, incoming, points, theirNow);
+        Priced toMe = side(slots, incoming, points, myAfter);
+        Priced toThem = side(slots, outgoing, points, theirAfter);
 
-        double myNet = iGet.total() - iGive.total();
-        double theirNet = theyGet.total() - theyGive.total();
-        double larger = Math.max(iGet.total(), iGive.total());
-        double gap = larger == 0 ? 0 : Math.abs(myNet) / larger;
+        double myNet = toMe.total() - toThem.total();
+        double larger = Math.max(toMe.total(), toThem.total());
+        // Classify from the number the reader is shown. A gap printed as
+        // 5.0% must not be called even in one trade and a slight edge in
+        // the next; the rounding is the thing the two have to agree on.
+        double gap = larger == 0 ? 0 : round(Math.abs(myNet) / larger * 100);
 
         String verdict = gap < EVEN_BAND ? EVEN : gap <= CLEAR_BAND ? SLIGHT_EDGE : CLEAR_EDGE;
         String favours = myNet >= 0 ? YOU : partner.manager();
@@ -235,12 +236,15 @@ public class TradeEvaluator {
 
         List<String> notes = new ArrayList<>(points.notes());
         notes.add("A player is worth his rest-of-season points times a scarcity multiplier "
-                + "(QB 1.20, TE 1.10, RB 1.05, WR 1.00) times how he fits the roster judging "
-                + "him (1.10 he starts there, 0.90 he is buried, 1.00 otherwise)");
-        if (EVEN.equals(verdict)) {
-            notes.add("The two sides are inside %.0f%% of each other, which is a coin flip. "
-                    .formatted(EVEN_BAND * 100)
-                    + "The lean is stated because you asked, not because it is a reason to act");
+                + "(QB 1.20, TE 1.10, RB 1.05, WR 1.00) times how he fits the roster that "
+                + "would receive him (1.10 he starts there, 0.90 he is buried, 1.00 otherwise)");
+        if (larger == 0) {
+            notes.add("Nothing on either side of this trade carries a price, so there is no "
+                    + "verdict here to read");
+        } else if (EVEN.equals(verdict)) {
+            notes.add(("The two sides are inside %.0f%% of each other, which is a coin flip. "
+                    + "The lean is stated because you asked, not because it is a reason to act")
+                    .formatted(EVEN_BAND));
         }
         notes.addAll(pickAndFaabNotes(incoming, outgoing));
         notes.addAll(offRosterNotes(mine, partner, incoming, outgoing));
@@ -249,15 +253,19 @@ public class TradeEvaluator {
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
                 "weeks %d to %d".formatted(points.weeks().getFirst(), points.weeks().getLast()),
-                new Perspective(YOU, iGet.side(), iGive.side(), points(myNet)),
-                new Perspective(partner.manager(), theyGet.side(), theyGive.side(),
-                        points(theirNet)),
+                new Perspective(YOU, toMe.side(), toThem.side(), points(myNet)),
+                new Perspective(partner.manager(), toThem.side(), toMe.side(), points(-myNet)),
                 verdict,
                 favours,
-                String.format(Locale.ROOT, "%.1f%%", gap * 100),
+                String.format(Locale.ROOT, "%.1f%%", gap),
                 confidence.name(),
                 leverage(leagueWeek, mine, partner),
                 notes));
+    }
+
+    /** One decimal place, which is the precision every number here is read at. */
+    private static double round(double value) {
+        return Math.round(value * 10) / 10.0;
     }
 
     /** The players one roster holds while a valuation is made against it. */
@@ -411,8 +419,8 @@ public class TradeEvaluator {
             leverage.add("Yours to spend: %s".formatted(strength));
         }
         if (leverage.isEmpty()) {
-            leverage.add("%s is short at no position I can price, so he has no need to trade "
-                    + "into and you hold no leverage over him".formatted(partner.manager()));
+            leverage.add(("%s is short at no position I can price, so he has no need to trade "
+                    + "into and you hold no leverage over him").formatted(partner.manager()));
         }
         return leverage;
     }

@@ -35,6 +35,9 @@ import otto.sleeper.SourceResult;
 @Component
 public class RestOfSeasonProjections {
 
+    /** The last week an NFL regular season can reach. */
+    private static final int LAST_POSSIBLE_WEEK = 18;
+
     private final SleeperAdapter sleeper;
     private final SelfReportService selfReport;
 
@@ -72,7 +75,9 @@ public class RestOfSeasonProjections {
 
         String season = stateOk.value().season();
         int firstWeek = stateOk.value().week();
-        int lastWeek = league.lastRegularWeek().getAsInt();
+        // A drifted playoff_week_start must not turn one question into
+        // hundreds of requests. No NFL regular season runs past week 18.
+        int lastWeek = Math.min(league.lastRegularWeek().getAsInt(), LAST_POSSIBLE_WEEK);
         if (firstWeek > lastWeek) {
             return new SourceResult.Unavailable<>("sleeper:state",
                     "the regular season ended in week %d, so there is no season left to price"
@@ -118,8 +123,10 @@ public class RestOfSeasonProjections {
         }
         notes.add(("Rest of season is weeks %d to %d, priced in this league's scoring, with a "
                 + "bye week counting zero").formatted(weeks.getFirst(), weeks.getLast()));
+        Map<String, List<Integer>> byes = new LinkedHashMap<>();
+        byeWeeks.forEach((playerId, weeksOff) -> byes.put(playerId, List.copyOf(weeksOff)));
         return new SourceResult.Ok<>(new RestOfSeason(List.copyOf(weeks), Map.copyOf(points),
-                Map.copyOf(byeWeeks), Map.copyOf(weeksPriced), List.copyOf(notes)));
+                Map.copyOf(byes), Map.copyOf(weeksPriced), List.copyOf(notes)));
     }
 
     private Optional<ProjectionTable> weekTable(LeagueScoring scoring, String season, int week) {

@@ -40,14 +40,15 @@ public sealed interface TradeAsset {
 
     /**
      * A pick reads as a round with or without a season: "2027 1st",
-     * "first round pick", "2028 2nd rounder". The word "pick" or
-     * "round" alone is enough, because no player Otto knows is called
-     * either.
+     * "a 2028 2nd", "first round pick". The word "pick" or "round"
+     * alone is enough, because no player Otto knows is called either,
+     * and the bare season-and-round form is allowed a leading article
+     * because that is how a user writes one out.
      */
     Pattern DRAFT_PICK = Pattern.compile(
             "(?i).*\\b(pick|picks|round|rounder|rd)\\b.*"
-                    + "|(?i)\\s*(19|20)\\d\\d\\s+(1st|2nd|3rd|[4-9]th|first|second|third"
-                    + "|fourth|fifth|sixth|seventh)\\s*");
+                    + "|(?i)\\s*(an?\\s+)?(19|20)\\d\\d\\s+(1st|2nd|3rd|[4-9]th|first|second"
+                    + "|third|fourth|fifth|sixth|seventh)\\s*");
 
     /** FAAB reads as an amount of money, with or without the word. */
     Pattern FAAB = Pattern.compile("(?i).*\\b(faab|waiver budget|waiver dollars)\\b.*"

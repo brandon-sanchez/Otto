@@ -17,6 +17,11 @@ import otto.lineup.Slot;
  * a trade that ignores that talks a user into swapping his own bench
  * for somebody else's.
  *
+ * <p>The roster asked is always the one that would receive him, taken
+ * after the trade. One player therefore carries one value whichever
+ * side of the deal is being read, which is what stops a trade being
+ * priced with two different yardsticks.
+ *
  * <p>The question is answered by the optimal lineup rather than by a
  * count of players at the position, because the flex slots decide it: a
  * fourth receiver starts in a league with two flexes and does not in a
