@@ -172,6 +172,7 @@ public class WaiverScorer {
         private final Optional<WeeklyRosters> rosters;
         private final Optional<DefenseVersusPosition> defenses;
         private final Optional<UsageShares> shares;
+        private final Map<String, WeeklyRosters.Outlook> outlooks;
         private final Map<String, String> sleeperByGsis;
         private final Map<String, String> gsisBySleeper;
         private final Map<String, Integer> trendingAdds;
@@ -202,6 +203,7 @@ public class WaiverScorer {
             // denominators, so a share is arithmetic on this run rather
             // than a scan per candidate.
             this.shares = stats.map(UsageShares::of);
+            this.outlooks = rosters.map(WeeklyRosters::outlooks).orElseGet(Map::of);
             Optional<PlayerIdMap> ids = nflverse.playerIds();
             this.gsisBySleeper = ids.map(PlayerIdMap::sleeperToGsis).orElseGet(Map::of);
             this.sleeperByGsis = invert(gsisBySleeper);
@@ -404,27 +406,26 @@ public class WaiverScorer {
             // A designation is a breakout on its own only when the man
             // ahead has no date he comes back on. An absence that
             // reverts is a loan of the role, and the loan is a stream.
+            WeeklyRosters.Outlook outlook = aheadAndOut
+                    .map(ahead -> outlooks.getOrDefault(ahead.gsisId(),
+                            WeeklyRosters.Outlook.UNKNOWN))
+                    .orElse(WeeklyRosters.Outlook.UNKNOWN);
             boolean breakout = spot.get().rank() == 1
-                    && aheadAndOut.filter(ahead -> seasonEnding(ahead.gsisId())).isPresent();
-            if (aheadAndOut.isPresent()) {
-                reasons.add(breakout
-                        ? "%s's season is over, so the role does not revert when he is back"
-                                .formatted(aheadAndOut.get().player().fullName())
-                        : ("%s has a date he comes back on, so this role is a loan unless his "
-                                + "own usage says otherwise")
-                                        .formatted(aheadAndOut.get().player().fullName()));
-            }
+                    && outlook == WeeklyRosters.Outlook.SEASON_ENDING;
+            aheadAndOut.map(ahead -> ahead.player().fullName())
+                    .map(ahead -> switch (outlook) {
+                        case SEASON_ENDING -> ("%s's season is over, so the role does not revert "
+                                + "when he is back").formatted(ahead);
+                        case RETURNING -> ("%s has a date he comes back on, so this role is a "
+                                + "loan unless his own usage says otherwise").formatted(ahead);
+                        // Never the claim that he is coming back, and
+                        // never the claim that he is not. Both would be
+                        // a fact this board did not read.
+                        case UNKNOWN -> ("I cannot see %s's roster standing, so I cannot tell "
+                                + "whether this role reverts when he is back").formatted(ahead);
+                    })
+                    .ifPresent(reasons::add);
             return new Usage(points, breakout, reasons);
-        }
-
-        /**
-         * True when the league's own roster standing for this player
-         * carries no reversion date. Without the feed nothing is
-         * season-ending: the board says it cannot see the standings
-         * rather than guessing that an absence is permanent.
-         */
-        private boolean seasonEnding(String gsisId) {
-            return rosters.map(feed -> feed.seasonEnding(gsisId)).orElse(false);
         }
 
         /** What a candidate's own chart line says, joined through the id map. */

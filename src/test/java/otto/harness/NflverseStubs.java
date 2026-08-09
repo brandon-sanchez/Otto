@@ -92,6 +92,25 @@ public final class NflverseStubs {
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-waivers-returning.csv");
     }
 
+    /**
+     * Three played weeks, over which one tight end grows into a role,
+     * one back takes a loaned one outright, one receiver clears the bar
+     * in two weeks with a gap between them, and one back has not played
+     * since week 2. The man ahead is designated to return, so only the
+     * player's own share can tag anybody here.
+     */
+    public static void waiverWeekWithGrowingAndStaleShares(WireMockServer nflverse) {
+        waiverWeekWithAReturningStarter(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-share-lanes.csv");
+    }
+
+    /** The weekly-roster feed is gone, so no absence can be read either way. */
+    public static void waiverWeekWithNoRosterStandings(WireMockServer nflverse) {
+        waiverWeek(nflverse);
+        nflverse.stubFor(get(urlEqualTo(ROSTERS_2026_PATH))
+                .willReturn(aResponse().withStatus(404)));
+    }
+
     /** The weekly stats asset is republished: its timestamp moves forward. */
     public static void weeklyStatsRepublished(WireMockServer nflverse) {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player-refreshed.json");

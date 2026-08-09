@@ -5,7 +5,7 @@ player_id,player_name,player_display_name,position,position_group,season,week,se
 00-0090003,G.Passer,Giants Passer,QB,QB,2026,1,REG,NYG,DAL,22,34,250,2,0,0,2,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
 00-0090011,B.Wideout,Bucs Wideout,WR,WR,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,5,8,70,0,0,0,0.211,99.9,99.9
 00-0037625,R.White,Rachaad White,RB,RB,2026,1,REG,TB,NO,0,0,0,0,0,0,24,120,0,0,3,4,30,0,0,0,0.105,99.9,99.9
-00-0037680,C.Otton,Cade Otton,TE,TE,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,4,6,40,0,0,0,0.158,99.9,99.9
+00-0037680,C.Otton,Cade Otton,TE,TE,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,4,12,40,0,0,0,0.316,99.9,99.9
 00-0090013,B.Passer,Bucs Passer,QB,QB,2026,1,REG,TB,NO,26,38,300,2,0,0,1,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
 00-0090021,B.Wideout,Bills Wideout,WR,WR,2026,1,REG,BUF,MIA,0,0,0,0,0,0,0,0,0,0,4,7,60,0,0,0,0.241,99.9,99.9
 00-0039875,R.Davis,Ray Davis,RB,RB,2026,1,REG,BUF,MIA,0,0,0,0,0,0,19,90,0,0,2,2,15,0,0,0,0.069,99.9,99.9

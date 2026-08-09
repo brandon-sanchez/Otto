@@ -186,10 +186,17 @@ against 75% for `R48`, the injured-reserve code that carries a return
 designation, and 59% for `R04`, the PUP code. That last number is why
 this ADR does not follow #33's own list, which named PUP and the
 non-football lists as season-ending: the feed says most of those men
-come back. A code the set does not name reads as an absence he returns
-from, which is the reading that never pays a breakout price for a man
-who is coming back, and a missing feed names nothing season-ending at
-all.
+come back.
+
+The standing therefore has three states, not two, and the board says
+which one it is. A named code means the season is over. Any other code
+means he comes back. No row at all - a feed that never downloaded, or a
+player it has never seen - means the board does not know, and it says
+so on the man's own line rather than printing either claim. A read that
+collapsed "he comes back" and "I cannot tell" into one answer would put
+a fact on the board that no feed supplied, which is the failure this
+system treats as worse than silence. Only the first state tags a
+breakout, so a board with no standings tags none.
 
 The 10 usage points are unchanged and still key off the Player
 Directory's own health: those points say the man ahead cannot play this

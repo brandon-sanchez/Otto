@@ -415,25 +415,79 @@ class WaiverScenarioTest extends WireSeamTest {
         // Ray Davis is Kyren-shaped: 91% of Buffalo's backfield work in
         // week 1 while James Cook, still RB1 on the chart, is healthy.
         // Neither man is visible to a rule that reads the label on the
-        // man ahead, and both are the week's league-winning add.
+        // man ahead, and both are the week's league-winning add. Cade
+        // Otton at 32% of Tampa Bay's targets is the same claim at
+        // tight end, so all three positions the lanes cover are here.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
         OutboundStubs.telegramOk(telegram);
-        OutboundStubs.llmPhrases(llm, "Two men took their own jobs.");
+        OutboundStubs.llmPhrases(llm, "Three men took their own jobs.");
 
         runCheckAt(TUESDAY_EVENING);
 
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
-        String facts = String.join("\n", board.facts().values());
-        assertThat(facts)
-                .contains("he took 39% of target share in week 1")
-                .contains("he took 91% of opportunity share in week 1");
-        assertThat(targetLine(board, "Wandale Robinson")).contains("breakout");
-        assertThat(targetLine(board, "Ray Davis")).contains("breakout");
+        assertThat(targetLine(board, "Wandale Robinson"))
+                .contains("breakout", "he took 39% of target share in week 1");
+        assertThat(targetLine(board, "Cade Otton"))
+                .contains("breakout", "he took 32% of target share in week 1");
+        assertThat(targetLine(board, "Ray Davis"))
+                .contains("breakout", "he took 91% of opportunity share in week 1");
+    }
 
-        // The control on the same board: Cade Otton's six targets are
-        // 16% of Tampa Bay's, which is a normal share of an offence
-        // however soft the defence he met. He stays a one-week play.
-        assertThat(targetLine(board, "Cade Otton")).contains("stream").doesNotContain("breakout");
+    @Test
+    void aGrowingShareTagsOnlyTheManWhoHeldItInStraightWeeksUpToNow() {
+        // Three weeks on record, and four free agents whose shares say
+        // four different things.
+        //
+        // Cade Otton held 19% and then 21% of Tampa Bay's targets in
+        // weeks 2 and 3: the slow lane at tight end. Bucky Irving took
+        // 71% of the backfield in week 3, which is the fast lane, and
+        // it fires even though Rachaad White ahead of him is only
+        // designated to return - a loan the man himself has outgrown.
+        //
+        // The other two must stay quiet. Wandale Robinson cleared 18%
+        // in weeks 1 and 3 but did not play week 2, and two games with
+        // a gap between them are not two straight weeks. Ray Davis owned
+        // 95% of Buffalo's backfield in weeks 1 and 2 and has not played
+        // since, so his claim is about a role he held a fortnight ago.
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithGrowingAndStaleShares);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "One grew into it, one outgrew a loan.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Cade Otton"))
+                .contains("breakout",
+                        "he held 19% and then 21% of target share over weeks 2 and 3");
+        assertThat(targetLine(board, "Bucky Irving"))
+                .contains("breakout",
+                        "Rachaad White has a date he comes back on",
+                        "he took 71% of opportunity share in week 3");
+        assertThat(targetLine(board, "Wandale Robinson")).doesNotContain("breakout");
+        assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
+    }
+
+    @Test
+    void withNoRosterStandingsTheBoardSaysSoRatherThanGuessingEitherWay() {
+        // The weekly-roster feed is down, so nothing is known about
+        // whether Rachaad White comes back. That is not the same as
+        // knowing he does, and it is not the same as knowing he does
+        // not: the board must claim neither. Bucky Irving keeps his 20
+        // usage points, because White cannot play this Sunday either
+        // way, and loses only the breakout the standing would have
+        // justified.
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithNoRosterStandings);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "One feed is down.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Bucky Irving"))
+                .contains("Rachaad White, ahead of him on that chart, is IR")
+                .contains("I cannot see Rachaad White's roster standing")
+                .doesNotContain("breakout")
+                .doesNotContain("has a date he comes back on");
     }
 
     @Test

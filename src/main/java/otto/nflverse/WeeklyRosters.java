@@ -1,9 +1,9 @@
 package otto.nflverse;
 
 import java.time.Instant;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -52,20 +52,42 @@ public record WeeklyRosters(
     public record Standing(String gsisId, int week, String code) {
     }
 
-    /**
-     * True when this player's newest standing means his season is over.
-     * A player the feed has never seen reads as false: an unknown
-     * standing is never a season-ending one.
-     */
-    public boolean seasonEnding(String gsisId) {
-        return newestFor(gsisId).map(standing -> SEASON_ENDING.contains(standing.code()))
-                .orElse(false);
+    /** What a player's newest standing says about his coming back. */
+    public enum Outlook {
+
+        /** No reversion date exists: his season is over. */
+        SEASON_ENDING,
+
+        /**
+         * His season is not over. Either he is playing, or he is on a
+         * list he comes back from on a stated date.
+         */
+        RETURNING,
+
+        /**
+         * The feed does not say. Either it was never downloaded or it
+         * has no row for this player, and the two are the same answer:
+         * nothing may be claimed either way.
+         */
+        UNKNOWN
     }
 
-    private Optional<Standing> newestFor(String gsisId) {
-        return rows.stream()
-                .filter(standing -> standing.gsisId().equals(gsisId))
-                .max(Comparator.comparingInt(Standing::week));
+    /**
+     * Every player's outlook, in one pass. Callers hold the result for
+     * the length of their own run rather than asking per player: this
+     * file carries a row per player per week, so a scan per lookup
+     * would read tens of thousands of rows to answer one question.
+     */
+    public Map<String, Outlook> outlooks() {
+        Map<String, Standing> newest = new HashMap<>();
+        rows.forEach(standing -> newest.merge(standing.gsisId(), standing,
+                (held, arriving) -> arriving.week() > held.week() ? arriving : held));
+        Map<String, Outlook> outlooks = new HashMap<>();
+        newest.forEach((gsisId, standing) -> outlooks.put(gsisId,
+                SEASON_ENDING.contains(standing.code())
+                        ? Outlook.SEASON_ENDING
+                        : Outlook.RETURNING));
+        return Map.copyOf(outlooks);
     }
 
     public WeeklyRosters withCheckedAt(Instant newCheckedAt) {
