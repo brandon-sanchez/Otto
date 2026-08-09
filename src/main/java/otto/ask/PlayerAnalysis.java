@@ -10,7 +10,6 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.alerts.Confidence;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;
@@ -24,6 +23,7 @@ import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
 import otto.nflverse.WeeklyStats;
+import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 
@@ -48,14 +48,14 @@ public class PlayerAnalysis {
     private final PlayerLookup lookup;
     private final NflverseStore nflverse;
     private final SleeperAdapter sleeper;
-    private final double edgeThreshold;
+    private final SettingsStore settings;
 
     public PlayerAnalysis(PlayerLookup lookup, NflverseStore nflverse, SleeperAdapter sleeper,
-            OttoProperties properties) {
+            SettingsStore settings) {
         this.lookup = lookup;
         this.nflverse = nflverse;
         this.sleeper = sleeper;
-        this.edgeThreshold = properties.edgeThreshold();
+        this.settings = settings;
     }
 
     /**
@@ -190,6 +190,9 @@ public class PlayerAnalysis {
         double gap = one.points().orElseThrow() - two.points().orElseThrow();
         Assessed pick = gap >= 0 ? one : two;
         addProjectionReason(reasons, one, two);
+        // The user sets the threshold by chat, so a comparison and an
+        // Alert always call a coin flip at the same size.
+        double edgeThreshold = settings.edgeThreshold();
         if (Math.abs(gap) < edgeThreshold) {
             reasons.add("That is inside the %s point edge threshold: a coin flip, leaning %s"
                     .formatted(points(edgeThreshold), pick.player()));

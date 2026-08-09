@@ -36,9 +36,17 @@ import otto.sleeper.SleeperAdapter;
  * publishes that time, and it is what makes the event news: a
  * transaction the Alert retry window has already passed is history,
  * however late a recovered feed hands it over.
+ *
+ * Every event also records the league status it was seen under. A
+ * Check diffs whatever the league is doing, so the Event Log holds the
+ * pre-season too, and Alert detection reads the stamp rather than
+ * assuming everything on record happened in season.
  */
 @Component
 public class SnapshotDiffer {
+
+    /** The fact every Snapshot Diff event carries: what the league was doing. */
+    public static final String LEAGUE_STATUS = "leagueStatus";
 
     public List<Event> diff(Optional<Snapshot> previous, Snapshot current,
             List<SleeperAdapter.LeagueTransaction> transactions, Instant at) {
@@ -47,7 +55,16 @@ public class SnapshotDiffer {
         }
         List<Event> events = new ArrayList<>(statusEvents(previous.get(), current, at));
         events.addAll(activityEvents(previous.get(), current, transactions, at));
-        return events;
+        // One place stamps them all, so a new event kind cannot be added
+        // without one and be silently refused by Alert detection.
+        String status = current.leagueStatus().name();
+        return events.stream().map(event -> stamped(event, status)).toList();
+    }
+
+    private static Event stamped(Event event, String status) {
+        Map<String, String> facts = new LinkedHashMap<>(event.facts());
+        facts.put(LEAGUE_STATUS, status);
+        return new Event(event.key(), event.type(), event.at(), Map.copyOf(facts));
     }
 
     private List<Event> statusEvents(Snapshot previous, Snapshot current, Instant at) {
@@ -83,9 +100,10 @@ public class SnapshotDiffer {
 
     /**
      * The league activity in the week's transactions: one event per
-     * player a trade moved, and one per player who left a roster and
-     * joined nobody else's. A trade moves every player it names, so a
-     * player in both the adds and the drops was traded, not dropped.
+     * player a trade moved, one per player claimed off free agency, and
+     * one per player who left a roster and joined nobody else's. A
+     * trade moves every player it names, so a player in both the adds
+     * and the drops was traded, not dropped.
      */
     private List<Event> activityEvents(Snapshot previous, Snapshot current,
             List<SleeperAdapter.LeagueTransaction> transactions, Instant at) {
@@ -100,11 +118,32 @@ public class SnapshotDiffer {
                                 happenedAt)));
                 continue;
             }
+            transaction.adds().forEach((playerId, toRoster) ->
+                    events.add(addEvent(previous, current, transaction, playerId, toRoster,
+                            happenedAt)));
             transaction.droppedToFreeAgency().forEach((playerId, rosterId) ->
                     events.add(dropEvent(previous, current, transaction, playerId, rosterId,
                             happenedAt)));
         }
         return events;
+    }
+
+    /**
+     * A player claimed off free agency, by waiver or as a free agent.
+     * It is the moment he stops being available to everyone else, which
+     * is what makes it a Snipe when the user was watching him.
+     */
+    private Event addEvent(Snapshot previous, Snapshot current,
+            SleeperAdapter.LeagueTransaction transaction, String playerId, int toRoster,
+            Instant at) {
+        Map<String, String> facts = playerFacts(previous, current, playerId);
+        facts.put(DiffKind.factName(), DiffKind.ADD.fact());
+        facts.put("transactionId", transaction.transactionId());
+        facts.put("toManager", manager(current, toRoster));
+        facts.put("userRoster", String.valueOf(isUser(current, toRoster)));
+        return new Event("snapshot-diff:add:%s:%s".formatted(
+                transaction.transactionId(), playerId),
+                EventType.SNAPSHOT_DIFF, at, Map.copyOf(facts));
     }
 
     private Event tradeEvent(Snapshot previous, Snapshot current,

@@ -9,12 +9,12 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.check.WeekFacts;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.LineupSwap;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
+import otto.settings.SettingsStore;
 import otto.snapshot.RosterSnapshot;
 
 /**
@@ -31,11 +31,11 @@ import otto.snapshot.RosterSnapshot;
 public class BenchEdgeDetector {
 
     private final LineupOptimizer optimizer;
-    private final double edgeThreshold;
+    private final SettingsStore settings;
 
-    public BenchEdgeDetector(LineupOptimizer optimizer, OttoProperties properties) {
+    public BenchEdgeDetector(LineupOptimizer optimizer, SettingsStore settings) {
         this.optimizer = optimizer;
-        this.edgeThreshold = properties.edgeThreshold();
+        this.settings = settings;
     }
 
     public List<AlertCandidate> detect(RosterSnapshot roster, WeekFacts week, Instant now) {
@@ -43,6 +43,9 @@ public class BenchEdgeDetector {
                 || week.startingSlots().isEmpty()) {
             return List.of();
         }
+        // The user sets this by chat, so it is read per Check and never
+        // frozen at startup.
+        double edgeThreshold = settings.edgeThreshold();
         String weekKey = week.weekKey().get();
         ProjectionTable projections = week.projections().get();
         List<Slot> slots = week.startingSlots();

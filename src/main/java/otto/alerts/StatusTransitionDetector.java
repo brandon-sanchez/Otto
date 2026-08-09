@@ -22,9 +22,17 @@ import otto.events.EventType;
 @Component
 public class StatusTransitionDetector {
 
+    /** The Snapshot Diff also reports roster moves; this reads only status. */
+    private static final String STATUS_KEY = "snapshot-diff:status:";
+
     public Optional<AlertCandidate> detect(Event event) {
+        // The kind is the vocabulary every detector reads. The key is
+        // checked too, because a status event is the one shape that
+        // parses its facts as designations: an event mislabelled STATUS
+        // by an absent kind would throw on the health values.
         if (event.type() != EventType.SNAPSHOT_DIFF
                 || DiffKind.of(event) != DiffKind.STATUS
+                || !event.key().startsWith(STATUS_KEY)
                 || !"true".equals(event.facts().get("userRoster"))) {
             return Optional.empty();
         }

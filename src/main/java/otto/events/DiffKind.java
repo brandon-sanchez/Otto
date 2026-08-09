@@ -16,7 +16,9 @@ public enum DiffKind {
 
     STATUS,
     TRADE,
-    DROP;
+    DROP,
+    /** A player claimed off free agency: the Snipe, when he is watched. */
+    ADD;
 
     private static final String FACT = "kind";
 

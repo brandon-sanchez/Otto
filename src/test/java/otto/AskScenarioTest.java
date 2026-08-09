@@ -105,7 +105,9 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("get_player_news"))
                 .withRequestBody(containing("get_standings"))
                 .withRequestBody(containing("analyze_playoff_race"))
-                .withRequestBody(containing("get_team_roster")));
+                .withRequestBody(containing("get_team_roster"))
+                .withRequestBody(containing("manage_watchlist"))
+                .withRequestBody(containing("manage_settings")));
     }
 
     @Test

@@ -3,6 +3,7 @@ package otto.alerts;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,20 @@ import otto.storage.OttoJson;
 public class MuteStore {
 
     public record Mute(String target, Instant at) {
+    }
+
+    private static final String PLAYER = "player:";
+
+    /** The target that silences one player's news. */
+    public static String playerTarget(String playerId) {
+        return PLAYER + playerId;
+    }
+
+    /** The player a target silences, when it silences one at all. */
+    public static Optional<String> playerIdOf(String target) {
+        return target != null && target.startsWith(PLAYER)
+                ? Optional.of(target.substring(PLAYER.length()))
+                : Optional.empty();
     }
 
     private static final String DOCUMENT = "mutes";

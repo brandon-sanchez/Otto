@@ -13,13 +13,13 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.check.WeekFacts;
 import otto.events.DiffKind;
 import otto.events.Event;
 import otto.lineup.PositionCutoffs;
 import otto.lineup.PositionRanking;
 import otto.lineup.PositionRankings;
+import otto.settings.SettingsStore;
 
 /**
  * Turns league activity into Alert candidates: any trade, and the drop
@@ -38,11 +38,11 @@ import otto.lineup.PositionRankings;
 public class LeagueActivityDetector {
 
     private final PositionRankings rankings;
-    private final PositionCutoffs notableCutoffs;
+    private final SettingsStore settings;
 
-    public LeagueActivityDetector(PositionRankings rankings, OttoProperties properties) {
+    public LeagueActivityDetector(PositionRankings rankings, SettingsStore settings) {
         this.rankings = rankings;
-        this.notableCutoffs = properties.notableCutoffs();
+        this.settings = settings;
     }
 
     /**
@@ -164,6 +164,9 @@ public class LeagueActivityDetector {
     private Recommendation judge(PositionRanking ranking, String playerId, String player,
             String position, String manager, Map<String, String> facts) {
         OptionalInt rank = ranking.rankOf(playerId);
+        // The user moves this line by chat, so it is read per drop
+        // rather than frozen at startup.
+        PositionCutoffs notableCutoffs = settings.notableCutoffs();
         int cutoff = notableCutoffs.forPosition(position);
         String projection = ranking.pointsOf(playerId)
                 .map(points -> String.format(Locale.ROOT, "%.1f", points))

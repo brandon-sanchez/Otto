@@ -32,7 +32,7 @@ public class LocalCheckLoop {
             log.debug("Check skipped by pre-draft cadence");
             return;
         }
-        log.info("Check done: {} new diff events, {} alerts sent",
-                result.newDiffEvents().size(), result.alertsSent().size());
+        log.info("Check done: {} new events, {} alerts sent",
+                result.newEvents().size(), result.alertsSent().size());
     }
 }
