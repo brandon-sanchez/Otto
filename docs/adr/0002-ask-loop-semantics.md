@@ -50,8 +50,13 @@ slots out of the sum.
 
 "What if I start Goedert" names one player, not a swap. The answer
 prices the swap the user would actually make: the weakest starter whose
-slot accepts the incoming player makes the room. Naming a sit-side
-player explicitly always wins over this default.
+slot accepts the incoming player makes the room.
+
+Picking for the user only ever picks a slot he can still free, so a
+starter whose game has kicked off is skipped even when he projects
+lowest. Naming a sit-side player explicitly always wins over this
+default, and still prices a locked swap rather than refusing it - with
+`legal: false` on the answer.
 
 ## "Legal" in a what-if means Sleeper would take it
 
@@ -70,11 +75,12 @@ the model call, so a stray or replayed update can never spend tokens.
 ## Depth is a reply-length control, not a mode
 
 "why", "more" and their kin swap the closing instruction of the system
-prompt from the 2-to-5-line brief to a full-reasoning one. A depth word
-only counts inside a short message, so "I want more points from my
-flex" stays a fresh question. There is no stored mode: the next
-ordinary question is short again, which is what "short by default" has
-to mean.
+prompt from the 2-to-5-line brief to a full-reasoning one. A question
+that starts with "why" counts however long it runs, because it always
+asks about the answer before it. Any other depth word counts only
+inside a short message, so "I want more points from my flex" stays a
+fresh question. There is no stored mode: the next ordinary question is
+short again, which is what "short by default" has to mean.
 
 ## An outage reply is not an answer
 

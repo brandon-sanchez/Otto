@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -55,11 +54,16 @@ public class AskService {
             the call. Stay inside the tool results.
             """;
 
-    /** What the user gets when the model cannot answer at all. */
+    /** What the user gets when the model cannot be reached at all. */
     private static final String UNREACHABLE = """
             I cannot reach my language model right now, so I cannot answer \
             that. My checks and alerts keep running, and I will answer once \
             it is back.""";
+
+    /** What the user gets when the model answers with nothing. */
+    private static final String EMPTY_ANSWER = """
+            My language model came back with nothing that time. Ask me \
+            again and I will have another go.""";
 
     private static final Set<String> DEPTH_WORDS =
             Set.of("why", "more", "detail", "details", "explain", "expand");
@@ -82,9 +86,19 @@ public class AskService {
         this.clock = clock;
     }
 
+    /** One run of the loop: the answer, or the failure to own up to. */
+    private sealed interface Outcome {
+
+        record Answered(String text) implements Outcome {
+        }
+
+        record Failed(String reply) implements Outcome {
+        }
+    }
+
     /**
      * Answers one Ask and records the exchange in the rolling window.
-     * An outage reply is not an answer, so it is never recorded: a
+     * A failure reply is not an answer, so it is never recorded: a
      * spell of them would otherwise evict the real conversation and
      * come back to the model as its own prior words.
      *
@@ -92,23 +106,42 @@ public class AskService {
      */
     public String answer(String question) {
         Instant now = clock.instant();
-        Optional<String> reply = run(question, now);
-        reply.ifPresent(answer -> conversation.record(now, question, answer));
-        return reply.orElse(UNREACHABLE);
+        return switch (run(question, now)) {
+            case Outcome.Answered answered -> {
+                conversation.record(now, question, answered.text());
+                yield answered.text();
+            }
+            case Outcome.Failed failed -> failed.reply();
+        };
     }
 
-    /** Empty when the model gave nothing back. */
-    private Optional<String> run(String question, Instant now) {
+    /**
+     * The two failures are told apart on purpose: a model that never
+     * answered is a different thing from one that answered with
+     * nothing, and claiming the wrong one would be a lie about what
+     * the assistant can see.
+     */
+    private Outcome run(String question, Instant now) {
         try {
             String content = chat.prompt()
                     .messages(prompt(question, now))
                     .tools(tools)
                     .call()
                     .content();
-            return content == null || content.isBlank() ? Optional.empty() : Optional.of(content);
+            if (content == null || content.isBlank()) {
+                log.warn("The model answered with no content");
+                return new Outcome.Failed(EMPTY_ANSWER);
+            }
+            return new Outcome.Answered(content);
         } catch (Exception e) {
+            // A wrapped interrupt must not die here: restore the flag
+            // so whatever runs this thread next still sees it.
+            if (e instanceof InterruptedException
+                    || e.getCause() instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.warn("Ask loop failed, answering with the outage reply", e);
-            return Optional.empty();
+            return new Outcome.Failed(UNREACHABLE);
         }
     }
 

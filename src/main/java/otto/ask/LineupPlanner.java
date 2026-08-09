@@ -150,7 +150,7 @@ public class LineupPlanner {
                     "%s already starts for you this week".formatted(team.name(startId)));
         }
 
-        SlotChoice choice = slotToFree(team, startId, sit);
+        SlotChoice choice = slotToFree(team, startId, now, sit);
         if (choice instanceof SlotChoice.Rejected rejected) {
             return ToolAnswer.unavailable(rejected.reason());
         }
@@ -208,18 +208,32 @@ public class LineupPlanner {
      * The starting slot the incoming player would take: the one whose
      * starter the user named, or the weakest slot his position fits
      * when the user named nobody.
+     *
+     * Picking for the user only ever picks a slot he can still free.
+     * A locked starter cannot come out, so the weakest slot on the
+     * board is the wrong answer when that starter's game has kicked
+     * off; naming him explicitly still prices the swap and says it is
+     * not legal.
      */
-    private SlotChoice slotToFree(UserWeek team, String startId, String sit) {
+    private SlotChoice slotToFree(UserWeek team, String startId, Instant now, String sit) {
         if (sit == null || sit.isBlank()) {
-            return IntStream.range(0, team.slots().size())
-                    .filter(index -> team.slots().get(index).accepts(team.position(startId)))
+            String position = team.position(startId);
+            List<Integer> accepting = IntStream.range(0, team.slots().size())
+                    .filter(index -> team.slots().get(index).accepts(position))
                     .boxed()
+                    .toList();
+            if (accepting.isEmpty()) {
+                return new SlotChoice.Rejected(
+                        "no starting slot of yours accepts a %s".formatted(position));
+            }
+            return accepting.stream()
+                    .filter(index -> !starterLocked(team, index, now))
                     .min(Comparator.comparingDouble(
                             index -> slotPoints(team, team.starterAt(index))))
                     .<SlotChoice>map(SlotChoice.Found::new)
                     .orElseGet(() -> new SlotChoice.Rejected(
-                            "no starting slot of yours accepts a %s"
-                                    .formatted(team.position(startId))));
+                            "every slot that takes a %s has already locked this week"
+                                    .formatted(position)));
         }
 
         List<String> matches = resolve(team, sit);
@@ -277,6 +291,12 @@ public class LineupPlanner {
             team.points(playerId).ifPresent(projected -> points.put(playerId, projected));
         }
         return points;
+    }
+
+    /** True when a slot's starter can no longer be taken out. */
+    private boolean starterLocked(UserWeek team, int index, Instant now) {
+        String starterId = team.starterAt(index);
+        return starterId != null && team.locked(starterId, now);
     }
 
     /** Says so when a player in the swap is a certain zero. */

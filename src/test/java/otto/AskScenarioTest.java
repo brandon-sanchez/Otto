@@ -1,6 +1,7 @@
 package otto;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,6 +136,30 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("144.5"))
                 .withRequestBody(containing("-0.5"))
                 .withRequestBody(containing("Travis Kelce")));
+    }
+
+    @Test
+    void aWhatIfPicksOnlyASlotTheUserCanStillFree() {
+        snapshotWithABenchEdge();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "whatif_lineup",
+                "{\"start\":\"Josh Jacobs\"}", "Jacobs for Love gains you 1.5.");
+
+        // Sunday afternoon: the 17:00 UTC games have kicked off, so
+        // every RB-capable slot has locked except SUPER_FLEX, where
+        // Love (GB, Monday) still sits.
+        clock.set(Instant.parse("2026-09-20T18:00:00Z"));
+
+        ask("what if I start Jacobs?");
+
+        // Cook projects lowest of the slots an RB fits, but his game is
+        // underway and Sleeper will not take him out. Love is the
+        // weakest starter the user can still move: 145.0 - 15.0 + 16.5.
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Jordan Love"))
+                .withRequestBody(containing("146.5"))
+                .withRequestBody(containing("+1.5"))
+                .withRequestBody(notContaining("James Cook")));
     }
 
     @Test
