@@ -76,13 +76,19 @@ public class AlertActions {
 
     /**
      * What the Mute button under this Alert silences. An Alert about a
-     * status transition is that player's news; anything else mutes the
-     * class of the problem that led the message.
+     * status transition, or about a player another manager dropped, is
+     * that player's news; anything else mutes the class of the problem
+     * that led the message.
      */
     private String muteTarget(List<Event> alerts, String playerId) {
         List<String> problemKeys = alerts.stream()
                 .map(event -> event.key().substring("alert:".length()))
                 .toList();
+        // A trade names several players, so muting it can only mean the
+        // class: the user is saying he does not want trade news.
+        if (problemKeys.stream().anyMatch(key -> key.startsWith("trade:"))) {
+            return "class:trade";
+        }
         boolean news = problemKeys.stream()
                 .anyMatch(key -> key.startsWith("snapshot-diff:") || key.startsWith("final:"));
         if (news && !playerId.isBlank()) {

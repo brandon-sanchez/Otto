@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import otto.directory.PlayerHealth;
+import otto.sleeper.SleeperAdapter;
 
 /**
  * One roster inside a Snapshot. The userRoster flag marks the roster
@@ -22,7 +23,8 @@ public record RosterSnapshot(
         Map<String, PlayerHealth> playerHealth,
         Map<String, String> playerNames,
         Map<String, String> playerPositions,
-        Map<String, String> playerTeams) {
+        Map<String, String> playerTeams,
+        SleeperAdapter.TeamRecord teamRecord) {
 
     public RosterSnapshot {
         starters = starters == null ? List.of() : starters;
@@ -31,5 +33,27 @@ public record RosterSnapshot(
         playerNames = playerNames == null ? Map.of() : playerNames;
         playerPositions = playerPositions == null ? Map.of() : playerPositions;
         playerTeams = playerTeams == null ? Map.of() : playerTeams;
+        teamRecord = teamRecord == null ? SleeperAdapter.TeamRecord.NONE : teamRecord;
+    }
+
+    /**
+     * What to call this team. The owner's display name where there is
+     * one; the owner id where a claimed team has no name Otto could
+     * read, because a claimed team is somebody's and must not read as
+     * empty; and the team number only when nobody has claimed it.
+     */
+    public String manager() {
+        if (ownerName != null && !ownerName.isBlank()) {
+            return ownerName;
+        }
+        if (ownerId != null && !ownerId.isBlank()) {
+            return ownerId;
+        }
+        return unclaimedName(rosterId);
+    }
+
+    /** What a team is called before anyone has claimed it. */
+    public static String unclaimedName(int rosterId) {
+        return "team " + rosterId;
     }
 }

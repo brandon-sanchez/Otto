@@ -18,6 +18,10 @@ public final class SleeperStubs {
     public static final String STATE_PATH = "/v1/state/nfl";
     public static final String PROJECTIONS_PATH = "/v1/projections/nfl/regular/2026/2";
     public static final String SCORES_PATH = "/scores/nfl/regular/2026/2";
+    public static final String TRANSACTIONS_PATH = LEAGUE_PATH + "/transactions/2";
+
+    /** A Check reads the week before as well, so a late trade stays in view. */
+    public static final String TRANSACTIONS_WEEK_1_PATH = LEAGUE_PATH + "/transactions/1";
 
     private SleeperStubs() {
     }
@@ -30,6 +34,9 @@ public final class SleeperStubs {
         stubJson(sleeper, STATE_PATH, "sleeper/state-nfl.json", "state-v1");
         stubJson(sleeper, PROJECTIONS_PATH, "sleeper/projections-2026-2.json", "projections-v1");
         stubJson(sleeper, SCORES_PATH, "sleeper/scores-2026-2.json", "scores-v1");
+        stubJson(sleeper, TRANSACTIONS_PATH, "sleeper/transactions-none.json", "transactions-v1");
+        stubJson(sleeper, TRANSACTIONS_WEEK_1_PATH, "sleeper/transactions-none.json",
+                "transactions-w1");
     }
 
     /**
@@ -79,5 +86,7 @@ public final class SleeperStubs {
         stubNotModified(server, STATE_PATH, "state-v1");
         stubNotModified(server, PROJECTIONS_PATH, "projections-v1");
         stubNotModified(server, SCORES_PATH, "scores-v1");
+        stubNotModified(server, TRANSACTIONS_PATH, "transactions-v1");
+        stubNotModified(server, TRANSACTIONS_WEEK_1_PATH, "transactions-w1");
     }
 }

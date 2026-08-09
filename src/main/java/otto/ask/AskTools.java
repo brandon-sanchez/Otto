@@ -13,14 +13,15 @@ import otto.OttoProperties;
 import otto.check.WeekFacts;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
+import otto.snapshot.RosterSnapshot;
 
 /**
  * The tools the Lane A agent loop routes questions to. Each one runs
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
  *
- * This is six of the twelve tools the spec names. Keep them coarse: one
- * tool per question a user would ask, not one per field.
+ * This is nine of the twelve tools the spec names. Keep them coarse:
+ * one tool per question a user would ask, not one per field.
  */
 @Component
 public class AskTools {
@@ -28,14 +29,16 @@ public class AskTools {
     private final UserWeekLoader loader;
     private final LineupPlanner planner;
     private final PlayerAnalysis players;
+    private final LeagueAnalysis league;
     private final Clock clock;
     private final double edgeThreshold;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
-            Clock clock, OttoProperties properties) {
+            LeagueAnalysis league, Clock clock, OttoProperties properties) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
+        this.league = league;
         this.clock = clock;
         this.edgeThreshold = properties.edgeThreshold();
     }
@@ -137,6 +140,59 @@ public class AskTools {
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player) {
         return players.news(player, clock.instant());
+    }
+
+    @Tool(name = "get_standings", description = """
+            The league table: every team with its record, points for and
+            against, in seed order, and where the user sits. Call this
+            for standings, seeding and "how am I doing" questions.""")
+    public ToolAnswer<LeagueAnalysis.Standings> getStandings() {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> ToolAnswer.of(league.standings(ok.value()));
+        };
+    }
+
+    @Tool(name = "analyze_playoff_race", description = """
+            What each team still needs: who has clinched a playoff place,
+            who is out, and how many of his remaining games the user must
+            win to be certain of a seed. Call this for playoff, clinch,
+            elimination and "what do I need" questions.""")
+    public ToolAnswer<LeagueAnalysis.PlayoffRace> analyzePlayoffRace() {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> league.playoffRace(ok.value());
+        };
+    }
+
+    @Tool(name = "get_team_roster", description = """
+            Any league mate's team: the lineup they have set with
+            projections, their bench, and where they are deep or short
+            against replacement level at each position. Call this to size
+            up a trade partner or to answer "what does X have".""")
+    public ToolAnswer<LeagueAnalysis.TeamRoster> getTeamRoster(
+            @ToolParam(description = "The manager, by the name they use in the league")
+            String manager) {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> {
+                List<RosterSnapshot> matches = ok.value().managersMatching(manager);
+                if (matches.size() != 1) {
+                    yield ToolAnswer.unavailable(noManager(ok.value(), manager, matches));
+                }
+                yield league.teamRoster(ok.value(), matches.getFirst(), clock.instant());
+            }
+        };
+    }
+
+    private static String noManager(LeagueWeek league, String reference,
+            List<RosterSnapshot> matches) {
+        if (matches.isEmpty()) {
+            return "no manager in this league matches \"%s\"; the teams are %s".formatted(
+                    reference, league.rosters().stream().map(RosterSnapshot::manager).toList());
+        }
+        return "\"%s\" matches more than one manager: %s".formatted(reference,
+                matches.stream().map(RosterSnapshot::manager).toList());
     }
 
     private static <T, R> ToolAnswer<R> unavailable(SourceResult.Unavailable<T> unavailable) {

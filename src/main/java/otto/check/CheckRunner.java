@@ -127,9 +127,11 @@ public class CheckRunner {
         Snapshot current = snapshotBuilder.build(now, leagueOk.value(),
                 rostersOk.value(), usersOk.value(), directoryStore.read());
         Optional<Snapshot> previous = snapshotStore.advance(current);
+        List<SleeperAdapter.LeagueTransaction> transactions =
+                leagueTransactions(leagueOk.value());
 
         List<Event> appended = new ArrayList<>();
-        for (Event event : snapshotDiffer.diff(previous, current, now)) {
+        for (Event event : snapshotDiffer.diff(previous, current, transactions, now)) {
             if (eventLog.append(event)) {
                 appended.add(event);
             }
@@ -137,4 +139,47 @@ public class CheckRunner {
         return new SnapshotStage(Optional.of(current), leagueOk.value(), appended);
     }
 
+    /**
+     * The completed transactions a trade or a drop comes from. Only an
+     * in-season league reads them: before a draft there is no league
+     * activity to be aware of.
+     *
+     * The week before the current one is read as well. Sleeper files a
+     * transaction under the week it happened in, and the week rolls over
+     * on a Tuesday - so a trade agreed in the last minutes of a week
+     * would drop out of view the moment the week advanced. Reading both
+     * keeps it in view for as long as it is still news. The transaction
+     * ids dedup through the Event Log, so the overlap costs nothing but
+     * one conditional GET.
+     *
+     * A week that cannot be read yields none, and the Event Log keeps a
+     * recovered feed from saying the same thing twice.
+     */
+    private List<SleeperAdapter.LeagueTransaction> leagueTransactions(
+            SleeperAdapter.League league) {
+        if (LeagueStatus.fromSleeper(league.status()) != LeagueStatus.IN_SEASON) {
+            return List.of();
+        }
+        // WeekFactsBuilder reads and self-reports the same week, so a
+        // failure here is already the user's news by the end of the Check.
+        if (!(sleeper.nflState() instanceof SourceResult.Ok<SleeperAdapter.NflState> state)) {
+            return List.of();
+        }
+        String season = state.value().season();
+        int week = state.value().week();
+        List<SleeperAdapter.LeagueTransaction> transactions = new ArrayList<>();
+        if (week > 1) {
+            transactions.addAll(transactionsFor(season, week - 1));
+        }
+        transactions.addAll(transactionsFor(season, week));
+        return transactions;
+    }
+
+    private List<SleeperAdapter.LeagueTransaction> transactionsFor(String season, int week) {
+        SourceResult<List<SleeperAdapter.LeagueTransaction>> transactions =
+                sleeper.transactions(season, week);
+        selfReport.reportIfUnavailable(transactions);
+        return transactions instanceof SourceResult.Ok<
+                List<SleeperAdapter.LeagueTransaction>> ok ? ok.value() : List.of();
+    }
 }

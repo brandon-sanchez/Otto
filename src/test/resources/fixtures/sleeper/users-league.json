@@ -1,0 +1,74 @@
+[
+  {
+    "user_id": "777001",
+    "display_name": "SenorMustache",
+    "is_owner": true,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777002",
+    "display_name": "GridironGoblin",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777003",
+    "display_name": "WaiverWizard",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777004",
+    "display_name": "EndZoneEnvy",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777005",
+    "display_name": "PlayActionPat",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777006",
+    "display_name": "BootlegBandit",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777007",
+    "display_name": "ScreenPassSam",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777008",
+    "display_name": "HailMaryHank",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777009",
+    "display_name": "BlitzBrigade",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777010",
+    "display_name": "CoverTwoCarl",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777011",
+    "display_name": "PylonPatrol",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  },
+  {
+    "user_id": "777012",
+    "display_name": "TwoPointTina",
+    "is_owner": false,
+    "league_id": "1389748403805650944"
+  }
+]

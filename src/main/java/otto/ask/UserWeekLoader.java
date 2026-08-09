@@ -29,6 +29,11 @@ import otto.snapshot.SnapshotStore;
 @Component
 public class UserWeekLoader {
 
+    /** Read by every tool here, so it must not name only the user's roster. */
+    private static final String NO_SNAPSHOT =
+            "no Snapshot stored yet, so I cannot see the league or your roster; "
+                    + "the next Check builds one";
+
     private final SleeperAdapter sleeper;
     private final SnapshotStore snapshotStore;
     private final WeekFactsBuilder weekFactsBuilder;
@@ -64,9 +69,20 @@ public class UserWeekLoader {
         return league().flatMap(league -> userRoster()
                 .<SourceResult<UserWeek>>map(roster -> new SourceResult.Ok<>(
                         new UserWeek(league, roster, weekFactsBuilder.buildWithinCadence(league))))
-                .orElseGet(() -> new SourceResult.Unavailable<>("snapshot",
-                        "no Snapshot stored yet, so I cannot see your roster; "
-                                + "the next Check builds one")));
+                .orElseGet(() -> new SourceResult.Unavailable<>("snapshot", NO_SNAPSHOT)));
+    }
+
+    /**
+     * The whole league from the latest Snapshot, for the questions that
+     * are about the other eleven teams as much as the user's own.
+     */
+    public SourceResult<LeagueWeek> leagueWeek() {
+        return league().flatMap(league -> snapshotStore.current()
+                .<SourceResult<LeagueWeek>>map(snapshot -> new SourceResult.Ok<>(new LeagueWeek(
+                        league,
+                        snapshot,
+                        weekFactsBuilder.buildWithinCadence(league))))
+                .orElseGet(() -> new SourceResult.Unavailable<>("snapshot", NO_SNAPSHOT)));
     }
 
     private Optional<RosterSnapshot> userRoster() {

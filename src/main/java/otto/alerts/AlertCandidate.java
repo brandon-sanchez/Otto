@@ -17,11 +17,15 @@ public record AlertCandidate(
         Map<String, String> facts) {
 
     /**
-     * What produced the candidate. Transitions are Snapshot Diff
-     * driven and fire once per transition; legality and edge problems
+     * What produced the candidate. Transitions, trades and drops are
+     * Snapshot Diff driven and fire once; legality and edge problems
      * are recomputed from current state on every Check.
+     *
+     * A trade and a drop are league activity: they report what another
+     * manager did, so they carry no lineup Recommendation and never
+     * take part in the Lock Ladder.
      */
     public enum Source {
-        TRANSITION, LEGALITY, EDGE
+        TRANSITION, LEGALITY, EDGE, TRADE, DROP
     }
 }

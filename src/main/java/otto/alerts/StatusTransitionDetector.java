@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import otto.directory.PlayerHealth;
+import otto.events.DiffKind;
 import otto.events.Event;
 import otto.events.EventType;
 
@@ -23,6 +24,7 @@ public class StatusTransitionDetector {
 
     public Optional<AlertCandidate> detect(Event event) {
         if (event.type() != EventType.SNAPSHOT_DIFF
+                || DiffKind.of(event) != DiffKind.STATUS
                 || !"true".equals(event.facts().get("userRoster"))) {
             return Optional.empty();
         }

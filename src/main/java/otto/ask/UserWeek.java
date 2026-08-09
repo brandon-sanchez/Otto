@@ -12,9 +12,12 @@ import otto.sleeper.SleeperAdapter;
 import otto.snapshot.RosterSnapshot;
 
 /**
- * What an Ask tool needs to answer a question about the user's team:
- * the league document, the user's roster from the latest Snapshot, and
- * this week's facts.
+ * What an Ask tool needs to answer a question about one team: the
+ * league document, that team's roster from the latest Snapshot, and
+ * this week's facts. Usually the team is the user's, which is what the
+ * lineup tools are for; a league question builds the same view over a
+ * league mate's roster, because a trade has two sides and both must be
+ * read the same way.
  *
  * It answers about one player at a time, so callers ask it rather than
  * walking into the roster and the week themselves. Every source fails

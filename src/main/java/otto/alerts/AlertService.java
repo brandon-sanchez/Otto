@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -57,9 +58,14 @@ public class AlertService {
     private static final Comparator<AlertCandidate> BY_CONFIDENCE =
             Comparator.comparingInt(candidate -> candidate.recommendation().confidence().ordinal());
 
+    /** What the Lock Ladder's final rung warns about: this week's lineup. */
+    private static final Set<AlertCandidate.Source> LINEUP_PROBLEMS =
+            EnumSet.of(AlertCandidate.Source.LEGALITY, AlertCandidate.Source.EDGE);
+
     private final StatusTransitionDetector transitionDetector;
     private final LineupLegalityDetector legalityDetector;
     private final BenchEdgeDetector edgeDetector;
+    private final LeagueActivityDetector activityDetector;
     private final AlertPhraser phraser;
     private final TelegramClient telegram;
     private final EventLog eventLog;
@@ -70,12 +76,14 @@ public class AlertService {
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
+            LeagueActivityDetector activityDetector,
             AlertPhraser phraser, TelegramClient telegram, EventLog eventLog,
             IgnoreLedger ignoreLedger, MuteStore muteStore, AlertIdSequence idSequence,
             Clock clock) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
+        this.activityDetector = activityDetector;
         this.phraser = phraser;
         this.telegram = telegram;
         this.eventLog = eventLog;
@@ -96,7 +104,11 @@ public class AlertService {
                 .filter(RosterSnapshot::userRoster)
                 .findFirst();
 
-        List<AlertCandidate> candidates = new ArrayList<>(transitionCandidates(now));
+        List<Event> diffEvents = recentDiffEvents(now);
+        List<AlertCandidate> candidates = new ArrayList<>(diffEvents.stream()
+                .flatMap(event -> transitionDetector.detect(event).stream())
+                .toList());
+        candidates.addAll(activityDetector.detect(diffEvents, week));
         userRoster.ifPresent(roster -> {
             candidates.addAll(legalityDetector.detect(roster, week));
             candidates.addAll(edgeDetector.detect(roster, week, now));
@@ -114,11 +126,15 @@ public class AlertService {
         return sent;
     }
 
-    private List<AlertCandidate> transitionCandidates(Instant now) {
+    /**
+     * The Snapshot Diff events still worth a message. An event carries
+     * the time the thing it records happened, so a transaction a
+     * recovered feed hands over late is already outside the window.
+     */
+    private List<Event> recentDiffEvents(Instant now) {
         return eventLog.all().stream()
                 .filter(event -> event.type() == EventType.SNAPSHOT_DIFF)
                 .filter(event -> Duration.between(event.at(), now).compareTo(RETRY_WINDOW) <= 0)
-                .flatMap(event -> transitionDetector.detect(event).stream())
                 .toList();
     }
 
@@ -133,6 +149,12 @@ public class AlertService {
                     && muteStore.muted("player:" + candidate.playerId());
             case LEGALITY -> muteStore.muted("class:legality");
             case EDGE -> muteStore.muted("class:edge");
+            case TRADE -> muteStore.muted("class:trade");
+            // A drop is news about one player as much as it is a class of
+            // its own, so either Mute silences it.
+            case DROP -> muteStore.muted("class:drop")
+                    || (candidate.playerId() != null
+                            && muteStore.muted("player:" + candidate.playerId()));
         };
     }
 
@@ -141,6 +163,8 @@ public class AlertService {
      * dead once the player's game locks - the slot is burned for the
      * week. A status transition is only unactionable while the game is
      * underway; once complete it matters for next week and sends.
+     * League activity is neither: a trade or a drop is news about the
+     * league whatever the clock says, so it is never lock-suppressed.
      */
     private boolean lockSuppressed(AlertCandidate candidate, WeekFacts week, Instant now) {
         if (week.games().isEmpty() || candidate.team() == null || candidate.team().isBlank()) {
@@ -150,6 +174,7 @@ public class AlertService {
         return switch (candidate.source()) {
             case TRANSITION -> games.underway(candidate.team(), now);
             case LEGALITY, EDGE -> games.locked(candidate.team(), now);
+            case TRADE, DROP -> false;
         };
     }
 
@@ -223,7 +248,7 @@ public class AlertService {
             // An Ignore stops the follow-ups it covers, but never
             // shields an illegal lineup: legality problems always warn.
             List<AlertCandidate> problems = sendable.stream()
-                    .filter(candidate -> candidate.source() != AlertCandidate.Source.TRANSITION)
+                    .filter(candidate -> LINEUP_PROBLEMS.contains(candidate.source()))
                     .filter(candidate -> playerId.equals(candidate.playerId()))
                     .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY
                             || !ignoredKeys.contains(candidate.key()))
