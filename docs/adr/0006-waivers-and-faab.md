@@ -307,11 +307,37 @@ The rule is the board's, not the reader's, so the board states it in its
 notes. A rule the reader has to infer from an ordering is a rule that
 gets inferred wrong.
 
-The partition is a sort key, never a filter, and it leads the sort at
-both stages: before the news shortlist is chosen and after the scores
-are final. The news reads therefore go to the candidates who can still
-answer the question, rather than to a high scorer the user has already
-ruled out.
+The partition is a sort key, never a filter, and it is applied to the
+final ranking alone. The news shortlist is chosen on the scores by
+themselves, exactly as it is for a board with no drop side.
+
+Leading the shortlist with the partition was the tempting option and
+would break the invariant above it. Which candidates get a news read is
+which candidates can earn news points, so reordering the reads would
+move the news component of a score - and the same player would then
+show one number on Tuesday's board and another when the user named
+somebody to drop, on the same data. A candidate the partition promotes
+past the shortlist therefore carries an unread feed, and says so on his
+own line, which is what an unread feed has always said here.
+
+## A gain needs a projection at both ends
+
+A gain is the difference between two projections, so it is reported
+only when both exist. Where either side has no stat line the line says
+which projection is missing, the board says so in its notes, and no
+number is printed.
+
+Reading a missing projection as zero is the trap this avoids, and the
+drop side walks straight into it: the player a user most wants to drop
+is the one on bye, and a bye-week zero would price every candidate on
+the board as a large upgrade over him. The board already refuses to
+read a candidate's own missing projection as zero, for the same reason.
+
+A named player with no projection is not refused, because "I cannot
+price him" is a smaller problem than "I will not answer". He simply
+takes no part in the partition, and when no named player carries a
+projection at all there is nothing measurable on the other side of the
+swap, so no candidate is ranked below any other for losing to him.
 
 ## Narrowing to a need happens after the board is priced
 

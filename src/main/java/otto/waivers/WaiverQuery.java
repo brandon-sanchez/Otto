@@ -1,5 +1,6 @@
 package otto.waivers;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,6 +54,14 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
      */
     private static final int MOST_CANDIDATES = 50;
 
+    /**
+     * As many drops as one board can price and stay readable. Every
+     * named player adds a line to every candidate, so the answer grows
+     * by the product of the two - and nobody drops six players for one
+     * pickup.
+     */
+    private static final int MOST_DROPS = 5;
+
     private static final Set<String> FLEX = Set.of("RB", "WR", "TE");
 
     /** One position group a user can ask for, or the reason he cannot. */
@@ -84,13 +93,23 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
         int asked = count == null || count < 1 ? TUESDAY_COUNT : count;
         int wanted = Math.min(asked, MOST_CANDIDATES);
         boolean needs = Boolean.TRUE.equals(needsOnly);
-        String note = asked <= wanted ? null
-                : ("you asked for %d targets and I ranked the top %d: past that a reply stops "
-                        + "being a message and starts being a spreadsheet")
-                                .formatted(asked, wanted);
+        List<String> named = replacing == null ? List.of() : replacing;
+        List<String> drops = named.size() <= MOST_DROPS
+                ? named
+                : List.copyOf(named.subList(0, MOST_DROPS));
+        List<String> notes = new ArrayList<>();
+        if (asked > wanted) {
+            notes.add(("you asked for %d targets and I ranked the top %d: past that a reply stops "
+                    + "being a message and starts being a spreadsheet").formatted(asked, wanted));
+        }
+        if (named.size() > drops.size()) {
+            notes.add(("you named %d players to drop and I priced the first %d: every name adds a "
+                    + "line to every candidate").formatted(named.size(), drops.size()));
+        }
+        String note = notes.isEmpty() ? null : String.join("; ", notes);
         if (position == null || position.isBlank()) {
             return new Parsed.Ok(new WaiverQuery(new LinkedHashSet<>(ALL_POSITIONS), wanted,
-                    replacing, needs, note));
+                    drops, needs, note));
         }
         String normalized = position.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         Set<String> positions = switch (normalized) {
@@ -104,7 +123,7 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
                     ("I rank waiver targets at QB, RB, WR and TE, or at FLEX and all; "
                             + "\"%s\" is none of those").formatted(position));
         }
-        return new Parsed.Ok(new WaiverQuery(positions, wanted, replacing, needs, note));
+        return new Parsed.Ok(new WaiverQuery(positions, wanted, drops, needs, note));
     }
 
     /** Keeps board order, so two identical questions read the same way. */

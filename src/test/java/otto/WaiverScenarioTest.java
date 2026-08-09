@@ -29,6 +29,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -475,7 +476,71 @@ class WaiverScenarioTest extends WireSeamTest {
                         + "ranked below every candidate who beats one of them"))
                 .withRequestBody(containing("ranked below every candidate who beats at least "
                         + "one, and his line says so"))
-                .withRequestBody(matching("(?s).*Michael Penix.*Ray Davis.*")));
+                .withRequestBody(matching("(?s).*Michael Penix.*Ray Davis.*"))
+                // The gains ride as structured fields as well as words,
+                // and the flag that drove the ordering is on the line.
+                .withRequestBody(containing("gains\\\":[{"))
+                .withRequestBody(containing("theirProjection\\\":\\\"12.5\\\""))
+                .withRequestBody(containing("gain\\\":\\\"+6.5\\\""))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":true"))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":false"))
+                // The 50-point scale is the whole board's, not the
+                // beaters'. Bucky Irving still takes all 50 and scores
+                // 100, the number the Tuesday Alert gave him.
+                .withRequestBody(containing("score\\\":100"))
+                .withRequestBody(containing("scale to Bucky Irving")));
+    }
+
+    @Test
+    void twoReferencesToTheSamePlayerArePricedAsOneDrop() {
+        // The user can only drop him once, so naming him by name and
+        // again by Sleeper id must not double his line or make the swap
+        // look bigger than it is.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\",\"5850\"]}", "One drop, not two.");
+
+        ask("who beats Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Josh Jacobs (RB, 12.5 projected)"))
+                .withRequestBody(notMatching("(?s).*Josh Jacobs \\(RB, 12\\.5 projected\\)"
+                        + ".*Josh Jacobs \\(RB, 12\\.5 projected\\).*")));
+    }
+
+    @Test
+    void aDropWithNoProjectionIsSaidRatherThanPricedAtZero() {
+        // The player a user most wants to drop is the one with no stat
+        // line this week. Reading that as zero would price every
+        // candidate on the board as a large upgrade over him, so the
+        // gain is left out and the board says which projection it does
+        // not have.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-jacobs-unpriced.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\"]}", "I cannot price Josh Jacobs this week.");
+
+        ask("who beats Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "I have no projection available for Josh Jacobs, so no candidate "
+                                + "carries a measured gain over him"))
+                .withRequestBody(containing("so I cannot say what you gain over Josh Jacobs"))
+                // No gain is printed, and nobody is ranked below anybody
+                // for losing to a player nothing can be measured against.
+                .withRequestBody(notContaining("gain\\\":"))
+                .withRequestBody(notContaining("beatsSomebodyNamed\\\":false")));
     }
 
     @Test
@@ -638,6 +703,24 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("there is no position I would call a need this week"))
                 .withRequestBody(notContaining("Wandale Robinson"))
                 .withRequestBody(notContaining("Bucky Irving\\\",")));
+    }
+
+    @Test
+    void needsOnlyAtAPositionTheUserIsNotShortAtSaysWhichPositionsHeIs() {
+        // Tight end is covered, so a needs board about tight ends holds
+        // nobody. The honest reply names the positions he is short at
+        // rather than handing back an empty list with no reason on it.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"TE\",\"needsOnly\":true}", "You are covered at tight end.");
+
+        ask("do I need a tight end off waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("you asked for TE and your needs this week are QB "
+                        + "and WR, so there is nothing on this board"))
+                .withRequestBody(notContaining("Cade Otton")));
     }
 
     @Test

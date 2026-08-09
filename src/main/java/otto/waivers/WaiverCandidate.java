@@ -54,8 +54,10 @@ public record WaiverCandidate(
      * answers "how good is he"; this answers "is he better than the man
      * he would replace", which is the question the user actually asks.
      *
-     * @param gain the point difference, signed, in league scoring
+     * @param gain the point difference, signed, in league scoring, or
+     *        null when either side of it has no projection this week
      */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Gain(String player, String playerId, String theirProjection, String gain) {
     }
 }
