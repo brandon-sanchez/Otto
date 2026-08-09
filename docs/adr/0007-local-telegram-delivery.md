@@ -79,9 +79,12 @@ driver's copy went: two copies of one rule in two classes is the drift
 the gate exists to prevent. The driver now hands every update it takes
 to the seam and lets the seam decide.
 
-The gate reads `callback_query.message.chat` for a tap, with the sender
-as the fallback Telegram uses for a message too old to quote, and
-`message.chat` for free text. A dropped update is still confirmed -
+The gate reads `callback_query.message.chat` for a tap and
+`message.chat` for free text, and it passes nothing else.
+`callback_query.from` names the user who tapped, not the chat the tap
+came from, so it cannot stand in: it would authorize a chat by a user
+id. Telegram leaves the message out of a tap on one too old to quote,
+and such a tap is dropped. A dropped update is still confirmed -
 otherwise the poll would hand it back for ever - and a dropped tap is
 still answered, because Telegram offers a `callback_query` again until
 an `answerCallbackQuery` confirms it.

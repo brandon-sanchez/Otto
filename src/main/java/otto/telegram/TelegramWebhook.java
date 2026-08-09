@@ -88,19 +88,18 @@ public class TelegramWebhook {
     /**
      * Telegram carries the chat on the message the update belongs to -
      * the message itself for free text, the message the button hangs on
-     * for a tap. It leaves that message out of a tap on one too old to
-     * quote, and the sender is all it gives then.
+     * for a tap. An update that names no chat cannot pass: the sender it
+     * does name is a user, and a user is not the chat the assistant
+     * serves. Telegram leaves the message out of a tap on one too old to
+     * quote, so the cost of that is a refused tap on a stale Alert.
      */
     private boolean fromConfiguredChat(JsonNode update) {
         if (chatId == null || chatId.isBlank()) {
             return false;
         }
         JsonNode tap = update.path("callback_query");
-        if (tap.isMissingNode()) {
-            return chatId.equals(update.path("message").path("chat").path("id").asText(""));
-        }
-        String chat = tap.path("message").path("chat").path("id").asText("");
-        return chatId.equals(chat.isEmpty() ? tap.path("from").path("id").asText("") : chat);
+        JsonNode message = tap.isMissingNode() ? update.path("message") : tap.path("message");
+        return chatId.equals(message.path("chat").path("id").asText(""));
     }
 
     /** Free text goes to the Ask loop and its reply back to the chat. */

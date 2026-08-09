@@ -101,6 +101,34 @@ class WebhookScenarioTest extends WireSeamTest {
                 .containsExactly("action:done:1");
     }
 
+    /**
+     * Telegram leaves the message out of a tap on one too old to quote,
+     * and the sender it still names is a user, not a chat. A tap that
+     * names no chat therefore acts on nothing, whoever sent it.
+     */
+    @Test
+    void aButtonTapThatNamesNoChatActsOnNothingAndIsStillAcknowledged() {
+        runHealthyBaselineCheck();
+        runDeclineCheck();
+        OutboundStubs.telegramCallbackAnswered(telegram);
+
+        WebhookResult result = webhook.handle(WEBHOOK_SECRET, """
+                {
+                  "update_id": 200,
+                  "callback_query": {
+                    "id": "cb-1",
+                    "from": {"id": %d, "is_bot": false, "first_name": "Brandon"},
+                    "data": "done:1"
+                  }
+                }
+                """.formatted(USER_CHAT_ID));
+
+        assertThat(result).isEqualTo(WebhookResult.OK);
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
+        assertThat(eventLog.all().stream()
+                .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
+    }
+
     /** An Alert with buttons for the tap tests to act on. */
     private void runHealthyBaselineCheck() {
         SleeperStubs.healthyInSeason(sleeper);
