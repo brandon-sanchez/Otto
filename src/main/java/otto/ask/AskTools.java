@@ -10,6 +10,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.check.WeekFacts;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 
@@ -18,21 +19,23 @@ import otto.sleeper.SourceResult;
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
  *
- * This is the first four of the twelve tools the spec names. Keep them
- * coarse: one tool per question a user would ask, not one per field.
+ * This is six of the twelve tools the spec names. Keep them coarse: one
+ * tool per question a user would ask, not one per field.
  */
 @Component
 public class AskTools {
 
     private final UserWeekLoader loader;
     private final LineupPlanner planner;
+    private final PlayerAnalysis players;
     private final Clock clock;
     private final double edgeThreshold;
 
-    public AskTools(UserWeekLoader loader, LineupPlanner planner, Clock clock,
-            OttoProperties properties) {
+    public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
+            Clock clock, OttoProperties properties) {
         this.loader = loader;
         this.planner = planner;
+        this.players = players;
         this.clock = clock;
         this.edgeThreshold = properties.edgeThreshold();
     }
@@ -103,6 +106,37 @@ public class AskTools {
             case SourceResult.Ok<UserWeek> ok ->
                 planner.whatIf(ok.value(), clock.instant(), start, sit);
         };
+    }
+
+    @Tool(name = "compare_players", description = """
+            Weighs two players against each other for this week:
+            projections in league scoring, the matchup each faces from
+            the defense-versus-position table, injury status, depth-chart
+            role, season production and recent news, with the reasons
+            behind the call. Either player may be on any roster or on
+            none. Call this for "who do I start", "X or Y" and any
+            head-to-head question.""")
+    public ToolAnswer<PlayerAnalysis.Comparison> comparePlayers(
+            @ToolParam(description = "The first player, by name or Sleeper player id")
+            String first,
+            @ToolParam(description = "The second player, by name or Sleeper player id")
+            String second) {
+        return switch (loader.week()) {
+            case SourceResult.Unavailable<WeekFacts> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<WeekFacts> ok ->
+                players.compare(ok.value(), clock.instant(), first, second);
+        };
+    }
+
+    @Tool(name = "get_player_news", description = """
+            The latest news on one player, newest first, with the
+            headline, the report and the analysis behind it. This one
+            always reads live, so call it for anything about what has
+            just happened to a player.""")
+    public ToolAnswer<PlayerAnalysis.PlayerNews> getPlayerNews(
+            @ToolParam(description = "The player, by name or Sleeper player id")
+            String player) {
+        return players.news(player, clock.instant());
     }
 
     private static <T, R> ToolAnswer<R> unavailable(SourceResult.Unavailable<T> unavailable) {

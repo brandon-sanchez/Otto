@@ -1,0 +1,5 @@
+# Recorded fixtures are byte-faithful copies of what a source really
+# serves. Line-ending normalization would rewrite them, so the tests
+# would stop exercising the format the live source actually sends: the
+# DynastyProcess player-ID CSV ships CRLF.
+src/test/resources/fixtures/** -text

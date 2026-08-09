@@ -35,6 +35,13 @@ public record GameWeek(Map<String, SleeperAdapter.Game> byTeam) {
         return team != null && !team.isBlank() && !byTeam.containsKey(team);
     }
 
+    /** Who this team plays this week; empty on a bye. */
+    public Optional<String> opponentOf(String team) {
+        return Optional.ofNullable(team)
+                .map(byTeam::get)
+                .map(game -> team.equals(game.homeTeam()) ? game.awayTeam() : game.homeTeam());
+    }
+
     public boolean locked(String team, Instant now) {
         return lockFor(team).filter(lock -> !now.isBefore(lock)).isPresent();
     }

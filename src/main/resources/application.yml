@@ -9,8 +9,18 @@ otto:
     bot-token: "${TELEGRAM_BOT_TOKEN:}"
     chat-id: "${TELEGRAM_CHAT_ID:}"
     webhook-secret: "${TELEGRAM_WEBHOOK_SECRET:}"
+  nflverse:
+    api-base-url: "https://api.github.com"
+    download-base-url: "https://github.com"
+    player-ids-base-url: "https://raw.githubusercontent.com"
+    check-interval: 1h
   directory-check-interval: 60s
   pre-draft-check-interval: 24h
+  # How stale a cached Sleeper read may be before a reader that is not
+  # the Check goes back to the wire. It matches the Check's poll
+  # interval: the Check keeps the cache filled, and the Freshness
+  # Ceiling means a fresh poll would not be fresher anyway.
+  sleeper-cadence: 60s
   edge-threshold: 1.0
 
 spring:

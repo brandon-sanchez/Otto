@@ -1,0 +1,21 @@
+{
+  "tag_name": "depth_charts",
+  "name": "depth_charts",
+  "published_at": "2022-01-28T02:13:47Z",
+  "assets": [
+    {
+      "name": "depth_charts_2025.csv",
+      "content_type": "text/csv",
+      "size": 52917870,
+      "updated_at": "2026-03-14T07:32:30Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_2025.csv"
+    },
+    {
+      "name": "depth_charts_2026.csv",
+      "content_type": "text/csv",
+      "size": 39502638,
+      "updated_at": "2026-09-15T07:43:44Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_2026.csv"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,fantasy_points,fantasy_points_ppr
+00-0033280,C.McCaffrey,Christian McCaffrey,RB,RB,2025,1,REG,SF,DET,0,0,0,0,0,0,19,100,0,0,0,1,0,0,0,0,99.9,99.9
+00-0035700,J.Jacobs,Josh Jacobs,RB,RB,2025,2,REG,GB,DET,0,0,0,0,0,0,14,50,1,0,2,2,20,0,0,0,99.9,99.9
+00-0037248,J.Cook,James Cook,RB,RB,2025,1,REG,BUF,MIA,0,0,0,0,0,0,11,40,0,0,2,3,10,0,0,0,99.9,99.9
+00-0038542,B.Robinson,Bijan Robinson,RB,RB,2025,2,REG,ATL,MIA,0,0,0,0,0,0,15,60,0,0,1,2,5,0,0,0,99.9,99.9

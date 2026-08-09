@@ -1,0 +1,35 @@
+{
+  "tag_name": "stats_player",
+  "name": "stats_player",
+  "published_at": "2025-07-31T18:47:44Z",
+  "assets": [
+    {
+      "name": "stats_player_week_2025.csv",
+      "content_type": "text/csv",
+      "size": 8461830,
+      "updated_at": "2026-01-13T06:51:52Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv"
+    },
+    {
+      "name": "stats_player_week_2025.parquet",
+      "content_type": "application/octet-stream",
+      "size": 2210344,
+      "updated_at": "2026-01-13T06:51:55Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.parquet"
+    },
+    {
+      "name": "stats_player_reg_2026.csv",
+      "content_type": "text/csv",
+      "size": 861842,
+      "updated_at": "2026-09-16T07:09:44Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_reg_2026.csv"
+    },
+    {
+      "name": "stats_player_week_2026.csv",
+      "content_type": "text/csv",
+      "size": 598120,
+      "updated_at": "2026-09-23T07:12:40Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv"
+    }
+  ]
+}
