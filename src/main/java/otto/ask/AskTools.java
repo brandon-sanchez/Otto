@@ -15,6 +15,9 @@ import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
+import otto.waivers.WaiverBoard;
+import otto.waivers.WaiverQuery;
+import otto.waivers.WaiverScorer;
 import otto.watchlist.WatchlistService;
 
 /**
@@ -22,7 +25,8 @@ import otto.watchlist.WatchlistService;
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
  *
- * This is nine of the twelve tools the spec names. Keep them coarse:
+ * This is eleven of the twelve tools the spec names, plus the Settings
+ * tool the chat needs to change them. Keep them coarse:
  * one tool per question a user would ask, not one per field.
  */
 @Component
@@ -32,18 +36,20 @@ public class AskTools {
     private final LineupPlanner planner;
     private final PlayerAnalysis players;
     private final LeagueAnalysis league;
+    private final WaiverScorer waivers;
     private final WatchlistService watchlist;
     private final SettingsService settings;
     private final SettingsStore settingsStore;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
-            LeagueAnalysis league, WatchlistService watchlist, SettingsService settings,
-            SettingsStore settingsStore, Clock clock) {
+            LeagueAnalysis league, WaiverScorer waivers, WatchlistService watchlist,
+            SettingsService settings, SettingsStore settingsStore, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
         this.league = league;
+        this.waivers = waivers;
         this.watchlist = watchlist;
         this.settings = settings;
         this.settingsStore = settingsStore;
@@ -135,6 +141,44 @@ public class AskTools {
             case SourceResult.Unavailable<WeekFacts> unavailable -> unavailable(unavailable);
             case SourceResult.Ok<WeekFacts> ok ->
                 players.compare(ok.value(), clock.instant(), first, second);
+        };
+    }
+
+    @Tool(name = "rank_waiver_targets", description = """
+            The best free agents in the league right now, ranked by a
+            waiver score out of 100 built from projection above
+            replacement, depth-chart usage, Sleeper's trending adds and
+            recent news. Each one carries a role tag - stream, solid or
+            breakout - and a suggested FAAB bid range from the budget
+            the user has left, with the reasons behind both. Call this
+            for waivers, "who should I pick up", free agents, and any
+            request for targets at a position.""")
+    public ToolAnswer<WaiverBoard> rankWaiverTargets(
+            @ToolParam(required = false, description = """
+                    One position to rank: QB, RB, WR, TE, FLEX for the
+                    flex positions, or all. Leave it out for all.""")
+            String position,
+            @ToolParam(required = false, description = """
+                    How many candidates to return. Leave it out for
+                    five.""")
+            Integer count) {
+        return switch (WaiverQuery.of(position, count)) {
+            case WaiverQuery.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
+            case WaiverQuery.Parsed.Ok parsed -> board(parsed.query());
+        };
+    }
+
+    private ToolAnswer<WaiverBoard> board(WaiverQuery query) {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> ranked(ok.value(), query);
+        };
+    }
+
+    private ToolAnswer<WaiverBoard> ranked(LeagueWeek leagueWeek, WaiverQuery query) {
+        return switch (waivers.rank(leagueWeek, clock.instant(), query)) {
+            case SourceResult.Unavailable<WaiverBoard> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<WaiverBoard> board -> ToolAnswer.of(board.value());
         };
     }
 

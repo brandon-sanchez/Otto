@@ -34,6 +34,18 @@ public record WeeklyStats(
             String opponent,
             int week,
             Map<String, Double> stats) {
+
+        private static final String CARRIES = "rush_att";
+        private static final String TARGETS = "rec_tgt";
+
+        /**
+         * How much work the offense gave this player: carries plus
+         * targets. It is the usage half of a breakout - production
+         * follows the ball, and the ball follows the role.
+         */
+        public double touches() {
+            return stats.getOrDefault(CARRIES, 0.0) + stats.getOrDefault(TARGETS, 0.0);
+        }
     }
 
     public WeeklyStats withCheckedAt(Instant newCheckedAt) {

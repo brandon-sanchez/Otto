@@ -13,6 +13,7 @@ import otto.OttoProperties;
 import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
+import otto.ask.LeagueWeek;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -24,6 +25,7 @@ import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotBuilder;
 import otto.snapshot.SnapshotDiffer;
 import otto.snapshot.SnapshotStore;
+import otto.waivers.WaiverAlertService;
 import otto.watchlist.WatchlistWatcher;
 
 /**
@@ -43,6 +45,7 @@ public class CheckRunner {
     private final LastCheckStore stateStore;
     private final EventLog eventLog;
     private final AlertService alertService;
+    private final WaiverAlertService waiverAlertService;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -54,7 +57,8 @@ public class CheckRunner {
             SnapshotBuilder snapshotBuilder, SnapshotDiffer snapshotDiffer,
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
-            AlertService alertService, VerificationService verificationService,
+            AlertService alertService, WaiverAlertService waiverAlertService,
+            VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
             OttoProperties properties) {
         this.directoryService = directoryService;
@@ -67,6 +71,7 @@ public class CheckRunner {
         this.stateStore = stateStore;
         this.eventLog = eventLog;
         this.alertService = alertService;
+        this.waiverAlertService = waiverAlertService;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -97,6 +102,12 @@ public class CheckRunner {
             WeekFacts week = weekFactsBuilder.build(stage.league());
             newEvents.addAll(watchlistWatcher.observe(week, now));
             alerts.addAll(alertService.process(inSeason.get(), week));
+            // The Tuesday waiver board rides on this loop and the Event
+            // Log rather than on a scheduler of its own.
+            waiverAlertService
+                    .considerWaiverAlert(
+                            new LeagueWeek(stage.league(), inSeason.get(), week), now)
+                    .ifPresent(alerts::add);
             verificationService.verify(inSeason.get(), week, now);
         }
 

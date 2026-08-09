@@ -62,6 +62,7 @@ public class SnapshotBuilder {
                 names,
                 positions,
                 teams,
-                roster.teamRecord());
+                roster.teamRecord(),
+                roster.waiverBudgetUsed());
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotStore;
@@ -102,6 +103,12 @@ public class AlertActions {
         }
         if (problemKeys.stream().anyMatch(key -> key.startsWith("edge:"))) {
             return AlertCandidate.Source.EDGE.muteClass();
+        }
+        // A waiver board names five players, so muting it can only mean
+        // the class: the user is saying he does not want the Tuesday
+        // board, not that he is done with one of the targets on it.
+        if (problemKeys.stream().anyMatch(key -> key.startsWith("waiver:"))) {
+            return Trigger.WAIVER.muteTarget();
         }
         return playerId.isBlank()
                 ? AlertCandidate.Source.LEGALITY.muteClass()
