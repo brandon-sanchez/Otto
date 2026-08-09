@@ -23,6 +23,12 @@ import otto.storage.OttoJson;
  * carry the right token is rejected before any parsing. Invoked
  * directly by wire-seam tests; the deployed HTTP wrapper delegates to
  * it and maps the result to a status code.
+ *
+ * <p>The token guards the endpoint and the chat gate guards the
+ * identity, so both are needed: anybody who holds the token reaches
+ * this seam, and only the one chat the assistant serves is answered.
+ * The gate is applied once, to the whole update, so no branch of
+ * {@link #handle} can be added without it.
  */
 @Component
 public class TelegramWebhook {
@@ -51,41 +57,82 @@ public class TelegramWebhook {
             log.warn("Webhook call rejected: bad or missing secret token");
             return WebhookResult.FORBIDDEN;
         }
-        parse(updateJson).ifPresent(update -> {
-            JsonNode callback = update.path("callback_query");
-            if (!callback.isMissingNode()) {
-                answerTap(callback);
-                return;
-            }
-            answerAsk(update.path("message"));
-        });
+        parse(updateJson).ifPresent(this::dispatch);
         return WebhookResult.OK;
     }
 
     /**
-     * Free text goes to the Ask loop and its reply back to the chat.
-     * Only the one chat the assistant serves is answered; anything else
-     * that reaches this endpoint is dropped without a model call.
+     * The one chat gate, applied to every update before it is read for
+     * what it asks. The secret token guards the endpoint; this guards
+     * the identity, so anybody who holds the token still acts on no
+     * Alert and asks no question of the assistant. Gating here rather
+     * than in each branch is what keeps a later branch from missing it.
      */
+    private void dispatch(JsonNode update) {
+        JsonNode callback = update.path("callback_query");
+        boolean isTap = !callback.isMissingNode();
+        if (!fromConfiguredChat(update)) {
+            log.warn("Update dropped: it is not from the chat the assistant serves");
+            if (isTap) {
+                acknowledge(callback, "I do not answer this chat.");
+            }
+            return;
+        }
+        if (isTap) {
+            answerTap(callback);
+            return;
+        }
+        answerAsk(update.path("message"));
+    }
+
+    /**
+     * Telegram carries the chat on the message the update belongs to -
+     * the message itself for free text, the message the button hangs on
+     * for a tap. It leaves that message out of a tap on one too old to
+     * quote, and the sender is all it gives then.
+     */
+    private boolean fromConfiguredChat(JsonNode update) {
+        if (chatId == null || chatId.isBlank()) {
+            return false;
+        }
+        JsonNode tap = update.path("callback_query");
+        if (tap.isMissingNode()) {
+            return chatId.equals(update.path("message").path("chat").path("id").asText(""));
+        }
+        String chat = tap.path("message").path("chat").path("id").asText("");
+        return chatId.equals(chat.isEmpty() ? tap.path("from").path("id").asText("") : chat);
+    }
+
+    /** Free text goes to the Ask loop and its reply back to the chat. */
     private void answerAsk(JsonNode message) {
         String text = message.path("text").asText("");
-        if (text.isBlank() || !chatId.equals(message.path("chat").path("id").asText(""))) {
+        if (text.isBlank()) {
             return;
         }
         telegram.sendMessage(ask.answer(text));
     }
 
     private void answerTap(JsonNode callback) {
-        String callbackId = callback.path("id").asText("");
-        if (callbackId.isEmpty()) {
-            return;
-        }
         Matcher tap = TAP.matcher(callback.path("data").asText(""));
         String ack = tap.matches()
                 ? alertActions.apply(tap.group(1), Long.parseLong(tap.group(2)))
                         .orElse("That alert is no longer on my log.")
                 : "I do not recognize that button.";
-        telegram.answerCallbackQuery(callbackId, ack);
+        acknowledge(callback, ack);
+    }
+
+    /**
+     * Every tap that reaches the seam is answered, the ones this chat
+     * does not own included: Telegram offers a callback_query again
+     * until an answerCallbackQuery confirms it, so a silent drop buys a
+     * repeat rather than quiet.
+     */
+    private void acknowledge(JsonNode callback, String text) {
+        String callbackId = callback.path("id").asText("");
+        if (callbackId.isEmpty()) {
+            return;
+        }
+        telegram.answerCallbackQuery(callbackId, text);
     }
 
     /** A body Telegram would never send is logged and dropped, never retried. */

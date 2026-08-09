@@ -189,10 +189,6 @@ public class LocalTelegramLoop {
         if (!confirm(updateId)) {
             return false;
         }
-        if (!fromConfiguredChat(update)) {
-            log.info("Dropped update {}: it is not from the chat the assistant serves", updateId);
-            return true;
-        }
         try {
             if (webhook.handle(webhookSecret, update.toString()) != WebhookResult.OK) {
                 log.warn("Update {} was refused: the configured webhook secret is not"
@@ -225,20 +221,6 @@ public class LocalTelegramLoop {
         }
         lastUpdateId = updateId;
         return true;
-    }
-
-    /**
-     * Only the one chat the assistant serves is read. The seam already
-     * drops free text from anywhere else, but a button tap reaches the
-     * Alert actions without passing that gate, so the driver gates both.
-     */
-    private boolean fromConfiguredChat(JsonNode update) {
-        JsonNode tap = update.path("callback_query");
-        if (tap.isMissingNode()) {
-            return chatId.equals(update.path("message").path("chat").path("id").asText(""));
-        }
-        String chat = tap.path("message").path("chat").path("id").asText("");
-        return chatId.equals(chat.isEmpty() ? tap.path("from").path("id").asText("") : chat);
     }
 
     private Optional<JsonNode> fetchUpdates() {

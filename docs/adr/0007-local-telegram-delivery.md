@@ -65,14 +65,23 @@ put the same question to the model again and text the user twice. A
 failure while answering is caught for the same reason: one bad update
 is dropped rather than offered again on every poll for ever.
 
-## The driver gates the chat, not only the seam
+## The seam gates the chat, and the driver does not repeat it
 
 ADR-0002 recorded that only the configured chat reaches the Ask loop. A
-button tap does not pass that gate: it carries a callback id and an
-alert id, and the seam acts on the alert. Nothing reaches the Ask loop,
+button tap did not pass that gate: it carries a callback id and an
+alert id, and the seam acts on the alert. Nothing reached the Ask loop,
 but a stray tap could still record a user action.
 
-So the driver applies the gate to every update it takes, taps included,
-and reads `callback_query.message.chat` with the sender as the fallback
-Telegram uses for old messages. A dropped update is still confirmed -
-otherwise the poll would hand it back for ever.
+The driver first carried a gate of its own to cover that, because the
+seam gated only free text. Issue #29 moved the gate into
+`TelegramWebhook.handle`, where one check covers every branch, so the
+driver's copy went: two copies of one rule in two classes is the drift
+the gate exists to prevent. The driver now hands every update it takes
+to the seam and lets the seam decide.
+
+The gate reads `callback_query.message.chat` for a tap, with the sender
+as the fallback Telegram uses for a message too old to quote, and
+`message.chat` for free text. A dropped update is still confirmed -
+otherwise the poll would hand it back for ever - and a dropped tap is
+still answered, because Telegram offers a `callback_query` again until
+an `answerCallbackQuery` confirms it.
