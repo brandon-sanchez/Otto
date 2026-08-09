@@ -1,47 +1,98 @@
 # Otto
 
-A personal fantasy football assistant for one Sleeper league. Deterministic Java computes the facts; an LLM turns them into short Telegram messages.
+A fantasy football assistant for one Sleeper league. It watches your team, texts you when something needs doing, and answers questions in plain language.
 
-## Stack
+Sleeper tells you a starter is out when you remember to open the app. Otto tells you before kickoff.
 
-- Java 25, Spring Boot 4.1.0, Spring AI 2.0.0, Maven.
-- No database yet: local JSON documents under `./data` stand in for the object and key-value stores that AWS supplies later.
+## What it does
 
-## Run the tests
+- **Texts you first.** A starter ruled out, an illegal lineup before lock, a bench player projecting better than the one you started.
+- **Plans your waivers.** Every Tuesday evening: the top five free agents, what kind of pickup each one is, and what to bid out of the FAAB you have left.
+- **Watches the league.** Trades, notable drops, and the moment another manager claims a player off your watchlist.
+- **Answers questions.** "Who do I start at flex?" "Is Jacobs worth $30?" "What's my playoff seed?"
+
+Deterministic Java computes every number. The model only writes the sentence.
+
+## What it won't do
+
+- **Change your lineup.** Sleeper's API is read-only, so Otto tells you and you tap. It checks a later snapshot to confirm the problem is gone.
+- **Guess.** If a source is down it says so, rather than filling the gap with a zero.
+- **Nag.** One alert per problem, one repeat 30 minutes before that player's game locks, nothing after. Mute anything you would rather not hear.
+- **Talk during your draft.** Roster alerts stay off until the league is in season.
+
+## Set it up
+
+You need a Sleeper league, a Telegram bot from BotFather, and an OpenAI key.
+
+**1.** Fill in the four values in your own env file.
 
 ```sh
-mvn test
+cp .env.example .env
 ```
 
-The tests boot the real Spring context and invoke the two entry points - the Check and the Telegram webhook - directly. Stub HTTP servers play Sleeper, Telegram, and the LLM with recorded fixtures, including canned tool-call sequences for the Ask loop. No test touches the network or spends tokens.
-
-## Run Otto locally
-
-Copy `.env.example` to `.env` and fill it in.
-
-Locally, Otto reads your messages with `getUpdates`, and Telegram refuses that call for a bot that has a webhook registered. So clear the webhook before anything else, or both commands below answer 409:
+**2.** Clear any webhook on the bot. Telegram allows one reader at a time, and locally Otto is it.
 
 ```sh
 curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook"
 ```
 
-To read the chat id, message the bot once, then ask Telegram who wrote:
+**3.** Message your bot once, then put the chat id it reports into `.env`.
 
 ```sh
 curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq '.result[].message.chat.id'
 ```
 
-Nothing loads `.env` by itself, so put it into the environment and then start with the `local` profile:
+**4.** Run it.
 
 ```sh
 set -a; source .env; set +a
 SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
 ```
 
-The `local` profile runs one Check every 60 seconds and reads your Telegram messages. In a pre-draft league the cadence gate inside the Check drops this to one full Check per day, and no roster Alerts fire.
+Now text the bot. It answers in the same chat, and the buttons under an alert work from your phone.
 
-## Ask the bot
+## When it texts you
 
-Text the bot in plain language and the Ask loop answers. A tool-calling agent routes the question to deterministic tools - the roster, the league settings, the optimal lineup, and what-if swaps - and words what they computed; it never computes a number itself. Replies run 2 to 5 lines; reply "why" or "more" for the full reasoning. The loop answers only the configured chat, and it reads the Snapshot the last Check stored.
+| Something happens | Otto texts |
+| --- | --- |
+| Your starter is ruled out | Yes, with the best legal replacement |
+| A starting slot is empty, or on a bye | Yes, before that slot locks |
+| A bench player projects a point or more better | Yes |
+| It is Tuesday evening | Yes, the waiver board |
+| Another manager claims a player you are watching | Yes, always |
+| Anyone in the league trades | Yes |
+| A top-24 running back is dropped | Yes |
+| The same problem, an hour later | No, once on detect and once before lock |
+| You already tapped Done | No |
+| Anything you muted | No |
 
-Deployed, Telegram posts each message to a webhook. Locally there is no address for it to post to, so the `local` profile asks Telegram for its own messages instead - a `getUpdates` long poll that hands each one to the same code the webhook calls. Buttons work the same way, so Done, Ignore, and Mute answer from the phone. Otto registers nothing with Telegram, which is why the webhook is cleared by hand above.
+## Ask it anything
+
+> **you:** who do I start at flex
+>
+> **otto:** Start Kamara over Pollard, +2.4 projected. Pollard draws the toughest run defense left on your bench.
+
+> **you:** best wide receivers on waivers
+>
+> **otto:** Nacua, 100. Breakout, bid $40-60. Kupp is on IR and Nacua saw 15 targets.
+
+It also answers: your roster and how each player is doing, two players compared, a hypothetical lineup change, standings and your playoff seed, another manager's roster and where it is thin, the latest news on anyone, and your watchlist, settings and mutes.
+
+Replies run a couple of lines. Reply "why" or "more" for the reasoning behind one.
+
+## Under the hood
+
+Java 25, Spring Boot, Spring AI, Maven. No database yet: JSON files under `./data` stand in for what AWS supplies later.
+
+Otto runs one Check a minute. It polls Sleeper, builds a snapshot, diffs it against the last one, finds the problems, and works out what to do about them. Only the result reaches the model, and only to be turned into English.
+
+```sh
+mvn test
+```
+
+No test touches the network or spends a token. Stub servers play Sleeper, Telegram and the model from recorded fixtures.
+
+## Not built yet
+
+- Trade evaluation ([#18](https://github.com/brandon-sanchez/Otto/issues/18))
+- Running anywhere but your own machine ([#19](https://github.com/brandon-sanchez/Otto/issues/19))
