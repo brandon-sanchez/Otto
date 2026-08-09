@@ -1,0 +1,21 @@
+[
+  {
+    "type": "free_agent",
+    "transaction_id": "1789000000000000003",
+    "status": "complete",
+    "status_updated": 1789491661000,
+    "created": 1789491661000,
+    "roster_ids": [
+      1
+    ],
+    "consenter_ids": [
+      1
+    ],
+    "adds": null,
+    "drops": {
+      "6813": 1
+    },
+    "draft_picks": [],
+    "waiver_budget": []
+  }
+]

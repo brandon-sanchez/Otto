@@ -22,8 +22,13 @@ import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.lineup.GameWeek;
+import otto.settings.Settings;
+import otto.settings.SettingsStore;
+import otto.settings.Trigger;
+import otto.snapshot.LeagueStatus;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
+import otto.snapshot.SnapshotDiffer;
 import otto.telegram.TelegramClient;
 
 /**
@@ -66,29 +71,33 @@ public class AlertService {
     private final LineupLegalityDetector legalityDetector;
     private final BenchEdgeDetector edgeDetector;
     private final LeagueActivityDetector activityDetector;
+    private final WatchlistDetector watchlistDetector;
     private final AlertPhraser phraser;
     private final TelegramClient telegram;
     private final EventLog eventLog;
     private final IgnoreLedger ignoreLedger;
     private final MuteStore muteStore;
+    private final SettingsStore settings;
     private final AlertIdSequence idSequence;
     private final Clock clock;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
-            LeagueActivityDetector activityDetector,
+            LeagueActivityDetector activityDetector, WatchlistDetector watchlistDetector,
             AlertPhraser phraser, TelegramClient telegram, EventLog eventLog,
-            IgnoreLedger ignoreLedger, MuteStore muteStore, AlertIdSequence idSequence,
-            Clock clock) {
+            IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
+            AlertIdSequence idSequence, Clock clock) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
         this.activityDetector = activityDetector;
+        this.watchlistDetector = watchlistDetector;
         this.phraser = phraser;
         this.telegram = telegram;
         this.eventLog = eventLog;
         this.ignoreLedger = ignoreLedger;
         this.muteStore = muteStore;
+        this.settings = settings;
         this.idSequence = idSequence;
         this.clock = clock;
     }
@@ -109,13 +118,16 @@ public class AlertService {
                 .flatMap(event -> transitionDetector.detect(event).stream())
                 .toList());
         candidates.addAll(activityDetector.detect(diffEvents, week));
+        candidates.addAll(watchlistDetector.detect(diffEvents));
         userRoster.ifPresent(roster -> {
             candidates.addAll(legalityDetector.detect(roster, week));
             candidates.addAll(edgeDetector.detect(roster, week, now));
         });
 
+        Settings current = settings.current();
         List<AlertCandidate> sendable = candidates.stream()
                 .filter(candidate -> candidate.recommendation().confidence() != Confidence.LOW)
+                .filter(candidate -> current.enabled(candidate.source().trigger()))
                 .filter(candidate -> !lockSuppressed(candidate, week, now))
                 .filter(candidate -> !muted(candidate))
                 .toList();
@@ -127,35 +139,67 @@ public class AlertService {
     }
 
     /**
-     * The Snapshot Diff events still worth a message. An event carries
-     * the time the thing it records happened, so a transaction a
-     * recovered feed hands over late is already outside the window.
+     * The diff events still worth a message. An event carries the time
+     * the thing it records happened, so a transaction a recovered feed
+     * hands over late is already outside the window. Watchlist moves
+     * ride along: they are not Snapshot Diffs, but they are read back
+     * the same way and on the same window.
      */
     private List<Event> recentDiffEvents(Instant now) {
         return eventLog.all().stream()
-                .filter(event -> event.type() == EventType.SNAPSHOT_DIFF)
+                .filter(event -> event.type() == EventType.SNAPSHOT_DIFF
+                        || event.type() == EventType.WATCHLIST_MOVE)
                 .filter(event -> Duration.between(event.at(), now).compareTo(RETRY_WINDOW) <= 0)
+                .filter(AlertService::recordedInSeason)
                 .toList();
     }
 
     /**
+     * True when the event is known to have been seen in season. A Check
+     * builds a Snapshot and diffs it whatever the league is doing, so
+     * the Event Log holds the pre-season too - and roster moves made
+     * before a season starts are managers building teams, not news.
+     * Reading those back inside the retry window would Alert on all of
+     * them at once on the first Check after the league goes in season.
+     *
+     * A Snapshot Diff event must therefore carry the stamp and carry
+     * IN_SEASON. An unstamped one is refused rather than trusted: the
+     * stamp is newer than the Event Log, so every event written before
+     * this rule existed has no stamp, and trusting those would let an
+     * old log Alert on its whole history. Missing evidence is not
+     * evidence of safety. The cost is bounded and one-off - at most the
+     * retry window's worth of events from before the upgrade.
+     *
+     * The one exception is named rather than implied: a Watchlist move
+     * is only ever produced inside the in-season branch of a Check, so
+     * it cannot have been seen at any other time.
+     */
+    private static boolean recordedInSeason(Event event) {
+        if (event.type() == EventType.WATCHLIST_MOVE) {
+            return true;
+        }
+        return LeagueStatus.IN_SEASON.name()
+                .equals(event.facts().get(SnapshotDiffer.LEAGUE_STATUS));
+    }
+
+    /**
      * A Mute silences its notifications until unmuted: a class of
-     * Alerts as a class, a player's news as that player's transitions.
+     * Alerts as a class, a player's news as that player's own messages.
      * Recommendations keep computing; only the message is withheld.
+     *
+     * Two class names reach the same candidate: the one the button
+     * under an Alert writes, and the trigger name the chat writes.
+     * Either silences it, so what the user muted is what goes quiet
+     * however he said it.
      */
     private boolean muted(AlertCandidate candidate) {
-        return switch (candidate.source()) {
-            case TRANSITION -> candidate.playerId() != null
-                    && muteStore.muted("player:" + candidate.playerId());
-            case LEGALITY -> muteStore.muted("class:legality");
-            case EDGE -> muteStore.muted("class:edge");
-            case TRADE -> muteStore.muted("class:trade");
-            // A drop is news about one player as much as it is a class of
-            // its own, so either Mute silences it.
-            case DROP -> muteStore.muted("class:drop")
-                    || (candidate.playerId() != null
-                            && muteStore.muted("player:" + candidate.playerId()));
-        };
+        AlertCandidate.Source source = candidate.source();
+        if (muteStore.muted(source.muteClass())
+                || muteStore.muted(source.trigger().muteTarget())) {
+            return true;
+        }
+        return source.aboutOnePlayersNews() && candidate.playerId() != null
+                && muteStore.muted(MuteStore.playerTarget(candidate.playerId()));
     }
 
     /**
@@ -174,7 +218,9 @@ public class AlertService {
         return switch (candidate.source()) {
             case TRANSITION -> games.underway(candidate.team(), now);
             case LEGALITY, EDGE -> games.locked(candidate.team(), now);
-            case TRADE, DROP -> false;
+            // Who may hold a player at all is not a lineup slot, and no
+            // kickoff settles it.
+            case TRADE, DROP, WATCHLIST -> false;
         };
     }
 
@@ -255,8 +301,10 @@ public class AlertService {
                     .toList();
             PlayerHealth health = roster.playerHealth().get(playerId);
             boolean impaired = health != null && health.isWorseThan(PlayerHealth.PROBABLE)
+                    && settings.enabled(Trigger.STATUS_TRANSITION)
+                    && !muteStore.muted(Trigger.STATUS_TRANSITION.muteTarget())
                     && !ignoreLedger.covers(playerId, health)
-                    && !muteStore.muted("player:" + playerId);
+                    && !muteStore.muted(MuteStore.playerTarget(playerId));
             if (problems.isEmpty() && !impaired) {
                 continue;
             }

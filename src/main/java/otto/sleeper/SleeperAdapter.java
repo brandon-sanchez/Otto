@@ -146,6 +146,13 @@ public class SleeperAdapter {
             Instant published, String url) {
     }
 
+    /**
+     * One entry from Sleeper's trending list: how many managers across
+     * every Sleeper league added this player inside the lookback window.
+     */
+    public record TrendingPlayer(String playerId, int adds) {
+    }
+
     public SourceResult<League> league() {
         return fetch(leaguePath).flatMap(body -> {
             if (!body.hasNonNull("league_id") || !body.hasNonNull("status")) {
@@ -344,6 +351,35 @@ public class SleeperAdapter {
                         metadata.path("url").asText(null)));
             }
             return ok(items);
+        });
+    }
+
+    /**
+     * The most-added players across every Sleeper league, most added
+     * first. It is a national number, not a league one: it says the rest
+     * of the fantasy world has noticed somebody.
+     *
+     * @param lookbackHours how far back the add counts reach
+     * @param limit how many of the most-added players to ask for
+     */
+    public SourceResult<List<TrendingPlayer>> trendingAdds(int lookbackHours, int limit) {
+        String path = "/v1/players/nfl/trending/add?lookback_hours=%d&limit=%d"
+                .formatted(lookbackHours, limit);
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "trending is not an array");
+            }
+            List<TrendingPlayer> trending = new ArrayList<>();
+            for (JsonNode entry : body) {
+                JsonNode playerId = entry.get("player_id");
+                JsonNode count = entry.get("count");
+                if (playerId == null || !playerId.isTextual() || playerId.asText().isBlank()
+                        || count == null || !count.isIntegralNumber()) {
+                    return schemaDrift(path, "player_id or count missing or malformed");
+                }
+                trending.add(new TrendingPlayer(playerId.asText(), count.asInt()));
+            }
+            return ok(trending);
         });
     }
 

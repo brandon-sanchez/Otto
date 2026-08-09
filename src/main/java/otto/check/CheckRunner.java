@@ -24,6 +24,7 @@ import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotBuilder;
 import otto.snapshot.SnapshotDiffer;
 import otto.snapshot.SnapshotStore;
+import otto.watchlist.WatchlistWatcher;
 
 /**
  * One Check: the deterministic pipeline entry point. Scheduled in
@@ -43,6 +44,7 @@ public class CheckRunner {
     private final EventLog eventLog;
     private final AlertService alertService;
     private final VerificationService verificationService;
+    private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
     private final Clock clock;
     private final Duration preDraftCheckInterval;
@@ -53,7 +55,8 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, VerificationService verificationService,
-            SelfReportService selfReport, Clock clock, OttoProperties properties) {
+            WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
+            OttoProperties properties) {
         this.directoryService = directoryService;
         this.directoryStore = directoryStore;
         this.sleeper = sleeper;
@@ -65,6 +68,7 @@ public class CheckRunner {
         this.eventLog = eventLog;
         this.alertService = alertService;
         this.verificationService = verificationService;
+        this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
         this.clock = clock;
         this.preDraftCheckInterval = properties.preDraftCheckInterval();
@@ -83,12 +87,15 @@ public class CheckRunner {
         }
 
         SnapshotStage stage = snapshotStage(now);
-        // Roster Alerts fire only in season: pre-draft and drafting stay quiet.
+        // Roster Alerts fire only in season: pre-draft and drafting stay
+        // quiet, and a draft would otherwise Snipe on every pick.
         List<Event> alerts = new ArrayList<>();
+        List<Event> newEvents = new ArrayList<>(stage.newDiffEvents());
         Optional<Snapshot> inSeason = stage.snapshot()
                 .filter(snapshot -> snapshot.leagueStatus() == LeagueStatus.IN_SEASON);
         if (inSeason.isPresent()) {
             WeekFacts week = weekFactsBuilder.build(stage.league());
+            newEvents.addAll(watchlistWatcher.observe(week, now));
             alerts.addAll(alertService.process(inSeason.get(), week));
             verificationService.verify(inSeason.get(), week, now);
         }
@@ -97,7 +104,7 @@ public class CheckRunner {
                 .or(() -> state.map(LastCheck::leagueStatus))
                 .orElse(LeagueStatus.UNKNOWN);
         stateStore.write(new LastCheck(now, leagueStatus));
-        return new CheckResult(false, directory, stage.newDiffEvents(), alerts);
+        return new CheckResult(false, directory, List.copyOf(newEvents), alerts);
     }
 
     private boolean withinPreDraftCadence(Optional<LastCheck> state, Instant now) {

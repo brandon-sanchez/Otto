@@ -9,11 +9,13 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.check.WeekFacts;
+import otto.settings.SettingsService;
+import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
+import otto.watchlist.WatchlistService;
 
 /**
  * The tools the Lane A agent loop routes questions to. Each one runs
@@ -30,17 +32,22 @@ public class AskTools {
     private final LineupPlanner planner;
     private final PlayerAnalysis players;
     private final LeagueAnalysis league;
+    private final WatchlistService watchlist;
+    private final SettingsService settings;
+    private final SettingsStore settingsStore;
     private final Clock clock;
-    private final double edgeThreshold;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
-            LeagueAnalysis league, Clock clock, OttoProperties properties) {
+            LeagueAnalysis league, WatchlistService watchlist, SettingsService settings,
+            SettingsStore settingsStore, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
         this.league = league;
+        this.watchlist = watchlist;
+        this.settings = settings;
+        this.settingsStore = settingsStore;
         this.clock = clock;
-        this.edgeThreshold = properties.edgeThreshold();
     }
 
     /** The league's rules, as the projection and lineup math applies them. */
@@ -74,7 +81,7 @@ public class AskTools {
                     ok.value().status(),
                     ok.value().rosterPositions(),
                     ok.value().scoringSettings(),
-                    String.format(Locale.ROOT, "%.1f", edgeThreshold)));
+                    String.format(Locale.ROOT, "%.1f", settingsStore.edgeThreshold())));
         };
     }
 
@@ -183,6 +190,50 @@ public class AskTools {
                 yield league.teamRoster(ok.value(), matches.getFirst(), clock.instant());
             }
         };
+    }
+
+    @Tool(name = "manage_watchlist", description = """
+            The user's watchlist: the players he wants watched wherever
+            they are, rostered or not. Watched players alert him when
+            somebody drops them, when another manager claims them, when
+            Sleeper's add counts spike, and when their projection moves.
+            Call this to add a player, to remove one, or to list what is
+            watched. Sleeper has no watchlist of its own, so this list is
+            the only one there is.""")
+    public ToolAnswer<WatchlistService.View> manageWatchlist(
+            @ToolParam(description = "add, remove or list")
+            String action,
+            @ToolParam(required = false, description = """
+                    The player, by name or Sleeper player id. Needed to
+                    add or remove; leave it out to list.""")
+            String player) {
+        return watchlist.apply(action, player, clock.instant());
+    }
+
+    @Tool(name = "manage_settings", description = """
+            The assistant's own settings and the mute list: which alert
+            triggers are on, how many projected points make an edge worth
+            a message, where the Notable Player cutoffs sit, and what is
+            currently silenced. Call this to show them, to change one, or
+            to mute or unmute a class of alerts or one player's news.
+            There is no settings screen, so this tool is the only way.""")
+    public ToolAnswer<SettingsService.View> manageSettings(
+            @ToolParam(description = "show, set, mute or unmute")
+            String action,
+            @ToolParam(required = false, description = """
+                    What to act on. To set: a setting name -
+                    status_transition, lineup_legality, bench_edge,
+                    watchlist, waiver, league_activity, edge_threshold,
+                    notable_qb, notable_rb, notable_wr or notable_te. To
+                    mute or unmute: one of those trigger names, or a
+                    player by name or Sleeper player id.""")
+            String name,
+            @ToolParam(required = false, description = """
+                    The new value when setting: on or off for a trigger, a
+                    number of points for the edge threshold, a rank for a
+                    Notable Player cutoff.""")
+            String value) {
+        return settings.apply(action, name, value, clock.instant());
     }
 
     private static String noManager(LeagueWeek league, String reference,

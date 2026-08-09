@@ -87,20 +87,25 @@ public class AlertActions {
         // A trade names several players, so muting it can only mean the
         // class: the user is saying he does not want trade news.
         if (problemKeys.stream().anyMatch(key -> key.startsWith("trade:"))) {
-            return "class:trade";
+            return AlertCandidate.Source.TRADE.muteClass();
         }
+        // News about one player - a status change, a drop, a Watchlist
+        // hit, a last call before lock - mutes that player.
         boolean news = problemKeys.stream()
-                .anyMatch(key -> key.startsWith("snapshot-diff:") || key.startsWith("final:"));
+                .anyMatch(key -> key.startsWith("snapshot-diff:") || key.startsWith("final:")
+                        || key.startsWith("watchlist:"));
         if (news && !playerId.isBlank()) {
-            return "player:" + playerId;
+            return MuteStore.playerTarget(playerId);
         }
         if (problemKeys.stream().anyMatch(key -> key.startsWith("legality:"))) {
-            return "class:legality";
+            return AlertCandidate.Source.LEGALITY.muteClass();
         }
         if (problemKeys.stream().anyMatch(key -> key.startsWith("edge:"))) {
-            return "class:edge";
+            return AlertCandidate.Source.EDGE.muteClass();
         }
-        return playerId.isBlank() ? "class:legality" : "player:" + playerId;
+        return playerId.isBlank()
+                ? AlertCandidate.Source.LEGALITY.muteClass()
+                : MuteStore.playerTarget(playerId);
     }
 
     private List<Event> alertEvents(long alertId) {

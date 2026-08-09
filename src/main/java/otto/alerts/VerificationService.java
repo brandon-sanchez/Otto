@@ -163,7 +163,8 @@ public class VerificationService {
      */
     private boolean problemGone(String problemKey, Event alert, RosterSnapshot roster,
             WeekFacts week, Set<String> openProblemKeys, Instant now) {
-        if (locked(alert.facts().get("playerId"), roster, week, now)
+        if (!verifiable(problemKey)
+                || locked(alert.facts().get("playerId"), roster, week, now)
                 || locked(alert.facts().get("benchId"), roster, week, now)) {
             return false;
         }
@@ -187,6 +188,19 @@ public class VerificationService {
         return false;
     }
 
+    /**
+     * True when a detector owns this problem, so "gone" and "still
+     * open" both mean something. News about a Watchlist player - a
+     * drop, a Snipe, a trend, a projection move - is not a problem with
+     * the user's team: there is nothing to fix, so there is nothing to
+     * confirm and nothing to nudge about either.
+     */
+    private static boolean verifiable(String problemKey) {
+        return problemKey.startsWith("legality:")
+                || problemKey.startsWith("edge:")
+                || problemKey.startsWith("snapshot-diff:status:");
+    }
+
     /** A muted problem's notifications include its confirmation. */
     private boolean muted(String problemKey, String playerId) {
         if (problemKey.startsWith("legality:")) {
@@ -196,7 +210,7 @@ public class VerificationService {
             return muteStore.muted("class:edge");
         }
         return playerId != null && !playerId.isBlank()
-                && muteStore.muted("player:" + playerId);
+                && muteStore.muted(MuteStore.playerTarget(playerId));
     }
 
     private boolean declined(Map<String, String> facts) {
@@ -264,6 +278,7 @@ public class VerificationService {
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> alertId.equals(event.facts().get("alertId")))
                 .filter(event -> !event.key().startsWith(FINAL_WARNING_PREFIX))
+                .filter(event -> verifiable(event.key().substring(ALERT_PREFIX.length())))
                 .anyMatch(alert -> !problemGone(
                         alert.key().substring(ALERT_PREFIX.length()),
                         alert, roster, week, openProblemKeys, now)

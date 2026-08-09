@@ -20,6 +20,10 @@ public final class SleeperStubs {
     public static final String SCORES_PATH = "/scores/nfl/regular/2026/2";
     public static final String TRANSACTIONS_PATH = LEAGUE_PATH + "/transactions/2";
 
+    /** The most-added players, as the Watchlist watcher asks for them. */
+    public static final String TRENDING_PATH =
+            "/v1/players/nfl/trending/add?lookback_hours=24&limit=25";
+
     /** A Check reads the week before as well, so a late trade stays in view. */
     public static final String TRANSACTIONS_WEEK_1_PATH = LEAGUE_PATH + "/transactions/1";
 
@@ -88,5 +92,15 @@ public final class SleeperStubs {
         stubNotModified(server, SCORES_PATH, "scores-v1");
         stubNotModified(server, TRANSACTIONS_PATH, "transactions-v1");
         stubNotModified(server, TRANSACTIONS_WEEK_1_PATH, "transactions-w1");
+        stubNotModified(server, TRENDING_PATH, "trending-v1");
+    }
+
+    /**
+     * Sleeper's most-added list. Only a non-empty Watchlist makes Otto
+     * ask for it, so this stub is opt-in rather than part of a healthy
+     * league.
+     */
+    public static void stubTrending(WireMockServer server, String fixture, String etag) {
+        stubJson(server, TRENDING_PATH, fixture, etag);
     }
 }
