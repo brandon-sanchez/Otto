@@ -15,6 +15,7 @@ import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
+import otto.trade.TradeEvaluator;
 import otto.waivers.WaiverBoard;
 import otto.waivers.WaiverQuery;
 import otto.waivers.WaiverScorer;
@@ -25,7 +26,7 @@ import otto.watchlist.WatchlistService;
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
  *
- * This is eleven of the twelve tools the spec names, plus the Settings
+ * This is all twelve of the tools the spec names, plus the Settings
  * tool the chat needs to change them. Keep them coarse:
  * one tool per question a user would ask, not one per field.
  */
@@ -37,19 +38,22 @@ public class AskTools {
     private final PlayerAnalysis players;
     private final LeagueAnalysis league;
     private final WaiverScorer waivers;
+    private final TradeEvaluator trades;
     private final WatchlistService watchlist;
     private final SettingsService settings;
     private final SettingsStore settingsStore;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
-            LeagueAnalysis league, WaiverScorer waivers, WatchlistService watchlist,
-            SettingsService settings, SettingsStore settingsStore, Clock clock) {
+            LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
+            WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
+            Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
         this.league = league;
         this.waivers = waivers;
+        this.trades = trades;
         this.watchlist = watchlist;
         this.settings = settings;
         this.settingsStore = settingsStore;
@@ -232,6 +236,37 @@ public class AskTools {
                     yield ToolAnswer.unavailable(noManager(ok.value(), manager, matches));
                 }
                 yield league.teamRoster(ok.value(), matches.getFirst(), clock.instant());
+            }
+        };
+    }
+
+    @Tool(name = "evaluate_trade", description = """
+            Prices a proposed trade with one league mate: both sides in
+            league scoring over the rest of the season, read from both
+            teams' points of view, with a verdict, a confidence level,
+            and a leverage note saying what the partner is short of.
+            Draft picks and FAAB count zero and the answer says so. Call
+            this for "should I trade X for Y", "is this trade fair" and
+            any trade offer the user wants judged.""")
+    public ToolAnswer<TradeEvaluator.TradeEvaluation> evaluateTrade(
+            @ToolParam(description = "The trade partner, by the name they use in the league")
+            String manager,
+            @ToolParam(description = """
+                    What the user would receive: player names, draft
+                    picks or FAAB, separated by commas.""")
+            String gets,
+            @ToolParam(description = """
+                    What the user would send: player names, draft picks
+                    or FAAB, separated by commas.""")
+            String gives) {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> {
+                List<RosterSnapshot> matches = ok.value().managersMatching(manager);
+                if (matches.size() != 1) {
+                    yield ToolAnswer.unavailable(noManager(ok.value(), manager, matches));
+                }
+                yield trades.evaluate(ok.value(), matches.getFirst(), gets, gives);
             }
         };
     }

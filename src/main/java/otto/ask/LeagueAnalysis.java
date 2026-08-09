@@ -308,13 +308,51 @@ public class LeagueAnalysis {
     /** A position with this many spare startable players is a surplus. */
     private static final int SURPLUS_FOR_A_STRENGTH = 2;
 
-    /** What replacement level says about one team, read position by position. */
-    private record Depth(List<PositionDepth> positions, List<String> strengths,
+    /**
+     * What replacement level says about one team, read position by
+     * position. The trade tools read the same shape for both sides of a
+     * deal, so it is public: ADR-0004 fixed that a team is judged the
+     * same way whichever team it is, and a second yardstick for a trade
+     * partner would break that.
+     */
+    public record Depth(List<PositionDepth> positions, List<String> strengths,
             List<String> gaps) {
 
-        static Depth unpriced() {
+        public static Depth unpriced() {
             return new Depth(List.of(), List.of(), List.of());
         }
+
+        /** True when this position holds fewer startable players than slots only it can fill. */
+        public boolean shortAt(String position) {
+            return positions.stream()
+                    .filter(depth -> depth.position().equals(position))
+                    .anyMatch(depth -> depth.aboveReplacement() < depth.startingSlots()
+                            || depth.benchCover() == 0);
+        }
+
+        /** True when this position holds enough spare startable players to trade one. */
+        public boolean deepAt(String position) {
+            return positions.stream()
+                    .filter(depth -> depth.position().equals(position))
+                    .anyMatch(depth -> depth.aboveReplacement() - depth.startingSlots()
+                            >= SURPLUS_FOR_A_STRENGTH);
+        }
+
+        public Optional<PositionDepth> at(String position) {
+            return positions.stream()
+                    .filter(depth -> depth.position().equals(position))
+                    .findFirst();
+        }
+    }
+
+    /**
+     * The same replacement-level read {@code get_team_roster} gives,
+     * for any roster in the league. The trade tools call it for both
+     * sides of a deal.
+     */
+    public Depth depthOf(LeagueWeek league, RosterSnapshot roster) {
+        UserWeek team = new UserWeek(league.league(), roster, league.week());
+        return ranking(league).map(ranked -> depth(team, ranked)).orElseGet(Depth::unpriced);
     }
 
     /**
