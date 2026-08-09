@@ -37,7 +37,7 @@ public class SnapshotBuilder {
 
     private RosterSnapshot toRosterSnapshot(SleeperAdapter.Roster roster,
             Map<String, String> namesByUserId, Optional<PlayerDirectory> directory) {
-        String ownerName = namesByUserId.get(roster.ownerId());
+        String ownerName = roster.ownerId().map(namesByUserId::get).orElse(null);
         Map<String, PlayerHealth> health = new HashMap<>();
         Map<String, String> names = new HashMap<>();
         Map<String, String> positions = new HashMap<>();
@@ -53,7 +53,7 @@ public class SnapshotBuilder {
                 }));
         return new RosterSnapshot(
                 roster.rosterId(),
-                roster.ownerId(),
+                roster.ownerId().orElse(null),
                 ownerName,
                 username.equals(ownerName),
                 roster.starters(),

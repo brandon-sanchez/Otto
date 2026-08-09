@@ -53,6 +53,55 @@ class SnapshotScenarioTest extends WireSeamTest {
         assertThat(mine.playerTeams().get("4034")).isEqualTo("SF");
     }
 
+    /**
+     * Before a draft most teams have nobody in them. Sleeper answers
+     * with a null owner for each one, which is a real state and not a
+     * broken answer: dropping the whole roster list over it left Otto
+     * blind to the league it was watching.
+     */
+    @Test
+    void aCheckKeepsTheTeamsNobodyHasClaimedYet() {
+        SleeperStubs.preDraftWithUnclaimedTeams(sleeper);
+
+        checkRunner.runCheck();
+
+        Snapshot current = snapshotStore.current().orElseThrow();
+        assertThat(current.leagueStatus()).isEqualTo(LeagueStatus.PRE_DRAFT);
+        assertThat(current.rosters()).hasSize(4);
+        assertThat(current.rosters()).extracting(RosterSnapshot::rosterId)
+                .containsExactly(1, 2, 3, 4);
+
+        RosterSnapshot unclaimed = current.rosters().stream()
+                .filter(roster -> roster.rosterId() == 3)
+                .findFirst().orElseThrow();
+        assertThat(unclaimed.ownerId()).isNull();
+        assertThat(unclaimed.ownerName()).isNull();
+        assertThat(unclaimed.userRoster()).isFalse();
+        assertThat(unclaimed.players()).isEmpty();
+
+        RosterSnapshot mine = current.rosters().stream()
+                .filter(RosterSnapshot::userRoster)
+                .findFirst().orElseThrow();
+        assertThat(mine.ownerName()).isEqualTo("SenorMustache");
+
+        assertThat(eventLog.all()).noneMatch(event ->
+                event.type() == EventType.SOURCE_UNAVAILABLE);
+    }
+
+    /**
+     * The league status only reaches the stored state through the
+     * Snapshot, and the pre-draft cadence gate reads it from there. A
+     * rosters read that fails leaves the status unknown, so Otto keeps
+     * polling every minute instead of once a day.
+     */
+    @Test
+    void aPreDraftCheckSlowsTheNextOneDownToTheDailyCadence() {
+        SleeperStubs.preDraftWithUnclaimedTeams(sleeper);
+
+        checkRunner.runCheck();
+        assertThat(checkRunner.runCheck().skipped()).isTrue();
+    }
+
     @Test
     void aSecondCheckPollsWithConditionalGetsAndKeepsThePreviousSnapshot() {
         SleeperStubs.healthyInSeason(sleeper);
