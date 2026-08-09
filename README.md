@@ -17,13 +17,17 @@ The tests boot the real Spring context and invoke the two entry points - the Che
 
 ## Run a Check loop locally
 
-Set the secrets, then start with the `local` profile:
+Copy `.env.example` to `.env` and fill it in. Nothing loads that file by itself, so put it into the environment and then start with the `local` profile:
 
 ```sh
-export TELEGRAM_BOT_TOKEN=...   # from BotFather
-export TELEGRAM_CHAT_ID=...     # your chat with the bot
-export OPENAI_API_KEY=...
+set -a; source .env; set +a
 SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+```
+
+To read the chat id, message the bot once, then ask Telegram who wrote:
+
+```sh
+curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq '.result[].message.chat.id'
 ```
 
 The loop runs one Check every 60 seconds. In a pre-draft league the cadence gate inside the Check drops this to one full Check per day, and no roster Alerts fire.
