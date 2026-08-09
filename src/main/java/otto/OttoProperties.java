@@ -4,6 +4,14 @@ import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import otto.lineup.PositionCutoffs;
+
+/**
+ * @param notableCutoffs the ranks that make a dropped player league
+ *        news, part of the Settings document the spec names
+ * @param replacementCutoffs the ranks that price replacement level for
+ *        a starting slot
+ */
 @ConfigurationProperties(prefix = "otto")
 public record OttoProperties(
         String leagueId,
@@ -15,7 +23,9 @@ public record OttoProperties(
         Duration directoryCheckInterval,
         Duration preDraftCheckInterval,
         Duration sleeperCadence,
-        double edgeThreshold) {
+        double edgeThreshold,
+        PositionCutoffs notableCutoffs,
+        PositionCutoffs replacementCutoffs) {
 
     public record Sleeper(String baseUrl) {
     }

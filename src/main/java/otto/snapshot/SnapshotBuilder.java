@@ -61,6 +61,7 @@ public class SnapshotBuilder {
                 health,
                 names,
                 positions,
-                teams);
+                teams,
+                roster.teamRecord());
     }
 }

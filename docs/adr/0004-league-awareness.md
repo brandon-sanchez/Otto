@@ -1,0 +1,166 @@
+# ADR-0004: League awareness
+
+Status: accepted (2026-08-08, issue #15)
+
+The spec pins the three league tools, the informational Alert triggers,
+the Notable Player cutoffs and the confidence gate. It leaves the
+semantics of each open. This ADR records what implementation decided.
+
+## League activity is read from the transactions feed, not from roster arithmetic
+
+Two consecutive Snapshots can show that a player left one roster and
+joined another, but they cannot say why. A trade and a same-minute drop
+followed by a free agent pickup look identical in roster state, and the
+week a waiver period clears is exactly when both happen. Calling one the
+other would put a wrong sentence in the user's pocket.
+
+Sleeper's `transactions/{week}` endpoint labels each move - trade,
+waiver, free agent, commissioner - and names both sides. It is a
+documented v1 endpoint and the spec already lists it as a source, so the
+Check reads it and hands it to the Snapshot Diff. A drop is then a
+player in a transaction's `drops` who is not in its `adds`: a trade
+moves every player it names, so a trade drops nobody.
+
+The Check reads the week before the current one as well. Sleeper files a
+transaction under the week it happened in, and the week rolls over on a
+Tuesday, so a trade agreed in the closing minutes of a week would drop
+out of view the moment the week advanced - and stay out of view for the
+rest of the season. Reading both weeks keeps it in view for as long as
+it is still news, and costs one conditional GET.
+
+## The Event Log keeps the facts; the detector keeps the words
+
+A trade arrives as one diff event per player it moved, each naming the
+player, the manager who gave him up and the manager who got him. The
+detector groups the events by transaction id and writes the one message
+a trade deserves.
+
+The other way round - the Snapshot Diff storing a rendered sentence -
+would put prose in a season-long record that the rest of the system has
+to query. "Who did this manager acquire in November" is a question the
+Event Log should be able to answer without parsing English.
+
+## A transaction event is stamped with the time it happened
+
+Every other Snapshot Diff event is stamped with the time of the Check
+that found it, because Sleeper publishes no time for a status change.
+A transaction publishes `status_updated`, so the event carries that
+instead.
+
+This is what makes the feed safe to lose. If the transactions read fails
+for an hour, the next healthy Check sees the whole week's list as new,
+and stamping it with its own clock would send the user news about trades
+he already read about days ago. Stamped with the truth, the Alert retry
+window drops anything older than four hours on its own, and the Event
+Log's transaction-id keys stop anything inside the window from arriving
+twice.
+
+A transaction Otto cannot time is schema drift, not a transaction with
+an unknown time. The adapter rejects the whole read and self-reports,
+the same way a drifted kickoff time is rejected, because every timing
+rule below is measured from that stamp: a missing one would either bury
+a real trade in 1970 or dress week-old news as fresh, and both failures
+are silent.
+
+## A drop the user made himself is not news to him
+
+Every trade sends, the user's own included: it changes his lineup, and
+one confirmation of what he agreed to is worth having. A drop he made
+does not. Telling him to consider a claim on the player he has just cut
+would be the assistant arguing with a decision he took ten seconds ago.
+
+## Informational Alerts sit on both ends of the confidence gate
+
+The gate says High states the action, Medium sends and voices the doubt,
+and Low is never proactive. Informational Alerts use all three rungs,
+and which one they use is the whole rule:
+
+A completed trade is a fact, so it rides at High and states itself.
+ADR-0001 reserved High for certainties; a trade that has already
+happened is as certain as a ruled-out starter, and hedging a fact would
+read as doubt about whether the trade occurred.
+
+A dropped Notable Player is a judgement about a claim, so it rides at
+Medium and carries the case both ways: the rank that makes him worth
+having, and the reasons the manager who dropped him may have been right.
+
+Any other drop rides at Low, which the gate never sends. That is not a
+special case bolted on to keep quiet - it is the gate doing its job. A
+replacement-level player changing hands is an answer to a question, not
+a text message.
+
+## Notable Player cutoffs are Superflex-aware in the rank, not in the words
+
+The cutoffs are the spec's: top-12 QB, top-24 RB, top-24 WR, top-12 TE
+of the weekly projection table, priced in this league's own scoring.
+Quarterbacks are ranked and carry a cutoff at all because this league
+starts two of them; in a one-quarterback league a dropped QB12 is a
+replacement-level body, and here he starts for most of the field.
+
+The Superflex number the spec spells out is the replacement rank rather
+than the Notable one: replacement level sits at QB 24, RB 24, WR 24 and
+TE 12, because a Superflex league makes about 24 quarterbacks startable.
+Both sets of ranks live in Settings, which is where the spec puts them,
+so the Settings-by-chat work can move them without touching this code.
+
+## A rank the table cannot reach is not a replacement level of zero
+
+`PositionRanking` answers "empty" when the projection table holds fewer
+players at a position than the cutoff rank. A shallow table reads as a
+shallow table and the answer says so, rather than pricing replacement
+level at zero and calling every bench player startable.
+
+The same rule decides a drop this system cannot judge: no ranking means
+Low confidence with the reason stated, not silence and not a guess.
+
+## A team is judged the same way whichever team it is
+
+`get_team_roster` builds the same week view for a league mate that the
+lineup tools build for the user, and reads their lineup through the same
+planner. Strengths and gaps then come from one comparison: each starting
+slot against replacement level for the position filling it, and each
+position's count of startable players against the slots only that
+position can fill.
+
+A trade has two sides, and valuing them by two different yardsticks
+would be the fastest way to talk the user into a bad one.
+
+## The playoff race counts; it never simulates
+
+The spec puts Monte Carlo playoff odds out of scope, so two counts carry
+the whole answer.
+
+A team is eliminated when the number of teams already standing above the
+best finish it can still reach is the size of the playoff field or more.
+A team has clinched when fewer teams than the field can still reach the
+standing it already holds. The first counts teams strictly above, the
+second counts teams that can only draw level, so the points tiebreaker
+can never overturn either: it decides only the places this math leaves
+open.
+
+The counting runs in win points - a win is two, a tie is one - rather
+than in wins. Counting whole wins would call a team on 6-4-3 eliminated
+behind six teams on 8-5, when winning its last game would finish it
+above all six. A certainty that is only true when nobody drew is not a
+certainty, and the standings already seed on the same half-win.
+
+Games remaining come from each team's own record rather than from the
+calendar: a team that has played eleven of fourteen has three left,
+whichever week Sleeper says it is. Reading it off the record also
+removes the gap between a week's games finishing and Sleeper advancing
+its week, where the calendar would hand every team a phantom game.
+
+Wins to clinch is the smallest number of remaining wins that makes the
+second count hold. The math does not read the rest of the schedule, so
+two teams that still play each other are both counted as able to win
+out. That makes every "clinched" and "eliminated" conservative and true,
+and the answer says so in as many words.
+
+## Standings seed on wins, and settle on points scored
+
+Sleeper orders its own standings that way, and the user reads the two
+side by side. Ties count as half a win, which is the same order without
+a second sort key. A points total arrives as a whole part plus a
+two-digit fraction (`fpts` 1450 with `fpts_decimal` 50 is 1450.50);
+that convention is worth confirming against the live league during the
+soak.

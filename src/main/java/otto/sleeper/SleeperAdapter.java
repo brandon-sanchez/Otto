@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,8 +63,15 @@ public class SleeperAdapter {
         return new SleeperAdapter(client, cache, clock, leaguePath, maxAge);
     }
 
+    /**
+     * @param playoffTeams how many teams make the playoffs, 0 when the
+     *        league document does not say
+     * @param playoffWeekStart the first playoff week, so the regular
+     *        season runs to the week before it; 0 when it does not say
+     */
     public record League(String leagueId, String name, String status,
-            List<String> rosterPositions, Map<String, Double> scoringSettings) {
+            List<String> rosterPositions, Map<String, Double> scoringSettings,
+            int playoffTeams, int playoffWeekStart) {
     }
 
     public record NflState(String season, int week) {
@@ -79,7 +87,55 @@ public class SleeperAdapter {
      * league up.
      */
     public record Roster(int rosterId, Optional<String> ownerId, List<String> players,
-            List<String> starters) {
+            List<String> starters, TeamRecord teamRecord) {
+    }
+
+    /**
+     * One team's season record, as the standings read it. Sleeper writes
+     * a points total as a whole part plus a two-digit fraction, so fpts
+     * 1450 with fpts_decimal 50 is 1450.50 points.
+     */
+    public record TeamRecord(int wins, int losses, int ties, double pointsFor,
+            double pointsAgainst) {
+
+        /** What a team reads as before it has played, and when Sleeper says nothing. */
+        public static final TeamRecord NONE = new TeamRecord(0, 0, 0, 0.0, 0.0);
+
+        public int games() {
+            return wins + losses + ties;
+        }
+    }
+
+    /**
+     * One completed league transaction: a trade, a waiver claim, a free
+     * agent move or a commissioner edit. The adds and drops maps read
+     * player id to the roster that gained or lost them, which is how
+     * Sleeper publishes them.
+     *
+     * @param statusUpdated when the transaction completed, which is when
+     *        the thing it records actually happened. Never null: a
+     *        transaction whose timestamp cannot be read is schema drift,
+     *        because every Alert timing rule is measured from it.
+     */
+    public record LeagueTransaction(String transactionId, String type, List<Integer> rosterIds,
+            Map<String, Integer> adds, Map<String, Integer> drops, Instant statusUpdated) {
+
+        private static final String TRADE = "trade";
+
+        public boolean isTrade() {
+            return TRADE.equals(type);
+        }
+
+        /**
+         * The players this transaction took off a roster and did not put
+         * back on another one. A trade moves every player it names, so it
+         * drops nobody.
+         */
+        public Map<String, Integer> droppedToFreeAgency() {
+            Map<String, Integer> dropped = new LinkedHashMap<>(drops);
+            dropped.keySet().removeAll(adds.keySet());
+            return dropped;
+        }
     }
 
     public record LeagueUser(String userId, String displayName) {
@@ -95,12 +151,15 @@ public class SleeperAdapter {
             if (!body.hasNonNull("league_id") || !body.hasNonNull("status")) {
                 return schemaDrift(leaguePath, "league_id or status missing");
             }
+            JsonNode settings = body.path("settings");
             return ok(new League(
                     body.get("league_id").asText(),
                     body.path("name").asText(null),
                     body.get("status").asText(),
                     textList(body.path("roster_positions")),
-                    numberMap(body.path("scoring_settings"))));
+                    numberMap(body.path("scoring_settings")),
+                    settings.path("playoff_teams").asInt(0),
+                    settings.path("playoff_week_start").asInt(0)));
         });
     }
 
@@ -189,10 +248,69 @@ public class SleeperAdapter {
                                 .filter(JsonNode::isTextual)
                                 .map(JsonNode::asText),
                         textList(roster.path("players")),
-                        textList(roster.path("starters"))));
+                        textList(roster.path("starters")),
+                        teamRecord(roster.path("settings"))));
             }
             return ok(rosters);
         });
+    }
+
+    /**
+     * The league's transactions for one week: trades, waiver claims,
+     * free agent moves and commissioner edits. Only completed ones are
+     * returned - a pending waiver claim has not happened yet, and a
+     * failed one never will.
+     */
+    public SourceResult<List<LeagueTransaction>> transactions(String season, int week) {
+        String path = leaguePath + "/transactions/" + week;
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "transactions is not an array");
+            }
+            List<LeagueTransaction> transactions = new ArrayList<>();
+            for (JsonNode transaction : body) {
+                if (!transaction.hasNonNull("transaction_id")
+                        || !transaction.hasNonNull("type")) {
+                    return schemaDrift(path, "transaction_id or type missing");
+                }
+                if (!"complete".equals(transaction.path("status").asText(null))) {
+                    continue;
+                }
+                // A drifted status_updated must fail loudly. The Alert
+                // retry window is measured from it, so a missing or zero
+                // timestamp would either bury a real trade in 1970 or
+                // stamp week-old news as fresh - and either way in silence.
+                JsonNode updated = transaction.get("status_updated");
+                if (updated == null || !updated.isIntegralNumber() || updated.asLong() <= 0) {
+                    return schemaDrift(path, "status_updated missing or malformed");
+                }
+                transactions.add(new LeagueTransaction(
+                        transaction.get("transaction_id").asText(),
+                        transaction.get("type").asText(),
+                        intList(transaction.path("roster_ids")),
+                        rosterByPlayer(transaction.path("adds")),
+                        rosterByPlayer(transaction.path("drops")),
+                        Instant.ofEpochMilli(updated.asLong())));
+            }
+            return ok(transactions);
+        });
+    }
+
+    private static TeamRecord teamRecord(JsonNode settings) {
+        if (!settings.isObject()) {
+            return TeamRecord.NONE;
+        }
+        return new TeamRecord(
+                settings.path("wins").asInt(0),
+                settings.path("losses").asInt(0),
+                settings.path("ties").asInt(0),
+                points(settings, "fpts"),
+                points(settings, "fpts_against"));
+    }
+
+    private static double points(JsonNode settings, String field) {
+        return settings.path(field).asDouble(0.0)
+                + settings.path(field + "_decimal").asDouble(0.0) / 100.0;
     }
 
     /**
@@ -294,6 +412,31 @@ public class SleeperAdapter {
             });
         }
         return values;
+    }
+
+    private static List<Integer> intList(JsonNode array) {
+        List<Integer> values = new ArrayList<>();
+        if (array.isArray()) {
+            array.forEach(node -> {
+                if (node.isIntegralNumber()) {
+                    values.add(node.asInt());
+                }
+            });
+        }
+        return values;
+    }
+
+    /** Sleeper writes an adds or drops block as player id to roster id. */
+    private static Map<String, Integer> rosterByPlayer(JsonNode object) {
+        Map<String, Integer> byPlayer = new LinkedHashMap<>();
+        if (object.isObject()) {
+            object.properties().forEach(entry -> {
+                if (entry.getValue().isIntegralNumber()) {
+                    byPlayer.put(entry.getKey(), entry.getValue().asInt());
+                }
+            });
+        }
+        return byPlayer;
     }
 
     private static List<String> textList(JsonNode array) {

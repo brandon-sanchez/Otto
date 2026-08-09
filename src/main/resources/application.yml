@@ -22,6 +22,22 @@ otto:
   # Ceiling means a fresh poll would not be fresher anyway.
   sleeper-cadence: 60s
   edge-threshold: 1.0
+  # A dropped player inside these ranks of the weekly projection table is
+  # league news. The quarterback line stays at 12: this league starts two
+  # of them, so a top-12 quarterback is a starter on most rosters.
+  notable-cutoffs:
+    qb: 12
+    rb: 24
+    wr: 24
+    te: 12
+  # What a startable player is worth, by the rank a league of this shape
+  # can fill. Superflex makes about 24 quarterbacks startable, so the
+  # quarterback line sits with the running backs and receivers.
+  replacement-cutoffs:
+    qb: 24
+    rb: 24
+    wr: 24
+    te: 12
 
 spring:
   application:

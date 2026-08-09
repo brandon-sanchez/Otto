@@ -1,0 +1,1339 @@
+{
+  "4046": {
+    "player_id": "4046",
+    "first_name": "Patrick",
+    "last_name": "Mahomes",
+    "full_name": "Patrick Mahomes",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 15,
+    "age": 30
+  },
+  "4034": {
+    "player_id": "4034",
+    "first_name": "Christian",
+    "last_name": "McCaffrey",
+    "full_name": "Christian McCaffrey",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null,
+    "number": 23,
+    "age": 30
+  },
+  "6794": {
+    "player_id": "6794",
+    "first_name": "Justin",
+    "last_name": "Jefferson",
+    "full_name": "Justin Jefferson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null,
+    "number": 18,
+    "age": 27
+  },
+  "1466": {
+    "player_id": "1466",
+    "first_name": "Travis",
+    "last_name": "Kelce",
+    "full_name": "Travis Kelce",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 87,
+    "age": 36
+  },
+  "4866": {
+    "player_id": "4866",
+    "first_name": "Saquon",
+    "last_name": "Barkley",
+    "full_name": "Saquon Barkley",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 26,
+    "age": 29
+  },
+  "8135": {
+    "player_id": "8135",
+    "first_name": "Jordan",
+    "last_name": "Love",
+    "full_name": "Jordan Love",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": "Probable",
+    "number": 10,
+    "age": 27
+  },
+  "2216": {
+    "player_id": "2216",
+    "first_name": "Mike",
+    "last_name": "Evans",
+    "full_name": "Mike Evans",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": "Sus",
+    "number": 13,
+    "age": 33
+  },
+  "5859": {
+    "player_id": "5859",
+    "first_name": "Darrell",
+    "last_name": "Henderson",
+    "full_name": "Darrell Henderson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "LAR",
+    "status": "Physically Unable to Perform",
+    "injury_status": null,
+    "number": 27,
+    "age": 29
+  },
+  "4199": {
+    "player_id": "4199",
+    "first_name": "Aaron",
+    "last_name": "Jones",
+    "full_name": "Aaron Jones",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": null,
+    "status": "Inactive",
+    "injury_status": null,
+    "number": 33,
+    "age": 31
+  },
+  "4029": {
+    "player_id": "4029",
+    "first_name": "Tyler",
+    "last_name": "Lockett",
+    "full_name": "Tyler Lockett",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SEA",
+    "status": "Injured Reserve",
+    "injury_status": "Questionable",
+    "number": 16,
+    "age": 33
+  },
+  "6768": {
+    "player_id": "6768",
+    "first_name": "Jalen",
+    "last_name": "Reagor",
+    "full_name": "Jalen Reagor",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": "Emergency",
+    "number": 18,
+    "age": 27
+  },
+  "3678": {
+    "player_id": "3678",
+    "first_name": "Harrison",
+    "last_name": "Butker",
+    "full_name": "Harrison Butker",
+    "position": "K",
+    "fantasy_positions": [
+      "K"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 31
+  },
+  "KC": {
+    "player_id": "KC",
+    "first_name": "Kansas City",
+    "last_name": "Chiefs",
+    "position": "DEF",
+    "fantasy_positions": [
+      "DEF"
+    ],
+    "team": "KC",
+    "status": null,
+    "injury_status": null
+  },
+  "9509": {
+    "player_id": "9509",
+    "first_name": "Bijan",
+    "last_name": "Robinson",
+    "full_name": "Bijan Robinson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 24
+  },
+  "6786": {
+    "player_id": "6786",
+    "first_name": "CeeDee",
+    "last_name": "Lamb",
+    "full_name": "CeeDee Lamb",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 27
+  },
+  "8112": {
+    "player_id": "8112",
+    "first_name": "Garrett",
+    "last_name": "Wilson",
+    "full_name": "Garrett Wilson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null,
+    "number": 5,
+    "age": 26
+  },
+  "8138": {
+    "player_id": "8138",
+    "first_name": "James",
+    "last_name": "Cook",
+    "full_name": "James Cook",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null,
+    "number": 4,
+    "age": 27
+  },
+  "5850": {
+    "player_id": "5850",
+    "first_name": "Josh",
+    "last_name": "Jacobs",
+    "full_name": "Josh Jacobs",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null,
+    "number": 8,
+    "age": 28
+  },
+  "6813": {
+    "player_id": "6813",
+    "first_name": "Dallas",
+    "last_name": "Goedert",
+    "full_name": "Dallas Goedert",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 31
+  },
+  "9493": {
+    "player_id": "9493",
+    "first_name": "Puka",
+    "last_name": "Nacua",
+    "full_name": "Puka Nacua",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "LAR",
+    "status": "Active",
+    "injury_status": null,
+    "number": 12,
+    "age": 25
+  },
+  "91003": {
+    "player_id": "91003",
+    "first_name": "QB",
+    "last_name": "Depth 03",
+    "full_name": "QB Depth 03",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91004": {
+    "player_id": "91004",
+    "first_name": "QB",
+    "last_name": "Depth 04",
+    "full_name": "QB Depth 04",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "CHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91005": {
+    "player_id": "91005",
+    "first_name": "QB",
+    "last_name": "Depth 05",
+    "full_name": "QB Depth 05",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91006": {
+    "player_id": "91006",
+    "first_name": "QB",
+    "last_name": "Depth 06",
+    "full_name": "QB Depth 06",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "CAR",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91007": {
+    "player_id": "91007",
+    "first_name": "QB",
+    "last_name": "Depth 07",
+    "full_name": "QB Depth 07",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91008": {
+    "player_id": "91008",
+    "first_name": "QB",
+    "last_name": "Depth 08",
+    "full_name": "QB Depth 08",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "NYG",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91009": {
+    "player_id": "91009",
+    "first_name": "QB",
+    "last_name": "Depth 09",
+    "full_name": "QB Depth 09",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91010": {
+    "player_id": "91010",
+    "first_name": "QB",
+    "last_name": "Depth 10",
+    "full_name": "QB Depth 10",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "NE",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91011": {
+    "player_id": "91011",
+    "first_name": "QB",
+    "last_name": "Depth 11",
+    "full_name": "QB Depth 11",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91012": {
+    "player_id": "91012",
+    "first_name": "QB",
+    "last_name": "Depth 12",
+    "full_name": "QB Depth 12",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "MIA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91013": {
+    "player_id": "91013",
+    "first_name": "QB",
+    "last_name": "Depth 13",
+    "full_name": "QB Depth 13",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91014": {
+    "player_id": "91014",
+    "first_name": "QB",
+    "last_name": "Depth 14",
+    "full_name": "QB Depth 14",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "WAS",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91015": {
+    "player_id": "91015",
+    "first_name": "QB",
+    "last_name": "Depth 15",
+    "full_name": "QB Depth 15",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91016": {
+    "player_id": "91016",
+    "first_name": "QB",
+    "last_name": "Depth 16",
+    "full_name": "QB Depth 16",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "NO",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91017": {
+    "player_id": "91017",
+    "first_name": "QB",
+    "last_name": "Depth 17",
+    "full_name": "QB Depth 17",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91018": {
+    "player_id": "91018",
+    "first_name": "QB",
+    "last_name": "Depth 18",
+    "full_name": "QB Depth 18",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "BAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91019": {
+    "player_id": "91019",
+    "first_name": "QB",
+    "last_name": "Depth 19",
+    "full_name": "QB Depth 19",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91020": {
+    "player_id": "91020",
+    "first_name": "QB",
+    "last_name": "Depth 20",
+    "full_name": "QB Depth 20",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91021": {
+    "player_id": "91021",
+    "first_name": "QB",
+    "last_name": "Depth 21",
+    "full_name": "QB Depth 21",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91022": {
+    "player_id": "91022",
+    "first_name": "QB",
+    "last_name": "Depth 22",
+    "full_name": "QB Depth 22",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "DET",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91023": {
+    "player_id": "91023",
+    "first_name": "QB",
+    "last_name": "Depth 23",
+    "full_name": "QB Depth 23",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91024": {
+    "player_id": "91024",
+    "first_name": "QB",
+    "last_name": "Depth 24",
+    "full_name": "QB Depth 24",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "CHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91025": {
+    "player_id": "91025",
+    "first_name": "QB",
+    "last_name": "Depth 25",
+    "full_name": "QB Depth 25",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "91026": {
+    "player_id": "91026",
+    "first_name": "QB",
+    "last_name": "Depth 26",
+    "full_name": "QB Depth 26",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "CAR",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92006": {
+    "player_id": "92006",
+    "first_name": "RB",
+    "last_name": "Depth 06",
+    "full_name": "RB Depth 06",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92007": {
+    "player_id": "92007",
+    "first_name": "RB",
+    "last_name": "Depth 07",
+    "full_name": "RB Depth 07",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "NYG",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92008": {
+    "player_id": "92008",
+    "first_name": "RB",
+    "last_name": "Depth 08",
+    "full_name": "RB Depth 08",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92009": {
+    "player_id": "92009",
+    "first_name": "RB",
+    "last_name": "Depth 09",
+    "full_name": "RB Depth 09",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "NE",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92010": {
+    "player_id": "92010",
+    "first_name": "RB",
+    "last_name": "Depth 10",
+    "full_name": "RB Depth 10",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92011": {
+    "player_id": "92011",
+    "first_name": "RB",
+    "last_name": "Depth 11",
+    "full_name": "RB Depth 11",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "MIA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92012": {
+    "player_id": "92012",
+    "first_name": "RB",
+    "last_name": "Depth 12",
+    "full_name": "RB Depth 12",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92013": {
+    "player_id": "92013",
+    "first_name": "RB",
+    "last_name": "Depth 13",
+    "full_name": "RB Depth 13",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "WAS",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92014": {
+    "player_id": "92014",
+    "first_name": "RB",
+    "last_name": "Depth 14",
+    "full_name": "RB Depth 14",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92015": {
+    "player_id": "92015",
+    "first_name": "RB",
+    "last_name": "Depth 15",
+    "full_name": "RB Depth 15",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "NO",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92016": {
+    "player_id": "92016",
+    "first_name": "RB",
+    "last_name": "Depth 16",
+    "full_name": "RB Depth 16",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92017": {
+    "player_id": "92017",
+    "first_name": "RB",
+    "last_name": "Depth 17",
+    "full_name": "RB Depth 17",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "BAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92018": {
+    "player_id": "92018",
+    "first_name": "RB",
+    "last_name": "Depth 18",
+    "full_name": "RB Depth 18",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92019": {
+    "player_id": "92019",
+    "first_name": "RB",
+    "last_name": "Depth 19",
+    "full_name": "RB Depth 19",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92020": {
+    "player_id": "92020",
+    "first_name": "RB",
+    "last_name": "Depth 20",
+    "full_name": "RB Depth 20",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92021": {
+    "player_id": "92021",
+    "first_name": "RB",
+    "last_name": "Depth 21",
+    "full_name": "RB Depth 21",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "DET",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92022": {
+    "player_id": "92022",
+    "first_name": "RB",
+    "last_name": "Depth 22",
+    "full_name": "RB Depth 22",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92023": {
+    "player_id": "92023",
+    "first_name": "RB",
+    "last_name": "Depth 23",
+    "full_name": "RB Depth 23",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "CHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92024": {
+    "player_id": "92024",
+    "first_name": "RB",
+    "last_name": "Depth 24",
+    "full_name": "RB Depth 24",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92025": {
+    "player_id": "92025",
+    "first_name": "RB",
+    "last_name": "Depth 25",
+    "full_name": "RB Depth 25",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "CAR",
+    "status": "Active",
+    "injury_status": null
+  },
+  "92026": {
+    "player_id": "92026",
+    "first_name": "RB",
+    "last_name": "Depth 26",
+    "full_name": "RB Depth 26",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93004": {
+    "player_id": "93004",
+    "first_name": "WR",
+    "last_name": "Depth 04",
+    "full_name": "WR Depth 04",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYG",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93005": {
+    "player_id": "93005",
+    "first_name": "WR",
+    "last_name": "Depth 05",
+    "full_name": "WR Depth 05",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93006": {
+    "player_id": "93006",
+    "first_name": "WR",
+    "last_name": "Depth 06",
+    "full_name": "WR Depth 06",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NE",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93007": {
+    "player_id": "93007",
+    "first_name": "WR",
+    "last_name": "Depth 07",
+    "full_name": "WR Depth 07",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93008": {
+    "player_id": "93008",
+    "first_name": "WR",
+    "last_name": "Depth 08",
+    "full_name": "WR Depth 08",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93009": {
+    "player_id": "93009",
+    "first_name": "WR",
+    "last_name": "Depth 09",
+    "full_name": "WR Depth 09",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93010": {
+    "player_id": "93010",
+    "first_name": "WR",
+    "last_name": "Depth 10",
+    "full_name": "WR Depth 10",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "WAS",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93011": {
+    "player_id": "93011",
+    "first_name": "WR",
+    "last_name": "Depth 11",
+    "full_name": "WR Depth 11",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93012": {
+    "player_id": "93012",
+    "first_name": "WR",
+    "last_name": "Depth 12",
+    "full_name": "WR Depth 12",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NO",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93013": {
+    "player_id": "93013",
+    "first_name": "WR",
+    "last_name": "Depth 13",
+    "full_name": "WR Depth 13",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93014": {
+    "player_id": "93014",
+    "first_name": "WR",
+    "last_name": "Depth 14",
+    "full_name": "WR Depth 14",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "BAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93015": {
+    "player_id": "93015",
+    "first_name": "WR",
+    "last_name": "Depth 15",
+    "full_name": "WR Depth 15",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93016": {
+    "player_id": "93016",
+    "first_name": "WR",
+    "last_name": "Depth 16",
+    "full_name": "WR Depth 16",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93017": {
+    "player_id": "93017",
+    "first_name": "WR",
+    "last_name": "Depth 17",
+    "full_name": "WR Depth 17",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93018": {
+    "player_id": "93018",
+    "first_name": "WR",
+    "last_name": "Depth 18",
+    "full_name": "WR Depth 18",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DET",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93019": {
+    "player_id": "93019",
+    "first_name": "WR",
+    "last_name": "Depth 19",
+    "full_name": "WR Depth 19",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93020": {
+    "player_id": "93020",
+    "first_name": "WR",
+    "last_name": "Depth 20",
+    "full_name": "WR Depth 20",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "CHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93021": {
+    "player_id": "93021",
+    "first_name": "WR",
+    "last_name": "Depth 21",
+    "full_name": "WR Depth 21",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93022": {
+    "player_id": "93022",
+    "first_name": "WR",
+    "last_name": "Depth 22",
+    "full_name": "WR Depth 22",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "CAR",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93023": {
+    "player_id": "93023",
+    "first_name": "WR",
+    "last_name": "Depth 23",
+    "full_name": "WR Depth 23",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93024": {
+    "player_id": "93024",
+    "first_name": "WR",
+    "last_name": "Depth 24",
+    "full_name": "WR Depth 24",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYG",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93025": {
+    "player_id": "93025",
+    "first_name": "WR",
+    "last_name": "Depth 25",
+    "full_name": "WR Depth 25",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null
+  },
+  "93026": {
+    "player_id": "93026",
+    "first_name": "WR",
+    "last_name": "Depth 26",
+    "full_name": "WR Depth 26",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NE",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94003": {
+    "player_id": "94003",
+    "first_name": "TE",
+    "last_name": "Depth 03",
+    "full_name": "TE Depth 03",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94004": {
+    "player_id": "94004",
+    "first_name": "TE",
+    "last_name": "Depth 04",
+    "full_name": "TE Depth 04",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "MIA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94005": {
+    "player_id": "94005",
+    "first_name": "TE",
+    "last_name": "Depth 05",
+    "full_name": "TE Depth 05",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94006": {
+    "player_id": "94006",
+    "first_name": "TE",
+    "last_name": "Depth 06",
+    "full_name": "TE Depth 06",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "WAS",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94007": {
+    "player_id": "94007",
+    "first_name": "TE",
+    "last_name": "Depth 07",
+    "full_name": "TE Depth 07",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94008": {
+    "player_id": "94008",
+    "first_name": "TE",
+    "last_name": "Depth 08",
+    "full_name": "TE Depth 08",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "NO",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94009": {
+    "player_id": "94009",
+    "first_name": "TE",
+    "last_name": "Depth 09",
+    "full_name": "TE Depth 09",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94010": {
+    "player_id": "94010",
+    "first_name": "TE",
+    "last_name": "Depth 10",
+    "full_name": "TE Depth 10",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "BAL",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94011": {
+    "player_id": "94011",
+    "first_name": "TE",
+    "last_name": "Depth 11",
+    "full_name": "TE Depth 11",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94012": {
+    "player_id": "94012",
+    "first_name": "TE",
+    "last_name": "Depth 12",
+    "full_name": "TE Depth 12",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94013": {
+    "player_id": "94013",
+    "first_name": "TE",
+    "last_name": "Depth 13",
+    "full_name": "TE Depth 13",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null
+  },
+  "94014": {
+    "player_id": "94014",
+    "first_name": "TE",
+    "last_name": "Depth 14",
+    "full_name": "TE Depth 14",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "DET",
+    "status": "Active",
+    "injury_status": null
+  }
+}
