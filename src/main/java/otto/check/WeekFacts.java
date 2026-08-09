@@ -5,25 +5,33 @@ import java.util.Optional;
 
 import otto.directory.PlayerHealth;
 import otto.lineup.GameWeek;
+import otto.lineup.LeagueScoring;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.snapshot.RosterSnapshot;
 
 /**
  * The week-scoped facts a Check hands to Alert detection: which week it
- * is, the projected stat lines priced in league scoring, the starting
- * slots, and the week's games. Every part is optional because every
- * source fails soft - a detector that misses its inputs skips instead
- * of guessing.
+ * is, how the league prices a stat line, the projected stat lines
+ * priced that way, the starting slots, and the week's games. Every
+ * optional part is optional because every source fails soft - a
+ * detector that misses its inputs skips instead of guessing.
+ *
+ * The scoring rides along rather than staying inside the projection
+ * table because a played week prices through it too: what a defense
+ * allowed, and what a player has actually scored, are the same
+ * arithmetic as a projection.
  */
 public record WeekFacts(
         Optional<String> weekKey,
+        LeagueScoring scoring,
         Optional<ProjectionTable> projections,
         List<Slot> startingSlots,
         Optional<GameWeek> games) {
 
-    public static WeekFacts unavailable(List<Slot> startingSlots) {
-        return new WeekFacts(Optional.empty(), Optional.empty(), startingSlots, Optional.empty());
+    public static WeekFacts unavailable(LeagueScoring scoring, List<Slot> startingSlots) {
+        return new WeekFacts(Optional.empty(), scoring, Optional.empty(), startingSlots,
+                Optional.empty());
     }
 
     /**

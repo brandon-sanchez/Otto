@@ -41,6 +41,7 @@ public abstract class WireSeamTest {
     protected static final WireMockServer sleeper = newServer();
     protected static final WireMockServer telegram = newServer();
     protected static final WireMockServer llm = newServer();
+    protected static final WireMockServer nflverse = newServer();
     private static final Path storageDir = newStorageDir();
 
     private static WireMockServer newServer() {
@@ -66,6 +67,11 @@ public abstract class WireSeamTest {
         registry.add("otto.telegram.chat-id", () -> String.valueOf(USER_CHAT_ID));
         registry.add("otto.telegram.webhook-secret", () -> WEBHOOK_SECRET);
         registry.add("otto.storage-dir", () -> storageDir.toString());
+        // One stub server plays all three nflverse-side hosts: the GitHub
+        // release API, the release downloads, and the DynastyProcess file.
+        registry.add("otto.nflverse.api-base-url", nflverse::baseUrl);
+        registry.add("otto.nflverse.download-base-url", nflverse::baseUrl);
+        registry.add("otto.nflverse.player-ids-base-url", nflverse::baseUrl);
         registry.add("spring.ai.openai.base-url", llm::baseUrl);
         registry.add("spring.ai.openai.api-key", () -> "test-llm-key");
     }
@@ -81,6 +87,7 @@ public abstract class WireSeamTest {
         sleeper.resetAll();
         telegram.resetAll();
         llm.resetAll();
+        nflverse.resetAll();
         clock.set(TEST_START);
         sleeperCache.clear();
         wipe(storageDir);

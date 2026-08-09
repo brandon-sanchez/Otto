@@ -1,12 +1,16 @@
 package otto.sleeper;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
@@ -14,18 +18,48 @@ import otto.OttoProperties;
 /**
  * Typed, schema-validated access to the Sleeper league endpoints.
  * Any drift from the expected shape becomes a typed unavailable result.
+ *
+ * Every read is a conditional GET by default, which is what the Check
+ * needs: its whole job is to poll at the Freshness Ceiling.
+ * {@link #cachedWithin(Duration)} hands back the same wire with a
+ * cadence gate in front, for readers that must not add polling of their
+ * own.
  */
 @Component
 public class SleeperAdapter {
 
     private final SleeperClient client;
     private final SleeperCache cache;
+    private final Clock clock;
     private final String leaguePath;
 
-    public SleeperAdapter(SleeperClient client, SleeperCache cache, OttoProperties properties) {
+    /** How stale a cached body may be before this reader refetches. */
+    private final Duration maxAge;
+
+    @Autowired
+    public SleeperAdapter(SleeperClient client, SleeperCache cache, Clock clock,
+            OttoProperties properties) {
+        this(client, cache, clock, "/v1/league/" + properties.leagueId(), Duration.ZERO);
+    }
+
+    private SleeperAdapter(SleeperClient client, SleeperCache cache, Clock clock,
+            String leaguePath, Duration maxAge) {
         this.client = client;
         this.cache = cache;
-        this.leaguePath = "/v1/league/" + properties.leagueId();
+        this.clock = clock;
+        this.leaguePath = leaguePath;
+        this.maxAge = maxAge;
+    }
+
+    /**
+     * A reader over the same wire and the same cache that answers from
+     * the stored copy while it is younger than maxAge. An Ask reads this
+     * way: the Check keeps the cache filled every minute, and nothing
+     * can be fresher than the Freshness Ceiling, so a burst of questions
+     * costs no requests.
+     */
+    public SleeperAdapter cachedWithin(Duration maxAge) {
+        return new SleeperAdapter(client, cache, clock, leaguePath, maxAge);
     }
 
     public record League(String leagueId, String name, String status,
@@ -43,6 +77,11 @@ public class SleeperAdapter {
     }
 
     public record LeagueUser(String userId, String displayName) {
+    }
+
+    /** One item from a player's news feed, as Sleeper publishes it. */
+    public record NewsItem(String headline, String detail, String analysis, String source,
+            Instant published, String url) {
     }
 
     public SourceResult<League> league() {
@@ -144,6 +183,40 @@ public class SleeperAdapter {
         });
     }
 
+    /**
+     * Recent news for one player, newest first.
+     *
+     * News is the one Sleeper source that is always fetched live and
+     * never cached: the user asks for it precisely when something just
+     * happened, and a minute-old answer would be the wrong one.
+     *
+     * @param limit how many items to ask Sleeper for
+     */
+    public SourceResult<List<NewsItem>> playerNews(String playerId, int limit) {
+        String path = "/players/nfl/%s/news?limit=%d".formatted(playerId, limit);
+        return client.get(path, null).flatMap(fetched -> {
+            JsonNode body = fetched.body();
+            if (body == null || !body.isArray()) {
+                return schemaDrift(path, "news is not an array");
+            }
+            List<NewsItem> items = new ArrayList<>();
+            for (JsonNode item : body) {
+                JsonNode metadata = item.path("metadata");
+                JsonNode published = item.get("published");
+                items.add(new NewsItem(
+                        metadata.path("title").asText(null),
+                        metadata.path("description").asText(null),
+                        metadata.path("analysis").asText(null),
+                        item.path("source").asText(null),
+                        published != null && published.isIntegralNumber()
+                                ? Instant.ofEpochMilli(published.asLong())
+                                : null,
+                        metadata.path("url").asText(null)));
+            }
+            return ok(items);
+        });
+    }
+
     public SourceResult<List<LeagueUser>> users() {
         String path = leaguePath + "/users";
         return fetch(path).flatMap(body -> {
@@ -164,6 +237,11 @@ public class SleeperAdapter {
     }
 
     private SourceResult<JsonNode> fetch(String path) {
+        Instant now = clock.instant();
+        Optional<JsonNode> cached = cache.fresh(path, maxAge, now);
+        if (cached.isPresent()) {
+            return new SourceResult.Ok<>(cached.get());
+        }
         String knownEtag = cache.get(path).map(SleeperCache.Entry::etag).orElse(null);
         return switch (client.get(path, knownEtag)) {
             case SourceResult.Unavailable<SleeperClient.Fetched> unavailable ->
@@ -171,11 +249,16 @@ public class SleeperAdapter {
             case SourceResult.Ok<SleeperClient.Fetched> ok -> {
                 if (ok.value().notModified()) {
                     yield cache.get(path)
-                            .<SourceResult<JsonNode>>map(entry -> new SourceResult.Ok<>(entry.body()))
+                            .<SourceResult<JsonNode>>map(entry -> {
+                                // A 304 confirms the stored copy: it is
+                                // current as of now, not as of its download.
+                                cache.put(path, entry.etag(), entry.body(), now);
+                                return new SourceResult.Ok<>(entry.body());
+                            })
                             .orElseGet(() -> new SourceResult.Unavailable<>(
                                     "sleeper:" + path, "304 without a cached body"));
                 }
-                cache.put(path, ok.value().etag(), ok.value().body());
+                cache.put(path, ok.value().etag(), ok.value().body(), now);
                 yield new SourceResult.Ok<>(ok.value().body());
             }
         };

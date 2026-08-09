@@ -100,7 +100,9 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("get_roster_status"))
                 .withRequestBody(containing("get_league_settings"))
                 .withRequestBody(containing("recommend_lineup"))
-                .withRequestBody(containing("whatif_lineup")));
+                .withRequestBody(containing("whatif_lineup"))
+                .withRequestBody(containing("compare_players"))
+                .withRequestBody(containing("get_player_news")));
     }
 
     @Test

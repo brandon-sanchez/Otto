@@ -8,12 +8,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
+import otto.directory.NameMatch;
 import otto.directory.PlayerHealth;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.Slot;
@@ -368,24 +368,14 @@ public class LineupPlanner {
     }
 
     /**
-     * Matches what the user typed against their own roster: a player
-     * id, or any player whose name contains the text. Ambiguity is
-     * never resolved by guessing - the caller asks which one.
+     * Matches what the user typed against their own roster. The lineup
+     * tools only ever move a player the user already has, so the roster
+     * is the right candidate set here - a directory-wide match would
+     * offer players he cannot start.
      */
     private List<String> resolve(UserWeek team, String reference) {
-        if (reference == null || reference.isBlank()) {
-            return List.of();
-        }
-        String needle = reference.trim();
-        if (team.roster().players().contains(needle)) {
-            return List.of(needle);
-        }
-        String lowered = needle.toLowerCase(Locale.ROOT);
-        return team.roster().players().stream()
-                .filter(playerId -> Optional.ofNullable(team.roster().playerNames().get(playerId))
-                        .map(playerName -> playerName.toLowerCase(Locale.ROOT).contains(lowered))
-                        .orElse(false))
-                .toList();
+        return NameMatch.resolve(reference, team.roster().players(),
+                team.roster().playerNames()::get);
     }
 
     private String describeNoMatch(UserWeek team, String reference, List<String> matches) {

@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
 /** Recorded-fixture stubs that make the fake Sleeper play a healthy league. */
 public final class SleeperStubs {
@@ -29,6 +30,18 @@ public final class SleeperStubs {
         stubJson(sleeper, STATE_PATH, "sleeper/state-nfl.json", "state-v1");
         stubJson(sleeper, PROJECTIONS_PATH, "sleeper/projections-2026-2.json", "projections-v1");
         stubJson(sleeper, SCORES_PATH, "sleeper/scores-2026-2.json", "scores-v1");
+    }
+
+    /**
+     * Per-player news. The limit rides in the query string and the news
+     * feed is never cached, so the stub matches on the path alone.
+     */
+    public static void stubNews(WireMockServer server, String playerId, String fixture) {
+        server.stubFor(get(urlPathEqualTo("/players/nfl/" + playerId + "/news"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(Fixtures.read(fixture))));
     }
 
     public static void stubJson(WireMockServer server, String path, String fixture, String etag) {
