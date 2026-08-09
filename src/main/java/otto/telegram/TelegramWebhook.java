@@ -27,8 +27,9 @@ import otto.storage.OttoJson;
  * <p>The token guards the endpoint and the chat gate guards the
  * identity, so both are needed: anybody who holds the token reaches
  * this seam, and only the one chat the assistant serves is answered.
- * The gate is applied once, to the whole update, so no branch of
- * {@link #handle} can be added without it.
+ * The gate is applied once, to the whole update, before the update is
+ * read for what it asks. Every kind of update goes through that one
+ * check, so a new kind cannot be added without it.
  */
 @Component
 public class TelegramWebhook {
@@ -71,6 +72,10 @@ public class TelegramWebhook {
     private void dispatch(JsonNode update) {
         JsonNode callback = update.path("callback_query");
         boolean isTap = !callback.isMissingNode();
+        if (isTap && callback.path("id").asText("").isEmpty()) {
+            log.warn("Tap dropped: it carries no callback id, so it cannot be answered");
+            return;
+        }
         if (!fromConfiguredChat(update)) {
             log.warn("Update dropped: it is not from the chat the assistant serves");
             if (isTap) {
@@ -121,17 +126,14 @@ public class TelegramWebhook {
     }
 
     /**
-     * Every tap that reaches the seam is answered, the ones this chat
-     * does not own included: Telegram offers a callback_query again
-     * until an answerCallbackQuery confirms it, so a silent drop buys a
-     * repeat rather than quiet.
+     * Every tap the seam acts on is answered, the ones from another chat
+     * included. Telegram offers a callback_query again until an
+     * answerCallbackQuery confirms it, so a silent drop causes repeats.
+     * A tap that carries no id is refused before this point, because
+     * such a tap can never be answered.
      */
     private void acknowledge(JsonNode callback, String text) {
-        String callbackId = callback.path("id").asText("");
-        if (callbackId.isEmpty()) {
-            return;
-        }
-        telegram.answerCallbackQuery(callbackId, text);
+        telegram.answerCallbackQuery(callback.path("id").asText(""), text);
     }
 
     /** A body Telegram would never send is logged and dropped, never retried. */
