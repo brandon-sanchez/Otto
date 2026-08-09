@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
+import otto.alerts.VerificationService;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -44,6 +45,7 @@ public class CheckRunner {
     private final LastCheckStore stateStore;
     private final EventLog eventLog;
     private final AlertService alertService;
+    private final VerificationService verificationService;
     private final SelfReportService selfReport;
     private final Clock clock;
     private final Duration preDraftCheckInterval;
@@ -52,8 +54,8 @@ public class CheckRunner {
             PlayerDirectoryStore directoryStore, SleeperAdapter sleeper,
             SnapshotBuilder snapshotBuilder, SnapshotDiffer snapshotDiffer,
             SnapshotStore snapshotStore, LastCheckStore stateStore, EventLog eventLog,
-            AlertService alertService, SelfReportService selfReport, Clock clock,
-            OttoProperties properties) {
+            AlertService alertService, VerificationService verificationService,
+            SelfReportService selfReport, Clock clock, OttoProperties properties) {
         this.directoryService = directoryService;
         this.directoryStore = directoryStore;
         this.sleeper = sleeper;
@@ -63,6 +65,7 @@ public class CheckRunner {
         this.stateStore = stateStore;
         this.eventLog = eventLog;
         this.alertService = alertService;
+        this.verificationService = verificationService;
         this.selfReport = selfReport;
         this.clock = clock;
         this.preDraftCheckInterval = properties.preDraftCheckInterval();
@@ -82,10 +85,14 @@ public class CheckRunner {
 
         SnapshotStage stage = snapshotStage(now);
         // Roster Alerts fire only in season: pre-draft and drafting stay quiet.
-        List<Event> alerts = stage.snapshot()
-                .filter(snapshot -> snapshot.leagueStatus() == LeagueStatus.IN_SEASON)
-                .map(snapshot -> alertService.process(snapshot, weekFacts(stage.league())))
-                .orElseGet(List::of);
+        List<Event> alerts = new ArrayList<>();
+        Optional<Snapshot> inSeason = stage.snapshot()
+                .filter(snapshot -> snapshot.leagueStatus() == LeagueStatus.IN_SEASON);
+        if (inSeason.isPresent()) {
+            WeekFacts week = weekFacts(stage.league());
+            alerts.addAll(alertService.process(inSeason.get(), week));
+            verificationService.verify(inSeason.get(), week, now);
+        }
 
         LeagueStatus leagueStatus = stage.snapshot().map(Snapshot::leagueStatus)
                 .or(() -> state.map(LastCheck::leagueStatus))

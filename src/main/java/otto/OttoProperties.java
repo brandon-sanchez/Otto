@@ -18,6 +18,7 @@ public record OttoProperties(
     public record Sleeper(String baseUrl) {
     }
 
-    public record Telegram(String baseUrl, String botToken, String chatId) {
+    public record Telegram(String baseUrl, String botToken, String chatId,
+            String webhookSecret) {
     }
 }

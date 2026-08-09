@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -62,17 +63,25 @@ public class AlertService {
     private final AlertPhraser phraser;
     private final TelegramClient telegram;
     private final EventLog eventLog;
+    private final IgnoreLedger ignoreLedger;
+    private final MuteStore muteStore;
+    private final AlertIdSequence idSequence;
     private final Clock clock;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
-            AlertPhraser phraser, TelegramClient telegram, EventLog eventLog, Clock clock) {
+            AlertPhraser phraser, TelegramClient telegram, EventLog eventLog,
+            IgnoreLedger ignoreLedger, MuteStore muteStore, AlertIdSequence idSequence,
+            Clock clock) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
         this.phraser = phraser;
         this.telegram = telegram;
         this.eventLog = eventLog;
+        this.ignoreLedger = ignoreLedger;
+        this.muteStore = muteStore;
+        this.idSequence = idSequence;
         this.clock = clock;
     }
 
@@ -96,6 +105,7 @@ public class AlertService {
         List<AlertCandidate> sendable = candidates.stream()
                 .filter(candidate -> candidate.recommendation().confidence() != Confidence.LOW)
                 .filter(candidate -> !lockSuppressed(candidate, week, now))
+                .filter(candidate -> !muted(candidate))
                 .toList();
 
         List<Event> sent = new ArrayList<>(sendMerged(sendable, now));
@@ -110,6 +120,20 @@ public class AlertService {
                 .filter(event -> Duration.between(event.at(), now).compareTo(RETRY_WINDOW) <= 0)
                 .flatMap(event -> transitionDetector.detect(event).stream())
                 .toList();
+    }
+
+    /**
+     * A Mute silences its notifications until unmuted: a class of
+     * Alerts as a class, a player's news as that player's transitions.
+     * Recommendations keep computing; only the message is withheld.
+     */
+    private boolean muted(AlertCandidate candidate) {
+        return switch (candidate.source()) {
+            case TRANSITION -> candidate.playerId() != null
+                    && muteStore.muted("player:" + candidate.playerId());
+            case LEGALITY -> muteStore.muted("class:legality");
+            case EDGE -> muteStore.muted("class:edge");
+        };
     }
 
     /**
@@ -148,12 +172,15 @@ public class AlertService {
             }
             AlertCandidate primary = unalerted.stream().min(BY_CONFIDENCE).orElseThrow();
             String text = phraser.phrase(primary.facts(), primary.recommendation());
-            if (!telegram.sendMessage(text)) {
+            long alertId = idSequence.next();
+            if (!telegram.sendAlert(text, alertId)) {
                 continue;
             }
             for (AlertCandidate candidate : unalerted) {
+                Map<String, String> facts = new HashMap<>(alertFacts(candidate, text));
+                facts.put("alertId", String.valueOf(alertId));
                 Event alert = new Event("alert:" + candidate.key(),
-                        EventType.ALERT_SENT, now, alertFacts(candidate, text));
+                        EventType.ALERT_SENT, now, Map.copyOf(facts));
                 if (eventLog.append(alert)) {
                     sent.add(alert);
                 }
@@ -176,6 +203,7 @@ public class AlertService {
         }
         String weekKey = week.weekKey().get();
         GameWeek games = week.games().get();
+        Set<String> ignoredKeys = ignoreLedger.ignoredKeys();
 
         List<Event> sent = new ArrayList<>();
         for (String playerId : new LinkedHashSet<>(roster.starters())) {
@@ -192,12 +220,18 @@ public class AlertService {
                 continue;
             }
 
+            // An Ignore stops the follow-ups it covers, but never
+            // shields an illegal lineup: legality problems always warn.
             List<AlertCandidate> problems = sendable.stream()
                     .filter(candidate -> candidate.source() != AlertCandidate.Source.TRANSITION)
                     .filter(candidate -> playerId.equals(candidate.playerId()))
+                    .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY
+                            || !ignoredKeys.contains(candidate.key()))
                     .toList();
             PlayerHealth health = roster.playerHealth().get(playerId);
-            boolean impaired = health != null && health.isWorseThan(PlayerHealth.PROBABLE);
+            boolean impaired = health != null && health.isWorseThan(PlayerHealth.PROBABLE)
+                    && !ignoreLedger.covers(playerId, health)
+                    && !muteStore.muted("player:" + playerId);
             if (problems.isEmpty() && !impaired) {
                 continue;
             }
@@ -220,9 +254,11 @@ public class AlertService {
                     String.valueOf(Duration.between(now, lock.get()).toMinutes()));
 
             String text = phraser.phrase(facts, recommendation);
-            if (!telegram.sendMessage(text)) {
+            long alertId = idSequence.next();
+            if (!telegram.sendAlert(text, alertId)) {
                 continue;
             }
+            facts.put("alertId", String.valueOf(alertId));
             facts.put("playerId", playerId);
             facts.put("text", text);
             Event warning = new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts));
