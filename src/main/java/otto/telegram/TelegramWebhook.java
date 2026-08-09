@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
 import otto.alerts.AlertActions;
+import otto.ask.AskService;
 import otto.storage.OttoJson;
 
 /**
@@ -31,13 +32,17 @@ public class TelegramWebhook {
     private static final Pattern TAP = Pattern.compile("(done|ignore|mute):(\\d{1,18})");
 
     private final String webhookSecret;
+    private final String chatId;
     private final AlertActions alertActions;
+    private final AskService ask;
     private final TelegramClient telegram;
 
     public TelegramWebhook(OttoProperties properties, AlertActions alertActions,
-            TelegramClient telegram) {
+            AskService ask, TelegramClient telegram) {
         this.webhookSecret = properties.telegram().webhookSecret();
+        this.chatId = properties.telegram().chatId();
         this.alertActions = alertActions;
+        this.ask = ask;
         this.telegram = telegram;
     }
 
@@ -50,9 +55,24 @@ public class TelegramWebhook {
             JsonNode callback = update.path("callback_query");
             if (!callback.isMissingNode()) {
                 answerTap(callback);
+                return;
             }
+            answerAsk(update.path("message"));
         });
         return WebhookResult.OK;
+    }
+
+    /**
+     * Free text goes to the Ask loop and its reply back to the chat.
+     * Only the one chat the assistant serves is answered; anything else
+     * that reaches this endpoint is dropped without a model call.
+     */
+    private void answerAsk(JsonNode message) {
+        String text = message.path("text").asText("");
+        if (text.isBlank() || !chatId.equals(message.path("chat").path("id").asText(""))) {
+            return;
+        }
+        telegram.sendMessage(ask.answer(text));
     }
 
     private void answerTap(JsonNode callback) {

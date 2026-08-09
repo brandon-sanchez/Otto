@@ -35,6 +35,9 @@ public abstract class WireSeamTest {
     /** The secret token Telegram must echo back on every webhook call. */
     public static final String WEBHOOK_SECRET = "test-webhook-secret";
 
+    /** The one chat the assistant serves. */
+    public static final long USER_CHAT_ID = 4242;
+
     protected static final WireMockServer sleeper = newServer();
     protected static final WireMockServer telegram = newServer();
     protected static final WireMockServer llm = newServer();
@@ -60,7 +63,7 @@ public abstract class WireSeamTest {
         registry.add("otto.sleeper.base-url", sleeper::baseUrl);
         registry.add("otto.telegram.base-url", telegram::baseUrl);
         registry.add("otto.telegram.bot-token", () -> "test-bot-token");
-        registry.add("otto.telegram.chat-id", () -> "4242");
+        registry.add("otto.telegram.chat-id", () -> String.valueOf(USER_CHAT_ID));
         registry.add("otto.telegram.webhook-secret", () -> WEBHOOK_SECRET);
         registry.add("otto.storage-dir", () -> storageDir.toString());
         registry.add("spring.ai.openai.base-url", llm::baseUrl);

@@ -1,5 +1,7 @@
 package otto.lineup;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,5 +51,50 @@ public class LineupOptimizer {
                     });
         }
         return assignment;
+    }
+
+    /**
+     * Reads a reshuffle as concrete "start A over B" pairs.
+     *
+     * Both sides sort strongest first, so a multi-player reshuffle
+     * pairs the best entering player with the best leaving one.
+     * Pairing best against worst would inflate one pair's gain and
+     * describe a swap nobody would name that way.
+     *
+     * @param current the player ids in the lineup now
+     * @param optimal the player ids the optimizer chose
+     * @param points projected points per movable player; a player
+     *        absent from it cannot be moved, so neither side of a pair
+     *        is ever built from one. A caller may pin players outside
+     *        this map into the optimal lineup - a locked starter keeps
+     *        their slot - and pairing against them would price a swap
+     *        the user cannot make.
+     */
+    public List<LineupSwap> swaps(Collection<String> current, Collection<String> optimal,
+            Map<String, Double> points) {
+        Set<String> currentIds = new HashSet<>(current);
+        Set<String> optimalIds = new HashSet<>(optimal);
+        Comparator<String> strongestFirst = Comparator
+                .comparingDouble((String playerId) -> points.get(playerId))
+                .reversed();
+        List<String> entering = optimalIds.stream()
+                .filter(points::containsKey)
+                .filter(playerId -> !currentIds.contains(playerId))
+                .sorted(strongestFirst)
+                .toList();
+        List<String> leaving = currentIds.stream()
+                .filter(points::containsKey)
+                .filter(playerId -> !optimalIds.contains(playerId))
+                .sorted(strongestFirst)
+                .toList();
+
+        List<LineupSwap> swaps = new ArrayList<>();
+        int pairs = Math.min(entering.size(), leaving.size());
+        for (int pair = 0; pair < pairs; pair++) {
+            String in = entering.get(pair);
+            String out = leaving.get(pair);
+            swaps.add(new LineupSwap(in, out, points.get(in) - points.get(out)));
+        }
+        return swaps;
     }
 }

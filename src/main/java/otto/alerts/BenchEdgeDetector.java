@@ -2,19 +2,17 @@ package otto.alerts;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
 import otto.check.WeekFacts;
 import otto.lineup.LineupOptimizer;
+import otto.lineup.LineupSwap;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.snapshot.RosterSnapshot;
@@ -60,36 +58,14 @@ public class BenchEdgeDetector {
 
         Map<Integer, String> optimal =
                 optimizer.assign(slots, points, roster.playerPositions());
-        Set<String> optimalIds = new HashSet<>(optimal.values());
-        Set<String> currentIds = new HashSet<>(roster.starters());
-
-        // Both lists sort strongest first, so a multi-swap reshuffle
-        // pairs the best entering player with the best leaving one.
-        // Pairing best against worst would inflate one pair's edge and
-        // gate the threshold on a swap nobody would describe that way.
-        Comparator<String> strongestFirst = Comparator
-                .comparingDouble((String playerId) -> points.get(playerId))
-                .reversed();
-        List<String> entering = optimalIds.stream()
-                .filter(playerId -> !currentIds.contains(playerId))
-                .sorted(strongestFirst)
-                .toList();
-        List<String> leaving = currentIds.stream()
-                .filter(points::containsKey)
-                .filter(playerId -> !optimalIds.contains(playerId))
-                .sorted(strongestFirst)
-                .toList();
 
         List<AlertCandidate> candidates = new ArrayList<>();
-        int pairs = Math.min(entering.size(), leaving.size());
-        for (int pair = 0; pair < pairs; pair++) {
-            String in = entering.get(pair);
-            String out = leaving.get(pair);
-            double edge = points.get(in) - points.get(out);
-            if (edge < edgeThreshold) {
+        for (LineupSwap swap : optimizer.swaps(roster.starters(), optimal.values(), points)) {
+            if (swap.gain() < edgeThreshold) {
                 continue;
             }
-            candidates.add(candidate(roster, weekKey, slots, optimal, points, in, out, edge));
+            candidates.add(candidate(roster, weekKey, slots, optimal, points,
+                    swap.starting(), swap.sitting(), swap.gain()));
         }
         return candidates;
     }
