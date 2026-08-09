@@ -46,6 +46,7 @@ public class NflverseFeedService {
 
     private static final String WEEKLY_STATS_RELEASE = "stats_player";
     private static final String DEPTH_CHARTS_RELEASE = "depth_charts";
+    private static final String WEEKLY_ROSTERS_RELEASE = "weekly_rosters";
 
     private static final Set<String> KEPT_POSITIONS = Set.of("QB", "RB", "WR", "TE");
     private static final String REGULAR_SEASON = "REG";
@@ -92,6 +93,15 @@ public class NflverseFeedService {
             Map.entry("fumbles_lost_total", "fum_lost"));
 
     /**
+     * The share of his team's targets a player saw in one game. It is
+     * nflverse's own column, computed against a real team denominator,
+     * and it is what the waiver breakout tag reads for receivers and
+     * tight ends. It is no league's scoring key, so it rides beside the
+     * translated stats rather than inside them.
+     */
+    private static final String TARGET_SHARE = "target_share";
+
+    /**
      * Columns each file must carry. These feeds gain and reorder
      * columns between seasons, which a name-keyed read survives - but a
      * renamed column would read as a blank field and quietly price a
@@ -100,9 +110,11 @@ public class NflverseFeedService {
      */
     private static final Set<String> WEEKLY_STATS_COLUMNS = Set.of(
             "player_id", "player_display_name", "position", "season_type", "team",
-            "opponent_team", "week");
+            "opponent_team", "week", TARGET_SHARE);
     private static final Set<String> DEPTH_CHART_COLUMNS = Set.of(
             "dt", "team", "player_name", "gsis_id", "pos_abb", "pos_rank");
+    private static final Set<String> WEEKLY_ROSTER_COLUMNS = Set.of(
+            "gsis_id", "week", "status_description_abbr");
     private static final Set<String> PLAYER_ID_COLUMNS = Set.of(
             "sleeper_id", "gsis_id", "position");
 
@@ -141,7 +153,8 @@ public class NflverseFeedService {
         }
     }
 
-    public record Result(Update weeklyStats, Update depthCharts, Update playerIds) {
+    public record Result(Update weeklyStats, Update depthCharts, Update weeklyRosters,
+            Update playerIds) {
     }
 
     /**
@@ -153,6 +166,7 @@ public class NflverseFeedService {
         return new Result(
                 report(updateWeeklyStats(now)),
                 report(updateDepthCharts(now)),
+                report(updateWeeklyRosters(now)),
                 report(updatePlayerIds(now)));
     }
 
@@ -288,9 +302,28 @@ public class NflverseFeedService {
                     NflTeams.normalize(row.text("team")),
                     NflTeams.normalize(row.text("opponent_team")),
                     row.integer("week"),
+                    targetShare(row),
                     statsOf(row)));
         });
         return lines;
+    }
+
+    /**
+     * The published target share, or nothing when the row does not
+     * carry one. A blank, an "NA" or a value that is not a number reads
+     * as absent rather than as zero: a zero would say the offence never
+     * looked at him, which is a claim this file did not make.
+     */
+    private static Double targetShare(Csv.Row row) {
+        String value = row.text(TARGET_SHARE).trim();
+        if (blankOrNa(value)) {
+            return null;
+        }
+        try {
+            return Double.valueOf(value);
+        } catch (NumberFormatException notANumber) {
+            return null;
+        }
     }
 
     /** Only the stats the row actually recorded; a zero says nothing. */
@@ -438,6 +471,62 @@ public class NflverseFeedService {
                             row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0)))
                     .toList();
         }
+    }
+
+    // -- weekly rosters -----------------------------------------------------
+
+    /**
+     * The week-level roster standings, which carry the one fact no
+     * other feed here does: whether an absence has a date the player
+     * comes back on. The waiver breakout tag reads it, so that an IR
+     * spell designated for return is priced as the loan it is.
+     */
+    private Update updateWeeklyRosters(Instant now) {
+        Optional<WeeklyRosters> stored = store.weeklyRosters();
+        if (!due(stored, now)) {
+            return new Update.Skipped();
+        }
+
+        SourceResult<SleeperAdapter.NflState> state = sleeper.nflState();
+        if (state instanceof SourceResult.Unavailable<SleeperAdapter.NflState> unavailable) {
+            return new Update.Unavailable(unavailable.source(), unavailable.reason());
+        }
+        String season = ((SourceResult.Ok<SleeperAdapter.NflState>) state).value().season();
+        String asset = "roster_weekly_%s.csv".formatted(season);
+
+        return switch (decide(WEEKLY_ROSTERS_RELEASE, asset, stored, season)) {
+            case Decision.Blocked blocked ->
+                new Update.Unavailable(blocked.source(), blocked.reason());
+            case Decision.Touch ignored -> {
+                store.writeWeeklyRosters(stored.orElseThrow().withCheckedAt(now));
+                yield new Update.Unchanged();
+            }
+            case Decision.Download download -> stored(
+                    client.downloadAsset(WEEKLY_ROSTERS_RELEASE, asset,
+                            NflverseFeedService::standings),
+                    rows -> store.writeWeeklyRosters(new WeeklyRosters(season,
+                            download.assetUpdatedAt(), now, rows)));
+        };
+    }
+
+    /**
+     * Only the standing itself is kept. Everything else in this file -
+     * names, ids, colleges, draft position - is already in the Player
+     * Directory or in the id map, and a second copy of it would drift
+     * from the first.
+     */
+    private static List<WeeklyRosters.Standing> standings(Stream<Csv.Row> rows) {
+        List<WeeklyRosters.Standing> standings = new ArrayList<>();
+        rows.forEach(row -> {
+            requireColumns(row, WEEKLY_ROSTER_COLUMNS);
+            String gsisId = row.text("gsis_id");
+            String code = row.text("status_description_abbr");
+            if (blankOrNa(gsisId) || blankOrNa(code)) {
+                return;
+            }
+            standings.add(new WeeklyRosters.Standing(gsisId, row.integer("week"), code));
+        });
+        return standings;
     }
 
     // -- player id mapping --------------------------------------------------

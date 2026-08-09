@@ -9,7 +9,7 @@ import java.time.Instant;
  * Those three answer the only question the refresh asks - is the
  * stored copy still the current one?
  */
-public sealed interface NflverseFeed permits WeeklyStats, DepthCharts {
+public sealed interface NflverseFeed permits WeeklyStats, DepthCharts, WeeklyRosters {
 
     String season();
 

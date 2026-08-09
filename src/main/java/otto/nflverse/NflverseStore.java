@@ -12,6 +12,7 @@ public class NflverseStore {
 
     private static final String WEEKLY_STATS = "nflverse-weekly-stats";
     private static final String DEPTH_CHARTS = "nflverse-depth-charts";
+    private static final String WEEKLY_ROSTERS = "nflverse-weekly-rosters";
     private static final String PLAYER_IDS = "nflverse-player-ids";
     private static final String DEFENSE_VERSUS_POSITION = "defense-versus-position";
 
@@ -35,6 +36,14 @@ public class NflverseStore {
 
     public void writeDepthCharts(DepthCharts charts) {
         store.write(DEPTH_CHARTS, charts);
+    }
+
+    public Optional<WeeklyRosters> weeklyRosters() {
+        return store.read(WEEKLY_ROSTERS, WeeklyRosters.class);
+    }
+
+    public void writeWeeklyRosters(WeeklyRosters rosters) {
+        store.write(WEEKLY_ROSTERS, rosters);
     }
 
     public Optional<PlayerIdMap> playerIds() {

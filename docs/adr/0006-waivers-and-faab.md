@@ -2,6 +2,12 @@
 
 Status: accepted (2026-08-08, issue #17)
 
+Amended (2026-08-09, issue #33): the Role Tag rules are rewritten. A
+breakout is now read from the player's own share of his offence, and
+the designation route is split into an absence that ends the season and
+one the player comes back from. The sections below marked as revised
+replace what #17 decided; everything else stands.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -57,38 +63,151 @@ Degrading is right here and abstaining is not, because a replacement
 level of zero would price every scrub as a starter and nothing on the
 board could be scored at all.
 
-## A cutoff the table cannot reach abstains from a usage breakout
+## A breakout is a share of the offence, not a rank (revised, #33)
 
-The other cutoff reads the other way. The usage breakout rests on "two
-consecutive weeks of top-24 positional usage", and a top-24 claim over
-a week with eight running backs on record is not a top-24 claim - it
-would tag every candidate a breakout. So when the week's stat lines at
-a position number fewer than 24, the usage breakout does not fire.
+#17 read the usage breakout as "two consecutive weeks of top-24
+positional usage", and had to add a rule that a week with fewer than 24
+stat lines at a position abstains, because a top-24 claim over eight
+running backs is not a top-24 claim. That workaround is a symptom. A
+rank is a comparison against everybody else's week, so it moves when a
+blowout or a pass-heavy script reshuffles the busiest two dozen players
+without any role changing.
 
-Top-24 here is the spec's own number and is deliberately not the
-replacement cutoff, which is 12 at tight end. The two ranks answer
-different questions: replacement level asks how many starters a league
-of this shape needs at the position, and a usage breakout asks whether
-the offence is treating him as one of the two dozen busiest players at
-his position in the sport.
+A share does not move that way. It compares a player against his own
+team in the same game, so it is self-normalising, it can be read
+against a fixed bar, and the thin-table abstention rule is deleted
+rather than kept: there is no table to be thin. The board can now read
+a breakout off one played week in a fixture of sixteen rows, which is
+what week 1 of a real season looks like too.
 
-The thin-table rules differ for the same reason. A replacement level
-must produce a number or nothing works, so the conservative reading is
-the worst projected player. A breakout is a claim about one player, so
-the conservative reading is silence.
+The rank also read the wrong thing. Two real cases show it. Kyren
+Williams began 2023 as the number 2 back with nobody injured anywhere,
+took the job on merit in week 1 and is the best waiver pickup in
+fantasy history; the injury route cannot see him at all. Puka Nacua
+caught 10 of 15 targets in week 1 of the same season, about 39% of his
+team's targets, and the two-week route would have missed the only
+waiver run that mattered. Both men kept the role. What they have in
+common is that they earned it, and what predicts that is their own
+share of the offence.
 
-## Snap share is not in the feed, so touches and targets carry usage
+## The two lanes, and the numbers on them (new, #33)
+
+Either lane is enough, and both are named constants in
+`otto.waivers.BreakoutLanes`.
+
+The **fast lane** asks one game at the elite bar, because that is where
+the league winners are and waiting a second week means bidding against
+everybody else who waited.
+
+- `FAST_TARGET_SHARE` = 25% for WR and TE. A season target share above
+  25% is the published line for an elite receiver - fewer than eight
+  men in the league sustain 30% with the air-yards lead - so one game
+  at that rate is the offence treating him as its first read.
+- `FAST_OPPORTUNITY_SHARE` = 65% for RB. The published line for the
+  lead back of a two-man committee is 65-70% of the carries, so a back
+  at 65% of his backfield's work is the lead back and not the better
+  half of a committee.
+
+The **slow lane** asks two consecutive games at the bar of a real role,
+which is the role that grows rather than arrives.
+
+- `SLOW_TARGET_SHARE` = 18% for WR and TE. A season target share above
+  20% is associated with WR1 finishes; 18% held over two straight games
+  is the week-to-week reading of the same line.
+- `SLOW_OPPORTUNITY_SHARE` = 50% for RB. Half a backfield's work is the
+  point at which a committee has a lead back at all.
+
+`TREND_GAMES` = 3. A share that rose every week across three straight
+games goes in the reason string whatever the tag, because a role
+growing in front of the user is worth showing him before it crosses a
+bar.
+
+Three rules keep the lanes honest. A player's newest game has to be the
+newest week the feed holds, or the claim is about a role he had a month
+ago. The games have to be in straight weeks, so a bye or an absence
+does not get read as consecutive. And no lane fires for a player whose
+own designation rules him out this week: that is the week his role
+ended, whatever last week's share was.
+
+A quarterback has no lane. Nothing a quarterback does divides into a
+share of his own offence, and no waiver tag rests on one.
+
+## Where each share really comes from (new, #33)
+
+The column names were read off the published files before any threshold
+was pinned, because a threshold against a column that does not exist is
+worse than no threshold at all.
+
+| Input | Release | Asset | Column |
+|---|---|---|---|
+| Target share | `stats_player` | `stats_player_week_YYYY.csv` | `target_share` |
+| Carries | `stats_player` | `stats_player_week_YYYY.csv` | `carries` |
+| Targets | `stats_player` | `stats_player_week_YYYY.csv` | `targets` |
+| Roster standing | `weekly_rosters` | `roster_weekly_YYYY.csv` | `status_description_abbr` |
+
+Target share is nflverse's own per-game column and needs no arithmetic
+here: it is already his targets over his team's targets in that game,
+which is the real team denominator the tag asks for. It is no league's
+scoring key, so it rides beside the translated stats rather than inside
+them, and a blank or an "NA" reads as absent rather than as zero - a
+zero would say the offence never looked at him, which is a claim the
+file did not make.
+
+Opportunity share has no published column, so it is computed from the
+two that are already downloaded: a back's carries plus targets over the
+same total for every back his team played that week. The denominator
+comes from the same rows, so it is a real team's real game.
+
+#17 judged that a snap-count download was not worth a second hourly
+fetch. That judgement stands and is now moot: `snap_counts` is not
+added, because the share the tag actually wants was in the file the
+system already downloads. The only new download is `weekly_rosters`,
+and it is there for a different question.
+
+## An absence with a return date is a loan, not a breakout (revised, #33)
+
+#17 made any multi-week designation - IR or PUP - a breakout on its
+own. Modern IR carries a four-game return designation, so "on IR" no
+longer means "gone", and paying a breakout price for a four-game loan
+is how a budget disappears. The question that matters is whether the
+man ahead has a date he comes back on.
+
+Sleeper cannot answer it. Its players file publishes a single "Injured
+Reserve" status with no return designation, so the split is read from
+nflverse `weekly_rosters` instead, whose `status_description_abbr` is
+the league's own roster-standing code. Only two codes are named as
+season-ending: `R01`, reserve/injured with no return designation, and
+`R02`, reserve/retired.
+
+The codes are published without a key, so each one was read off the
+feed itself. Over the 2024 season a player on `R01` is active again in
+a later week 18% of the time and a player on `R02` 4% of the time,
+against 75% for `R48`, the injured-reserve code that carries a return
+designation, and 59% for `R04`, the PUP code. That last number is why
+this ADR does not follow #33's own list, which named PUP and the
+non-football lists as season-ending: the feed says most of those men
+come back. A code the set does not name reads as an absence he returns
+from, which is the reading that never pays a breakout price for a man
+who is coming back, and a missing feed names nothing season-ending at
+all.
+
+The 10 usage points are unchanged and still key off the Player
+Directory's own health: those points say the man ahead cannot play this
+Sunday, which is true either way. Only the tag reads the standing.
+
+## Snap share is still not needed (revised, #33)
 
 The spec's usage breakout reads "snap share plus touches or targets".
-Snap share lives in a separate nflverse release the system does not
-download. `stats_player_week` carries carries and targets, so those
-two - added together, and translated into Sleeper's own `rush_att` and
-`rec_tgt` keys on the way in like every other column - are the usage
-signal. This league scores neither, so no point total changes.
+Carries and targets are translated into Sleeper's own `rush_att` and
+`rec_tgt` keys on the way in like every other column, so one vocabulary
+serves a played week and a projected one. This league scores neither,
+so no point total changes.
 
-Adding a snap-count feed would be a second hourly download for a
-signal that moves with touches anyway. If the tag proves noisy in use,
-that download is the fix.
+Snap share lives in the `snap_counts` release, which is still not
+downloaded. It measures how often a player was on the field; target
+share and opportunity share measure what the offence did while he was
+there, which is the thing the tag is trying to see. If the lanes prove
+noisy in use, that download is still the fix.
 
 ## A stream is a matchup that explains more than half the edge
 
@@ -155,10 +274,9 @@ above him now or above him then. Nothing else about the older chart is
 kept.
 
 The two rules the spec draws are kept apart. Ten usage points go to a
-candidate whose man ahead is Out or worse. The breakout tag needs a
-multi-week designation - IR or PUP - because Out is a Sunday, not a
-season, and an aggressive bid on a one-week absence is how a budget
-disappears.
+candidate whose man ahead is Out or worse. The breakout tag asks for
+more than that, and what it asks for is above, under "An absence with a
+return date is a loan, not a breakout".
 
 ## Negative news wins, inside an item and across the feed
 
@@ -283,7 +401,9 @@ was cut, so the user knows he asked for more than he got.
 ## Only the projections are load-bearing
 
 Every other input fails soft into a note: no depth charts means no
-usage points, no defence table means no stream tags, no trending means
-no trending points, and each says so on the board. The projections are
+usage points, no defence table means no stream tags, no played weeks
+means no share to read and so no usage lane, no roster standings means
+nothing is season-ending, no trending means no trending points, and
+each says so on the board. The projections are
 half the score, and a board without them would be a ranking of rumour,
 so the tool answers that it cannot price one instead.

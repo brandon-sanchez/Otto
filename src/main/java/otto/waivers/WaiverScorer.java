@@ -34,6 +34,8 @@ import otto.nflverse.DefenseVersusPosition;
 import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
+import otto.nflverse.UsageShares;
+import otto.nflverse.WeeklyRosters;
 import otto.nflverse.WeeklyStats;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
@@ -93,17 +95,6 @@ public class WaiverScorer {
      */
     private static final int NEWS_READS = 25;
 
-    /**
-     * The positional rank a usage breakout has to sit inside, for every
-     * position. It is the spec's own "top-24 positional usage" and is
-     * deliberately not the replacement cutoff, which is 12 at tight end.
-     */
-    private static final int USAGE_TOP_RANK = 24;
-
-    /** Designations that keep a player out for weeks, not for a Sunday. */
-    private static final Set<PlayerHealth> MULTI_WEEK_OUT =
-            Set.of(PlayerHealth.IR, PlayerHealth.PUP);
-
     private final PlayerDirectoryStore directoryStore;
     private final NflverseStore nflverse;
     private final SleeperAdapter sleeper;
@@ -149,7 +140,7 @@ public class WaiverScorer {
     /** One candidate part-way through scoring. */
     private record Scored(DirectoryPlayer player, double projection, double pointsAboveReplacement,
             double projectionPoints, double usagePoints, double trendingPoints, double multiplier,
-            boolean breakoutRole, List<String> reasons) {
+            boolean breakoutRole, BreakoutLanes.Read lanes, List<String> reasons) {
 
         /** The score before news, which is the score news cannot lower. */
         double floor() {
@@ -178,7 +169,9 @@ public class WaiverScorer {
 
         private final Optional<DepthCharts> charts;
         private final Optional<WeeklyStats> stats;
+        private final Optional<WeeklyRosters> rosters;
         private final Optional<DefenseVersusPosition> defenses;
+        private final Optional<UsageShares> shares;
         private final Map<String, String> sleeperByGsis;
         private final Map<String, String> gsisBySleeper;
         private final Map<String, Integer> trendingAdds;
@@ -203,7 +196,12 @@ public class WaiverScorer {
 
             this.charts = nflverse.depthCharts();
             this.stats = nflverse.weeklyStats();
+            this.rosters = nflverse.weeklyRosters();
             this.defenses = nflverse.defenseVersusPosition();
+            // One pass over the stat lines builds every team's own
+            // denominators, so a share is arithmetic on this run rather
+            // than a scan per candidate.
+            this.shares = stats.map(UsageShares::of);
             Optional<PlayerIdMap> ids = nflverse.playerIds();
             this.gsisBySleeper = ids.map(PlayerIdMap::sleeperToGsis).orElseGet(Map::of);
             this.sleeperByGsis = invert(gsisBySleeper);
@@ -237,6 +235,14 @@ public class WaiverScorer {
             if (defenses.isEmpty()) {
                 notes.add("I have no defence-versus-position table yet, so I cannot tell a "
                         + "one-week matchup play from a real role");
+            }
+            if (stats.isEmpty()) {
+                notes.add("I have no played weeks on record yet, so I cannot read anybody's "
+                        + "share of his own offence");
+            }
+            if (rosters.isEmpty()) {
+                notes.add("I have no weekly roster standings yet, so I cannot tell a "
+                        + "season-ending absence from one a player comes back from");
             }
             if (trending
                     instanceof SourceResult.Unavailable<List<SleeperAdapter.TrendingPlayer>>
@@ -318,6 +324,9 @@ public class WaiverScorer {
             Usage usage = usageOf(player);
             reasons.addAll(usage.reasons());
 
+            BreakoutLanes.Read lanes = lanesFor(player);
+            reasons.addAll(lanes.reasons());
+
             double trendingPoints = trendingPoints(player);
             trendingReason(player).ifPresent(reasons::add);
 
@@ -329,7 +338,24 @@ public class WaiverScorer {
             }
 
             return new Scored(player, projection, above, projectionPoints, usage.points(),
-                    trendingPoints, multiplier, usage.breakoutRole(), reasons);
+                    trendingPoints, multiplier, usage.breakoutRole(), lanes, reasons);
+        }
+
+        /**
+         * What the player's own share of his offence says. It is joined
+         * through the id map like every other nflverse read, and it
+         * fails soft: no stats feed means no lane fires, and the board
+         * says so in its notes.
+         */
+        private BreakoutLanes.Read lanesFor(DirectoryPlayer player) {
+            String gsisId = gsisBySleeper.get(player.playerId());
+            // A man who cannot play is not breaking out, whatever last
+            // week's share was. That is the week his own role ended.
+            if (gsisId == null || shares.isEmpty() || player.health().rulesOutPlaying()) {
+                return new BreakoutLanes.Read(false, List.of());
+            }
+            return BreakoutLanes.of(player.position(), shares.get().newestWeek(),
+                    shares.get().of(gsisId));
         }
 
         private double trendingPoints(DirectoryPlayer player) {
@@ -367,18 +393,38 @@ public class WaiverScorer {
                                 spot.get().previousRank(), spot.get().label()));
             }
 
-            Optional<DirectoryPlayer> aheadAndOut = playerAheadWhoCannotPlay(player, spot.get());
+            Optional<Ahead> aheadAndOut = playerAheadWhoCannotPlay(player, spot.get());
             if (aheadAndOut.isPresent()) {
                 points += USAGE_AHEAD_OUT_POINTS;
                 reasons.add("%s, ahead of him on that chart, is %s".formatted(
-                        aheadAndOut.get().fullName(), aheadAndOut.get().health()));
+                        aheadAndOut.get().player().fullName(),
+                        aheadAndOut.get().player().health()));
             }
 
+            // A designation is a breakout on its own only when the man
+            // ahead has no date he comes back on. An absence that
+            // reverts is a loan of the role, and the loan is a stream.
             boolean breakout = spot.get().rank() == 1
-                    && spot.get().promoted()
-                    && aheadAndOut.filter(ahead -> MULTI_WEEK_OUT.contains(ahead.health()))
-                            .isPresent();
+                    && aheadAndOut.filter(ahead -> seasonEnding(ahead.gsisId())).isPresent();
+            if (aheadAndOut.isPresent()) {
+                reasons.add(breakout
+                        ? "%s's season is over, so the role does not revert when he is back"
+                                .formatted(aheadAndOut.get().player().fullName())
+                        : ("%s has a date he comes back on, so this role is a loan unless his "
+                                + "own usage says otherwise")
+                                        .formatted(aheadAndOut.get().player().fullName()));
+            }
             return new Usage(points, breakout, reasons);
+        }
+
+        /**
+         * True when the league's own roster standing for this player
+         * carries no reversion date. Without the feed nothing is
+         * season-ending: the board says it cannot see the standings
+         * rather than guessing that an absence is permanent.
+         */
+        private boolean seasonEnding(String gsisId) {
+            return rosters.map(feed -> feed.seasonEnding(gsisId)).orElse(false);
         }
 
         /** What a candidate's own chart line says, joined through the id map. */
@@ -399,7 +445,7 @@ public class WaiverScorer {
          * is the one that matters - a chart that already shows the
          * promotion has nobody above the promoted player at all.
          */
-        private Optional<DirectoryPlayer> playerAheadWhoCannotPlay(DirectoryPlayer player,
+        private Optional<Ahead> playerAheadWhoCannotPlay(DirectoryPlayer player,
                 DepthCharts.Spot spot) {
             if (charts.isEmpty()) {
                 return Optional.empty();
@@ -411,12 +457,12 @@ public class WaiverScorer {
                     .filter(row -> row.rank() < spot.rank()
                             || (row.previousRank() > 0 && spot.previousRank() > 0
                                     && row.previousRank() < spot.previousRank()))
-                    .map(row -> sleeperByGsis.get(row.gsisId()))
-                    .filter(Objects::nonNull)
-                    .map(sleeperId -> directory.players().get(sleeperId))
-                    .filter(Objects::nonNull)
-                    .filter(ahead -> ahead.health().rulesOutPlaying())
-                    .filter(ahead -> !ahead.playerId().equals(player.playerId()))
+                    .map(row -> Optional.ofNullable(sleeperByGsis.get(row.gsisId()))
+                            .map(sleeperId -> directory.players().get(sleeperId))
+                            .map(ahead -> new Ahead(row.gsisId(), ahead)))
+                    .flatMap(Optional::stream)
+                    .filter(ahead -> ahead.player().health().rulesOutPlaying())
+                    .filter(ahead -> !ahead.player().playerId().equals(player.playerId()))
                     .findFirst();
         }
 
@@ -538,7 +584,7 @@ public class WaiverScorer {
         // -- the role tag ---------------------------------------------------
 
         private RoleTag roleOf(Scored candidate) {
-            if (candidate.breakoutRole() || usageBreakout(candidate.player())) {
+            if (candidate.breakoutRole() || candidate.lanes().breakout()) {
                 return RoleTag.BREAKOUT;
             }
             return matchupLift(candidate)
@@ -586,67 +632,6 @@ public class WaiverScorer {
                             .filter(average -> average > 0.0)
                             .map(average -> Math.max(0.0,
                                     candidate.projection() * (allowed.perGame() / average - 1.0))));
-        }
-
-        /**
-         * Two straight weeks inside the top of his position by touches,
-         * at least one of them against a defence no softer than
-         * average. A stats table too thin to reach the cutoff cannot
-         * support a top-of-position claim, so it abstains rather than
-         * calling everyone a breakout.
-         */
-        private boolean usageBreakout(DirectoryPlayer player) {
-            String gsisId = gsisBySleeper.get(player.playerId());
-            if (gsisId == null || stats.isEmpty() || defenses.isEmpty()) {
-                return false;
-            }
-            List<WeeklyStats.StatLine> atPosition = stats.get().rows().stream()
-                    .filter(line -> player.position().equals(line.position()))
-                    .toList();
-            List<Integer> weeks = atPosition.stream()
-                    .map(WeeklyStats.StatLine::week)
-                    .distinct()
-                    .sorted(Comparator.reverseOrder())
-                    .limit(2)
-                    .toList();
-            if (weeks.size() < 2 || weeks.get(0) - weeks.get(1) != 1) {
-                return false;
-            }
-
-            boolean toughEnough = false;
-            for (int playedWeek : weeks) {
-                Optional<WeeklyStats.StatLine> line =
-                        topByTouches(atPosition, playedWeek, gsisId);
-                if (line.isEmpty()) {
-                    return false;
-                }
-                toughEnough |= atOrTougherThanAverage(line.get(), player.position());
-            }
-            return toughEnough;
-        }
-
-        /** His line for that week, but only when it ranks inside the top 24. */
-        private Optional<WeeklyStats.StatLine> topByTouches(List<WeeklyStats.StatLine> atPosition,
-                int playedWeek, String gsisId) {
-            List<WeeklyStats.StatLine> ranked = atPosition.stream()
-                    .filter(line -> line.week() == playedWeek)
-                    .sorted(Comparator.comparingDouble(WeeklyStats.StatLine::touches).reversed()
-                            .thenComparing(WeeklyStats.StatLine::gsisId))
-                    .toList();
-            if (ranked.size() < USAGE_TOP_RANK) {
-                return Optional.empty();
-            }
-            return ranked.stream()
-                    .limit(USAGE_TOP_RANK)
-                    .filter(line -> line.gsisId().equals(gsisId))
-                    .findFirst();
-        }
-
-        private boolean atOrTougherThanAverage(WeeklyStats.StatLine line, String position) {
-            return defenses.get().against(line.opponent(), position)
-                    .flatMap(allowed -> defenses.get().averageAllowedTo(position)
-                            .map(average -> allowed.perGame() <= average))
-                    .orElse(false);
         }
 
         // -- the user's own team --------------------------------------------
@@ -814,6 +799,10 @@ public class WaiverScorer {
         static Usage none() {
             return new Usage(0.0, false, List.of());
         }
+    }
+
+    /** A player above a candidate on the chart, and the id nflverse knows him by. */
+    private record Ahead(String gsisId, DirectoryPlayer player) {
     }
 
     /** What one candidate's news is worth, and why. */

@@ -2,6 +2,7 @@ package otto;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -53,7 +54,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * is more than half of the 10.5 that lift him above replacement. That
  * is a stream, and a stream is capped at 10% however good the score. He
  * also fills the receiver slot Puka Nacua's bye leaves illegal, which
- * adds five points to both ends: 10-15% of $100.</li>
+ * adds five points to both ends: 10-15% of $100.
+ * <p>He is also the false positive the breakout lanes have to refuse.
+ * The week gave him 13 targets and 180 yards, but the Giants threw 58
+ * times, so 13 targets is 22% of the offence - a normal share in a
+ * pass-fest, not a bigger role. Volume the game script handed him is
+ * not a breakout, and a share says so where a raw count does not.</li>
  * <li>Cade Otton (TE, TB) is a second stream against the softest
  * tight-end defence in the table, capped at 10% with no slot to fix.
  * Ray Davis (RB, BUF) and Michael Penix (QB, ATL) are solid: one meets
@@ -373,15 +379,16 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void twoWeeksOfTopOfPositionWorkloadIsABreakoutWithoutAnyDepthChartMove() {
-        // Ray Davis stays RB2 behind a healthy James Cook, so the
-        // depth chart says nothing. Two played weeks do: he leads every
-        // running back in the league in carries plus targets, and
-        // Miami, who he faced, give up less to running backs than the
-        // average defence - so the workload is his role, not his
-        // matchup. That is the other route to a breakout, and it lifts
-        // his bid a band from 0-5% to 5-12%.
-        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithTwoPlayedWeeks);
+    void twoStraightWeeksOfHalfABackfieldIsABreakoutWithoutAnyDepthChartMove() {
+        // The slow lane. Ray Davis stays RB2 behind a healthy James
+        // Cook, so the depth chart says nothing and no injury says
+        // anything either. Three played weeks do: his share of
+        // Buffalo's backfield goes 54%, 58%, 62%, so the last two both
+        // clear the 50% that marks a real role. That is a role growing
+        // rather than arriving, and it lifts his bid a band from 0-5%
+        // to 5-12%. The rise itself is on his line, because a share
+        // climbing every week is worth showing whatever the tag.
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAGrowingRole);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
                 "{\"position\":\"RB\"}", "Bucky Irving, then Ray Davis.");
@@ -392,7 +399,71 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Ray Davis"))
                 .withRequestBody(containing("breakout"))
                 .withRequestBody(containing("$5-$12"))
+                .withRequestBody(containing("he held 58% and then 62% of opportunity share "
+                        + "over weeks 2 and 3"))
+                .withRequestBody(containing("his share has risen every week: week 1 54%, "
+                        + "week 2 58%, week 3 62%"))
                 .withRequestBody(containing("raised one band to 5-12% for a breakout")));
+    }
+
+    @Test
+    void oneWeekAtTheEliteBarIsABreakoutWithNobodyInjuredAnywhere() {
+        // The fast lane, in the two shapes that made it necessary.
+        //
+        // Wandale Robinson is Nacua-shaped: 15 targets, 39% of his
+        // team's targets, in one game, with nobody hurt ahead of him.
+        // Ray Davis is Kyren-shaped: 91% of Buffalo's backfield work in
+        // week 1 while James Cook, still RB1 on the chart, is healthy.
+        // Neither man is visible to a rule that reads the label on the
+        // man ahead, and both are the week's league-winning add.
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Two men took their own jobs.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        String facts = String.join("\n", board.facts().values());
+        assertThat(facts)
+                .contains("he took 39% of target share in week 1")
+                .contains("he took 91% of opportunity share in week 1");
+        assertThat(targetLine(board, "Wandale Robinson")).contains("breakout");
+        assertThat(targetLine(board, "Ray Davis")).contains("breakout");
+
+        // The control on the same board: Cade Otton's six targets are
+        // 16% of Tampa Bay's, which is a normal share of an offence
+        // however soft the defence he met. He stays a one-week play.
+        assertThat(targetLine(board, "Cade Otton")).contains("stream").doesNotContain("breakout");
+    }
+
+    @Test
+    void aStarterWhoIsDesignatedToReturnLendsTheRoleRatherThanLosingIt() {
+        // Bucky Irving's whole case is Rachaad White's absence: he has
+        // no stat line of his own on this board. When White is on
+        // injured reserve with no way back, the job is Irving's and the
+        // bid is a breakout's. When White is designated to return, the
+        // same chart move is a loan of four games, and an aggressive
+        // bid on a loan is how a budget disappears.
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAReturningStarter);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "One loan and no breakout.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Bucky Irving"))
+                .contains("Rachaad White has a date he comes back on")
+                .doesNotContain("breakout");
+    }
+
+    /** The board's own line for one player, whatever rank he landed at. */
+    private static String targetLine(Event board, String player) {
+        return board.facts().entrySet().stream()
+                .filter(fact -> fact.getKey().startsWith("target"))
+                .map(Map.Entry::getValue)
+                .filter(fact -> fact.contains(player))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(player + " is not on the board"));
     }
 
     @Test
