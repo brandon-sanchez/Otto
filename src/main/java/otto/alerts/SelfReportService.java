@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.sleeper.SourceResult;
 import otto.telegram.TelegramClient;
 
 /**
@@ -26,6 +27,13 @@ public class SelfReportService {
         this.eventLog = eventLog;
         this.telegram = telegram;
         this.clock = clock;
+    }
+
+    /** Reports a source call that failed; an ok result is left alone. */
+    public void reportIfUnavailable(SourceResult<?> result) {
+        if (result instanceof SourceResult.Unavailable<?> unavailable) {
+            report(unavailable.source(), unavailable.reason());
+        }
     }
 
     public void report(String source, String reason) {

@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -18,9 +17,6 @@ import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
 import otto.events.EventLog;
-import otto.lineup.GameWeek;
-import otto.lineup.ProjectionTable;
-import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.LeagueStatus;
@@ -42,6 +38,7 @@ public class CheckRunner {
     private final SnapshotBuilder snapshotBuilder;
     private final SnapshotDiffer snapshotDiffer;
     private final SnapshotStore snapshotStore;
+    private final WeekFactsBuilder weekFactsBuilder;
     private final LastCheckStore stateStore;
     private final EventLog eventLog;
     private final AlertService alertService;
@@ -53,7 +50,8 @@ public class CheckRunner {
     public CheckRunner(PlayerDirectoryService directoryService,
             PlayerDirectoryStore directoryStore, SleeperAdapter sleeper,
             SnapshotBuilder snapshotBuilder, SnapshotDiffer snapshotDiffer,
-            SnapshotStore snapshotStore, LastCheckStore stateStore, EventLog eventLog,
+            SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
+            LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, VerificationService verificationService,
             SelfReportService selfReport, Clock clock, OttoProperties properties) {
         this.directoryService = directoryService;
@@ -62,6 +60,7 @@ public class CheckRunner {
         this.snapshotBuilder = snapshotBuilder;
         this.snapshotDiffer = snapshotDiffer;
         this.snapshotStore = snapshotStore;
+        this.weekFactsBuilder = weekFactsBuilder;
         this.stateStore = stateStore;
         this.eventLog = eventLog;
         this.alertService = alertService;
@@ -89,7 +88,7 @@ public class CheckRunner {
         Optional<Snapshot> inSeason = stage.snapshot()
                 .filter(snapshot -> snapshot.leagueStatus() == LeagueStatus.IN_SEASON);
         if (inSeason.isPresent()) {
-            WeekFacts week = weekFacts(stage.league());
+            WeekFacts week = weekFactsBuilder.build(stage.league());
             alerts.addAll(alertService.process(inSeason.get(), week));
             verificationService.verify(inSeason.get(), week, now);
         }
@@ -116,9 +115,9 @@ public class CheckRunner {
         SourceResult<SleeperAdapter.League> league = sleeper.league();
         SourceResult<List<SleeperAdapter.Roster>> rosters = sleeper.rosters();
         SourceResult<List<SleeperAdapter.LeagueUser>> users = sleeper.users();
-        reportIfUnavailable(league);
-        reportIfUnavailable(rosters);
-        reportIfUnavailable(users);
+        selfReport.reportIfUnavailable(league);
+        selfReport.reportIfUnavailable(rosters);
+        selfReport.reportIfUnavailable(users);
         if (!(league instanceof SourceResult.Ok<SleeperAdapter.League> leagueOk)
                 || !(rosters instanceof SourceResult.Ok<List<SleeperAdapter.Roster>> rostersOk)
                 || !(users instanceof SourceResult.Ok<List<SleeperAdapter.LeagueUser>> usersOk)) {
@@ -138,56 +137,4 @@ public class CheckRunner {
         return new SnapshotStage(Optional.of(current), leagueOk.value(), appended);
     }
 
-    /**
-     * Assembles the week-scoped detection inputs: the NFL week, the
-     * projected stat lines priced in league scoring, the starting
-     * slots, and the week's games. Every failed source self-reports
-     * once and leaves its part empty - detectors skip what is missing.
-     */
-    private WeekFacts weekFacts(SleeperAdapter.League league) {
-        List<Slot> slots = Slot.startingSlots(league.rosterPositions());
-        if (slots.isEmpty() || league.scoringSettings().isEmpty()) {
-            selfReport.report("sleeper:league-settings",
-                    "league document lacks roster_positions or scoring_settings");
-        }
-
-        SourceResult<SleeperAdapter.NflState> state = sleeper.nflState();
-        reportIfUnavailable(state);
-        if (!(state instanceof SourceResult.Ok<SleeperAdapter.NflState> stateOk)) {
-            return WeekFacts.unavailable(slots);
-        }
-        String season = stateOk.value().season();
-        int week = stateOk.value().week();
-
-        // A projection table without scoring settings could only answer
-        // "no projection available"; stay empty so detectors skip instead.
-        SourceResult<Map<String, Map<String, Double>>> projections =
-                sleeper.projections(season, week);
-        reportIfUnavailable(projections);
-        Optional<ProjectionTable> projectionTable = !league.scoringSettings().isEmpty()
-                && projections
-                        instanceof SourceResult.Ok<Map<String, Map<String, Double>>> projectionsOk
-                                ? Optional.of(new ProjectionTable(
-                                        league.scoringSettings(), projectionsOk.value()))
-                                : Optional.empty();
-
-        SourceResult<List<SleeperAdapter.Game>> games = sleeper.games(season, week);
-        reportIfUnavailable(games);
-        Optional<GameWeek> gameWeek =
-                games instanceof SourceResult.Ok<List<SleeperAdapter.Game>> gamesOk
-                        ? Optional.of(GameWeek.of(gamesOk.value()))
-                        : Optional.empty();
-
-        return new WeekFacts(
-                Optional.of("%s-w%d".formatted(season, week)),
-                projectionTable,
-                slots,
-                gameWeek);
-    }
-
-    private void reportIfUnavailable(SourceResult<?> result) {
-        if (result instanceof SourceResult.Unavailable<?> unavailable) {
-            selfReport.report(unavailable.source(), unavailable.reason());
-        }
-    }
 }
