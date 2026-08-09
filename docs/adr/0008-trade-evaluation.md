@@ -46,7 +46,7 @@ positional scarcity multiplier, times a roster-fit factor:
   is the same fact the replacement-level ranks record (TE 12 where the
   other three sit at 24).
 - Roster fit: 1.10 when he walks into the optimal lineup of the roster
-  judging him, 0.90 when somebody better at his position is already on
+  receiving him, 0.90 when somebody better at his position is already on
   that bench ahead of him, and 1.00 otherwise, which is the first man
   off the bench and real cover.
 
