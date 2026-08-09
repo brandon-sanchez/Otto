@@ -41,6 +41,29 @@ public final class NflverseStubs {
         stubCsv(nflverse, PLAYER_IDS_PATH, "nflverse/db-playerids.csv");
     }
 
+    /**
+     * The nflverse side of a waiver week: a depth chart that shows one
+     * promotion since the chart before it, stat lines that rank four
+     * defences, and the id mapping the join needs.
+     */
+    public static void waiverWeek(WireMockServer nflverse) {
+        stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
+        stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-waivers.csv");
+        stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-waivers.csv");
+        stubCsv(nflverse, PLAYER_IDS_PATH, "nflverse/db-playerids-waivers.csv");
+    }
+
+    /**
+     * The same waiver week, but with two played weeks on record and a
+     * full field of running backs: enough for a top-24 usage claim to
+     * mean something, which is what a usage breakout rests on.
+     */
+    public static void waiverWeekWithTwoPlayedWeeks(WireMockServer nflverse) {
+        waiverWeek(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-usage-breakout.csv");
+    }
+
     /** The weekly stats asset is republished: its timestamp moves forward. */
     public static void weeklyStatsRepublished(WireMockServer nflverse) {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player-refreshed.json");

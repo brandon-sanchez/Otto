@@ -3,7 +3,9 @@ package otto.nflverse;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * How much every defense gives up, by position: ESPN-style fantasy
@@ -47,6 +49,22 @@ public record DefenseVersusPosition(
         return Optional.ofNullable(byTeam.get(team))
                 .map(TeamDefense::byPosition)
                 .map(byPosition -> byPosition.get(position));
+    }
+
+    /**
+     * What the average defense in this table gives up to a position.
+     * It is the line a matchup is soft or tough against: the waiver
+     * score splits a projection into the part the matchup explains and
+     * the part the player's own role does, and this is the zero point
+     * of that split.
+     */
+    public Optional<Double> averageAllowedTo(String position) {
+        OptionalDouble average = byTeam.values().stream()
+                .map(defense -> defense.byPosition().get(position))
+                .filter(Objects::nonNull)
+                .mapToDouble(Allowed::perGame)
+                .average();
+        return average.isPresent() ? Optional.of(average.getAsDouble()) : Optional.empty();
     }
 
     public Optional<Allowed> runDefense(String team) {

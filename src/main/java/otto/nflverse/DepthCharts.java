@@ -18,12 +18,25 @@ public record DepthCharts(
         Instant checkedAt,
         List<Spot> rows) implements NflverseFeed {
 
-    /** One player's place on their team's chart: RB1, WR3 and so on. */
-    public record Spot(String gsisId, String player, String team, String position, int rank) {
+    /**
+     * One player's place on their team's chart: RB1, WR3 and so on.
+     *
+     * The rank he held on the chart published before this one rides
+     * alongside, because a waiver score turns on the move rather than
+     * on the standing: RB2 to RB1 is the news, RB1 again is not. A
+     * player absent from the previous chart carries rank 0.
+     */
+    public record Spot(String gsisId, String player, String team, String position, int rank,
+            int previousRank) {
 
         /** How the user would say it: "RB1". */
         public String label() {
             return position + rank;
+        }
+
+        /** True when this chart moved him up from the one before it. */
+        public boolean promoted() {
+            return previousRank > 0 && rank < previousRank;
         }
     }
 

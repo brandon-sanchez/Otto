@@ -12,6 +12,10 @@ import otto.sleeper.SleeperAdapter;
  * name, position, and team maps cover only players present in the
  * Player Directory. The compact constructor normalizes absent
  * collections, so Snapshots stored before a field existed still load.
+ *
+ * @param teamRecord what this team has won and lost so far
+ * @param waiverBudgetUsed the FAAB this team has spent so far, which is
+ *        what the waiver board subtracts from the league budget
  */
 public record RosterSnapshot(
         int rosterId,
@@ -24,7 +28,8 @@ public record RosterSnapshot(
         Map<String, String> playerNames,
         Map<String, String> playerPositions,
         Map<String, String> playerTeams,
-        SleeperAdapter.TeamRecord teamRecord) {
+        SleeperAdapter.TeamRecord teamRecord,
+        int waiverBudgetUsed) {
 
     public RosterSnapshot {
         starters = starters == null ? List.of() : starters;

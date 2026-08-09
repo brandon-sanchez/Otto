@@ -74,7 +74,8 @@ public class UserWeekLoader {
 
     /**
      * The whole league from the latest Snapshot, for the questions that
-     * are about the other eleven teams as much as the user's own.
+     * are about the other eleven teams as much as the user's own - the
+     * waiver board reads every roster to know who is free.
      */
     public SourceResult<LeagueWeek> leagueWeek() {
         return league().flatMap(league -> snapshotStore.current()

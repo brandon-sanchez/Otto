@@ -68,10 +68,12 @@ public class SleeperAdapter {
      *        league document does not say
      * @param playoffWeekStart the first playoff week, so the regular
      *        season runs to the week before it; 0 when it does not say
+     * @param waiverBudget the FAAB budget each team starts the season
+     *        with, empty when the league document carries no budget
      */
     public record League(String leagueId, String name, String status,
             List<String> rosterPositions, Map<String, Double> scoringSettings,
-            int playoffTeams, int playoffWeekStart) {
+            int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget) {
     }
 
     public record NflState(String season, int week) {
@@ -85,9 +87,12 @@ public class SleeperAdapter {
      * One team in the league. A team nobody has claimed yet has no
      * owner, which is how every team reads before a draft fills the
      * league up.
+     *
+     * @param waiverBudgetUsed the FAAB this team has already spent, so
+     *        the budget it has left is the league budget less this
      */
     public record Roster(int rosterId, Optional<String> ownerId, List<String> players,
-            List<String> starters, TeamRecord teamRecord) {
+            List<String> starters, TeamRecord teamRecord, int waiverBudgetUsed) {
     }
 
     /**
@@ -159,6 +164,12 @@ public class SleeperAdapter {
                 return schemaDrift(leaguePath, "league_id or status missing");
             }
             JsonNode settings = body.path("settings");
+            // A drifted budget must fail loudly rather than read as
+            // absent: the waiver board would price every bid against a
+            // budget of nothing and call that advice.
+            if (unreadableNumber(settings.path("waiver_budget"))) {
+                return schemaDrift(leaguePath, "settings.waiver_budget is not a whole number");
+            }
             return ok(new League(
                     body.get("league_id").asText(),
                     body.path("name").asText(null),
@@ -166,7 +177,8 @@ public class SleeperAdapter {
                     textList(body.path("roster_positions")),
                     numberMap(body.path("scoring_settings")),
                     settings.path("playoff_teams").asInt(0),
-                    settings.path("playoff_week_start").asInt(0)));
+                    settings.path("playoff_week_start").asInt(0),
+                    integer(settings.path("waiver_budget"))));
         });
     }
 
@@ -249,6 +261,13 @@ public class SleeperAdapter {
                 if (!roster.hasNonNull("roster_id")) {
                     return schemaDrift(path, "roster_id missing");
                 }
+                // Spent FAAB read as zero would tell the user he still
+                // has money he has already spent, so a value this code
+                // cannot read stops the document instead.
+                if (unreadableNumber(roster.path("settings").path("waiver_budget_used"))) {
+                    return schemaDrift(path,
+                            "settings.waiver_budget_used is not a whole number");
+                }
                 rosters.add(new Roster(
                         roster.get("roster_id").asInt(),
                         Optional.ofNullable(roster.get("owner_id"))
@@ -256,7 +275,8 @@ public class SleeperAdapter {
                                 .map(JsonNode::asText),
                         textList(roster.path("players")),
                         textList(roster.path("starters")),
-                        teamRecord(roster.path("settings"))));
+                        teamRecord(roster.path("settings")),
+                        integer(roster.path("settings").path("waiver_budget_used")).orElse(0)));
             }
             return ok(rosters);
         });
@@ -357,10 +377,12 @@ public class SleeperAdapter {
     /**
      * The most-added players across every Sleeper league, most added
      * first. It is a national number, not a league one: it says the rest
-     * of the fantasy world has noticed somebody.
+     * of the fantasy world has noticed somebody, which is why the waiver
+     * score weighs it and the Watchlist watches it.
      *
      * @param lookbackHours how far back the add counts reach
-     * @param limit how many of the most-added players to ask for
+     * @param limit how many of the most-added players to ask for; a
+     *        player outside the list simply has no count
      */
     public SourceResult<List<TrendingPlayer>> trendingAdds(int lookbackHours, int limit) {
         String path = "/v1/players/nfl/trending/add?lookback_hours=%d&limit=%d"
@@ -436,6 +458,30 @@ public class SleeperAdapter {
 
     private static <T> SourceResult<T> schemaDrift(String path, String reason) {
         return new SourceResult.Unavailable<>("sleeper:" + path, "schema drift: " + reason);
+    }
+
+    /**
+     * A whole-number settings field, empty when the document omits it.
+     * A field that is present but is not a whole number this code can
+     * hold never reaches here - {@link #unreadableNumber} stops the
+     * document first, so "empty" only ever means "Sleeper did not say".
+     */
+    private static Optional<Integer> integer(JsonNode value) {
+        return wholeNumber(value) ? Optional.of(value.asInt()) : Optional.empty();
+    }
+
+    /**
+     * True when Sleeper sent something for this field and it is not a
+     * whole number that fits an int: a string, a fraction, or a value
+     * too large. An absent or null field is not unreadable - it is the
+     * document saying nothing, which every caller already handles.
+     */
+    private static boolean unreadableNumber(JsonNode value) {
+        return !value.isMissingNode() && !value.isNull() && !wholeNumber(value);
+    }
+
+    private static boolean wholeNumber(JsonNode value) {
+        return value.isIntegralNumber() && value.canConvertToInt();
     }
 
     private static Map<String, Double> numberMap(JsonNode object) {

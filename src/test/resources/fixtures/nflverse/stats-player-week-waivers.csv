@@ -1,0 +1,17 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,fantasy_points,fantasy_points_ppr
+00-0037746,W.Robinson,Wandale Robinson,WR,WR,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,10,13,180,0,0,0,99.9,99.9
+00-0090001,G.Back,Giants Back,RB,RB,2026,1,REG,NYG,DAL,0,0,0,0,0,0,18,80,0,0,2,3,20,0,0,0,99.9,99.9
+00-0090002,G.End,Giants End,TE,TE,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,4,6,20,0,0,0,99.9,99.9
+00-0090003,G.Passer,Giants Passer,QB,QB,2026,1,REG,NYG,DAL,22,34,250,2,0,0,2,0,0,0,0,0,0,0,0,0,99.9,99.9
+00-0090011,B.Wideout,Bucs Wideout,WR,WR,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,5,8,70,0,0,0,99.9,99.9
+00-0037625,R.White,Rachaad White,RB,RB,2026,1,REG,TB,NO,0,0,0,0,0,0,24,120,0,0,3,4,30,0,0,0,99.9,99.9
+00-0037680,C.Otton,Cade Otton,TE,TE,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,4,6,40,0,0,0,99.9,99.9
+00-0090013,B.Passer,Bucs Passer,QB,QB,2026,1,REG,TB,NO,26,38,300,2,0,0,1,0,0,0,0,0,0,0,0,0,99.9,99.9
+00-0090021,B.Wideout,Bills Wideout,WR,WR,2026,1,REG,BUF,MIA,0,0,0,0,0,0,0,0,0,0,4,7,60,0,0,0,99.9,99.9
+00-0037248,J.Cook,James Cook,RB,RB,2026,1,REG,BUF,MIA,0,0,0,0,0,0,14,60,0,0,2,2,20,0,0,0,99.9,99.9
+00-0090022,B.End,Bills End,TE,TE,2026,1,REG,BUF,MIA,0,0,0,0,0,0,0,0,0,0,3,4,15,0,0,0,99.9,99.9
+00-0090023,B.Passer,Bills Passer,QB,QB,2026,1,REG,BUF,MIA,18,29,200,1,0,0,3,0,0,0,0,0,0,0,0,0,99.9,99.9
+00-0090031,P.Wideout,Packers Wideout,WR,WR,2026,1,REG,GB,CHI,0,0,0,0,0,0,0,0,0,0,3,5,50,0,0,0,99.9,99.9
+00-0035700,J.Jacobs,Josh Jacobs,RB,RB,2026,1,REG,GB,CHI,0,0,0,0,0,0,12,40,0,0,2,3,20,0,0,0,99.9,99.9
+00-0090032,P.End,Packers End,TE,TE,2026,1,REG,GB,CHI,0,0,0,0,0,0,0,0,0,0,2,3,10,0,0,0,99.9,99.9
+00-0090033,P.Passer,Packers Passer,QB,QB,2026,1,REG,GB,CHI,15,26,150,1,0,0,2,0,0,0,0,0,0,0,0,0,99.9,99.9

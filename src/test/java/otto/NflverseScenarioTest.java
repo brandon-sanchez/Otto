@@ -11,6 +11,7 @@ import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseStore;
 
@@ -140,6 +141,49 @@ class NflverseScenarioTest extends WireSeamTest {
                         && event.key().contains("stats_player"));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("schema drift")));
+    }
+
+    @Test
+    void aDepthChartDateThisCodeCannotReadFailsInsteadOfSortingAsText() {
+        healthyFeeds();
+        // Day-first dates sort as text into an order the calendar does
+        // not agree with, which would hand the newest chart's rank to
+        // the wrong snapshot - and the rank a player held on the chart
+        // before this one is what a promotion is read from.
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.DEPTH_2026_PATH,
+                "nflverse/depth-charts-2026-drifted-date.csv");
+
+        feeds.updateIfDue();
+
+        assertThat(store.depthCharts()).isEmpty();
+        assertThat(eventLog.all())
+                .anyMatch(event -> event.type() == EventType.SOURCE_UNAVAILABLE
+                        && event.key().contains("depth_charts"));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("schema drift")));
+
+        // The feeds that still parse are unaffected.
+        assertThat(store.weeklyStats()).isPresent();
+        assertThat(store.playerIds()).isPresent();
+    }
+
+    @Test
+    void aChartPublishedWithAnOffsetOrdersAgainstOneWrittenWithAZ() {
+        healthyFeeds();
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.DEPTH_2026_PATH,
+                "nflverse/depth-charts-2026-mixed-formats.csv");
+
+        feeds.updateIfDue();
+
+        // The three rows name the same three moments whichever way they
+        // are written, so the newest chart is still the newest one and
+        // Jacobs still reads as promoted from RB2.
+        DepthCharts.Spot jacobs = store.depthCharts().orElseThrow().rows().stream()
+                .filter(spot -> spot.gsisId().equals("00-0035700"))
+                .findFirst().orElseThrow();
+        assertThat(jacobs.rank()).isEqualTo(1);
+        assertThat(jacobs.previousRank()).isEqualTo(2);
+        assertThat(jacobs.promoted()).isTrue();
     }
 
     @Test
