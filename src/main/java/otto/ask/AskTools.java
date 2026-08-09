@@ -150,8 +150,11 @@ public class AskTools {
             replacement, depth-chart usage, Sleeper's trending adds and
             recent news. Each one carries a role tag - stream, solid or
             breakout - and a suggested FAAB bid range from the budget
-            the user has left, with the reasons behind both. Call this
-            for waivers, "who should I pick up", free agents, and any
+            the user has left, with the reasons behind both. It also
+            answers the drop side of a pickup: name the rostered players
+            the user would drop and every candidate carries what he is
+            worth over each of them. Call this for waivers, "who should
+            I pick up", "is anybody better than X", free agents, and any
             request for targets at a position.""")
     public ToolAnswer<WaiverBoard> rankWaiverTargets(
             @ToolParam(required = false, description = """
@@ -161,8 +164,21 @@ public class AskTools {
             @ToolParam(required = false, description = """
                     How many candidates to return. Leave it out for
                     five.""")
-            Integer count) {
-        return switch (WaiverQuery.of(position, count)) {
+            Integer count,
+            @ToolParam(required = false, description = """
+                    The players on the user's own roster he would drop,
+                    by name or Sleeper player id. Every candidate then
+                    carries the projected points he gains over each of
+                    them. Use it for "who is better than X" and "who
+                    would I drop". Leave it out when he named nobody.""")
+            List<String> replacing,
+            @ToolParam(required = false, description = """
+                    True to keep the board to the positions where the
+                    user has no bench player above replacement level.
+                    Use it for "where do I need help". Leave it out
+                    otherwise.""")
+            Boolean needsOnly) {
+        return switch (WaiverQuery.of(position, count, replacing, needsOnly)) {
             case WaiverQuery.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
             case WaiverQuery.Parsed.Ok parsed -> board(parsed.query());
         };

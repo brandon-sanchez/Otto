@@ -287,3 +287,79 @@ usage points, no defence table means no stream tags, no trending means
 no trending points, and each says so on the board. The projections are
 half the score, and a board without them would be a ranking of rumour,
 so the tool answers that it cannot price one instead.
+
+## A candidate who beats nobody named is ranked below, not dropped
+
+`replacing` names the players the user would drop, and every candidate
+then carries what he projects over each of them. A candidate who
+out-projects none of them stays on the board. He is ranked below every
+candidate who beats at least one, and his own line says that is why he
+sat down.
+
+Dropping him instead was the other option and is the wrong one. "Nobody
+out there is better than what you have" is the answer to the question
+the user asked, and a board that hides the losers says it with an empty
+list - which is what a broken feed, a bad name and a quiet week all look
+like. Keeping them shows the user the gap he is looking at, and the
+gains on their lines are the evidence.
+
+The rule is the board's, not the reader's, so the board states it in its
+notes. A rule the reader has to infer from an ordering is a rule that
+gets inferred wrong.
+
+The partition is a sort key, never a filter, and it leads the sort at
+both stages: before the news shortlist is chosen and after the scores
+are final. The news reads therefore go to the candidates who can still
+answer the question, rather than to a high scorer the user has already
+ruled out.
+
+## Narrowing to a need happens after the board is priced
+
+`needs_only` keeps the board to the positions where the user has no
+bench player above replacement level. It reads the same roster-need set
+that the 1.1 multiplier reads, so one definition of a need serves the
+score and the filter.
+
+It runs last. The replacement levels, the roster-need read and the
+50-point scale are all computed over every position before anything is
+narrowed, exactly as they are for a question about one position. A
+number on this board is the number the Tuesday Alert would have shown,
+and the basis still names the best free agent on the whole board even
+when he plays a position the filter removed.
+
+With a need nowhere, the board says so in words rather than returning an
+empty list. The two states are different answers - "you are covered
+everywhere" and "I found nothing" - and only one of them is good news.
+
+## A drop can open a hole, so it can cancel the slot bump
+
+The five-point bump pays for a pickup that fills a starting slot the
+user cannot legally fill this week. A drop can never fill such a slot;
+it can only open one. So when a named player is a healthy starter,
+dropping him empties a slot the user can fill today, the swap moves the
+hole instead of plugging it, and no bid on that board carries the bump.
+The board says which drop cost it.
+
+A named player whose slot is already broken - he is on bye, or a
+designation rules him out - does not cancel anything. That slot is a
+hole before the swap and after it, and swapping him for a player who can
+start is the case the bump exists for.
+
+The rule is deliberately coarser than a full re-optimisation of the
+lineup. Asking whether the swap reduces the count of unfillable slots
+would mean solving the assignment twice per candidate, for an answer
+that only ever moves a bid by five points. The conservative reading -
+any healthy starter dropped cancels the bump - is cheap, and it errs
+towards the smaller bid.
+
+## A drop the user does not roster is refused by name
+
+A player named in `replacing` who is not on the user's own roster stops
+the board with a refusal that names him. Skipping him quietly was never
+an option: a board priced against nobody reads exactly like a board
+priced against the man the user meant, and he would act on it.
+
+The two refusals are kept apart. "He is not on your roster" and "I have
+never heard of him" are different problems with different fixes, and the
+user cannot tell a typo from somebody else's running back if both come
+back as the same sentence.
