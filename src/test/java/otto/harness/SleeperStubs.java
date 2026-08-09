@@ -33,6 +33,19 @@ public final class SleeperStubs {
     }
 
     /**
+     * A league before its draft. Teams nobody has claimed yet carry no
+     * owner, and no roster holds players. Sleeper really answers this
+     * way, so the fixture keeps the nulls rather than tidying them.
+     */
+    public static void preDraftWithUnclaimedTeams(WireMockServer sleeper) {
+        stubJson(sleeper, PLAYERS_PATH, "sleeper/players-nfl.json", "players-v1");
+        stubJson(sleeper, LEAGUE_PATH, "sleeper/league-pre-draft.json", "league-v1");
+        stubJson(sleeper, ROSTERS_PATH, "sleeper/rosters-pre-draft.json", "rosters-v1");
+        stubJson(sleeper, USERS_PATH, "sleeper/users.json", "users-v1");
+        stubJson(sleeper, STATE_PATH, "sleeper/state-nfl.json", "state-v1");
+    }
+
+    /**
      * Per-player news. The limit rides in the query string and the news
      * feed is never cached, so the stub matches on the path alone.
      */

@@ -73,7 +73,13 @@ public class SleeperAdapter {
     public record Game(String homeTeam, String awayTeam, Instant startTime, String status) {
     }
 
-    public record Roster(int rosterId, String ownerId, List<String> players, List<String> starters) {
+    /**
+     * One team in the league. A team nobody has claimed yet has no
+     * owner, which is how every team reads before a draft fills the
+     * league up.
+     */
+    public record Roster(int rosterId, Optional<String> ownerId, List<String> players,
+            List<String> starters) {
     }
 
     public record LeagueUser(String userId, String displayName) {
@@ -170,12 +176,18 @@ public class SleeperAdapter {
             }
             List<Roster> rosters = new ArrayList<>();
             for (JsonNode roster : body) {
-                if (!roster.hasNonNull("roster_id") || !roster.hasNonNull("owner_id")) {
-                    return schemaDrift(path, "roster_id or owner_id missing");
+                // Only roster_id is required: it is how Otto tells one
+                // team from another. An absent owner means nobody has
+                // claimed the team yet, which is a real state Sleeper
+                // reports for most teams before a draft.
+                if (!roster.hasNonNull("roster_id")) {
+                    return schemaDrift(path, "roster_id missing");
                 }
                 rosters.add(new Roster(
                         roster.get("roster_id").asInt(),
-                        roster.get("owner_id").asText(),
+                        Optional.ofNullable(roster.get("owner_id"))
+                                .filter(JsonNode::isTextual)
+                                .map(JsonNode::asText),
                         textList(roster.path("players")),
                         textList(roster.path("starters"))));
             }

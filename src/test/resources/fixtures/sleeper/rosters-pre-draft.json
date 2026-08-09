@@ -1,0 +1,54 @@
+[
+  {
+    "roster_id": 1,
+    "owner_id": "777001",
+    "league_id": "1389748403805650944",
+    "players": null,
+    "starters": null,
+    "reserve": null,
+    "settings": {
+      "wins": 0,
+      "losses": 0,
+      "waiver_budget_used": 0
+    }
+  },
+  {
+    "roster_id": 2,
+    "owner_id": "777002",
+    "league_id": "1389748403805650944",
+    "players": null,
+    "starters": null,
+    "reserve": null,
+    "settings": {
+      "wins": 0,
+      "losses": 0,
+      "waiver_budget_used": 0
+    }
+  },
+  {
+    "roster_id": 3,
+    "owner_id": null,
+    "league_id": "1389748403805650944",
+    "players": null,
+    "starters": null,
+    "reserve": null,
+    "settings": {
+      "wins": 0,
+      "losses": 0,
+      "waiver_budget_used": 0
+    }
+  },
+  {
+    "roster_id": 4,
+    "owner_id": null,
+    "league_id": "1389748403805650944",
+    "players": null,
+    "starters": null,
+    "reserve": null,
+    "settings": {
+      "wins": 0,
+      "losses": 0,
+      "waiver_budget_used": 0
+    }
+  }
+]
