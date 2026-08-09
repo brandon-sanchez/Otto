@@ -8,8 +8,10 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import otto.storage.OttoJson;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 /** Stubs for the outbound wires: Telegram and the LLM. */
@@ -17,6 +19,7 @@ public final class OutboundStubs {
 
     public static final String SEND_MESSAGE_PATH = "/bottest-bot-token/sendMessage";
     public static final String ANSWER_CALLBACK_PATH = "/bottest-bot-token/answerCallbackQuery";
+    public static final String GET_UPDATES_PATH = "/bottest-bot-token/getUpdates";
     public static final String CHAT_COMPLETIONS_PATH = "(/v1)?/chat/completions";
 
     /** The canned Lane A run: one tool call, then the narration. */
@@ -49,19 +52,40 @@ public final class OutboundStubs {
                 .withBody("{\"ok\":true,\"result\":true}")));
     }
 
-    /** One user tap on an inline button, as Telegram posts it to the webhook. */
+    /**
+     * The long-poll answer the local driver reads: the updates Telegram
+     * holds, in the order it hands them over.
+     */
+    public static void telegramUpdates(WireMockServer telegram, String... updates) {
+        telegram.stubFor(get(urlPathEqualTo(GET_UPDATES_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"ok\":true,\"result\":[%s]}".formatted(String.join(",", updates)))));
+    }
+
+    /**
+     * One user tap on an inline button, as Telegram posts it to the
+     * webhook. Its update id is fixed, so two taps in one long-poll
+     * answer would read as the same update: give a scenario that needs
+     * two taps an update id of its own.
+     */
     public static String callbackTap(String callbackData) {
+        return callbackTap(WireSeamTest.USER_CHAT_ID, callbackData);
+    }
+
+    /** The same tap from any chat, to prove the chat gate works. */
+    public static String callbackTap(long chatId, String callbackData) {
         return """
                 {
                   "update_id": 200,
                   "callback_query": {
                     "id": "cb-1",
-                    "from": {"id": 4242, "is_bot": false, "first_name": "Brandon"},
-                    "message": {"message_id": 10},
+                    "from": {"id": %d, "is_bot": false, "first_name": "Brandon"},
+                    "message": {"message_id": 10, "chat": {"id": %d, "type": "private"}},
                     "data": %s
                   }
                 }
-                """.formatted(jsonString(callbackData));
+                """.formatted(chatId, chatId, jsonString(callbackData));
     }
 
     /** One free-text Ask from the user's chat, as Telegram posts it. */
