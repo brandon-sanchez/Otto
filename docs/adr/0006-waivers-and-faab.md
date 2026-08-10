@@ -320,6 +320,14 @@ somebody to drop, on the same data. A candidate the partition promotes
 past the shortlist therefore carries an unread feed, and says so on his
 own line, which is what an unread feed has always said here.
 
+That narrows one older claim on this page. "News is read for a shortlist
+that says where it stopped" says a candidate who cannot reach the answer
+on news never has his feed read, and that stays exact for the score. It
+is no longer exact for the board: with a drop side, a candidate the
+score alone would have left off can be shown, because the question is no
+longer which candidate is best. The shortlist is a rule about scores,
+and the partition is a rule about which answer the user asked for.
+
 ## A gain needs a projection at both ends
 
 A gain is the difference between two projections, so it is reported

@@ -536,7 +536,10 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(
                         "I have no projection available for Josh Jacobs, so no candidate "
                                 + "carries a measured gain over him"))
-                .withRequestBody(containing("so I cannot say what you gain over Josh Jacobs"))
+                // The sentence names the side that is missing, and only
+                // that side: the candidate's own projection is fine.
+                .withRequestBody(containing("I have no projection available for Josh Jacobs this "
+                        + "week, so I cannot say what you gain over him"))
                 // No gain is printed, and nobody is ranked below anybody
                 // for losing to a player nothing can be measured against.
                 .withRequestBody(notContaining("gain\\\":"))

@@ -33,11 +33,27 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
     public WaiverQuery {
         // Board order, and nobody's to change after the fact.
         positions = Collections.unmodifiableSet(new LinkedHashSet<>(positions));
-        // A blank entry is a name the caller did not really give, and
-        // refusing it by name would mean refusing "".
-        replacing = replacing == null ? List.of() : replacing.stream()
+        replacing = cleaned(replacing);
+    }
+
+    /**
+     * The references worth resolving: trimmed, with the blanks and the
+     * repeats gone. A blank is a name the caller did not really give,
+     * and refusing it by name would mean refusing "". A repeat is one
+     * drop asked for twice.
+     *
+     * <p>Cleaning happens before anything counts the list, so a cap
+     * cannot spend its places on entries that were never going to
+     * resolve and then report a number that means nothing.
+     */
+    private static List<String> cleaned(List<String> references) {
+        if (references == null) {
+            return List.of();
+        }
+        return references.stream()
                 .filter(reference -> reference != null && !reference.isBlank())
                 .map(String::trim)
+                .distinct()
                 .toList();
     }
 
@@ -93,7 +109,10 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
         int asked = count == null || count < 1 ? TUESDAY_COUNT : count;
         int wanted = Math.min(asked, MOST_CANDIDATES);
         boolean needs = Boolean.TRUE.equals(needsOnly);
-        List<String> named = replacing == null ? List.of() : replacing;
+        // Cleaned before it is counted, so the cap spends its places on
+        // references that could resolve and the note below reports a
+        // number the user would recognise as his own list.
+        List<String> named = cleaned(replacing);
         List<String> drops = named.size() <= MOST_DROPS
                 ? named
                 : List.copyOf(named.subList(0, MOST_DROPS));

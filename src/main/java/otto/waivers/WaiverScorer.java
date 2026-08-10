@@ -501,8 +501,18 @@ public class WaiverScorer {
          * dropped: "nobody out there is better than what you have" is
          * the answer to the question, and a board that hid him would
          * say it with an empty list that reads like a broken feed.
+         *
+         * <p>With nothing projected on the other side of the swap there
+         * is no comparison to rank on, so the note says only what the
+         * board did: it named the drops and ranked nobody below anybody
+         * for them.
          */
         private String dropSideRule() {
+            if (pricedDrops().isEmpty()) {
+                return ("I priced every candidate against %s, and none of them carries a "
+                        + "projection this week, so the ranking is the board's own")
+                                .formatted(namesOfDropped());
+            }
             return ("I priced every candidate against %s. A candidate who out-projects none of "
                     + "them is still on the board, ranked below every candidate who beats at "
                     + "least one, and his line says so").formatted(namesOfDropped());
@@ -819,16 +829,20 @@ public class WaiverScorer {
                     List.copyOf(reasons));
         }
 
+        /**
+         * One gain, in words. The missing-projection sentence names the
+         * side that is missing rather than both, because "no projection
+         * available projected against 12.5" is not a sentence.
+         */
         private String gainReason(Optional<Double> projected, WaiverCandidate.Gain gain) {
             if (gain.gain() == null) {
-                return ("I have %s for one of the two, so I cannot say what you gain over %s: "
-                        + "%s projected against %s").formatted(ProjectionTable.NO_PROJECTION,
-                                gain.player(),
-                                projected.map(WaiverScorer::points)
-                                        .orElse(ProjectionTable.NO_PROJECTION),
-                                gain.theirProjection());
+                return projected.isEmpty()
+                        ? ("I have %s for him this week, so I cannot say what you gain over %s")
+                                .formatted(ProjectionTable.NO_PROJECTION, gain.player())
+                        : ("I have %s for %s this week, so I cannot say what you gain over him")
+                                .formatted(ProjectionTable.NO_PROJECTION, gain.player());
             }
-            if ("+0.0".equals(gain.gain())) {
+            if (level(gain.gain())) {
                 return "against %s he is level: %s projected each".formatted(
                         gain.player(), gain.theirProjection());
             }
@@ -1201,6 +1215,15 @@ public class WaiverScorer {
     /** A difference, with its sign, so a loss never reads as a gain. */
     private static String signed(double value) {
         return String.format(Locale.ROOT, "%+.1f", value);
+    }
+
+    /**
+     * Whether a signed difference rounded to nothing. Both signs of
+     * zero count: a difference of a twentieth of a point formats as
+     * "-0.0", which reads as a loss and is not one.
+     */
+    private static boolean level(String gain) {
+        return "+0.0".equals(gain) || "-0.0".equals(gain);
     }
 
     /** "QB and WR", or "QB, WR and TE": a list a sentence can carry. */
