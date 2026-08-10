@@ -3,6 +3,7 @@ package otto.waivers;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,6 +24,7 @@ import otto.OttoProperties;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;
+import otto.directory.NameMatch;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
@@ -129,18 +131,133 @@ public class WaiverScorer {
             return unavailable("I cannot see your roster in the latest Snapshot, so I cannot "
                     + "tell which positions you need or what FAAB you have left");
         }
-        return new SourceResult.Ok<>(
-                new Run(directory.get(), league, userRoster.get(), now, query).board());
+
+        // Two references that land on the same player are one drop. He
+        // can only be dropped once, so listing his gain twice would say
+        // the same thing twice and make the swap look bigger than it is.
+        Map<String, Dropped> replacing = new LinkedHashMap<>();
+        for (String reference : query.replacing()) {
+            switch (resolveOnRoster(directory.get(), userRoster.get(), league.week(), reference)) {
+                case Drop.Refused refused -> {
+                    return unavailable(refused.reason());
+                }
+                case Drop.Found found ->
+                    replacing.putIfAbsent(found.dropped().player().playerId(), found.dropped());
+            }
+        }
+        return new SourceResult.Ok<>(new Run(directory.get(), league, userRoster.get(), now, query,
+                List.copyOf(replacing.values())).board());
     }
 
     private static SourceResult<WaiverBoard> unavailable(String reason) {
         return new SourceResult.Unavailable<>("waivers", reason);
     }
 
-    /** One candidate part-way through scoring. */
+    /**
+     * One player the user offered to drop, and what he projects.
+     *
+     * <p>The projection is optional for the same reason a candidate's
+     * is: a player with no stat line has no projection, which is a
+     * different thing from a projection of nothing. Reading it as zero
+     * would price every candidate as an upgrade over the one player the
+     * user most wants to drop - the one on bye.
+     */
+    private record Dropped(DirectoryPlayer player, Optional<Double> projection) {
+
+        String display() {
+            return projection.map(WaiverScorer::points).orElse(ProjectionTable.NO_PROJECTION);
+        }
+    }
+
+    /** A named drop, or the reason the board will not price against him. */
+    private sealed interface Drop {
+
+        record Found(Dropped dropped) implements Drop {
+        }
+
+        record Refused(String reason) implements Drop {
+        }
+    }
+
+    /**
+     * Resolves a player the user offered to drop against his own roster,
+     * because that is the only roster he can drop from.
+     *
+     * <p>A name that lands nowhere on his roster is refused by name
+     * rather than skipped. Silently ignoring it would answer a question
+     * he did not ask - a board priced against nobody reads exactly like
+     * a board priced against the man he meant - and the two refusals are
+     * kept apart, because "he is Sarah's" and "I have never heard of
+     * him" are different problems with different fixes.
+     */
+    private static Drop resolveOnRoster(PlayerDirectory directory, RosterSnapshot userRoster,
+            WeekFacts week, String reference) {
+        Map<String, DirectoryPlayer> players = directory.players();
+        List<String> onRoster = NameMatch.resolve(reference, userRoster.players(),
+                playerId -> nameOf(players, userRoster, playerId));
+        if (onRoster.size() > 1) {
+            // Position, team and the Sleeper id, because the case that
+            // produces the ambiguity is two players of the same name -
+            // a list of that name twice tells the user nothing.
+            return new Drop.Refused("\"%s\" matches more than one player on your roster: %s"
+                    .formatted(reference, joined(onRoster.stream()
+                            .map(playerId -> describe(players, userRoster, playerId))
+                            .toList())));
+        }
+        if (onRoster.isEmpty()) {
+            List<String> anywhere = NameMatch.resolve(reference, players.keySet(),
+                    playerId -> players.get(playerId).fullName());
+            if (anywhere.size() == 1) {
+                return new Drop.Refused(("%s is not on your roster, so you cannot drop him; "
+                        + "name somebody you actually roster").formatted(
+                                players.get(anywhere.getFirst()).fullName()));
+            }
+            return new Drop.Refused(("nobody on your roster matches \"%s\", so I cannot price a "
+                    + "pickup against him").formatted(reference));
+        }
+
+        String playerId = onRoster.getFirst();
+        DirectoryPlayer player = players.get(playerId);
+        if (player == null) {
+            return new Drop.Refused(("I have %s on your roster but not in my player directory, "
+                    + "so I cannot say what he projects").formatted(reference));
+        }
+        return new Drop.Found(new Dropped(player, week.projections()
+                .flatMap(table -> table.points(playerId, player.position()))));
+    }
+
+    /** The directory's name for a rostered player, or the Snapshot's. */
+    private static String nameOf(Map<String, DirectoryPlayer> players, RosterSnapshot userRoster,
+            String playerId) {
+        DirectoryPlayer player = players.get(playerId);
+        String name = player != null ? player.fullName() : userRoster.playerNames().get(playerId);
+        return name != null ? name : "";
+    }
+
+    /** Enough of a player to tell him from his namesake. */
+    private static String describe(Map<String, DirectoryPlayer> players, RosterSnapshot userRoster,
+            String playerId) {
+        DirectoryPlayer player = players.get(playerId);
+        String name = nameOf(players, userRoster, playerId);
+        if (player == null) {
+            return "%s (id %s)".formatted(name.isEmpty() ? "a player I have no name for" : name,
+                    playerId);
+        }
+        return "%s (%s, %s, id %s)".formatted(name, player.position(), player.team(), playerId);
+    }
+
+    /**
+     * One candidate part-way through scoring.
+     *
+     * @param beatsSomebodyNamed whether he out-projects at least one of
+     *        the players the user offered to drop. True for every
+     *        candidate when the user named nobody, so a board without a
+     *        drop side ranks exactly as it always has.
+     */
     private record Scored(DirectoryPlayer player, double projection, double pointsAboveReplacement,
             double projectionPoints, double usagePoints, double trendingPoints, double multiplier,
-            boolean breakoutRole, BreakoutLanes.Read lanes, List<String> reasons) {
+            boolean breakoutRole, BreakoutLanes.Read lanes,
+            boolean beatsSomebodyNamed, List<String> reasons) {
 
         /** The score before news, which is the score news cannot lower. */
         double floor() {
@@ -186,9 +303,14 @@ public class WaiverScorer {
         private final int remainingBudget;
         private final List<String> notes = new ArrayList<>();
 
+        private final List<Dropped> replacing;
+        private final Set<String> boardPositions;
+        private final boolean dropOpensASlot;
+
         private Run(PlayerDirectory directory, LeagueWeek league, RosterSnapshot userRoster,
-                Instant now, WaiverQuery query) {
+                Instant now, WaiverQuery query, List<Dropped> replacing) {
             this.directory = directory;
+            this.replacing = replacing;
             this.userRoster = userRoster;
             this.week = league.week();
             this.now = now;
@@ -235,6 +357,12 @@ public class WaiverScorer {
             this.positionsThatFixASlot = positionsThatFixASlot();
             this.remainingBudget = Math.max(0,
                     league.league().waiverBudget().orElse(0) - userRoster.waiverBudgetUsed());
+            // Narrowing to the user's needs happens here, after every
+            // replacement level, the scale and the need read are already
+            // fixed over the whole board. It changes who is shown and
+            // never what anybody scores.
+            this.boardPositions = boardPositions();
+            this.dropOpensASlot = dropOpensASlot();
 
             if (charts.isEmpty()) {
                 notes.add("I have no depth charts yet, so no candidate can earn usage points");
@@ -270,24 +398,64 @@ public class WaiverScorer {
             if (query.note() != null) {
                 notes.add(query.note());
             }
+            needsOnlyNote().ifPresent(notes::add);
+            if (!replacing.isEmpty()) {
+                notes.add(dropSideRule());
+            }
+            List<String> unpriced = replacing.stream()
+                    .filter(dropped -> dropped.projection().isEmpty())
+                    .map(dropped -> dropped.player().fullName())
+                    .toList();
+            if (!unpriced.isEmpty()) {
+                notes.add(("I have %s for %s, so no candidate carries a measured gain over %s")
+                        .formatted(ProjectionTable.NO_PROJECTION, joined(unpriced),
+                                unpriced.size() == 1 ? "him" : "them"));
+            }
+            if (dropOpensASlot) {
+                notes.add(("dropping %s empties a starting slot you can legally fill today, so "
+                        + "the swap plugs no hole and no bid here carries the five-point slot "
+                        + "bump").formatted(namesOfStartersDropped()));
+            }
         }
 
         private WaiverBoard board() {
+            // The news shortlist is chosen on the scores alone, and the
+            // drop side is deliberately kept out of it. Letting it
+            // reorder the reads would move the news component of a
+            // score, and a score must not move because of how the
+            // question was narrowed. A candidate the drop side then
+            // promotes past the shortlist carries an unread feed and
+            // says so on his own line, which is what an unread feed has
+            // always said here.
             List<Scored> scored = candidates().stream()
                     .map(this::scoreWithoutNews)
-                    .sorted(Comparator.comparingDouble(Scored::ceiling).reversed())
+                    .sorted(Comparator.comparingDouble(Scored::ceiling).reversed()
+                            .thenComparing(candidate -> candidate.player().playerId()))
                     .toList();
 
-            List<WaiverCandidate> ranked = withNews(scored).stream()
-                    .sorted(Comparator.comparingInt(WaiverCandidate::score).reversed()
+            List<WaiverCandidate> finished = withNews(scored).stream()
+                    .sorted(Comparator.comparing(WaiverScorer::beatsSomebodyNamed).reversed()
+                            .thenComparing(Comparator.comparingInt(WaiverCandidate::score)
+                                    .reversed())
                             .thenComparing(Comparator.comparing(WaiverCandidate::playerId)))
-                    .limit(query.count())
                     .toList();
+            // The answer reads the whole field, not the top few, so
+            // "the closest is" names the closest there was and not the
+            // closest that survived the count.
+            List<WaiverCandidate> ranked = finished.stream().limit(query.count()).toList();
 
             return new WaiverBoard(
                     week.weekKey().orElse(null),
-                    List.copyOf(query.positions()),
+                    answer(finished),
+                    List.copyOf(boardPositions),
                     remainingBudget,
+                    replacing.isEmpty() ? null : replacing.stream()
+                            .map(dropped -> "%s (%s, %s)".formatted(
+                                    dropped.player().fullName(), dropped.player().position(),
+                                    dropped.projection().isPresent()
+                                            ? dropped.display() + " projected"
+                                            : dropped.display()))
+                            .toList(),
                     basis(),
                     ranked,
                     List.copyOf(notes));
@@ -296,7 +464,7 @@ public class WaiverScorer {
         /** How the numbers were set, in the words the model may quote. */
         private List<String> basis() {
             List<String> basis = new ArrayList<>(replacements.values().stream()
-                    .filter(replacement -> query.covers(replacement.position()))
+                    .filter(replacement -> boardPositions.contains(replacement.position()))
                     .map(Replacement::basis)
                     .toList());
             basis.add(scale.basis());
@@ -305,8 +473,266 @@ public class WaiverScorer {
 
         private List<DirectoryPlayer> candidates() {
             return freeAgents()
-                    .filter(player -> query.covers(player.position()))
+                    .filter(player -> boardPositions.contains(player.position()))
                     .toList();
+        }
+
+        // -- the drop side, and the narrowing to needs ----------------------
+
+        /**
+         * Which positions this board shows: what the user asked for,
+         * kept to the positions he is short at when he asked for that.
+         * Every number on the board is already fixed by the time this
+         * runs, so narrowing here cannot move one.
+         */
+        private Set<String> boardPositions() {
+            // Board order, which Set.copyOf would not keep, so two
+            // identical questions read the same way round.
+            if (!query.needsOnly()) {
+                return new LinkedHashSet<>(query.positions());
+            }
+            return WaiverQuery.ALL_POSITIONS.stream()
+                    .filter(query::covers)
+                    .filter(needPositions::contains)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+
+        /**
+         * The plain answer, when the honest answer is that there is
+         * nothing here worth doing. The user asked for this directly:
+         * if nobody is better than the man he would drop, or he is
+         * short at nothing, he wants to be told so and told why - not
+         * handed a ranking and left to work it out from the order.
+         *
+         * <p>It leads the board, and the candidates still follow it. He
+         * may still want to see who came closest.
+         *
+         * <p>Null when the ranking is itself the answer, which is the
+         * usual case: a board with somebody worth claiming on it needs
+         * no sentence explaining that it has one.
+         */
+        private String answer(List<WaiverCandidate> finished) {
+            return noNeedAnywhere()
+                    .or(() -> nobodyBeatsTheDrop(finished))
+                    .orElse(null);
+        }
+
+        /** Said when the needs filter found the user short at nothing. */
+        private Optional<String> noNeedAnywhere() {
+            if (!query.needsOnly()) {
+                return Optional.empty();
+            }
+            if (needPositions.isEmpty()) {
+                return Optional.of("You are short at nothing this week. You roster a bench player "
+                        + "above replacement level at every position, and enough quarterbacks "
+                        + "for a Superflex league, so there is no position I would call a need "
+                        + "and nothing on this board. Stand pat.");
+            }
+            if (boardPositions.isEmpty()) {
+                return Optional.of(("You are not short at %s this week, so there is nothing on "
+                        + "this board. Where you are short is %s. Stand pat at %s.").formatted(
+                                joined(query.positions()), joined(needPositions),
+                                joined(query.positions())));
+            }
+            return Optional.empty();
+        }
+
+        /**
+         * Said when no candidate on the board out-projects anybody the
+         * user offered to drop. It names the closest there was and the
+         * gap he fell short by, because "nobody is better" is only an
+         * answer once the user can see how near the field came.
+         */
+        private Optional<String> nobodyBeatsTheDrop(List<WaiverCandidate> finished) {
+            // Only the named players who carry a projection were
+            // compared against anything, so only they are claimed. A
+            // board that said "nobody beats him" about a player it never
+            // measured would contradict its own notes.
+            List<Dropped> priced = replacing.stream()
+                    .filter(dropped -> dropped.projection().isPresent())
+                    .toList();
+            if (priced.isEmpty() || finished.stream().anyMatch(WaiverScorer::beatsSomebodyNamed)) {
+                return Optional.empty();
+            }
+            String named = joined(priced.stream()
+                    .map(dropped -> dropped.player().fullName())
+                    .toList(), "or");
+            // The lowest-projecting named player is the one to measure
+            // against: beating any of them would have been enough, so he
+            // is the bar the field failed to clear, and the gap to him
+            // is the smallest gap there is.
+            Dropped easiest = priced.stream()
+                    .min(Comparator.comparingDouble(
+                            dropped -> dropped.projection().orElseThrow()))
+                    .orElseThrow();
+            Optional<WaiverCandidate> closest = finished.stream()
+                    .filter(candidate -> projectionOf(candidate).isPresent())
+                    .max(Comparator.comparingDouble(
+                            candidate -> projectionOf(candidate).orElseThrow()));
+            String tail = unpricedClause() + " Keep who you have.";
+            if (closest.isEmpty()) {
+                return Optional.of(("Nobody on waivers out-projects %s this week, and there is "
+                        + "nobody on this board I can price against %s.%s").formatted(
+                                named, priced.size() == 1 ? "him" : "them", tail));
+            }
+            double theirs = easiest.projection().orElseThrow();
+            double best = projectionOf(closest.get()).orElseThrow();
+            String gap = points(theirs - best);
+            // A gap that rounds away is a tie, not a shortfall, and
+            // "0.0 short" reads as a number rather than as a dead heat.
+            String margin = "0.0".equals(gap)
+                    ? "so he is level with him"
+                    : "so he is %s short".formatted(gap);
+            return Optional.of(("Nobody on waivers out-projects %s this week. The closest is %s, "
+                    + "who projects %s against the %s %s projects, %s.%s").formatted(
+                            named, closest.get().player(), points(best), points(theirs),
+                            easiest.player().fullName(), margin, tail));
+        }
+
+        /**
+         * What the answer owes the named players it could not price.
+         * They were named and they were not measured, so the sentence
+         * says which, rather than leaving the user to read the notes to
+         * find out his question was half answered.
+         */
+        private String unpricedClause() {
+            List<String> unpriced = replacing.stream()
+                    .filter(dropped -> dropped.projection().isEmpty())
+                    .map(dropped -> dropped.player().fullName())
+                    .toList();
+            if (unpriced.isEmpty()) {
+                return "";
+            }
+            return (" I have %s for %s, so nobody was measured against %s.").formatted(
+                    ProjectionTable.NO_PROJECTION, joined(unpriced),
+                    unpriced.size() == 1 ? "him" : "them");
+        }
+
+        private Optional<Double> projectionOf(WaiverCandidate candidate) {
+            return projections.points(candidate.playerId(), candidate.position());
+        }
+
+        /** What the needs filter did, when it left a board to rank. */
+        private Optional<String> needsOnlyNote() {
+            if (!query.needsOnly() || boardPositions.isEmpty()) {
+                return Optional.empty();
+            }
+            // Each position says why it counts as a need, because they
+            // do not all count for the same reason: quarterback is one
+            // on a head count in a Superflex league, whatever the bench
+            // projects.
+            return Optional.of(("I kept the board to %s: %s. Every score is still computed over "
+                    + "the whole board").formatted(joined(boardPositions),
+                            joined(boardPositions.stream().map(this::needBasis).toList())));
+        }
+
+        /**
+         * The rule this board applied to a candidate who out-projects
+         * none of the players the user offered to drop. He is kept and
+         * ranked below every candidate who beats somebody, rather than
+         * dropped: "nobody out there is better than what you have" is
+         * the answer to the question, and a board that hid him would
+         * say it with an empty list that reads like a broken feed.
+         *
+         * <p>With nothing projected on the other side of the swap there
+         * is no comparison to rank on, so the note says only what the
+         * board did: it named the drops and ranked nobody below anybody
+         * for them.
+         */
+        private String dropSideRule() {
+            if (pricedDrops().isEmpty()) {
+                return ("I priced every candidate against %s, and none of them carries a "
+                        + "projection this week, so the ranking is the board's own")
+                                .formatted(namesOfDropped());
+            }
+            return ("I priced every candidate against %s. A candidate who out-projects none of "
+                    + "them is still on the board, ranked below every candidate who beats at "
+                    + "least one, and his line says so").formatted(namesOfDropped());
+        }
+
+        private String namesOfDropped() {
+            return joined(replacing.stream()
+                    .map(dropped -> dropped.player().fullName())
+                    .toList());
+        }
+
+        private String namesOfStartersDropped() {
+            return joined(replacing.stream()
+                    .filter(dropped -> startedAndHealthy(dropped.player().playerId()))
+                    .map(dropped -> dropped.player().fullName())
+                    .toList());
+        }
+
+        /**
+         * What this candidate is worth over each named player, in league
+         * scoring. Null rather than empty when the user named nobody, so
+         * the field is absent from the answer instead of reading as a
+         * drop side with nothing in it.
+         *
+         * <p>A gain needs a projection at both ends. Where either is
+         * missing the gain is left out rather than computed from a zero
+         * that nobody measured, and the line says which projection is
+         * the one it does not have.
+         */
+        private List<WaiverCandidate.Gain> gainsOver(Optional<Double> projected) {
+            if (replacing.isEmpty()) {
+                return null;
+            }
+            return replacing.stream()
+                    .map(dropped -> new WaiverCandidate.Gain(
+                            dropped.player().fullName(),
+                            dropped.player().playerId(),
+                            dropped.display(),
+                            projected.flatMap(points -> dropped.projection()
+                                    .map(theirs -> signed(points - theirs)))
+                                    .orElse(null)))
+                    .toList();
+        }
+
+        /**
+         * Whether this candidate out-projects at least one named player.
+         * True for everybody when the user named nobody, and true again
+         * when no named player carries a projection at all: with nothing
+         * measurable on the other side of the swap there is no partition
+         * to make, and ranking the whole board below itself would answer
+         * a question nobody could ask.
+         */
+        private boolean beatsSomebodyNamed(Optional<Double> projected) {
+            List<Double> priced = pricedDrops();
+            if (replacing.isEmpty() || priced.isEmpty()) {
+                return true;
+            }
+            return projected
+                    .filter(points -> priced.stream().anyMatch(theirs -> points > theirs))
+                    .isPresent();
+        }
+
+        private List<Double> pricedDrops() {
+            return replacing.stream()
+                    .map(Dropped::projection)
+                    .flatMap(Optional::stream)
+                    .toList();
+        }
+
+        /**
+         * Whether dropping somebody the user named would empty a
+         * starting slot he can legally fill today. A drop can only ever
+         * open a hole, never fill one, so when it opens one the swap
+         * moves the problem rather than fixing it and the five-point
+         * slot bump does not fire on any bid this board prices.
+         *
+         * <p>A named player whose slot is already broken - he is on bye,
+         * or a designation rules him out - does not count. That slot is
+         * a hole before the swap and after it, and swapping him out for
+         * a player who can start is exactly what the bump is for.
+         */
+        private boolean dropOpensASlot() {
+            return replacing.stream()
+                    .anyMatch(dropped -> startedAndHealthy(dropped.player().playerId()));
+        }
+
+        private boolean startedAndHealthy(String playerId) {
+            return userRoster.starters().contains(playerId) && !brokenStarter(playerId);
         }
 
         // -- the four components ------------------------------------------
@@ -351,7 +777,8 @@ public class WaiverScorer {
             }
 
             return new Scored(player, projection, above, projectionPoints, usage.points(),
-                    trendingPoints, multiplier, usage.breakoutRole(), lanes, reasons);
+                    trendingPoints, multiplier, usage.breakoutRole(), lanes,
+                    beatsSomebodyNamed(projected), reasons);
         }
 
         /**
@@ -533,10 +960,23 @@ public class WaiverScorer {
                     + candidate.trendingPoints() + news.points()) * candidate.multiplier();
             int score = (int) Math.clamp(Math.round(raw), 0L, (long) MAX_SCORE);
 
+            DirectoryPlayer scoredPlayer = candidate.player();
+            Optional<Double> projected =
+                    projections.points(scoredPlayer.playerId(), scoredPlayer.position());
+            List<WaiverCandidate.Gain> gains = gainsOver(projected);
+            if (gains != null) {
+                gains.forEach(gain -> reasons.add(gainReason(projected, gain)));
+                if (!candidate.beatsSomebodyNamed()) {
+                    reasons.add(("he out-projects none of %s, so he is ranked below every "
+                            + "candidate who beats one of them").formatted(namesOfDropped()));
+                }
+            }
+
             RoleTag role = roleOf(candidate);
             reasons.add(roleReason(candidate, role));
 
-            boolean fixesSlot = positionsThatFixASlot.contains(candidate.player().position());
+            boolean fixesSlot = positionsThatFixASlot.contains(candidate.player().position())
+                    && !dropOpensASlot;
             FaabRange faab = FaabRange.of(score, role, fixesSlot, remainingBudget);
             reasons.add("bid %s: %s".formatted(faab.display(), faab.basis()));
 
@@ -560,7 +1000,32 @@ public class WaiverScorer {
                     faab.display(),
                     faab.low(),
                     faab.high(),
+                    gains,
+                    gains == null ? null : candidate.beatsSomebodyNamed(),
                     List.copyOf(reasons));
+        }
+
+        /**
+         * One gain, in words. The missing-projection sentence names the
+         * side that is missing rather than both, because "no projection
+         * available projected against 12.5" is not a sentence.
+         */
+        private String gainReason(Optional<Double> projected, WaiverCandidate.Gain gain) {
+            if (gain.gain() == null) {
+                return projected.isEmpty()
+                        ? ("I have %s for him this week, so I cannot say what you gain over %s")
+                                .formatted(ProjectionTable.NO_PROJECTION, gain.player())
+                        : ("I have %s for %s this week, so I cannot say what you gain over him")
+                                .formatted(ProjectionTable.NO_PROJECTION, gain.player());
+            }
+            if (level(gain.gain())) {
+                return "against %s he is level: %s projected each".formatted(
+                        gain.player(), gain.theirProjection());
+            }
+            return "against %s he is %s points a week: %s projected against %s".formatted(
+                    gain.player(), gain.gain(),
+                    projected.map(WaiverScorer::points).orElse(ProjectionTable.NO_PROJECTION),
+                    gain.theirProjection());
         }
 
         private News newsFor(DirectoryPlayer player) {
@@ -747,14 +1212,23 @@ public class WaiverScorer {
             return needs;
         }
 
-        private String needReason(String position) {
+        /**
+         * Why a position counts as a need. One definition, read by the
+         * multiplier's own reason and by the note the needs filter
+         * writes, so the two can never give the user different reasons
+         * for the same position.
+         */
+        private String needBasis(String position) {
             if ("QB".equals(position) && quarterbacksRostered() < QB_NEED_BELOW) {
-                return ("you roster %d quarterbacks in a Superflex league that starts two, so QB "
-                        + "counts as a need: the score carries the 1.1 multiplier")
-                                .formatted(quarterbacksRostered());
+                return "you roster %d quarterbacks in a Superflex league that starts two"
+                        .formatted(quarterbacksRostered());
             }
-            return ("you have no bench %s above replacement, so the score carries the 1.1 "
-                    + "roster-need multiplier").formatted(position);
+            return "you have no bench %s above replacement".formatted(position);
+        }
+
+        private String needReason(String position) {
+            return "%s, so the score carries the 1.1 roster-need multiplier"
+                    .formatted(needBasis(position));
         }
 
         private long quarterbacksRostered() {
@@ -795,11 +1269,15 @@ public class WaiverScorer {
             String team = userRoster.playerTeams().get(playerId);
             return week.games().map(games -> games.onBye(team)).orElse(false);
         }
+    }
 
-        private int remainingBudget(SleeperAdapter.League league) {
-            int budget = league.waiverBudget().orElse(0);
-            return Math.max(0, budget - userRoster.waiverBudgetUsed());
-        }
+    /**
+     * Whether a finished candidate beats somebody the user named. A
+     * board with no drop side leaves the flag absent, and every
+     * candidate on it ranks the way he always has.
+     */
+    private static boolean beatsSomebodyNamed(WaiverCandidate candidate) {
+        return candidate.beatsSomebodyNamed() == null || candidate.beatsSomebodyNamed();
     }
 
     /** One position's replacement level, and how it was arrived at. */
@@ -860,5 +1338,42 @@ public class WaiverScorer {
 
     private static String points(double value) {
         return String.format(Locale.ROOT, "%.1f", value);
+    }
+
+    /** A difference, with its sign, so a loss never reads as a gain. */
+    private static String signed(double value) {
+        return String.format(Locale.ROOT, "%+.1f", value);
+    }
+
+    /**
+     * Whether a signed difference rounded to nothing. Both signs of
+     * zero count: a difference of a twentieth of a point formats as
+     * "-0.0", which reads as a loss and is not one.
+     */
+    private static boolean level(String gain) {
+        return "+0.0".equals(gain) || "-0.0".equals(gain);
+    }
+
+    /** "QB and WR", or "QB, WR and TE": a list a sentence can carry. */
+    private static String joined(Collection<String> items) {
+        return joined(items, "and");
+    }
+
+    /**
+     * The same list joined by whichever conjunction the sentence needs.
+     * "Nobody beats Josh Jacobs or Dallas Goedert" is the claim the
+     * board actually makes; "and" there would read as beating both.
+     */
+    private static String joined(Collection<String> items, String conjunction) {
+        List<String> values = List.copyOf(items);
+        if (values.isEmpty()) {
+            return "nobody";
+        }
+        if (values.size() == 1) {
+            return values.getFirst();
+        }
+        return "%s %s %s".formatted(
+                String.join(", ", values.subList(0, values.size() - 1)), conjunction,
+                values.getLast());
     }
 }

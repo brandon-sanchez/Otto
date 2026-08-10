@@ -1,5 +1,6 @@
 package otto.waivers;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -8,18 +9,52 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * What a caller asked the waiver board for: which positions, and how
- * many candidates. The Tuesday Alert asks for the top five at every
- * position; a chat question asks for whatever the user said.
+ * What a caller asked the waiver board for: which positions, how many
+ * candidates, who the user would drop for them, and whether to keep to
+ * the positions he is short at. The Tuesday Alert asks for the top five
+ * at every position; a chat question asks for whatever the user said.
  *
+ * <p>None of it changes a score. The positions, the count, the drop
+ * side and the needs filter all narrow what the board <em>shows</em>;
+ * the replacement levels, the roster-need read and the 50-point scale
+ * are computed over every position whatever was asked.
+ *
+ * @param replacing the rostered players the user would drop, by name or
+ *        Sleeper id, in the order he named them; empty when he named
+ *        nobody
+ * @param needsOnly keep the board to the positions where the user has
+ *        no bench answer above replacement level
  * @param note what this query could not honour, said plainly, or null
  *        when it was taken exactly as asked
  */
-public record WaiverQuery(Set<String> positions, int count, String note) {
+public record WaiverQuery(Set<String> positions, int count, List<String> replacing,
+        boolean needsOnly, String note) {
 
     public WaiverQuery {
         // Board order, and nobody's to change after the fact.
         positions = Collections.unmodifiableSet(new LinkedHashSet<>(positions));
+        replacing = cleaned(replacing);
+    }
+
+    /**
+     * The references worth resolving: trimmed, with the blanks and the
+     * repeats gone. A blank is a name the caller did not really give,
+     * and refusing it by name would mean refusing "". A repeat is one
+     * drop asked for twice.
+     *
+     * <p>Cleaning happens before anything counts the list, so a cap
+     * cannot spend its places on entries that were never going to
+     * resolve and then report a number that means nothing.
+     */
+    private static List<String> cleaned(List<String> references) {
+        if (references == null) {
+            return List.of();
+        }
+        return references.stream()
+                .filter(reference -> reference != null && !reference.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
     }
 
     /** The positions the Player Directory keeps, in board order. */
@@ -35,6 +70,14 @@ public record WaiverQuery(Set<String> positions, int count, String note) {
      */
     private static final int MOST_CANDIDATES = 50;
 
+    /**
+     * As many drops as one board can price and stay readable. Every
+     * named player adds a line to every candidate, so the answer grows
+     * by the product of the two - and nobody drops six players for one
+     * pickup.
+     */
+    private static final int MOST_DROPS = 5;
+
     private static final Set<String> FLEX = Set.of("RB", "WR", "TE");
 
     /** One position group a user can ask for, or the reason he cannot. */
@@ -48,7 +91,7 @@ public record WaiverQuery(Set<String> positions, int count, String note) {
     }
 
     public static WaiverQuery everyPosition(int count) {
-        return new WaiverQuery(new LinkedHashSet<>(ALL_POSITIONS), count, null);
+        return new WaiverQuery(new LinkedHashSet<>(ALL_POSITIONS), count, List.of(), false, null);
     }
 
     /**
@@ -58,16 +101,34 @@ public record WaiverQuery(Set<String> positions, int count, String note) {
      *
      * @param position a position, a flex group, "all", or nothing
      * @param count how many candidates, or nothing for five
+     * @param replacing the players the user would drop, or nothing
+     * @param needsOnly keep to the positions he is short at
      */
-    public static Parsed of(String position, Integer count) {
+    public static Parsed of(String position, Integer count, List<String> replacing,
+            Boolean needsOnly) {
         int asked = count == null || count < 1 ? TUESDAY_COUNT : count;
         int wanted = Math.min(asked, MOST_CANDIDATES);
-        String note = asked <= wanted ? null
-                : ("you asked for %d targets and I ranked the top %d: past that a reply stops "
-                        + "being a message and starts being a spreadsheet")
-                                .formatted(asked, wanted);
+        boolean needs = Boolean.TRUE.equals(needsOnly);
+        // Cleaned before it is counted, so the cap spends its places on
+        // references that could resolve and the note below reports a
+        // number the user would recognise as his own list.
+        List<String> named = cleaned(replacing);
+        List<String> drops = named.size() <= MOST_DROPS
+                ? named
+                : List.copyOf(named.subList(0, MOST_DROPS));
+        List<String> notes = new ArrayList<>();
+        if (asked > wanted) {
+            notes.add(("you asked for %d targets and I ranked the top %d: past that a reply stops "
+                    + "being a message and starts being a spreadsheet").formatted(asked, wanted));
+        }
+        if (named.size() > drops.size()) {
+            notes.add(("you named %d players to drop and I priced the first %d: every name adds a "
+                    + "line to every candidate").formatted(named.size(), drops.size()));
+        }
+        String note = notes.isEmpty() ? null : String.join("; ", notes);
         if (position == null || position.isBlank()) {
-            return new Parsed.Ok(new WaiverQuery(new LinkedHashSet<>(ALL_POSITIONS), wanted, note));
+            return new Parsed.Ok(new WaiverQuery(new LinkedHashSet<>(ALL_POSITIONS), wanted,
+                    drops, needs, note));
         }
         String normalized = position.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         Set<String> positions = switch (normalized) {
@@ -81,7 +142,7 @@ public record WaiverQuery(Set<String> positions, int count, String note) {
                     ("I rank waiver targets at QB, RB, WR and TE, or at FLEX and all; "
                             + "\"%s\" is none of those").formatted(position));
         }
-        return new Parsed.Ok(new WaiverQuery(positions, wanted, note));
+        return new Parsed.Ok(new WaiverQuery(positions, wanted, drops, needs, note));
     }
 
     /** Keeps board order, so two identical questions read the same way. */

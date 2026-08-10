@@ -28,7 +28,9 @@ import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -608,6 +610,397 @@ class WaiverScenarioTest extends WireSeamTest {
         settings.change(current -> current.withTrigger(Trigger.WAIVER, true));
         runCheckAt(WINTER_TUESDAY_EVENING);
         assertThat(boardEvent(NOVEMBER_BOARD)).isPresent();
+    }
+
+    @Test
+    void aBoardPricesEveryCandidateAgainstOneBenchPlayerTheUserWouldDrop() {
+        // Josh Jacobs projects 12.5 on the bench. Four free agents beat
+        // him and one does not, and the one who does not is still on the
+        // board - ranked below every candidate who beats him, and saying
+        // so on his own line. "Nobody out there is better than what you
+        // have" is an answer; an empty list reads like a broken feed.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\"]}",
+                "Bucky Irving is 6.5 points a week better than Josh Jacobs.");
+
+        ask("is anybody on waivers better than Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "against Josh Jacobs he is +6.5 points a week: 19.0 projected "
+                                + "against 12.5"))
+                .withRequestBody(containing(
+                        "against Josh Jacobs he is +8.1 points a week: 20.6 projected "
+                                + "against 12.5"))
+                // Ray Davis projects 7.5 and beats nobody named, so he
+                // says so and drops behind Michael Penix - who scores a
+                // point less than him on the board they share.
+                .withRequestBody(containing(
+                        "against Josh Jacobs he is -5.0 points a week: 7.5 projected "
+                                + "against 12.5"))
+                .withRequestBody(containing("he out-projects none of Josh Jacobs, so he is "
+                        + "ranked below every candidate who beats one of them"))
+                .withRequestBody(containing("ranked below every candidate who beats at least "
+                        + "one, and his line says so"))
+                .withRequestBody(matching("(?s).*Michael Penix.*Ray Davis.*"))
+                // The gains ride as structured fields as well as words,
+                // and the flag that drove the ordering is on the line.
+                .withRequestBody(containing("gains\\\":[{"))
+                .withRequestBody(containing("theirProjection\\\":\\\"12.5\\\""))
+                .withRequestBody(containing("gain\\\":\\\"+6.5\\\""))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":true"))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":false"))
+                // The 50-point scale is the whole board's, not the
+                // beaters'. Bucky Irving still takes all 50 and scores
+                // 100, the number the Tuesday Alert gave him.
+                .withRequestBody(containing("score\\\":100"))
+                .withRequestBody(containing("scale to Bucky Irving")));
+    }
+
+    @Test
+    void aBoardWhereNobodyBeatsTheDropSaysSoFirstAndSaysByHowMuch() {
+        // Patrick Mahomes projects 22.0 and no free agent reaches him.
+        // The user asked to be told that in words rather than left to
+        // infer it from an ordering, so the board leads with it, names
+        // the closest and says how far short he fell. The ranking still
+        // follows: he may want to see who came nearest.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Patrick Mahomes\"]}",
+                "Nobody out there beats Mahomes. Stand pat.");
+
+        ask("is anybody on waivers better than Mahomes?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes this "
+                        + "week. The closest is Michael Penix, who projects 20.6 against the "
+                        + "22.0 Patrick Mahomes projects, so he is 1.4 short. Keep who you have."))
+                // It is the answer, not a footnote on one: it rides in
+                // its own field, ahead of the ranking.
+                .withRequestBody(containing("answer\\\":\\\"Nobody on waivers out-projects"))
+                // And the board is still a board underneath it.
+                .withRequestBody(containing("Bucky Irving"))
+                .withRequestBody(containing("Michael Penix"))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":false"))
+                .withRequestBody(notContaining("beatsSomebodyNamed\\\":true")));
+    }
+
+    @Test
+    void anAnswerClaimsOnlyTheNamedPlayersItCouldActuallyPrice() {
+        // Two names, one of them with no projection this week. The
+        // board never measured anybody against Josh Jacobs, so it does
+        // not say nobody beats him - it says so about Patrick Mahomes,
+        // whom it did price, and says plainly that Jacobs went
+        // unmeasured. A claim the notes disclaim is worse than no claim.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-jacobs-unpriced.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Patrick Mahomes\",\"Josh Jacobs\"]}",
+                "Nobody beats Mahomes, and I cannot price Jacobs.");
+
+        ask("anybody better than Mahomes or Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes this "
+                        + "week. The closest is Michael Penix, who projects 20.6 against the "
+                        + "22.0 Patrick Mahomes projects, so he is 1.4 short. I have no "
+                        + "projection available for Josh Jacobs, so nobody was measured against "
+                        + "him. Keep who you have."))
+                // The unpriced name is never folded into the claim.
+                .withRequestBody(notContaining("out-projects Patrick Mahomes or Josh Jacobs")));
+    }
+
+    @Test
+    void anAnswerWithNothingItCanPriceOnTheBoardSaysThatInsteadOfAGap() {
+        // A quarterback board where the only free agent has no
+        // projection. Nobody can be shown to beat either name, and
+        // there is no closest and no gap to report, so the answer says
+        // that rather than inventing one. Two names, so it says "them".
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-no-qb-free-agent.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"QB\",\"replacing\":[\"Patrick Mahomes\",\"Jordan Love\"]}",
+                "No quarterback on waivers I can price.");
+
+        ask("any quarterback better than Mahomes or Love?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes or "
+                        + "Jordan Love this week, and there is nobody on this board I can price "
+                        + "against them. Keep who you have.")));
+    }
+
+    @Test
+    void twoReferencesToTheSamePlayerArePricedAsOneDrop() {
+        // The user can only drop him once, so naming him by name and
+        // again by Sleeper id must not double his line or make the swap
+        // look bigger than it is.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\",\"5850\"]}", "One drop, not two.");
+
+        ask("who beats Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Josh Jacobs (RB, 12.5 projected)"))
+                .withRequestBody(notMatching("(?s).*Josh Jacobs \\(RB, 12\\.5 projected\\)"
+                        + ".*Josh Jacobs \\(RB, 12\\.5 projected\\).*")));
+    }
+
+    @Test
+    void aDropWithNoProjectionIsSaidRatherThanPricedAtZero() {
+        // The player a user most wants to drop is the one with no stat
+        // line this week. Reading that as zero would price every
+        // candidate on the board as a large upgrade over him, so the
+        // gain is left out and the board says which projection it does
+        // not have.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-jacobs-unpriced.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\"]}", "I cannot price Josh Jacobs this week.");
+
+        ask("who beats Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "I have no projection available for Josh Jacobs, so no candidate "
+                                + "carries a measured gain over him"))
+                // The sentence names the side that is missing, and only
+                // that side: the candidate's own projection is fine.
+                .withRequestBody(containing("I have no projection available for Josh Jacobs this "
+                        + "week, so I cannot say what you gain over him"))
+                // The board is a real board, not an empty one: Bucky
+                // Irving is still on it and still scores 100.
+                .withRequestBody(containing("Bucky Irving"))
+                .withRequestBody(containing("score\\\":100"))
+                // No gain is printed, and nobody is ranked below anybody
+                // for losing to a player nothing can be measured against.
+                .withRequestBody(notContaining("gain\\\":"))
+                .withRequestBody(notContaining("beatsSomebodyNamed\\\":false")));
+    }
+
+    @Test
+    void aBoardPricesEveryCandidateAgainstEveryPlayerTheUserWouldDrop() {
+        // Two names, two gains on every line. Dallas Goedert projects
+        // 10.5 and Josh Jacobs 12.5, so a candidate is measured against
+        // both rather than against whichever the board picked.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\",\"Dallas Goedert\"]}",
+                "Bucky Irving beats both of them.");
+
+        ask("who on waivers beats Josh Jacobs or Dallas Goedert?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "against Josh Jacobs he is +6.5 points a week: 19.0 projected "
+                                + "against 12.5"))
+                .withRequestBody(containing(
+                        "against Dallas Goedert he is +8.5 points a week: 19.0 projected "
+                                + "against 10.5"))
+                // Ray Davis at 7.5 is under both of them.
+                .withRequestBody(containing("he out-projects none of Josh Jacobs and Dallas "
+                        + "Goedert, so he is ranked below every candidate who beats one of them"))
+                .withRequestBody(containing(
+                        "I priced every candidate against Josh Jacobs and Dallas Goedert")));
+    }
+
+    @Test
+    void aPlayerTheUserDoesNotRosterIsRefusedByNameRatherThanIgnored() {
+        // Saquon Barkley is real and is somebody else's. Pricing the
+        // board against nobody would read exactly like pricing it
+        // against the man the user meant, so it is refused by name - and
+        // "he is not yours" is kept apart from "I have never heard of
+        // him", because the two have different fixes.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Saquon Barkley\"]}",
+                "Saquon Barkley is not on your roster.");
+
+        ask("anybody better than Saquon Barkley on waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Saquon Barkley is not on your roster, so you "
+                        + "cannot drop him"))
+                .withRequestBody(notContaining("Bucky Irving")));
+
+        llm.resetAll();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Elmer Fudd\"]}",
+                "I do not know an Elmer Fudd.");
+
+        ask("anybody better than Elmer Fudd?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                // The name is quoted in the refusal, so it arrives with
+                // a JSON escape on either side of it.
+                .withRequestBody(matching(
+                        "(?s).*nobody on your roster matches [^E]*Elmer Fudd[^,]*, so I cannot "
+                                + "price a pickup against him.*"))
+                // A refusal is a refusal: no board rides with it, so the
+                // model has no ranking it could narrate past the error.
+                .withRequestBody(notContaining("Bucky Irving"))
+                .withRequestBody(notContaining("candidates\\\":")));
+    }
+
+    @Test
+    void theSlotBumpSurvivesDroppingABenchPlayerAndDiesDroppingAStarter() {
+        // Wandale Robinson fills the receiver slot Puka Nacua's bye
+        // leaves illegal, which is worth five points on both ends of the
+        // bid. Dropping Josh Jacobs off the bench costs nothing, so the
+        // bump stands: 10-15% of $100.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Josh Jacobs\"]}", "Bid $10-$15 on Wandale Robinson.");
+
+        ask("who do I pick up for Josh Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Wandale Robinson"))
+                .withRequestBody(containing("$10-$15"))
+                .withRequestBody(containing("fills a slot you cannot legally fill this week")));
+
+        // Justin Jefferson is a healthy starter. Dropping him empties a
+        // slot the user can fill today, so the swap moves the hole
+        // rather than plugging one and the bump does not fire: back to
+        // the capped 5-10% of a one-week stream.
+        llm.resetAll();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Justin Jefferson\"]}", "Nobody is worth that.");
+
+        ask("who do I pick up for Justin Jefferson?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("$5-$10"))
+                .withRequestBody(containing("dropping Justin Jefferson empties a starting slot "
+                        + "you can legally fill today"))
+                .withRequestBody(notContaining("fills a slot you cannot legally fill this week"))
+                // Jefferson projects 19.0, and only Michael Penix beats
+                // him. The best free agent on the board scores 100 and
+                // still ranks below a 20 - because the user asked who
+                // beats Jefferson, not who is best.
+                .withRequestBody(matching("(?s).*Michael Penix.*Bucky Irving.*")));
+    }
+
+    @Test
+    void needsOnlyKeepsTheBoardToThePositionsTheUserIsShortAt() {
+        // The user has a bench running back and a bench tight end above
+        // replacement, and neither a bench receiver nor a third
+        // quarterback. So the needs are QB and WR, and the board holds
+        // those two alone.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"needsOnly\":true}", "You need a receiver and a quarterback.");
+
+        ask("where do I need help on waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("I kept the board to QB and WR"))
+                .withRequestBody(containing("Wandale Robinson"))
+                .withRequestBody(containing("Michael Penix"))
+                // The 1.1 multiplier is visible on the line it lifted,
+                // not just inside the number.
+                .withRequestBody(containing("you have no bench WR above replacement, so the "
+                        + "score carries the 1.1 roster-need multiplier"))
+                // Narrowing the question moves no number. Wandale scores
+                // the 57 the whole-position board gave him, and the
+                // 50-point scale still names Bucky Irving, who is a
+                // running back and is not on this board at all.
+                .withRequestBody(containing("score\\\":57"))
+                .withRequestBody(containing("scale to Bucky Irving"))
+                .withRequestBody(notContaining("Bucky Irving\\\","))
+                .withRequestBody(notContaining("Cade Otton"))
+                .withRequestBody(notContaining("Ray Davis")));
+    }
+
+    @Test
+    void needsOnlyWithNoNeedAnywhereSaysSoRatherThanReturningAnEmptyList() {
+        // The same week, with a third quarterback and a bench receiver
+        // above replacement added to the user's roster. Every position
+        // now has an answer, so the honest reply is that there is no
+        // need - not a list of nobody.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-waivers-no-needs.json", "rosters-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"needsOnly\":true}", "You have an answer everywhere.");
+
+        ask("where do I need help on waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                // Said out loud and said first, in the same voice the
+                // board uses when nobody beats the man he would drop.
+                .withRequestBody(containing("answer\\\":\\\"You are short at nothing this week."))
+                .withRequestBody(containing("there is no position I would call a need and "
+                        + "nothing on this board. Stand pat."))
+                // Empty means empty, and the board says so as a board
+                // rather than as a list somebody forgot to fill.
+                .withRequestBody(containing("candidates\\\":[]"))
+                .withRequestBody(notContaining("Wandale Robinson"))
+                .withRequestBody(notContaining("Bucky Irving\\\",")));
+    }
+
+    @Test
+    void needsOnlyAtAPositionTheUserIsNotShortAtSaysWhichPositionsHeIs() {
+        // Tight end is covered, so a needs board about tight ends holds
+        // nobody. The honest reply names the positions he is short at
+        // rather than handing back an empty list with no reason on it.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"TE\",\"needsOnly\":true}", "You are covered at tight end.");
+
+        ask("do I need a tight end off waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("answer\\\":\\\"You are not short at TE this week, so "
+                        + "there is nothing on this board. Where you are short is QB and WR. "
+                        + "Stand pat at TE."))
+                .withRequestBody(containing("candidates\\\":[]"))
+                .withRequestBody(notContaining("Cade Otton")));
     }
 
     @Test

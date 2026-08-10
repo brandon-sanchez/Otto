@@ -502,3 +502,148 @@ usage points, no defence table means no stream tags, no trending means
 no trending points, and each says so on the board. The projections are
 half the score, and a board without them would be a ranking of rumour,
 so the tool answers that it cannot price one instead.
+
+## A candidate who beats nobody named is ranked below, not dropped
+
+`replacing` names the players the user would drop, and every candidate
+then carries what he projects over each of them. A candidate who
+out-projects none of them stays on the board. He is ranked below every
+candidate who beats at least one, and his own line says that is why he
+sat down.
+
+Dropping him instead was the other option and is the wrong one. "Nobody
+out there is better than what you have" is the answer to the question
+the user asked, and a board that hides the losers says it with an empty
+list - which is what a broken feed, a bad name and a quiet week all look
+like. Keeping them shows the user the gap he is looking at, and the
+gains on their lines are the evidence.
+
+The rule is the board's, not the reader's, so the board states it in its
+notes. A rule the reader has to infer from an ordering is a rule that
+gets inferred wrong.
+
+## When nobody beats the drop, the board says so first
+
+Ranking the losers below the winners is not enough on its own. When no
+candidate on the board out-projects anybody the user named, the board
+leads with that in words: nobody beats him, here is the closest there
+was, and here is the gap he fell short by. The ranking follows it,
+because the user may still want to see who came nearest.
+
+The user asked for this directly. His words were that if nobody is a
+better option than what is on his bench, or than the man he is trying to
+replace, then say so flatly and say why. So it is a field of its own at
+the head of the board and not a note at the foot of one - the notes are
+where the board says what it could not see, and this is not a limit of
+the board. It is the answer.
+
+The gap is part of the answer and not decoration. "Nobody is better" and
+"nobody is better, and the nearest missed by a tenth of a point" lead to
+different decisions next week, and only one of them is worth watching
+the wire for. A gap that rounds away is a tie and is said as one: "0.0
+short" reads as a number when the honest word is level.
+
+The claim covers only the named players the board could actually price.
+A player with no projection was never measured against anybody, so he is
+not in the sentence that says nobody beats him - he gets his own clause
+saying he went unmeasured. A claim the notes below it disclaim is worse
+than no claim. Where no candidate carries a projection either, there is
+no closest and no gap to report, and the answer says that rather than
+reporting one.
+
+The same sentence answers the same shape of question from `needs_only`.
+A user who is short at nothing hears that he is short at nothing and
+why, in one voice with the drop side, rather than getting an empty list
+and a footnote. Two ways of saying "there is nothing to do here" would
+be one way too many.
+
+The partition is a sort key, never a filter, and it is applied to the
+final ranking alone. The news shortlist is chosen on the scores by
+themselves, exactly as it is for a board with no drop side.
+
+Leading the shortlist with the partition was the tempting option and
+would break the invariant above it. Which candidates get a news read is
+which candidates can earn news points, so reordering the reads would
+move the news component of a score - and the same player would then
+show one number on Tuesday's board and another when the user named
+somebody to drop, on the same data. A candidate the partition promotes
+past the shortlist therefore carries an unread feed, and says so on his
+own line, which is what an unread feed has always said here.
+
+That narrows one older claim on this page. "News is read for a shortlist
+that says where it stopped" says a candidate who cannot reach the answer
+on news never has his feed read, and that stays exact for the score. It
+is no longer exact for the board: with a drop side, a candidate the
+score alone would have left off can be shown, because the question is no
+longer which candidate is best. The shortlist is a rule about scores,
+and the partition is a rule about which answer the user asked for.
+
+## A gain needs a projection at both ends
+
+A gain is the difference between two projections, so it is reported
+only when both exist. Where either side has no stat line the line says
+which projection is missing, the board says so in its notes, and no
+number is printed.
+
+Reading a missing projection as zero is the trap this avoids, and the
+drop side walks straight into it: the player a user most wants to drop
+is the one on bye, and a bye-week zero would price every candidate on
+the board as a large upgrade over him. The board already refuses to
+read a candidate's own missing projection as zero, for the same reason.
+
+A named player with no projection is not refused, because "I cannot
+price him" is a smaller problem than "I will not answer". He simply
+takes no part in the partition, and when no named player carries a
+projection at all there is nothing measurable on the other side of the
+swap, so no candidate is ranked below any other for losing to him.
+
+## Narrowing to a need happens after the board is priced
+
+`needs_only` keeps the board to the positions where the user has no
+bench player above replacement level. It reads the same roster-need set
+that the 1.1 multiplier reads, so one definition of a need serves the
+score and the filter.
+
+It runs last. The replacement levels, the roster-need read and the
+50-point scale are all computed over every position before anything is
+narrowed, exactly as they are for a question about one position. A
+number on this board is the number the Tuesday Alert would have shown,
+and the basis still names the best free agent on the whole board even
+when he plays a position the filter removed.
+
+With a need nowhere, the board says so in words rather than returning an
+empty list. The two states are different answers - "you are covered
+everywhere" and "I found nothing" - and only one of them is good news.
+
+## A drop can open a hole, so it can cancel the slot bump
+
+The five-point bump pays for a pickup that fills a starting slot the
+user cannot legally fill this week. A drop can never fill such a slot;
+it can only open one. So when a named player is a healthy starter,
+dropping him empties a slot the user can fill today, the swap moves the
+hole instead of plugging it, and no bid on that board carries the bump.
+The board says which drop cost it.
+
+A named player whose slot is already broken - he is on bye, or a
+designation rules him out - does not cancel anything. That slot is a
+hole before the swap and after it, and swapping him for a player who can
+start is the case the bump exists for.
+
+The rule is deliberately coarser than a full re-optimisation of the
+lineup. Asking whether the swap reduces the count of unfillable slots
+would mean solving the assignment twice per candidate, for an answer
+that only ever moves a bid by five points. The conservative reading -
+any healthy starter dropped cancels the bump - is cheap, and it errs
+towards the smaller bid.
+
+## A drop the user does not roster is refused by name
+
+A player named in `replacing` who is not on the user's own roster stops
+the board with a refusal that names him. Skipping him quietly was never
+an option: a board priced against nobody reads exactly like a board
+priced against the man the user meant, and he would act on it.
+
+The two refusals are kept apart. "He is not on your roster" and "I have
+never heard of him" are different problems with different fixes, and the
+user cannot tell a typo from somebody else's running back if both come
+back as the same sentence.
