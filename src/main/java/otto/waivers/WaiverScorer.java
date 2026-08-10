@@ -488,10 +488,13 @@ public class WaiverScorer {
                         + "is nothing on this board").formatted(
                                 joined(query.positions()), joined(needPositions)));
             }
-            return Optional.of(("I kept the board to %s, the position%s where you have no bench "
-                    + "answer above replacement level; every score is still computed over the "
-                    + "whole board").formatted(
-                            joined(boardPositions), boardPositions.size() == 1 ? "" : "s"));
+            // Each position says why it counts as a need, because they
+            // do not all count for the same reason: quarterback is one
+            // on a head count in a Superflex league, whatever the bench
+            // projects.
+            return Optional.of(("I kept the board to %s: %s. Every score is still computed over "
+                    + "the whole board").formatted(joined(boardPositions),
+                            joined(boardPositions.stream().map(this::needBasis).toList())));
         }
 
         /**
@@ -1097,14 +1100,23 @@ public class WaiverScorer {
             return needs;
         }
 
-        private String needReason(String position) {
+        /**
+         * Why a position counts as a need. One definition, read by the
+         * multiplier's own reason and by the note the needs filter
+         * writes, so the two can never give the user different reasons
+         * for the same position.
+         */
+        private String needBasis(String position) {
             if ("QB".equals(position) && quarterbacksRostered() < QB_NEED_BELOW) {
-                return ("you roster %d quarterbacks in a Superflex league that starts two, so QB "
-                        + "counts as a need: the score carries the 1.1 multiplier")
-                                .formatted(quarterbacksRostered());
+                return "you roster %d quarterbacks in a Superflex league that starts two"
+                        .formatted(quarterbacksRostered());
             }
-            return ("you have no bench %s above replacement, so the score carries the 1.1 "
-                    + "roster-need multiplier").formatted(position);
+            return "you have no bench %s above replacement".formatted(position);
+        }
+
+        private String needReason(String position) {
+            return "%s, so the score carries the 1.1 roster-need multiplier"
+                    .formatted(needBasis(position));
         }
 
         private long quarterbacksRostered() {

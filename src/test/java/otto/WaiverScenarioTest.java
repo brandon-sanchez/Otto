@@ -540,6 +540,10 @@ class WaiverScenarioTest extends WireSeamTest {
                 // that side: the candidate's own projection is fine.
                 .withRequestBody(containing("I have no projection available for Josh Jacobs this "
                         + "week, so I cannot say what you gain over him"))
+                // The board is a real board, not an empty one: Bucky
+                // Irving is still on it and still scores 100.
+                .withRequestBody(containing("Bucky Irving"))
+                .withRequestBody(containing("score\\\":100"))
                 // No gain is printed, and nobody is ranked below anybody
                 // for losing to a player nothing can be measured against.
                 .withRequestBody(notContaining("gain\\\":"))
@@ -605,7 +609,11 @@ class WaiverScenarioTest extends WireSeamTest {
                 // a JSON escape on either side of it.
                 .withRequestBody(matching(
                         "(?s).*nobody on your roster matches [^E]*Elmer Fudd[^,]*, so I cannot "
-                                + "price a pickup against him.*")));
+                                + "price a pickup against him.*"))
+                // A refusal is a refusal: no board rides with it, so the
+                // model has no ranking it could narrate past the error.
+                .withRequestBody(notContaining("Bucky Irving"))
+                .withRequestBody(notContaining("candidates\\\":")));
     }
 
     @Test
@@ -704,6 +712,9 @@ class WaiverScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("there is no position I would call a need this week"))
+                // Empty means empty, and the board says so as a board
+                // rather than as a list somebody forgot to fill.
+                .withRequestBody(containing("candidates\\\":[]"))
                 .withRequestBody(notContaining("Wandale Robinson"))
                 .withRequestBody(notContaining("Bucky Irving\\\",")));
     }
@@ -723,6 +734,7 @@ class WaiverScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("you asked for TE and your needs this week are QB "
                         + "and WR, so there is nothing on this board"))
+                .withRequestBody(containing("candidates\\\":[]"))
                 .withRequestBody(notContaining("Cade Otton")));
     }
 
