@@ -77,10 +77,11 @@ public class TelegramWebhook {
             return;
         }
         if (!fromConfiguredChat(update)) {
-            log.warn("Update dropped: it is not from the chat the assistant serves");
             if (isTap) {
-                acknowledge(callback, "I do not answer this chat.");
+                acknowledge(callback, refusalFor(callback));
+                return;
             }
+            log.warn("Update dropped: it is not from the chat the assistant serves");
             return;
         }
         if (isTap) {
@@ -88,6 +89,23 @@ public class TelegramWebhook {
             return;
         }
         answerAsk(update.path("message"));
+    }
+
+    /**
+     * A refused tap is answered, so the wording has to be true. Only one
+     * of the two refusals is about who tapped. Telegram stops quoting
+     * the message a button hangs on once it is about two days old, and
+     * the tap then names no chat, so the user's own tap on an Alert he
+     * left for a day or two lands here. Telling him he is a stranger
+     * would be false; the Alert is the thing that is out of date.
+     */
+    private String refusalFor(JsonNode callback) {
+        if (callback.path("message").path("chat").path("id").asText("").isEmpty()) {
+            log.warn("Tap dropped: it names no chat, so the alert it acts on is too old");
+            return "That alert is too old to act on. Ask me instead.";
+        }
+        log.warn("Tap dropped: it is not from the chat the assistant serves");
+        return "I do not answer this chat.";
     }
 
     /**

@@ -84,7 +84,22 @@ The gate reads `callback_query.message.chat` for a tap and
 `callback_query.from` names the user who tapped, not the chat the tap
 came from, so it cannot stand in: it would authorize a chat by a user
 id. Telegram leaves the message out of a tap on one too old to quote,
-and such a tap is dropped. A dropped update is still confirmed -
-otherwise the poll would hand it back for ever - and a dropped tap is
-still answered, because Telegram offers a `callback_query` again until
-an `answerCallbackQuery` confirms it.
+about two days, and such a tap is dropped too. A dropped update is
+still confirmed - otherwise the poll would hand it back for ever - and
+a dropped tap is still answered, because Telegram offers a
+`callback_query` again until an `answerCallbackQuery` confirms it.
+
+## Two refusals, because the user sees the answer
+
+The answer to a refused tap is the only part of this the user reads, so
+it has to be true of his case. The two refusals are not the same case.
+A tap that names another chat is a stranger's, and "I do not answer
+this chat" is what it deserves. A tap that names no chat is almost
+always the user's own, on an Alert he left for a day or two, and
+telling him he is in the wrong chat would be false as well as
+confusing: it is his chat, and the Alert is the thing that is out of
+date. That tap is answered with "That alert is too old to act on. Ask
+me instead", which is true and gives him the way forward.
+
+Both refusals act on no Alert, and both are answered. Only the wording
+tells them apart.

@@ -16,6 +16,8 @@ import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,7 +78,9 @@ class WebhookScenarioTest extends WireSeamTest {
                 OutboundStubs.callbackTap(FOREIGN_CHAT_ID, "done:1"));
 
         assertThat(result).isEqualTo(WebhookResult.OK);
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath(
+                        "$.text", equalTo("I do not answer this chat."))));
         assertThat(eventLog.all().stream()
                 .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
     }
@@ -104,10 +108,13 @@ class WebhookScenarioTest extends WireSeamTest {
     /**
      * Telegram leaves the message out of a tap on one too old to quote,
      * and the sender it still names is a user, not a chat. A tap that
-     * names no chat therefore acts on nothing, whoever sent it.
+     * names no chat therefore acts on nothing, whoever sent it. This is
+     * the user's own tap on an old Alert far more often than it is a
+     * stranger's, so the answer says the Alert is old and does not tell
+     * the user he is in the wrong chat.
      */
     @Test
-    void aButtonTapThatNamesNoChatActsOnNothingAndIsStillAcknowledged() {
+    void aButtonTapThatNamesNoChatIsRefusedAsAStaleAlert() {
         runHealthyBaselineCheck();
         runDeclineCheck();
         OutboundStubs.telegramCallbackAnswered(telegram);
@@ -124,7 +131,9 @@ class WebhookScenarioTest extends WireSeamTest {
                 """.formatted(USER_CHAT_ID));
 
         assertThat(result).isEqualTo(WebhookResult.OK);
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo("That alert is too old to act on. Ask me instead."))));
         assertThat(eventLog.all().stream()
                 .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
     }
