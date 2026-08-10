@@ -356,6 +356,22 @@ public class LeagueAnalysis {
     }
 
     /**
+     * What a week of Replacement Level is worth at one position: the
+     * projection of the player at the position's cutoff rank. Empty when
+     * the table does not reach that far down, which is a shallow table
+     * rather than a replacement level of zero.
+     *
+     * <p>The trade tools price a player above this line, so the cutoff
+     * ranks stay in one place. A trade and the waiver board must agree
+     * on what a free agent is worth, or the same player is worth two
+     * different things on the same afternoon.
+     */
+    public Optional<Double> replacementLevel(LeagueWeek league, String position) {
+        return ranking(league).flatMap(ranked ->
+                ranked.pointsAtRank(position, replacementCutoffs.forPosition(position)));
+    }
+
+    /**
      * One league mate's team: the lineup they have set, and where it is
      * strong or short against replacement level.
      *

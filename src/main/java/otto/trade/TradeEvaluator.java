@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -28,11 +29,22 @@ import otto.snapshot.RosterSnapshot;
  * teams' points of view, with a verdict and the leverage the user
  * actually holds.
  *
- * <p>One player is worth his rest-of-season projected points, times a
- * positional scarcity multiplier, times how he fits the roster that
- * would receive him. Every part of that is Java arithmetic over the
- * league's own scoring and the Snapshot; the model reads it and writes
- * the sentence, never the numbers.
+ * <p>One player is worth his rest-of-season projected points above
+ * Replacement Level, times a positional scarcity multiplier, times how
+ * he fits the roster reading him. Every part of that is Java arithmetic
+ * over the league's own scoring and the Snapshot; the model reads it and
+ * writes the sentence, never the numbers.
+ *
+ * <p>Four numbers come out of it, not two: each team's gain and each
+ * team's cost, priced against that team's own roster. Both teams can
+ * come out ahead, and usually do - a manager gives from a surplus and
+ * receives at a hole, which is the only reason anybody agrees to a
+ * trade at all.
+ *
+ * <p>The verdict is the user's alone. It reads his net and nothing
+ * else. What the trade does for the other manager is reported beside
+ * it, because it says whether he would accept; it is never a reason to
+ * talk the user out of a trade that is good for him.
  *
  * <p>ADR-0008 records why each factor is what it is.
  */
@@ -75,43 +87,65 @@ public class TradeEvaluator {
     }
 
     /**
-     * One thing the trade moves, priced.
+     * One thing the trade moves, priced for one team.
      *
-     * @param kind player, draft pick or FAAB
+     * @param kind player or draft pick
      * @param restOfSeasonPoints projected points over the weeks left
+     * @param aboveReplacement those points less what Replacement Level
+     *        projects over the same weeks, which is what a manager can
+     *        claim off the waiver wire without giving anything up
      * @param scarcity the positional multiplier applied to them
-     * @param rosterFit the factor for the roster receiving him
+     * @param rosterFit the factor for the roster this side is read from
      * @param value the three multiplied together
      * @param note why this asset is priced at nothing, when it is
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record AssetValue(String asset, String kind, String position, String team,
-            String restOfSeasonPoints, String scarcity, String rosterFit, String fitReason,
-            String value, String byes, String note) {
+            String restOfSeasonPoints, String aboveReplacement, String scarcity,
+            String rosterFit, String fitReason, String value, String byes, String note) {
     }
 
-    /** One half of the trade, priced by the roster that would receive it. */
+    /** One team's half of the trade, priced against that team's own roster. */
     public record SideValue(List<AssetValue> assets, String total) {
     }
 
     /**
-     * The trade as one team reads it. Both halves are priced against the
-     * roster receiving them, so the two teams read the same two totals
-     * from opposite ends and one net is the other with its sign turned.
+     * The trade as one team reads it, priced against that team's own
+     * roster. A gain and a cost, and the net between them.
+     *
+     * <p>The two teams are not mirrors of each other. Each manager gives
+     * from a surplus and receives at a hole, so the same two players can
+     * be worth more to both teams than what each gives up. That is why a
+     * trade happens at all.
+     *
+     * @param gain what the players arriving are worth to this team
+     * @param cost what the players leaving were worth to it
+     * @param net the gain less the cost
+     * @param startersNow what this team's optimal starting lineup
+     *        projects over the rest of the season as it stands
+     * @param startersAfter the same lineup once the trade is made
+     * @param startersDelta the difference the trade makes to it
      */
-    public record Perspective(String team, SideValue gets, SideValue gives, String net) {
+    public record Perspective(String team, SideValue gain, SideValue cost, String net,
+            String startersNow, String startersAfter, String startersDelta) {
     }
 
     /**
-     * @param verdict even, slight edge or clear edge
+     * @param verdict even, slight edge or clear edge, from the user's
+     *        net alone - the trade is his decision and nobody else's
      * @param favours whose way the trade goes; on an even trade this is
      *        the lean, which is stated but is not a reason to act
-     * @param gap the difference as a share of the larger side
+     * @param gap the user's net as a share of the larger of his two
+     *        sides
+     * @param partnerOutcome what the same trade does for the partner,
+     *        which is context for what he will accept and never a
+     *        reason to turn down a trade that is good for the user
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record TradeEvaluation(String week, String partner, String restOfSeasonWeeks,
             Perspective yours, Perspective theirs, String verdict, String favours,
-            String gap, String confidence, List<String> leverage, List<String> notes) {
+            String gap, String confidence, String partnerOutcome, List<String> leverage,
+            List<String> notes) {
     }
 
     private static final String EVEN = "even";
@@ -211,56 +245,114 @@ public class TradeEvaluator {
         }
         RestOfSeason points = ((SourceResult.Ok<RestOfSeason>) season).value();
         List<Slot> slots = leagueWeek.week().startingSlots();
+        Map<String, Double> replacement = replacementOverTheWeeksLeft(leagueWeek, positions,
+                points.weekCount());
 
-        // A player is priced against the roster that would receive him,
-        // taken after the trade. One player therefore carries one value,
-        // and the two teams read the same two totals from opposite ends.
-        Roster myAfter = Roster.of(mine, positions, points)
-                .without(outgoing).with(incoming, positions, points);
-        Roster theirAfter = Roster.of(partner, positions, points)
-                .without(incoming).with(outgoing, positions, points);
+        // Four numbers, not two. Each team prices what it gains against
+        // the roster it would then hold, and what it loses against the
+        // roster it holds now, so both teams can come out ahead - which
+        // is the only reason anybody agrees to a trade.
+        Roster myNow = Roster.of(mine, positions, points, replacement);
+        Roster theirNow = Roster.of(partner, positions, points, replacement);
+        Roster myAfter = myNow.without(outgoing).with(incoming, positions, points);
+        Roster theirAfter = theirNow.without(incoming).with(outgoing, positions, points);
 
-        Priced toMe = side(slots, incoming, points, myAfter);
-        Priced toThem = side(slots, outgoing, points, theirAfter);
+        Priced myGain = side(slots, incoming, points, myAfter, replacement);
+        Priced myCost = side(slots, outgoing, points, myNow, replacement);
+        Priced theirGain = side(slots, outgoing, points, theirAfter, replacement);
+        Priced theirCost = side(slots, incoming, points, theirNow, replacement);
 
-        double myNet = toMe.total() - toThem.total();
-        double larger = Math.max(toMe.total(), toThem.total());
+        double myNet = myGain.total() - myCost.total();
+        double theirNet = theirGain.total() - theirCost.total();
+        double larger = Math.max(myGain.total(), myCost.total());
         // Classify from the number the reader is shown. A gap printed as
         // 5.0% must not be called even in one trade and a slight edge in
         // the next; the rounding is the thing the two have to agree on.
         double gap = larger == 0 ? 0 : round(Math.abs(myNet) / larger * 100);
 
+        // The band reads the user's net and nothing else. What the trade
+        // does for the other manager is his business, not a reason to
+        // talk the user out of a deal that is good for him.
         String verdict = gap < EVEN_BAND ? EVEN : gap <= CLEAR_BAND ? SLIGHT_EDGE : CLEAR_EDGE;
         String favours = myNet >= 0 ? YOU : partner.manager();
         Confidence confidence = CLEAR_EDGE.equals(verdict) ? Confidence.HIGH : Confidence.MEDIUM;
 
         List<String> notes = new ArrayList<>(points.notes());
-        notes.add("A player is worth his rest-of-season points times a scarcity multiplier "
-                + "(QB 1.20, TE 1.10, RB 1.05, WR 1.00) times how he fits the roster that "
-                + "would receive him (1.10 he starts there, 0.90 he is buried, 1.00 otherwise)");
+        notes.add("A player is worth his rest-of-season points above Replacement Level, times "
+                + "a scarcity multiplier (QB 1.20, TE 1.10, RB 1.05, WR 1.00), times how he "
+                + "fits the roster reading him (1.10 he starts there, 0.90 he is buried, 1.00 "
+                + "otherwise)");
+        notes.add(("Each team is priced against its own roster, so both can come out ahead. The "
+                + "verdict is yours alone: what this does for %s is context for whether he "
+                + "will agree, and never a reason to turn down a trade that is good for you")
+                .formatted(partner.manager()));
+        notes.add("The net and the starting lineup answer two different questions, and can "
+                + "point different ways. The net asks whether the value is fair, and counts "
+                + "positional scarcity. The starting lineup asks what the team would actually "
+                + "score, and counts none");
         if (larger == 0) {
-            notes.add("Nothing on either side of this trade carries a price, so there is no "
-                    + "verdict here to read");
+            notes.add("Nothing on either side of this trade carries a price above Replacement "
+                    + "Level, so there is no verdict here to read");
         } else if (EVEN.equals(verdict)) {
-            notes.add(("The two sides are inside %.0f%% of each other, which is a coin flip. "
+            notes.add(("Your two sides are inside %.0f%% of each other, which is a coin flip. "
                     + "The lean is stated because you asked, not because it is a reason to act")
                     .formatted(EVEN_BAND));
         }
-        notes.addAll(pickAndFaabNotes(incoming, outgoing));
+        notes.addAll(pickNotes(incoming, outgoing));
         notes.addAll(offRosterNotes(mine, partner, incoming, outgoing));
 
         return ToolAnswer.of(new TradeEvaluation(
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
                 "weeks %d to %d".formatted(points.weeks().getFirst(), points.weeks().getLast()),
-                new Perspective(YOU, toMe.side(), toThem.side(), points(myNet)),
-                new Perspective(partner.manager(), toThem.side(), toMe.side(), points(-myNet)),
+                perspective(YOU, myGain, myCost, myNet, slots, myNow, myAfter),
+                perspective(partner.manager(), theirGain, theirCost, theirNet, slots, theirNow,
+                        theirAfter),
                 verdict,
                 favours,
                 String.format(Locale.ROOT, "%.1f%%", gap),
                 confidence.name(),
+                partnerOutcome(partner, theirNet),
                 leverage(leagueWeek, mine, partner),
                 notes));
+    }
+
+    /**
+     * What Replacement Level is worth over the weeks that are left. A
+     * player is priced above it because a manager who loses him does not
+     * field nobody; he claims the best free agent there is.
+     */
+    private Map<String, Double> replacementOverTheWeeksLeft(LeagueWeek leagueWeek,
+            Map<String, String> positions, int weeks) {
+        Map<String, Double> replacement = new LinkedHashMap<>();
+        positions.values().stream().filter(Objects::nonNull).distinct().sorted()
+                .forEach(position -> league.replacementLevel(leagueWeek, position)
+                        .ifPresent(weekly -> replacement.put(position, weekly * weeks)));
+        return replacement;
+    }
+
+    private Perspective perspective(String team, Priced gain, Priced cost, double net,
+            List<Slot> slots, Roster now, Roster after) {
+        double startersNow = rosterFit.startingPoints(slots, now.pool());
+        double startersAfter = rosterFit.startingPoints(slots, after.pool());
+        return new Perspective(team, gain.side(), cost.side(), points(net),
+                points(startersNow), points(startersAfter),
+                points(startersAfter - startersNow));
+    }
+
+    /**
+     * What the trade does for the other manager, said plainly. A trade
+     * that is good for both is the normal case, not a warning.
+     */
+    private static String partnerOutcome(RosterSnapshot partner, double theirNet) {
+        if (Math.abs(round(theirNet)) < 0.05) {
+            return "%s comes out level, so he has no reason either way".formatted(
+                    partner.manager());
+        }
+        return theirNet > 0
+                ? "%s gains from this too, which is why he would agree to it".formatted(
+                        partner.manager())
+                : "%s loses on this, so he has a reason to say no".formatted(partner.manager());
     }
 
     /** One decimal place, which is the precision every number here is read at. */
@@ -269,10 +361,11 @@ public class TradeEvaluator {
     }
 
     /** The players one roster holds while a valuation is made against it. */
-    private record Roster(Map<String, Double> points, Map<String, String> positions) {
+    private record Roster(Map<String, Double> points, Map<String, String> positions,
+            Map<String, Double> replacement) {
 
         static Roster of(RosterSnapshot snapshot, Map<String, String> positions,
-                RestOfSeason season) {
+                RestOfSeason season, Map<String, Double> replacement) {
             Map<String, Double> held = new LinkedHashMap<>();
             Map<String, String> heldPositions = new LinkedHashMap<>();
             for (String playerId : snapshot.players()) {
@@ -281,7 +374,11 @@ public class TradeEvaluator {
                     heldPositions.put(playerId, positions.get(playerId));
                 });
             }
-            return new Roster(held, heldPositions);
+            return new Roster(held, heldPositions, replacement);
+        }
+
+        RosterFit.Pool pool() {
+            return new RosterFit.Pool(points, positions, replacement);
         }
 
         Roster without(Resolved leaving) {
@@ -293,7 +390,7 @@ public class TradeEvaluator {
                     heldPositions.remove(piece.player().playerId());
                 }
             }
-            return new Roster(held, heldPositions);
+            return new Roster(held, heldPositions, replacement);
         }
 
         Roster with(Resolved arriving, Map<String, String> allPositions, RestOfSeason season) {
@@ -309,7 +406,7 @@ public class TradeEvaluator {
                     heldPositions.put(playerId, allPositions.get(playerId));
                 });
             }
-            return new Roster(held, heldPositions);
+            return new Roster(held, heldPositions, replacement);
         }
     }
 
@@ -317,12 +414,17 @@ public class TradeEvaluator {
     private record Priced(SideValue side, double total) {
     }
 
-    private Priced side(List<Slot> slots, Resolved assets, RestOfSeason season,
-            Roster judging) {
+    private Priced side(List<Slot> slots, Resolved assets, RestOfSeason season, Roster reading,
+            Map<String, Double> replacement) {
         List<AssetValue> values = new ArrayList<>();
         double total = 0;
         for (Piece piece : assets.pieces()) {
-            Valued valued = value(slots, piece, season, judging);
+            // Bidding money is not part of a trade in this league, so it
+            // is parsed and dropped rather than shown priced at nothing.
+            if (piece.asset() instanceof TradeAsset.Faab) {
+                continue;
+            }
+            Valued valued = value(slots, piece, season, reading, replacement);
             values.add(valued.asset());
             total += valued.value();
         }
@@ -333,30 +435,29 @@ public class TradeEvaluator {
     private record Valued(AssetValue asset, double value) {
     }
 
-    private Valued value(List<Slot> slots, Piece piece, RestOfSeason season, Roster judging) {
-        if (!(piece.asset() instanceof TradeAsset.Player)) {
-            boolean pick = piece.asset() instanceof TradeAsset.DraftPick;
-            return new Valued(new AssetValue(piece.asset().reference(),
-                    pick ? "draft pick" : "FAAB",
-                    null, null, null, null, null, null, "0.0", null,
-                    pick
-                            ? "Otto puts no price on a draft pick, so this side carries one "
-                                    + "thing the verdict cannot see"
-                            : "Otto puts no price on FAAB, so this side carries one thing the "
-                                    + "verdict cannot see"), 0.0);
+    private Valued value(List<Slot> slots, Piece piece, RestOfSeason season, Roster reading,
+            Map<String, Double> replacement) {
+        if (piece.asset() instanceof TradeAsset.DraftPick) {
+            return new Valued(new AssetValue(piece.asset().reference(), "draft pick",
+                    null, null, null, null, null, null, null, "0.0", null,
+                    "Otto puts no price on a draft pick, so this side carries one thing the "
+                            + "verdict cannot see"), 0.0);
         }
         DirectoryPlayer player = piece.player();
         Optional<Double> projected = season.points(player.playerId());
         if (projected.isEmpty()) {
             return new Valued(new AssetValue(player.fullName(), "player", player.position(),
-                    player.team(), null, null, null, null, "0.0", null,
+                    player.team(), null, null, null, null, null, "0.0", null,
                     "No week left in the season projects him, so I can put no price on him"),
                     0.0);
         }
+        // A player worth less than the best free agent is worth nothing
+        // to trade for: the manager can have that player for a claim.
+        Double line = replacement.get(player.position());
+        double above = Math.max(0, projected.orElseThrow() - (line == null ? 0 : line));
         double scarcity = SCARCITY.getOrDefault(player.position(), NO_SCARCITY);
-        RosterFit.Factor fit = rosterFit.of(slots, judging.points(), judging.positions(),
-                player.playerId());
-        double value = projected.orElseThrow() * scarcity * fit.factor();
+        RosterFit.Factor fit = rosterFit.of(slots, reading.pool(), player.playerId());
+        double value = above * scarcity * fit.factor();
         List<Integer> byes = season.byesFor(player.playerId());
         return new Valued(new AssetValue(
                 player.fullName(),
@@ -364,6 +465,7 @@ public class TradeEvaluator {
                 player.position(),
                 player.team(),
                 points(projected.orElseThrow()),
+                points(above),
                 factor(scarcity),
                 factor(fit.factor()),
                 fit.reason(),
@@ -371,11 +473,22 @@ public class TradeEvaluator {
                 byes.isEmpty() ? null : "on bye in week%s %s".formatted(
                         byes.size() == 1 ? "" : "s",
                         byes.stream().map(String::valueOf).collect(Collectors.joining(", "))),
-                season.weeksPricedFor(player.playerId()) < season.weekCount()
-                        ? "Only %d of the %d weeks left carry a projection for him".formatted(
-                                season.weeksPricedFor(player.playerId()), season.weekCount())
-                        : null),
+                note(season, player, line)),
                 value);
+    }
+
+    /** What the reader must know about one player's price, when anything. */
+    private static String note(RestOfSeason season, DirectoryPlayer player, Double line) {
+        if (line == null) {
+            return "The projection table does not reach the %s replacement rank, so he is "
+                    .formatted(player.position())
+                    + "priced from his whole projection rather than above a free agent";
+        }
+        if (season.weeksPricedFor(player.playerId()) < season.weekCount()) {
+            return "Only %d of the %d weeks left carry a projection for him".formatted(
+                    season.weeksPricedFor(player.playerId()), season.weekCount());
+        }
+        return null;
     }
 
     // -- the leverage note --------------------------------------------------
@@ -427,21 +540,14 @@ public class TradeEvaluator {
 
     // -- notes --------------------------------------------------------------
 
-    private static List<String> pickAndFaabNotes(Resolved incoming, Resolved outgoing) {
-        List<String> notes = new ArrayList<>();
-        boolean picks = names(incoming, TradeAsset.DraftPick.class)
-                || names(outgoing, TradeAsset.DraftPick.class);
-        boolean faab = names(incoming, TradeAsset.Faab.class)
-                || names(outgoing, TradeAsset.Faab.class);
-        if (picks) {
-            notes.add("Draft picks count zero. Otto has no way to price a pick in this league, "
-                    + "so a trade that turns on one is a trade this verdict cannot settle");
+    private static List<String> pickNotes(Resolved incoming, Resolved outgoing) {
+        if (names(incoming, TradeAsset.DraftPick.class)
+                || names(outgoing, TradeAsset.DraftPick.class)) {
+            return List.of("Draft picks count zero. Otto has no way to price a pick in this "
+                    + "league, so a trade that turns on one is a trade this verdict cannot "
+                    + "settle");
         }
-        if (faab) {
-            notes.add("FAAB counts zero for the same reason as a draft pick, so read the "
-                    + "verdict as the player side of the deal alone");
-        }
-        return notes;
+        return List.of();
     }
 
     private static boolean names(Resolved side, Class<? extends TradeAsset> kind) {

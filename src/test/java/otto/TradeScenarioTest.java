@@ -13,26 +13,30 @@ import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Trade evaluation: the user Asks whether a trade is worth taking and
- * gets both sides priced over the rest of the season, in league
- * scoring, from both teams' points of view, with a verdict, a
- * confidence level and a leverage note.
+ * gets four numbers - his own gain and cost, and the partner's - each
+ * priced against that team's own roster, plus a verdict from his side
+ * alone and a leverage note.
  *
  * <p>The scenario runs the league in week 12 of a regular season that
  * ends in week 14, so the rest of the season is three weeks and a
  * player is worth three weeks of projection. The projection fixture
- * prices every rostered player at a round number, so each verdict band
- * is forced by the fixture rather than by the assertion.
+ * prices every rostered player at a round number, which puts
+ * Replacement Level at 10.5 points for a quarterback, 9.0 for a running
+ * back, 15.0 for a receiver and 16.5 for a tight end over those three
+ * weeks. Each verdict band is forced by that arithmetic rather than by
+ * the assertion.
  *
- * <p>The user holds a deep set of running backs and receivers and a
- * thin pair of tight ends. GridironGoblin is the mirror of that: the
- * best tight end in the league and nothing much behind his starting
- * running backs.
+ * <p>The user holds four running backs and six receivers above
+ * replacement and a thin pair of tight ends. GridironGoblin is the
+ * mirror of that: the two best tight ends in the league and no receiver
+ * the user would want.
  */
 class TradeScenarioTest extends WireSeamTest {
 
@@ -110,15 +114,16 @@ class TradeScenarioTest extends WireSeamTest {
 
     /**
      * TE Depth 06 projects 16.0 a week, so 48.0 over the three weeks
-     * left. A tight end is scarce (1.10) and he walks into the user's
-     * tight end slot over Travis Kelce (1.10), which values him at
-     * 58.1. James Cook projects 12.0 a week, so 36.0; a running back
-     * carries 1.05 and he starts for GridironGoblin, who would receive
-     * him (1.10), so 41.6. The gap is 28.4% of the larger side, which
-     * is a clear edge, and a clear edge states itself at High.
+     * left and 31.5 of that above the tight end replacement level of
+     * 16.5. A tight end is scarce (1.10) and he walks into the user's
+     * tight end slot (1.10), so he is worth 38.1 to the user. James Cook
+     * is worth 27.0 above the running back line, carries 1.05, and is
+     * only the first back off the user's own bench (1.00), so giving him
+     * up costs 28.4. The user nets 9.8, which is 25.6% of his larger
+     * side: a clear edge, and a clear edge states itself at High.
      */
     @Test
-    void aClearEdgePricesBothSidesAndRidesAtHighConfidence() {
+    void aClearEdgePricesFourNumbersAndRidesAtHighConfidence() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("TE Depth 06", "James Cook"),
@@ -129,159 +134,155 @@ class TradeScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "clear edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "28.4%")))
+                .withRequestBody(containing(field("gap", "25.6%")))
                 .withRequestBody(containing(field("confidence", "HIGH")))
                 .withRequestBody(containing(field("restOfSeasonWeeks", "weeks 12 to 14")))
                 .withRequestBody(containing(field("restOfSeasonPoints", "48.0")))
+                .withRequestBody(containing(field("aboveReplacement", "31.5")))
                 .withRequestBody(containing(field("scarcity", "1.10")))
                 .withRequestBody(containing(field("rosterFit", "1.10")))
-                .withRequestBody(containing(field("value", "58.1")))
-                .withRequestBody(containing(field("value", "41.6")))
-                .withRequestBody(containing(field("net", "16.5"))));
+                // The user's own four numbers, and the partner's.
+                .withRequestBody(containing(field("net", "9.8")))
+                .withRequestBody(containing(field("net", "-6.9")))
+                .withRequestBody(containing(field("total", "38.1")))
+                .withRequestBody(containing(field("total", "28.4")))
+                .withRequestBody(containing(field("total", "31.2"))));
     }
 
     /**
-     * A player is priced against the roster that would receive him,
-     * whichever roster that is, so the two teams read the same two
-     * totals from opposite ends. GridironGoblin gives up the tight end
-     * he starts and gets a running back who also starts for him, so his
-     * own net is the mirror of the user's: he loses 16.5.
+     * The point of the four numbers. The user's fourth running back is
+     * buried behind James Cook on his own bench, so giving him up costs
+     * little; GridironGoblin starts him. GridironGoblin's second tight
+     * end only reaches the user's flex, and he walks into the user's
+     * empty tight end slot. Both managers come out ahead, which is why
+     * a trade happens at all, and Otto says so rather than warning the
+     * user off a deal that is good for him.
      */
     @Test
-    void bothTeamsArePricedByTheSameYardstick() {
+    void aTradeCanBeGoodForBothTeamsAndTheAnswerSaysSo() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("TE Depth 06", "James Cook"),
-                "He has no reason to say yes.");
+                trade("TE Depth 10", "Josh Jacobs"),
+                "You both win: he needs the back, you need the tight end.");
 
-        ask("would GridironGoblin take Cook for his tight end?");
+        ask("Josh Jacobs to GridironGoblin for TE Depth 10?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("team", "you")))
-                .withRequestBody(containing(field("team", "GridironGoblin")))
-                .withRequestBody(containing(field("net", "16.5")))
-                .withRequestBody(containing(field("net", "-16.5"))));
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing(field("favours", "you")))
+                .withRequestBody(containing(field("gap", "16.7%")))
+                // The user is up 4.5 and the partner is up 0.5: both nets
+                // are positive at once, which the mirror model could not
+                // ever produce.
+                .withRequestBody(containing(field("net", "4.5")))
+                .withRequestBody(containing(field("net", "0.5")))
+                .withRequestBody(containing(
+                        "GridironGoblin gains from this too, which is why he would agree"))
+                // Jacobs is buried on the user's bench, so he is cheap to give.
+                .withRequestBody(containing(field("rosterFit", "0.90")))
+                .withRequestBody(containing("sits behind 1 better RB on that bench")));
     }
 
     /**
-     * QB Depth 05 projects 18.0 a week - 54.0 left - and a Superflex
-     * league makes a quarterback the scarcest thing there is (1.20). He
-     * starts in the user's second quarterback slot (1.10), so 71.3.
-     * Justin Jefferson projects 20.0 a week, 60.0 left, but a receiver
-     * is the position the waiver wire answers best (1.00) even though
-     * he starts (1.10), so 66.0. That is 7.4%: a slight edge, and a
-     * comparison of two estimates rides at Medium.
+     * The verdict is the user's alone. This trade costs GridironGoblin
+     * 7.9 and gains the user 7.9, and Otto still reports it as a slight
+     * edge to the user with the partner's loss beside it as context. It
+     * is not Otto's business to talk a user out of a trade another
+     * manager is willing to make.
      */
     @Test
-    void aSlightEdgeIsSaidToBeSlightAndRidesAtMedium() {
+    void theVerdictReadsTheUsersNetAloneAndNeverThePartners() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("QB Depth 05", "Justin Jefferson"),
-                "It leans your way, but not far.");
+                "It leans your way, and he pays for it.");
 
         ask("Jefferson for QB Depth 05, worth it?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "slight edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "7.4%")))
+                .withRequestBody(containing(field("gap", "13.8%")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
+                // Superflex makes the quarterback the scarcest thing there is.
                 .withRequestBody(containing(field("scarcity", "1.20")))
-                .withRequestBody(containing(field("value", "71.3")))
-                .withRequestBody(containing(field("value", "66.0"))));
+                .withRequestBody(containing(field("net", "7.9")))
+                .withRequestBody(containing(field("net", "-7.9")))
+                .withRequestBody(containing(
+                        "GridironGoblin loses on this, so he has a reason to say no"))
+                .withRequestBody(containing("The verdict is yours alone")));
     }
 
     /**
-     * WR Depth 05 and Bijan Robinson both project 15.0 a week and both
-     * start for the team that would hold them, so the only thing
-     * between them is that a running back is scarcer than a receiver.
-     * That is 4.8% - inside the even band - so the answer is a coin
-     * flip with the lean stated and no more.
+     * CeeDee Lamb is worth 36.0 above the receiver line and RB Depth 08
+     * 33.0 above the running back one, and both start for the team that
+     * would hold them. A running back is scarcer, which closes the gap
+     * to 3.7%: inside the even band, so the answer is a coin flip with
+     * the lean stated and no more.
      */
     @Test
     void anEvenTradeIsACoinFlipWithTheLeanStated() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("WR Depth 05", "Bijan Robinson"),
+                trade("RB Depth 08", "CeeDee Lamb"),
                 "It is a coin flip that leans his way.");
 
-        ask("Bijan for WR Depth 05?");
+        ask("Lamb for RB Depth 08?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "even")))
                 .withRequestBody(containing(field("favours", "GridironGoblin")))
-                .withRequestBody(containing(field("gap", "4.8%")))
+                .withRequestBody(containing(field("gap", "3.7%")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
-                .withRequestBody(containing(field("value", "49.5")))
-                .withRequestBody(containing(field("value", "52.0")))
+                .withRequestBody(containing(field("net", "-1.5")))
                 .withRequestBody(containing("which is a coin flip")));
     }
 
     /**
-     * A player who would sit behind a better one on the bench of the
-     * team receiving him is worth less to that team, whichever team it
-     * is. TE Depth 13 would sit behind Dallas Goedert on the user's
-     * bench, and Tyler Lockett would sit behind WR Depth 12 on
-     * GridironGoblin's, so both sides of this trade carry the buried
-     * factor.
+     * A player who projects below Replacement Level is worth nothing in
+     * a trade: the manager can claim that player off the waiver wire
+     * without giving anything up. TE Depth 13 projects 15.0 over the
+     * three weeks left, under the 16.5 a free agent tight end is worth,
+     * so he prices at zero however he would fit.
      */
     @Test
-    void aBuriedPlayerIsWorthLessToTheTeamThatWouldReceiveHim() {
+    void aPlayerBelowReplacementLevelIsWorthNothingInATrade() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("TE Depth 13", "Tyler Lockett"),
-                "Neither of them plays for the team that gets him.");
+                "He is free on the wire. Do not pay for him.");
 
         ask("Lockett for TE Depth 13?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("rosterFit", "0.90")))
-                .withRequestBody(containing("sits behind 1 better WR on that bench"))
-                .withRequestBody(containing("sits behind 1 better TE on that bench"))
-                .withRequestBody(containing(field("value", "24.3")))
-                .withRequestBody(containing(field("value", "14.9")))
+                .withRequestBody(containing(field("restOfSeasonPoints", "15.0")))
+                .withRequestBody(containing(field("aboveReplacement", "0.0")))
+                .withRequestBody(containing(field("value", "0.0")))
                 .withRequestBody(containing(field("favours", "GridironGoblin"))));
     }
 
     /**
-     * FAAB moves with a trade in Sleeper's own transaction row, so a
-     * user can offer it. Otto prices no bidding money either, and says
-     * so rather than dropping it out of the answer.
+     * The starting lineup is the other half of the answer: what the
+     * team would actually score. It counts no scarcity, so it can point
+     * a different way from the priced net, and the answer says as much
+     * rather than letting the two read as a contradiction.
      */
     @Test
-    void faabCountsZeroAndTheAnswerSaysItIsUnvalued() {
+    void theAnswerCarriesWhatEachStartingLineupWouldScore() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("TE Depth 06", "James Cook and $20 FAAB"),
-                "I cannot price the money, so read this as the players alone.");
+                trade("TE Depth 06", "James Cook"),
+                "Your starters go up twelve points.");
 
-        ask("Cook plus 20 dollars of FAAB for TE Depth 06?");
-
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("kind", "FAAB")))
-                .withRequestBody(containing("Otto puts no price on FAAB"))
-                .withRequestBody(containing("FAAB counts zero for the same reason")));
-    }
-
-    /**
-     * A user who names a player on the wrong side of the deal wants to
-     * be told which player he means, not handed an error. The trade is
-     * still priced and the answer says whose roster he is really on.
-     */
-    @Test
-    void aPlayerNamedOnTheWrongSideIsStillPricedWithTheMixUpNamed() {
-        snapshotOfTheLeague();
-        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("Travis Kelce", "TE Depth 06"),
-                "You have those two the wrong way round.");
-
-        ask("Kelce from GridironGoblin for TE Depth 06?");
+        ask("what does that trade do to my starting lineup?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(
-                        "Travis Kelce is not on GridironGoblin's roster, so check who you meant"))
-                .withRequestBody(containing(
-                        "TE Depth 06 is not on your roster, so check who you meant")));
+                .withRequestBody(containing(field("startersNow", "444.0")))
+                .withRequestBody(containing(field("startersAfter", "456.0")))
+                .withRequestBody(containing(field("startersDelta", "12.0")))
+                .withRequestBody(containing(field("startersDelta", "-12.0")))
+                .withRequestBody(containing("count positional scarcity")
+                        .or(containing("counts positional scarcity"))));
     }
 
     /**
@@ -306,10 +307,37 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     /**
-     * A bye scores nothing, so a player with a bye left in the season
-     * is worth less than the same player without one. Kansas City sit
-     * out week 14 in this fixture, which takes Travis Kelce from 36.0
-     * to 24.0 over the three weeks left.
+     * This league does not allow FAAB to move in a trade. Whoever gives
+     * up more players replaces them off the wire for about a dollar, so
+     * bidding money in a trade is noise. Otto reads the words and drops
+     * them: no price, no note, nothing in the answer at all.
+     */
+    @Test
+    void faabIsDroppedFromTheAnswerBecauseThisLeagueDoesNotTradeIt() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook and $20 FAAB"),
+                "The money is not part of a trade here.");
+
+        ask("Cook plus 20 dollars of FAAB for TE Depth 06?");
+
+        // The trade prices exactly as it does without the money, and the
+        // money itself reaches no field of the answer. The raw words stay
+        // visible only where the model quoted its own tool call back.
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("gap", "25.6%")))
+                .withRequestBody(containing(field("total", "28.4")))
+                .withRequestBody(notContaining(field("kind", "FAAB")))
+                .withRequestBody(notContaining(field("asset", "$20 FAAB")))
+                .withRequestBody(notContaining("no price on FAAB")));
+    }
+
+    /**
+     * A bye scores nothing, so a player with a bye left in the season is
+     * worth less than the same player without one. Kansas City sit out
+     * week 14 in this fixture, which takes Travis Kelce from 36.0 to
+     * 24.0 over the three weeks left, and from 19.5 above the tight end
+     * line to 7.5.
      */
     @Test
     void aByeWeekCountsZeroTowardsTheRestOfTheSeason() {
@@ -328,6 +356,7 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("restOfSeasonPoints", "24.0")))
+                .withRequestBody(containing(field("aboveReplacement", "7.5")))
                 .withRequestBody(containing(field("byes", "on bye in week 14")))
                 .withRequestBody(containing("a bye week counting zero")));
     }
@@ -384,9 +413,29 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     /**
-     * A trade needs two teams. Asking about a player nobody in the
-     * league can trade away, or about a manager who is not there, is
-     * answered plainly rather than priced.
+     * A user who names a player on the wrong side of the deal wants to
+     * be told which player he means, not handed an error. The trade is
+     * still priced and the answer says whose roster he is really on.
+     */
+    @Test
+    void aPlayerNamedOnTheWrongSideIsStillPricedWithTheMixUpNamed() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("Travis Kelce", "TE Depth 06"),
+                "You have those two the wrong way round.");
+
+        ask("Kelce from GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "Travis Kelce is not on GridironGoblin's roster, so check who you meant"))
+                .withRequestBody(containing(
+                        "TE Depth 06 is not on your roster, so check who you meant")));
+    }
+
+    /**
+     * A trade needs two teams. Asking about a manager who is not there
+     * is answered plainly rather than priced.
      */
     @Test
     void aTradeOtherThanBetweenTwoTeamsIsRefusedInWords() {
