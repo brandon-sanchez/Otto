@@ -201,13 +201,41 @@ season-ending: `R01`, reserve/injured with no return designation, and
 `R02`, reserve/retired.
 
 The codes are published without a key, so each one was read off the
-feed itself. Over the 2024 season a player on `R01` is active again in
-a later week 18% of the time and a player on `R02` 4% of the time,
-against 75% for `R48`, the injured-reserve code that carries a return
-designation, and 59% for `R04`, the PUP code. That last number is why
-this ADR does not follow #33's own list, which named PUP and the
-non-football lists as season-ending: the feed says most of those men
-come back.
+feed itself. Over the 2024 season, a player is active again in a later
+week:
+
+| Code | Meaning | Active again later |
+|---|---|---|
+| `R01` | Reserve/injured, no return designation | 18% |
+| `R02` | Reserve/retired | 4% |
+| `R04` | Reserve/PUP | 59% |
+| `R48` | Reserve/injured, designated for return | 75% |
+
+### PUP and the non-football lists are not season-ending here
+
+#33 named PUP and the non-football lists as season-ending. This ADR
+does not follow that list, and the deviation was put to the user with
+the rates above and approved by him explicitly.
+
+The deviation follows #33's own principle rather than departing from
+it. The ticket says the distinction that matters is "does he revert
+when the starter comes back". Applied to the feed instead of to a
+guess, that principle puts `R04` with `R48` and not with `R01`: a man
+on PUP is back inside the season more often than not. Naming PUP
+season-ending would keep the ticket's words and break its rule.
+
+What settled it is that the two errors do not cost the same, and the
+asymmetry is severe.
+
+- Calling PUP season-ending when it is not tags a breakout on a
+  four-week rental. That is a $50 bid on a man who gives the job back,
+  and the money is gone.
+- Calling PUP returning when it really was season-ending costs a $5 bid
+  on a genuine breakout. The fast usage lane then catches him the
+  following week, at 25% or 65% of his own offence.
+
+One error has a safety net inside this same feature. The other has
+none. The set is built around that.
 
 Rarer codes are deliberately left unnamed. The file carries a long tail
 of reserve codes that appear a few dozen times a season, too few to
@@ -256,11 +284,27 @@ Carries and targets are translated into Sleeper's own `rush_att` and
 serves a played week and a projected one. This league scores neither,
 so no point total changes.
 
-Snap share lives in the `snap_counts` release, which is still not
-downloaded. It measures how often a player was on the field; target
-share and opportunity share measure what the offence did while he was
-there, which is the thing the tag is trying to see. If the lanes prove
-noisy in use, that download is still the fix.
+#33 asked for #17's judgement on the `snap_counts` download to be
+revisited, because #17 had refused it as a second hourly fetch for a
+signal that moves with touches anyway, and because the tag it feeds is
+the difference between a $5 bid and a $50 one. It has been revisited.
+The answer is unchanged, and the reason for it is new.
+
+`snap_counts` is still not downloaded, and this time not because the
+cost outweighs the signal. It is because the signal the tag actually
+wants was already in a file the system downloads: `target_share` is a
+column of `stats_player_week`, and opportunity share is arithmetic on
+two more columns of the same file. The question #33 raised - "the data
+already exists, no scraping needed" - is answered in full, and it is
+answered without adding the feed the ticket assumed would be needed.
+The one new download is `weekly_rosters`, and that is for the
+designation split, not for usage.
+
+Snap share would still say a different thing if it were fetched: it
+measures how often a player was on the field, where target share and
+opportunity share measure what the offence did while he was there,
+which is the thing the tag is trying to see. If the lanes prove noisy
+in use, that download remains the fix.
 
 ## A stream is a matchup that explains more than half the edge
 
