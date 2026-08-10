@@ -109,6 +109,10 @@ public final class NflverseStubs {
      * stats file the system can name is last season's final record, so
      * the earned-roles week sits in the 2025 asset instead of the 2026
      * one - the same big shares, all of them last December's.
+     *
+     * The 2026 asset stays stubbed and is never asked for, which is the
+     * point: in this state the feed names last season's file, and the
+     * scenario checks that no request for the current season's is made.
      */
     public static void waiverWeekBeforeAnyGameIsPlayed(WireMockServer nflverse) {
         waiverWeek(nflverse);

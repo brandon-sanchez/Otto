@@ -199,6 +199,16 @@ this ADR does not follow #33's own list, which named PUP and the
 non-football lists as season-ending: the feed says most of those men
 come back.
 
+Rarer codes are deliberately left unnamed. The file carries a long tail
+of reserve codes that appear a few dozen times a season, too few to
+measure and published with no key to read them by, and naming one on a
+guess is how a wrong bid gets made. The error the two directions cost
+is not the same. A season-ending code this set does not know costs a
+breakout the board should have tagged, which the usage lanes may catch
+anyway. A returning code wrongly named season-ending costs real money
+on a man who is back in four weeks. The set errs the cheap way, and it
+grows only when the feed itself gives a number to grow it on.
+
 The standing therefore has three states, not two, and the board says
 which one it is. A named code means the season is over. Any other code
 means he comes back. No row at all - a feed that never downloaded, or a

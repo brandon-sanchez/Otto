@@ -541,7 +541,11 @@ class WaiverScenarioTest extends WireSeamTest {
                 .doesNotContain("breakout")
                 .doesNotContain("target share");
 
-        // And it says what it is short of, rather than going quiet.
+        // The current season's file was never asked for, because in
+        // this state it is not the file the feed names.
+        nflverse.verify(0, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2026_PATH)));
+
+        // And the board says what it is short of, rather than going quiet.
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(
                         "I have no played week of this season on record yet")));

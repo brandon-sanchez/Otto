@@ -313,6 +313,11 @@ public class NflverseFeedService {
      * carry one. A blank, an "NA" or a value that is not a number reads
      * as absent rather than as zero: a zero would say the offence never
      * looked at him, which is a claim this file did not make.
+     *
+     * "NaN" and "Infinity" parse as doubles and are refused here for
+     * the same reason. An infinite share would clear every bar the
+     * breakout lanes hold, which is the one wrong answer this column
+     * could produce on its own.
      */
     private static Double targetShare(Csv.Row row) {
         String value = row.text(TARGET_SHARE).trim();
@@ -320,7 +325,8 @@ public class NflverseFeedService {
             return null;
         }
         try {
-            return Double.valueOf(value);
+            double share = Double.parseDouble(value);
+            return Double.isFinite(share) ? share : null;
         } catch (NumberFormatException notANumber) {
             return null;
         }
