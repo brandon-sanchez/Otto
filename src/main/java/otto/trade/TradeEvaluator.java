@@ -335,11 +335,13 @@ public class TradeEvaluator {
         // naming one on the wrong side would otherwise buy a High-
         // confidence verdict for a deal the partner cannot deliver.
         List<String> offRoster = offRosterNotes(mine, partner, incoming, outgoing);
-        // A side made only of things Otto cannot price - a pick, or
-        // bidding money this league does not trade - is a side the
-        // verdict is blind to. It may still be reported; it may not
-        // state itself.
-        boolean sideUnpriced = !holdsAPlayer(incoming) || !holdsAPlayer(outgoing);
+        // A side made only of things Otto cannot price is a side the
+        // verdict is blind to: a draft pick, the bidding money this
+        // league does not trade, or a player no remaining week projects.
+        // It may still be reported; it may not state itself.
+        boolean gainUnpriced = !holdsAPricedPlayer(incoming, points);
+        boolean costUnpriced = !holdsAPricedPlayer(outgoing, points);
+        boolean sideUnpriced = gainUnpriced || costUnpriced;
         Confidence confidence = CLEAR_EDGE.equals(verdict) && offRoster.isEmpty()
                 && !sideUnpriced
                 ? Confidence.HIGH
@@ -367,7 +369,9 @@ public class TradeEvaluator {
                     .formatted(EVEN_BAND));
         }
         notes.addAll(pickNotes(incoming, outgoing));
-        if (sideUnpriced) {
+        if (gainUnpriced && costUnpriced) {
+            notes.add("Neither side of this trade holds anything I can put a price on");
+        } else if (sideUnpriced) {
             notes.add("One side of this trade holds nothing I can put a price on, so the "
                     + "numbers describe the other side alone");
         }
@@ -666,9 +670,16 @@ public class TradeEvaluator {
         return List.of();
     }
 
-    /** True when this side moves at least one player Otto can price. */
-    private static boolean holdsAPlayer(Resolved side) {
-        return side.pieces().stream().anyMatch(piece -> piece.player() != null);
+    /**
+     * True when this side moves at least one player Otto can put a
+     * number on. A player the remaining weeks do not project is as
+     * invisible to the verdict as a draft pick is, so he counts the
+     * same way.
+     */
+    private static boolean holdsAPricedPlayer(Resolved side, RestOfSeason season) {
+        return side.pieces().stream()
+                .anyMatch(piece -> piece.player() != null
+                        && season.points(piece.player().playerId()).isPresent());
     }
 
     private static boolean names(Resolved side, Class<? extends TradeAsset> kind) {

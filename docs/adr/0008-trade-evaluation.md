@@ -233,9 +233,12 @@ The same cap covers the two other ways a verdict could state more than
 it knows. A side that names the same player twice, or a player who
 appears on both sides, is refused outright: there is only one of him,
 and no arithmetic over two copies of him means anything. A side that
-holds nothing priceable at all - only a draft pick, or only the bidding
-money this league does not trade - is still reported, but never at
-High, because the verdict is blind to half of it.
+holds nothing priceable at all is still reported, but never at High,
+because the verdict is blind to half of it. That covers a side holding
+only a draft pick, only the bidding money this league does not trade,
+and a side whose only player is one the remaining weeks do not project.
+A player Otto cannot put a number on is as invisible to a verdict as a
+pick is, whatever the reason.
 
 A player named on the wrong side - one the partner does not roster, or
 one the user does not - is still priced, with a note saying whose roster
