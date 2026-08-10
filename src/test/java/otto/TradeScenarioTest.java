@@ -440,8 +440,8 @@ class TradeScenarioTest extends WireSeamTest {
      * A player still carries his full price wherever he is named, so a
      * user who put one on the wrong side could otherwise buy himself a
      * High-confidence verdict for a trade the partner cannot deliver.
-     * The verdict drops to Medium and says the names are wrong, rather
-     * than stating a deal nobody could agree to.
+     * The confidence drops to Medium and the answer says the names are
+     * wrong, rather than stating a deal nobody could agree to.
      */
     @Test
     void aTradeNamingAPlayerNobodyCanDeliverNeverStatesItselfAtHigh() {
@@ -483,6 +483,60 @@ class TradeScenarioTest extends WireSeamTest {
                 // is leaving in the same deal.
                 .withRequestBody(containing(field("value", "25.2")))
                 .withRequestBody(notContaining("sits behind 1 better RB on that bench")));
+    }
+
+    /**
+     * There is only one of each player, so naming one twice on a side
+     * would price two copies of him and buy a verdict for a trade the
+     * partner could never deliver. The same holds for a player named on
+     * both sides at once: he would not move.
+     */
+    @Test
+    void aPlayerNamedTwiceIsRefusedRatherThanPricedTwice() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06 and TE Depth 06", "Tyler Lockett"),
+                "He only has one of him.");
+
+        ask("both of GridironGoblin's TE Depth 06 for Lockett?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("you name TE Depth 06 twice on the same side"))
+                .withRequestBody(notContaining(field("confidence", "HIGH"))));
+    }
+
+    @Test
+    void aPlayerOnBothSidesIsRefusedBecauseHeWouldNotMove() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook and TE Depth 06"),
+                "He is on both sides of that.");
+
+        ask("Cook and TE Depth 06 for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "TE Depth 06 is on both sides of this trade, so he would not move")));
+    }
+
+    /**
+     * A side Otto can put no price on leaves the verdict blind to half
+     * the trade. It is still reported, because the user asked, but it
+     * never states itself at High.
+     */
+    @Test
+    void aSideWithNothingPriceableNeverStatesItselfAtHigh() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "a 2027 1st round pick"),
+                "I cannot price what you would send.");
+
+        ask("my 2027 first for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("confidence", "MEDIUM")))
+                .withRequestBody(containing(
+                        "One side of this trade holds nothing I can put a price on")));
     }
 
     /**

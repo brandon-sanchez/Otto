@@ -2,12 +2,14 @@ package otto.trade;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -198,6 +200,10 @@ public class TradeEvaluator {
         if (resolvedOut.failure() != null) {
             return ToolAnswer.unavailable(resolvedOut.failure());
         }
+        String named = namedTwice(resolvedIn, resolvedOut);
+        if (named != null) {
+            return ToolAnswer.unavailable(named);
+        }
 
         return priced(leagueWeek, mine.get(), partner, resolvedIn, resolvedOut);
     }
@@ -209,6 +215,52 @@ public class TradeEvaluator {
     }
 
     private record Resolved(List<Piece> pieces, String failure) {
+    }
+
+    /**
+     * The reason a player reference cannot stand, or null when both
+     * sides name each player once.
+     *
+     * <p>Nobody can send the same player twice, and nobody can send a
+     * player he is receiving in the same trade. Both would otherwise
+     * price at full value on every copy and buy a verdict for a trade
+     * that cannot be made.
+     */
+    private static String namedTwice(Resolved incoming, Resolved outgoing) {
+        String twice = repeatedWithin(incoming);
+        if (twice != null) {
+            return "you name %s twice on the same side of this trade, and there is only one "
+                    .formatted(twice) + "of him";
+        }
+        twice = repeatedWithin(outgoing);
+        if (twice != null) {
+            return "you name %s twice on the same side of this trade, and there is only one "
+                    .formatted(twice) + "of him";
+        }
+        for (Piece piece : incoming.pieces()) {
+            if (piece.player() == null) {
+                continue;
+            }
+            boolean bothWays = outgoing.pieces().stream()
+                    .anyMatch(other -> other.player() != null
+                            && other.player().playerId().equals(piece.player().playerId()));
+            if (bothWays) {
+                return "%s is on both sides of this trade, so he would not move".formatted(
+                        piece.player().fullName());
+            }
+        }
+        return null;
+    }
+
+    /** The first player one side names more than once, or null. */
+    private static String repeatedWithin(Resolved side) {
+        Set<String> seen = new HashSet<>();
+        for (Piece piece : side.pieces()) {
+            if (piece.player() != null && !seen.add(piece.player().playerId())) {
+                return piece.player().fullName();
+            }
+        }
+        return null;
     }
 
     private Resolved resolve(List<TradeAsset> assets) {
@@ -283,7 +335,13 @@ public class TradeEvaluator {
         // naming one on the wrong side would otherwise buy a High-
         // confidence verdict for a deal the partner cannot deliver.
         List<String> offRoster = offRosterNotes(mine, partner, incoming, outgoing);
+        // A side made only of things Otto cannot price - a pick, or
+        // bidding money this league does not trade - is a side the
+        // verdict is blind to. It may still be reported; it may not
+        // state itself.
+        boolean sideUnpriced = !holdsAPlayer(incoming) || !holdsAPlayer(outgoing);
         Confidence confidence = CLEAR_EDGE.equals(verdict) && offRoster.isEmpty()
+                && !sideUnpriced
                 ? Confidence.HIGH
                 : Confidence.MEDIUM;
 
@@ -309,6 +367,10 @@ public class TradeEvaluator {
                     .formatted(EVEN_BAND));
         }
         notes.addAll(pickNotes(incoming, outgoing));
+        if (sideUnpriced) {
+            notes.add("One side of this trade holds nothing I can put a price on, so the "
+                    + "numbers describe the other side alone");
+        }
         if (!offRoster.isEmpty()) {
             notes.add("This trade names a player the team giving him up does not hold, so it "
                     + "is not a trade either manager could agree to as written. Read the "
@@ -602,6 +664,11 @@ public class TradeEvaluator {
                     + "settle");
         }
         return List.of();
+    }
+
+    /** True when this side moves at least one player Otto can price. */
+    private static boolean holdsAPlayer(Resolved side) {
+        return side.pieces().stream().anyMatch(piece -> piece.player() != null);
     }
 
     private static boolean names(Resolved side, Class<? extends TradeAsset> kind) {

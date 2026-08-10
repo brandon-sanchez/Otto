@@ -224,9 +224,18 @@ leave.
 A trade that names a player the team giving him up does not hold is not
 a trade either manager could agree to. It is still priced, because the
 user usually wants to be shown which player he means, but the verdict
-drops to Medium and says so. A player carries his full price wherever
-he is named, so leaving this alone would let a mistyped side buy a
-High-confidence verdict for a deal that cannot happen.
+confidence drops to Medium and the answer says so. A player carries his
+full price wherever he is named, so leaving this alone would let a
+mistyped side buy a High-confidence verdict for a deal that cannot
+happen.
+
+The same cap covers the two other ways a verdict could state more than
+it knows. A side that names the same player twice, or a player who
+appears on both sides, is refused outright: there is only one of him,
+and no arithmetic over two copies of him means anything. A side that
+holds nothing priceable at all - only a draft pick, or only the bidding
+money this league does not trade - is still reported, but never at
+High, because the verdict is blind to half of it.
 
 A player named on the wrong side - one the partner does not roster, or
 one the user does not - is still priced, with a note saying whose roster
