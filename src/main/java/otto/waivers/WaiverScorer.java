@@ -413,16 +413,20 @@ public class WaiverScorer {
                             .thenComparing(candidate -> candidate.player().playerId()))
                     .toList();
 
-            List<WaiverCandidate> ranked = withNews(scored).stream()
+            List<WaiverCandidate> finished = withNews(scored).stream()
                     .sorted(Comparator.comparing(WaiverScorer::beatsSomebodyNamed).reversed()
                             .thenComparing(Comparator.comparingInt(WaiverCandidate::score)
                                     .reversed())
                             .thenComparing(Comparator.comparing(WaiverCandidate::playerId)))
-                    .limit(query.count())
                     .toList();
+            // The answer reads the whole field, not the top few, so
+            // "the closest is" names the closest there was and not the
+            // closest that survived the count.
+            List<WaiverCandidate> ranked = finished.stream().limit(query.count()).toList();
 
             return new WaiverBoard(
                     week.weekKey().orElse(null),
+                    answer(finished),
                     List.copyOf(boardPositions),
                     remainingBudget,
                     replacing.isEmpty() ? null : replacing.stream()
@@ -473,20 +477,90 @@ public class WaiverScorer {
                     .collect(Collectors.toCollection(LinkedHashSet::new));
         }
 
-        /** What the needs filter did, or why it left nothing to rank. */
-        private Optional<String> needsOnlyNote() {
+        /**
+         * The plain answer, when the honest answer is that there is
+         * nothing here worth doing. The user asked for this directly:
+         * if nobody is better than the man he would drop, or he is
+         * short at nothing, he wants to be told so and told why - not
+         * handed a ranking and left to work it out from the order.
+         *
+         * <p>It leads the board, and the candidates still follow it. He
+         * may still want to see who came closest.
+         *
+         * <p>Null when the ranking is itself the answer, which is the
+         * usual case: a board with somebody worth claiming on it needs
+         * no sentence explaining that it has one.
+         */
+        private String answer(List<WaiverCandidate> finished) {
+            return noNeedAnywhere()
+                    .or(() -> nobodyBeatsTheDrop(finished))
+                    .orElse(null);
+        }
+
+        /** Said when the needs filter found the user short at nothing. */
+        private Optional<String> noNeedAnywhere() {
             if (!query.needsOnly()) {
                 return Optional.empty();
             }
             if (needPositions.isEmpty()) {
-                return Optional.of("you have a bench player above replacement level at every "
-                        + "position and enough quarterbacks for a Superflex league, so there is "
-                        + "no position I would call a need this week");
+                return Optional.of("You are short at nothing this week. You roster a bench player "
+                        + "above replacement level at every position, and enough quarterbacks "
+                        + "for a Superflex league, so there is no position I would call a need "
+                        + "and nothing on this board. Stand pat.");
             }
             if (boardPositions.isEmpty()) {
-                return Optional.of(("you asked for %s and your needs this week are %s, so there "
-                        + "is nothing on this board").formatted(
-                                joined(query.positions()), joined(needPositions)));
+                return Optional.of(("You are not short at %s this week, so there is nothing on "
+                        + "this board. Where you are short is %s. Stand pat at %s.").formatted(
+                                joined(query.positions()), joined(needPositions),
+                                joined(query.positions())));
+            }
+            return Optional.empty();
+        }
+
+        /**
+         * Said when no candidate on the board out-projects anybody the
+         * user offered to drop. It names the closest there was and the
+         * gap he fell short by, because "nobody is better" is only an
+         * answer once the user can see how near the field came.
+         */
+        private Optional<String> nobodyBeatsTheDrop(List<WaiverCandidate> finished) {
+            if (replacing.isEmpty() || pricedDrops().isEmpty()
+                    || finished.stream().anyMatch(WaiverScorer::beatsSomebodyNamed)) {
+                return Optional.empty();
+            }
+            String named = joined(replacing.stream()
+                    .map(dropped -> dropped.player().fullName())
+                    .toList(), "or");
+            Optional<Dropped> easiest = replacing.stream()
+                    .filter(dropped -> dropped.projection().isPresent())
+                    .min(Comparator.comparingDouble(
+                            dropped -> dropped.projection().orElseThrow()));
+            Optional<WaiverCandidate> closest = finished.stream()
+                    .filter(candidate -> projectionOf(candidate).isPresent())
+                    .max(Comparator.comparingDouble(
+                            candidate -> projectionOf(candidate).orElseThrow()));
+            if (easiest.isEmpty() || closest.isEmpty()) {
+                return Optional.of(("Nobody on waivers out-projects %s this week, and there is "
+                        + "nobody on this board I can price against him. Keep who you have.")
+                                .formatted(named));
+            }
+            double theirs = easiest.get().projection().orElseThrow();
+            double best = projectionOf(closest.get()).orElseThrow();
+            return Optional.of(("Nobody on waivers out-projects %s this week. The closest is %s, "
+                    + "who projects %s against the %s %s projects, so he is %s short. Keep who "
+                    + "you have.").formatted(named, closest.get().player(), points(best),
+                            points(theirs), easiest.get().player().fullName(),
+                            points(theirs - best)));
+        }
+
+        private Optional<Double> projectionOf(WaiverCandidate candidate) {
+            return projections.points(candidate.playerId(), candidate.position());
+        }
+
+        /** What the needs filter did, when it left a board to rank. */
+        private Optional<String> needsOnlyNote() {
+            if (!query.needsOnly() || boardPositions.isEmpty()) {
+                return Optional.empty();
             }
             // Each position says why it counts as a need, because they
             // do not all count for the same reason: quarterback is one
@@ -1240,6 +1314,15 @@ public class WaiverScorer {
 
     /** "QB and WR", or "QB, WR and TE": a list a sentence can carry. */
     private static String joined(Collection<String> items) {
+        return joined(items, "and");
+    }
+
+    /**
+     * The same list joined by whichever conjunction the sentence needs.
+     * "Nobody beats Josh Jacobs or Dallas Goedert" is the claim the
+     * board actually makes; "and" there would read as beating both.
+     */
+    private static String joined(Collection<String> items, String conjunction) {
         List<String> values = List.copyOf(items);
         if (values.isEmpty()) {
             return "nobody";
@@ -1247,7 +1330,8 @@ public class WaiverScorer {
         if (values.size() == 1) {
             return values.getFirst();
         }
-        return "%s and %s".formatted(
-                String.join(", ", values.subList(0, values.size() - 1)), values.getLast());
+        return "%s %s %s".formatted(
+                String.join(", ", values.subList(0, values.size() - 1)), conjunction,
+                values.getLast());
     }
 }

@@ -194,6 +194,11 @@ public class WaiverAlertService {
         facts.put("trigger", "waiver board");
         facts.put("waiverEvening", due.toString());
         facts.put("week", board.week() == null ? "unknown" : board.week());
+        // A board that leads with a plain answer leads with it here too,
+        // so the phrasing model never buries it under the ranking.
+        if (board.answer() != null) {
+            facts.put("answer", board.answer());
+        }
         facts.put("remainingBudget", String.valueOf(board.remainingBudget()));
         facts.put("basis", String.join("; ", board.basis()));
         List<WaiverCandidate> candidates = board.candidates();

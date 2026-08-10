@@ -307,6 +307,32 @@ The rule is the board's, not the reader's, so the board states it in its
 notes. A rule the reader has to infer from an ordering is a rule that
 gets inferred wrong.
 
+## When nobody beats the drop, the board says so first
+
+Ranking the losers below the winners is not enough on its own. When no
+candidate on the board out-projects anybody the user named, the board
+leads with that in words: nobody beats him, here is the closest there
+was, and here is the gap he fell short by. The ranking follows it,
+because the user may still want to see who came nearest.
+
+The user asked for this directly. His words were that if nobody is a
+better option than what is on his bench, or than the man he is trying to
+replace, then say so flatly and say why. So it is a field of its own at
+the head of the board and not a note at the foot of one - the notes are
+where the board says what it could not see, and this is not a limit of
+the board. It is the answer.
+
+The gap is part of the answer and not decoration. "Nobody is better" and
+"nobody is better, and the nearest missed by a tenth of a point" lead to
+different decisions next week, and only one of them is worth watching
+the wire for.
+
+The same sentence answers the same shape of question from `needs_only`.
+A user who is short at nothing hears that he is short at nothing and
+why, in one voice with the drop side, rather than getting an empty list
+and a footnote. Two ways of saying "there is nothing to do here" would
+be one way too many.
+
 The partition is a sort key, never a filter, and it is applied to the
 final ranking alone. The news shortlist is chosen on the scores by
 themselves, exactly as it is for a board with no drop side.

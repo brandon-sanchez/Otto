@@ -492,6 +492,35 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aBoardWhereNobodyBeatsTheDropSaysSoFirstAndSaysByHowMuch() {
+        // Patrick Mahomes projects 22.0 and no free agent reaches him.
+        // The user asked to be told that in words rather than left to
+        // infer it from an ordering, so the board leads with it, names
+        // the closest and says how far short he fell. The ranking still
+        // follows: he may want to see who came nearest.
+        aWaiverWeekOnDisk();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Patrick Mahomes\"]}",
+                "Nobody out there beats Mahomes. Stand pat.");
+
+        ask("is anybody on waivers better than Mahomes?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes this "
+                        + "week. The closest is Michael Penix, who projects 20.6 against the "
+                        + "22.0 Patrick Mahomes projects, so he is 1.4 short. Keep who you have."))
+                // It is the answer, not a footnote on one: it rides in
+                // its own field, ahead of the ranking.
+                .withRequestBody(containing("answer\\\":\\\"Nobody on waivers out-projects"))
+                // And the board is still a board underneath it.
+                .withRequestBody(containing("Bucky Irving"))
+                .withRequestBody(containing("Michael Penix"))
+                .withRequestBody(containing("beatsSomebodyNamed\\\":false"))
+                .withRequestBody(notContaining("beatsSomebodyNamed\\\":true")));
+    }
+
+    @Test
     void twoReferencesToTheSamePlayerArePricedAsOneDrop() {
         // The user can only drop him once, so naming him by name and
         // again by Sleeper id must not double his line or make the swap
@@ -711,7 +740,11 @@ class WaiverScenarioTest extends WireSeamTest {
         ask("where do I need help on waivers?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("there is no position I would call a need this week"))
+                // Said out loud and said first, in the same voice the
+                // board uses when nobody beats the man he would drop.
+                .withRequestBody(containing("answer\\\":\\\"You are short at nothing this week."))
+                .withRequestBody(containing("there is no position I would call a need and "
+                        + "nothing on this board. Stand pat."))
                 // Empty means empty, and the board says so as a board
                 // rather than as a list somebody forgot to fill.
                 .withRequestBody(containing("candidates\\\":[]"))
@@ -732,8 +765,9 @@ class WaiverScenarioTest extends WireSeamTest {
         ask("do I need a tight end off waivers?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("you asked for TE and your needs this week are QB "
-                        + "and WR, so there is nothing on this board"))
+                .withRequestBody(containing("answer\\\":\\\"You are not short at TE this week, so "
+                        + "there is nothing on this board. Where you are short is QB and WR. "
+                        + "Stand pat at TE."))
                 .withRequestBody(containing("candidates\\\":[]"))
                 .withRequestBody(notContaining("Cade Otton")));
     }
