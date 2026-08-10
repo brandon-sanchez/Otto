@@ -410,8 +410,9 @@ class WaiverScenarioTest extends WireSeamTest {
     void oneWeekAtTheEliteBarIsABreakoutWithNobodyInjuredAnywhere() {
         // The fast lane, in the two shapes that made it necessary.
         //
-        // Wandale Robinson is Nacua-shaped: 15 targets, 39% of his
-        // team's targets, in one game, with nobody hurt ahead of him.
+        // Wandale Robinson is Nacua-shaped: 15 targets of the 39 the
+        // Giants threw, 39% of the offence in one game, with nobody
+        // hurt ahead of him.
         // Ray Davis is Kyren-shaped: 91% of Buffalo's backfield work in
         // week 1 while James Cook, still RB1 on the chart, is healthy.
         // Neither man is visible to a rule that reads the label on the
@@ -438,7 +439,7 @@ class WaiverScenarioTest extends WireSeamTest {
         // Three weeks on record, and four free agents whose shares say
         // four different things.
         //
-        // Cade Otton held 19% and then 21% of Tampa Bay's targets in
+        // Cade Otton held 21% and then 24% of Tampa Bay's targets in
         // weeks 2 and 3: the slow lane at tight end. Bucky Irving took
         // 71% of the backfield in week 3, which is the fast lane, and
         // it fires even though Rachaad White ahead of him is only
@@ -458,10 +459,10 @@ class WaiverScenarioTest extends WireSeamTest {
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Cade Otton"))
                 .contains("breakout",
-                        "he held 19% and then 21% of target share over weeks 2 and 3");
+                        "he held 21% and then 24% of target share over weeks 2 and 3");
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("breakout",
-                        "Rachaad White has a date he comes back on",
+                        "Rachaad White is not on a list that ends his season",
                         "he took 71% of opportunity share in week 3");
         assertThat(targetLine(board, "Wandale Robinson")).doesNotContain("breakout");
         assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
@@ -487,7 +488,7 @@ class WaiverScenarioTest extends WireSeamTest {
                 .contains("Rachaad White, ahead of him on that chart, is IR")
                 .contains("I cannot see Rachaad White's roster standing")
                 .doesNotContain("breakout")
-                .doesNotContain("has a date he comes back on");
+                .doesNotContain("is not on a list that ends his season");
     }
 
     @Test
@@ -506,8 +507,44 @@ class WaiverScenarioTest extends WireSeamTest {
 
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Bucky Irving"))
-                .contains("Rachaad White has a date he comes back on")
+                .contains("Rachaad White is not on a list that ends his season")
                 .doesNotContain("breakout");
+    }
+
+    @Test
+    void aShareFromLastSeasonIsNeverThisWeeksBreakout() {
+        // Before week 1 is played the stats feed is last season's final
+        // record, on purpose: a defence table has to say something in
+        // week 1 and last season is the honest thing to say. A breakout
+        // is the opposite case. "He took 91% of the backfield" is news
+        // about a role now, and last December is not now - so the lanes
+        // read nothing at all until a week of this season is played,
+        // and the board says which week it is short of.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
+                "sleeper/state-nfl-week1.json", "state-week1");
+        SleeperStubs.stubJson(sleeper, "/v1/projections/nfl/regular/2026/1",
+                "sleeper/projections-waivers.json", "projections-week1");
+        SleeperStubs.stubJson(sleeper, "/scores/nfl/regular/2026/1",
+                "sleeper/scores-2026-2.json", "scores-week1");
+        NflverseStubs.waiverWeekBeforeAnyGameIsPlayed(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Nothing has been played yet.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Wandale Robinson"))
+                .doesNotContain("breakout")
+                .doesNotContain("target share");
+
+        // And it says what it is short of, rather than going quiet.
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "I have no played week of this season on record yet")));
     }
 
     /** The board's own line for one player, whatever rank he landed at. */

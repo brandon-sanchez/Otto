@@ -122,12 +122,23 @@ games goes in the reason string whatever the tag, because a role
 growing in front of the user is worth showing him before it crosses a
 bar.
 
-Three rules keep the lanes honest. A player's newest game has to be the
+Four rules keep the lanes honest. A player's newest game has to be the
 newest week the feed holds, or the claim is about a role he had a month
 ago. The games have to be in straight weeks, so a bye or an absence
-does not get read as consecutive. And no lane fires for a player whose
-own designation rules him out this week: that is the week his role
-ended, whatever last week's share was.
+does not get read as consecutive. No lane fires for a player whose own
+designation rules him out this week: that is the week his role ended,
+whatever last week's share was.
+
+The fourth rule is about which season the feed holds. Before any week
+of this season is played, the stats feed is deliberately last season's
+final record, because a defence table has to say something in week 1
+and last season is the honest thing for it to say. A breakout is the
+opposite case: "he took 91% of the backfield" is a claim about a role
+now, and last December is not now. So the lanes read nothing at all
+while the feed is the prior season's, and the board says which week it
+is short of. The staleness rule above cannot cover this on its own -
+the newest week of last season's file is week 18 of last season, which
+looks current to any rule that only compares weeks.
 
 A quarterback has no lane. Nothing a quarterback does divides into a
 share of his own offence, and no waiver tag rests on one.
@@ -197,6 +208,21 @@ collapsed "he comes back" and "I cannot tell" into one answer would put
 a fact on the board that no feed supplied, which is the failure this
 system treats as worse than silence. Only the first state tags a
 breakout, so a board with no standings tags none.
+
+The second state is worded as "not on a list that ends his season"
+rather than as "he comes back on a date", because only some of these
+codes name a date. A man who is merely Out for Sunday carries the
+active code, and promising a reversion date for him would be the same
+invented fact in a smaller way.
+
+Two rows can share a player's newest week, because a man claimed or
+traded inside a week appears twice. The order the file happens to list
+them in is not a fact about him, so a tie is settled by the code and
+settled the conservative way: the standing that does not end his season
+wins. Only the four positions the Player Directory keeps, and only
+regular-season rows, are stored at all - the published file carries the
+whole league down to the offensive line, and none of it can be the man
+ahead on a chart this system reads.
 
 The 10 usage points are unchanged and still key off the Player
 Directory's own health: those points say the man ahead cannot play this

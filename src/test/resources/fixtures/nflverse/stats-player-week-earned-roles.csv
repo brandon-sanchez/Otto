@@ -1,8 +1,8 @@
 player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,target_share,fantasy_points,fantasy_points_ppr
-00-0037746,W.Robinson,Wandale Robinson,WR,WR,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,10,15,180,0,0,0,0.390,99.9,99.9
-00-0090001,G.Back,Giants Back,RB,RB,2026,1,REG,NYG,DAL,0,0,0,0,0,0,18,80,0,0,2,3,20,0,0,0,0.079,99.9,99.9
-00-0090002,G.End,Giants End,TE,TE,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,4,6,20,0,0,0,0.158,99.9,99.9
-00-0090003,G.Passer,Giants Passer,QB,QB,2026,1,REG,NYG,DAL,22,34,250,2,0,0,2,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0037746,W.Robinson,Wandale Robinson,WR,WR,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,10,15,180,0,0,0,0.385,99.9,99.9
+00-0090001,G.Back,Giants Back,RB,RB,2026,1,REG,NYG,DAL,0,0,0,0,0,0,18,80,0,0,2,3,20,0,0,0,0.077,99.9,99.9
+00-0090002,G.End,Giants End,TE,TE,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,4,6,20,0,0,0,0.154,99.9,99.9
+00-0090003,G.Passer,Giants Passer,QB,QB,2026,1,REG,NYG,DAL,25,39,250,2,0,0,2,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
 00-0090011,B.Wideout,Bucs Wideout,WR,WR,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,5,8,70,0,0,0,0.211,99.9,99.9
 00-0037625,R.White,Rachaad White,RB,RB,2026,1,REG,TB,NO,0,0,0,0,0,0,24,120,0,0,3,4,30,0,0,0,0.105,99.9,99.9
 00-0037680,C.Otton,Cade Otton,TE,TE,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,4,12,40,0,0,0,0.316,99.9,99.9

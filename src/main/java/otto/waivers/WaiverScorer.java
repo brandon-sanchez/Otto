@@ -202,7 +202,12 @@ public class WaiverScorer {
             // One pass over the stat lines builds every team's own
             // denominators, so a share is arithmetic on this run rather
             // than a scan per candidate.
-            this.shares = stats.map(UsageShares::of);
+            // Before any week of this season has been played the stats
+            // feed is last season's final record, which is the right
+            // answer for a defence table and the wrong one for a
+            // breakout: a share from last December is not news about a
+            // role now. The lanes read nothing until a week is played.
+            this.shares = stats.filter(feed -> !feed.priorSeasonFinal()).map(UsageShares::of);
             this.outlooks = rosters.map(WeeklyRosters::outlooks).orElseGet(Map::of);
             Optional<PlayerIdMap> ids = nflverse.playerIds();
             this.gsisBySleeper = ids.map(PlayerIdMap::sleeperToGsis).orElseGet(Map::of);
@@ -238,9 +243,9 @@ public class WaiverScorer {
                 notes.add("I have no defence-versus-position table yet, so I cannot tell a "
                         + "one-week matchup play from a real role");
             }
-            if (stats.isEmpty()) {
-                notes.add("I have no played weeks on record yet, so I cannot read anybody's "
-                        + "share of his own offence");
+            if (shares.isEmpty()) {
+                notes.add("I have no played week of this season on record yet, so I cannot read "
+                        + "anybody's share of his own offence");
             }
             if (rosters.isEmpty()) {
                 notes.add("I have no weekly roster standings yet, so I cannot tell a "
@@ -416,8 +421,13 @@ public class WaiverScorer {
                     .map(ahead -> switch (outlook) {
                         case SEASON_ENDING -> ("%s's season is over, so the role does not revert "
                                 + "when he is back").formatted(ahead);
-                        case RETURNING -> ("%s has a date he comes back on, so this role is a "
-                                + "loan unless his own usage says otherwise").formatted(ahead);
+                        // Deliberately not "he comes back on a date":
+                        // some of these codes name one and some only
+                        // say the season is not over, and the board
+                        // must not promise the stronger of the two.
+                        case RETURNING -> ("%s is not on a list that ends his season, so this "
+                                + "role is a loan unless his own usage says otherwise")
+                                        .formatted(ahead);
                         // Never the claim that he is coming back, and
                         // never the claim that he is not. Both would be
                         // a fact this board did not read.

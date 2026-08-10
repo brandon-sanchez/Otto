@@ -104,6 +104,17 @@ public final class NflverseStubs {
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-share-lanes.csv");
     }
 
+    /**
+     * The week before any game of the season is played. The newest
+     * stats file the system can name is last season's final record, so
+     * the earned-roles week sits in the 2025 asset instead of the 2026
+     * one - the same big shares, all of them last December's.
+     */
+    public static void waiverWeekBeforeAnyGameIsPlayed(WireMockServer nflverse) {
+        waiverWeek(nflverse);
+        stubCsv(nflverse, STATS_2025_PATH, "nflverse/stats-player-week-earned-roles.csv");
+    }
+
     /** The weekly-roster feed is gone, so no absence can be read either way. */
     public static void waiverWeekWithNoRosterStandings(WireMockServer nflverse) {
         waiverWeek(nflverse);

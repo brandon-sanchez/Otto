@@ -80,14 +80,29 @@ public record WeeklyRosters(
      */
     public Map<String, Outlook> outlooks() {
         Map<String, Standing> newest = new HashMap<>();
-        rows.forEach(standing -> newest.merge(standing.gsisId(), standing,
-                (held, arriving) -> arriving.week() > held.week() ? arriving : held));
+        rows.forEach(standing -> newest.merge(standing.gsisId(), standing, WeeklyRosters::later));
         Map<String, Outlook> outlooks = new HashMap<>();
         newest.forEach((gsisId, standing) -> outlooks.put(gsisId,
                 SEASON_ENDING.contains(standing.code())
                         ? Outlook.SEASON_ENDING
                         : Outlook.RETURNING));
         return Map.copyOf(outlooks);
+    }
+
+    /**
+     * The row that describes a player now. A man who was claimed or
+     * traded inside a week has two standings in that week, and the
+     * order they were written in is not a fact about him - so a tie on
+     * the week is settled by the code rather than by the file, and it
+     * is settled the conservative way. Reading the standing that ends
+     * his season would pay a breakout price on a man the same week
+     * says is playing.
+     */
+    private static Standing later(Standing held, Standing arriving) {
+        if (arriving.week() != held.week()) {
+            return arriving.week() > held.week() ? arriving : held;
+        }
+        return SEASON_ENDING.contains(held.code()) ? arriving : held;
     }
 
     public WeeklyRosters withCheckedAt(Instant newCheckedAt) {
