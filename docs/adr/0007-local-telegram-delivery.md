@@ -65,14 +65,41 @@ put the same question to the model again and text the user twice. A
 failure while answering is caught for the same reason: one bad update
 is dropped rather than offered again on every poll for ever.
 
-## The driver gates the chat, not only the seam
+## The seam gates the chat, and the driver does not repeat it
 
 ADR-0002 recorded that only the configured chat reaches the Ask loop. A
-button tap does not pass that gate: it carries a callback id and an
-alert id, and the seam acts on the alert. Nothing reaches the Ask loop,
+button tap did not pass that gate: it carries a callback id and an
+alert id, and the seam acts on the alert. Nothing reached the Ask loop,
 but a stray tap could still record a user action.
 
-So the driver applies the gate to every update it takes, taps included,
-and reads `callback_query.message.chat` with the sender as the fallback
-Telegram uses for old messages. A dropped update is still confirmed -
-otherwise the poll would hand it back for ever.
+The driver first carried a gate of its own to cover that, because the
+seam gated only free text. Issue #29 moved the gate into
+`TelegramWebhook.handle`, where one check covers every branch, so the
+driver's copy went: two copies of one rule in two classes is the drift
+the gate exists to prevent. The driver now hands every update it takes
+to the seam and lets the seam decide.
+
+The gate reads `callback_query.message.chat` for a tap and
+`message.chat` for free text, and it passes nothing else.
+`callback_query.from` names the user who tapped, not the chat the tap
+came from, so it cannot stand in: it would authorize a chat by a user
+id. Telegram leaves the message out of a tap on one too old to quote,
+about two days, and such a tap is dropped too. A dropped update is
+still confirmed - otherwise the poll would hand it back for ever - and
+a dropped tap is still answered, because Telegram offers a
+`callback_query` again until an `answerCallbackQuery` confirms it.
+
+## Two refusals, because the user sees the answer
+
+The answer to a refused tap is the only part of this the user reads, so
+it has to be true of his case. The two refusals are not the same case.
+A tap that names another chat is a stranger's, and "I do not answer
+this chat" is what it deserves. A tap that names no chat is almost
+always the user's own, on an Alert he left for a day or two, and
+telling him he is in the wrong chat would be false as well as
+confusing: it is his chat, and the Alert is the thing that is out of
+date. That tap is answered with "That alert is too old to act on. Ask
+me instead", which is true and gives him the way forward.
+
+Both refusals act on no Alert, and both are answered. Only the wording
+tells them apart.

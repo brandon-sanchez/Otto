@@ -194,7 +194,11 @@ class LocalPollingScenarioTest extends WireSeamTest {
 
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
-        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
+        assertThat(eventLog.all().stream()
+                .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
+        // The tap acts on no Alert, but it is still acknowledged, which
+        // is what stops Telegram offering the same tap again.
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
         // A dropped update is confirmed like any other; otherwise
         // Telegram would offer it on every poll for ever.
         telegram.verify(1, getRequestedFor(urlPathEqualTo(OutboundStubs.GET_UPDATES_PATH))
