@@ -25,7 +25,15 @@ public record WeeklyStats(
         Instant checkedAt,
         List<StatLine> rows) implements NflverseFeed {
 
-    /** One player's line from one game, and the defense that allowed it. */
+    /**
+     * One player's line from one game, and the defense that allowed it.
+     *
+     * @param targetShare his share of his team's targets in that game,
+     *        nflverse's own {@code target_share} column, or null when
+     *        the row carries no readable value. A null is not a zero:
+     *        one says the file did not say, the other says the offence
+     *        never looked at him.
+     */
     public record StatLine(
             String gsisId,
             String player,
@@ -33,6 +41,7 @@ public record WeeklyStats(
             String team,
             String opponent,
             int week,
+            Double targetShare,
             Map<String, Double> stats) {
 
         private static final String CARRIES = "rush_att";
@@ -40,8 +49,8 @@ public record WeeklyStats(
 
         /**
          * How much work the offense gave this player: carries plus
-         * targets. It is the usage half of a breakout - production
-         * follows the ball, and the ball follows the role.
+         * targets. Against the same total for every back his team
+         * played, it is a running back's opportunity share.
          */
         public double touches() {
             return stats.getOrDefault(CARRIES, 0.0) + stats.getOrDefault(TARGETS, 0.0);

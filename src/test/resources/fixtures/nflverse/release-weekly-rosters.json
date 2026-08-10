@@ -1,0 +1,28 @@
+{
+  "tag_name": "weekly_rosters",
+  "name": "weekly_rosters",
+  "published_at": "2025-07-31T18:47:44Z",
+  "assets": [
+    {
+      "name": "roster_weekly_2025.csv",
+      "content_type": "text/csv",
+      "size": 6182104,
+      "updated_at": "2026-01-13T06:52:10Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2025.csv"
+    },
+    {
+      "name": "roster_weekly_2026.csv",
+      "content_type": "text/csv",
+      "size": 1204480,
+      "updated_at": "2026-09-16T07:11:03Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2026.csv"
+    },
+    {
+      "name": "roster_weekly_2026.parquet",
+      "content_type": "application/octet-stream",
+      "size": 310002,
+      "updated_at": "2026-09-16T07:11:05Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2026.parquet"
+    }
+  ]
+}

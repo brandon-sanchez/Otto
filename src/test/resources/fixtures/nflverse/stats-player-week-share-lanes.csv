@@ -1,0 +1,23 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,target_share,fantasy_points,fantasy_points_ppr
+00-0037625,R.White,Rachaad White,RB,RB,2026,1,REG,TB,NO,0,0,0,0,0,0,10,45,0,0,2,2,15,0,0,0,0.061,99.9,99.9
+00-0039918,B.Irving,Bucky Irving,RB,RB,2026,1,REG,TB,NO,0,0,0,0,0,0,6,30,0,0,2,2,15,0,0,0,0.061,99.9,99.9
+00-0037680,C.Otton,Cade Otton,TE,TE,2026,1,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,2,3,20,0,0,0,0.091,99.9,99.9
+00-0090013,B.Passer,Bucs Passer,QB,QB,2026,1,REG,TB,NO,20,33,240,1,0,0,1,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0037746,W.Robinson,Wandale Robinson,WR,WR,2026,1,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,5,6,60,0,0,0,0.188,99.9,99.9
+00-0090003,G.Passer,Giants Passer,QB,QB,2026,1,REG,NYG,DAL,21,32,230,1,0,0,2,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0039875,R.Davis,Ray Davis,RB,RB,2026,1,REG,BUF,MIA,0,0,0,0,0,0,18,85,0,0,1,1,10,0,0,0,0.034,99.9,99.9
+00-0089999,B.Backup,Buffalo Backup,RB,RB,2026,1,REG,BUF,MIA,0,0,0,0,0,0,1,3,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0090023,B.Passer,Bills Passer,QB,QB,2026,1,REG,BUF,MIA,19,29,210,1,0,0,3,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0037625,R.White,Rachaad White,RB,RB,2026,2,REG,TB,NO,0,0,0,0,0,0,11,50,0,0,2,2,15,0,0,0,0.061,99.9,99.9
+00-0039918,B.Irving,Bucky Irving,RB,RB,2026,2,REG,TB,NO,0,0,0,0,0,0,9,40,0,0,2,2,15,0,0,0,0.061,99.9,99.9
+00-0037680,C.Otton,Cade Otton,TE,TE,2026,2,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,5,7,45,0,0,0,0.212,99.9,99.9
+00-0090013,B.Passer,Bucs Passer,QB,QB,2026,2,REG,TB,NO,21,33,245,1,0,0,1,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0039875,R.Davis,Ray Davis,RB,RB,2026,2,REG,BUF,MIA,0,0,0,0,0,0,18,85,0,0,1,1,10,0,0,0,0.034,99.9,99.9
+00-0089999,B.Backup,Buffalo Backup,RB,RB,2026,2,REG,BUF,MIA,0,0,0,0,0,0,1,3,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0090023,B.Passer,Bills Passer,QB,QB,2026,2,REG,BUF,MIA,19,29,210,1,0,0,3,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0039918,B.Irving,Bucky Irving,RB,RB,2026,3,REG,TB,NO,0,0,0,0,0,0,14,75,0,0,3,3,25,0,0,0,0.088,99.9,99.9
+00-0090012,B.Backup,Bucs Backup,RB,RB,2026,3,REG,TB,NO,0,0,0,0,0,0,6,20,0,0,1,1,5,0,0,0,0.029,99.9,99.9
+00-0037680,C.Otton,Cade Otton,TE,TE,2026,3,REG,TB,NO,0,0,0,0,0,0,0,0,0,0,6,8,50,0,0,0,0.235,99.9,99.9
+00-0090013,B.Passer,Bucs Passer,QB,QB,2026,3,REG,TB,NO,22,34,250,1,0,0,1,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
+00-0037746,W.Robinson,Wandale Robinson,WR,WR,2026,3,REG,NYG,DAL,0,0,0,0,0,0,0,0,0,0,6,7,70,0,0,0,0.212,99.9,99.9
+00-0090003,G.Passer,Giants Passer,QB,QB,2026,3,REG,NYG,DAL,22,33,240,1,0,0,2,0,0,0,0,0,0,0,0,0,NA,99.9,99.9
