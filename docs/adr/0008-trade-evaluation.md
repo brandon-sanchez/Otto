@@ -44,8 +44,13 @@ times a positional scarcity multiplier, times a roster-fit factor:
 
 - Above Replacement Level. A player is priced against what the manager
   could have for nothing, not against zero, and it is the same
-  Replacement Level the waiver board already uses - the projection at
-  the position's cutoff rank, over the same weeks. A manager who loses a
+  Replacement Level the waiver board already uses: the projection at the
+  position's cutoff rank. That rank is read from the current week's
+  table and multiplied by the weeks that are left, rather than summed
+  week by week. Replacement Level is a line, not a person - the free
+  agent who fills it is a different player every week, and none of them
+  has a bye that matters, because the manager claims whoever plays. A
+  manager who loses a
   player does not field nobody; he claims the best free agent there is.
   This is also what makes a fourth running back correctly cheap to a
   manager who already holds three: the points that put him above a free
@@ -210,6 +215,18 @@ is no transaction to read. It takes the partner's name and the two
 sides as the user typed them, resolves each player reference through the
 one `NameMatch` rule ADR-0003 fixed, and refuses rather than guesses
 when a reference is ambiguous.
+
+Each player on one side is priced as the one player moving: the rest of
+his own side comes off the roster he is read against. Two backs sent
+together must not each be called buried behind the other when they both
+leave.
+
+A trade that names a player the team giving him up does not hold is not
+a trade either manager could agree to. It is still priced, because the
+user usually wants to be shown which player he means, but the verdict
+drops to Medium and says so. A player carries his full price wherever
+he is named, so leaving this alone would let a mistyped side buy a
+High-confidence verdict for a deal that cannot happen.
 
 A player named on the wrong side - one the partner does not roster, or
 one the user does not - is still priced, with a note saying whose roster

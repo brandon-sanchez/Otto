@@ -141,6 +141,9 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(field("aboveReplacement", "31.5")))
                 .withRequestBody(containing(field("scarcity", "1.10")))
                 .withRequestBody(containing(field("rosterFit", "1.10")))
+                // Cook is neither an upgrade nor buried: he is the cover.
+                .withRequestBody(containing(field("rosterFit", "1.00")))
+                .withRequestBody(containing("is the first RB off that bench"))
                 // The user's own four numbers, and the partner's.
                 .withRequestBody(containing(field("net", "9.8")))
                 .withRequestBody(containing(field("net", "-6.9")))
@@ -215,9 +218,9 @@ class TradeScenarioTest extends WireSeamTest {
 
     /**
      * CeeDee Lamb is worth 36.0 above the receiver line and RB Depth 08
-     * 33.0 above the running back one, and both start for the team that
+     * 33.6 above the running back one, and both start for the team that
      * would hold them. A running back is scarcer, which closes the gap
-     * to 3.7%: inside the even band, so the answer is a coin flip with
+     * to 2.0%: inside the even band, so the answer is a coin flip with
      * the lean stated and no more.
      */
     @Test
@@ -232,9 +235,9 @@ class TradeScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "even")))
                 .withRequestBody(containing(field("favours", "GridironGoblin")))
-                .withRequestBody(containing(field("gap", "3.7%")))
+                .withRequestBody(containing(field("gap", "2.0%")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
-                .withRequestBody(containing(field("net", "-1.5")))
+                .withRequestBody(containing(field("net", "-0.8")))
                 .withRequestBody(containing("which is a coin flip")));
     }
 
@@ -431,6 +434,55 @@ class TradeScenarioTest extends WireSeamTest {
                         "Travis Kelce is not on GridironGoblin's roster, so check who you meant"))
                 .withRequestBody(containing(
                         "TE Depth 06 is not on your roster, so check who you meant")));
+    }
+
+    /**
+     * A player still carries his full price wherever he is named, so a
+     * user who put one on the wrong side could otherwise buy himself a
+     * High-confidence verdict for a trade the partner cannot deliver.
+     * The verdict drops to Medium and says the names are wrong, rather
+     * than stating a deal nobody could agree to.
+     */
+    @Test
+    void aTradeNamingAPlayerNobodyCanDeliverNeverStatesItselfAtHigh() {
+        snapshotOfTheLeague();
+        // Justin Jefferson is the user's own, so GridironGoblin cannot
+        // send him. Priced naively this is a landslide in the user's
+        // favour, which is exactly the answer that must not be stated.
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06 and Justin Jefferson", "James Cook"),
+                "Check the names: Jefferson is already yours.");
+
+        ask("Cook for TE Depth 06 and Justin Jefferson?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing(field("confidence", "MEDIUM")))
+                .withRequestBody(containing("not a trade either manager could agree to"))
+                .withRequestBody(containing(
+                        "Justin Jefferson is not on GridironGoblin's roster")));
+    }
+
+    /**
+     * Two players sent together must not be read as blocking each
+     * other. Josh Jacobs is buried behind James Cook on the user's
+     * bench, but in a trade that sends both of them Cook is gone, so
+     * Jacobs is priced as the cover he would be.
+     */
+    @Test
+    void twoPlayersOnTheSameSideAreNotPricedAsBlockingEachOther() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook and Josh Jacobs"),
+                "Both backs leave, so neither is buried behind the other.");
+
+        ask("Cook and Jacobs for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                // Jacobs at 1.00 cover, not 0.90 buried behind a back who
+                // is leaving in the same deal.
+                .withRequestBody(containing(field("value", "25.2")))
+                .withRequestBody(notContaining("sits behind 1 better RB on that bench")));
     }
 
     /**

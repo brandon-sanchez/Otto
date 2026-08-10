@@ -89,6 +89,12 @@ public class RosterFit {
             return new Factor(STARTER_UPGRADE, "starts for that roster over what it has now");
         }
         String position = pool.positions().get(playerId);
+        if (position == null) {
+            // Callers put the priced player on the roster first, so this
+            // is a player the Player Directory knows no position for.
+            return new Factor(DEPTH, "has no position I can read, so he is priced at face "
+                    + "value against that roster");
+        }
         double his = pool.points().getOrDefault(playerId, 0.0);
         long aheadOnTheBench = pool.points().entrySet().stream()
                 .filter(other -> !other.getKey().equals(playerId))

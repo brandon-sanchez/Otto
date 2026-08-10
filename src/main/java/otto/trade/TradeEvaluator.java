@@ -154,6 +154,9 @@ public class TradeEvaluator {
 
     private static final String YOU = "you";
 
+    /** An exactly level trade leans nobody's way, and says so. */
+    private static final String NOBODY = "neither of you";
+
     /**
      * Prices a proposed trade.
      *
@@ -274,8 +277,15 @@ public class TradeEvaluator {
         // does for the other manager is his business, not a reason to
         // talk the user out of a deal that is good for him.
         String verdict = gap < EVEN_BAND ? EVEN : gap <= CLEAR_BAND ? SLIGHT_EDGE : CLEAR_EDGE;
-        String favours = myNet >= 0 ? YOU : partner.manager();
-        Confidence confidence = CLEAR_EDGE.equals(verdict) ? Confidence.HIGH : Confidence.MEDIUM;
+        String favours = myNet > 0 ? YOU : myNet < 0 ? partner.manager() : NOBODY;
+        // A trade nobody can actually make must never state itself. A
+        // player neither manager holds still carries his full price, so
+        // naming one on the wrong side would otherwise buy a High-
+        // confidence verdict for a deal the partner cannot deliver.
+        List<String> offRoster = offRosterNotes(mine, partner, incoming, outgoing);
+        Confidence confidence = CLEAR_EDGE.equals(verdict) && offRoster.isEmpty()
+                ? Confidence.HIGH
+                : Confidence.MEDIUM;
 
         List<String> notes = new ArrayList<>(points.notes());
         notes.add("A player is worth his rest-of-season points above Replacement Level, times "
@@ -299,7 +309,12 @@ public class TradeEvaluator {
                     .formatted(EVEN_BAND));
         }
         notes.addAll(pickNotes(incoming, outgoing));
-        notes.addAll(offRosterNotes(mine, partner, incoming, outgoing));
+        if (!offRoster.isEmpty()) {
+            notes.add("This trade names a player the team giving him up does not hold, so it "
+                    + "is not a trade either manager could agree to as written. Read the "
+                    + "verdict as a sketch and check the names first");
+            notes.addAll(offRoster);
+        }
 
         return ToolAnswer.of(new TradeEvaluation(
                 leagueWeek.week().weekKey().orElse(null),
@@ -381,6 +396,40 @@ public class TradeEvaluator {
             return new RosterFit.Pool(points, positions, replacement);
         }
 
+        /**
+         * This roster without the rest of one side of the trade, so an
+         * asset is never read against players that move with it.
+         */
+        Roster alongside(Resolved side, Piece priced) {
+            Map<String, Double> held = new LinkedHashMap<>(points);
+            Map<String, String> heldPositions = new LinkedHashMap<>(positions);
+            for (Piece other : side.pieces()) {
+                if (other == priced || other.player() == null) {
+                    continue;
+                }
+                held.remove(other.player().playerId());
+                heldPositions.remove(other.player().playerId());
+            }
+            return new Roster(held, heldPositions, replacement);
+        }
+
+        /**
+         * This roster with the player being priced on it. A player is
+         * always read against a roster that holds him, so a reference
+         * the user put on the wrong side is still priced by the same
+         * rule rather than falling through it.
+         */
+        Roster holding(DirectoryPlayer player, double projected) {
+            if (points.containsKey(player.playerId())) {
+                return this;
+            }
+            Map<String, Double> held = new LinkedHashMap<>(points);
+            Map<String, String> heldPositions = new LinkedHashMap<>(positions);
+            held.put(player.playerId(), projected);
+            heldPositions.put(player.playerId(), player.position());
+            return new Roster(held, heldPositions, replacement);
+        }
+
         Roster without(Resolved leaving) {
             Map<String, Double> held = new LinkedHashMap<>(points);
             Map<String, String> heldPositions = new LinkedHashMap<>(positions);
@@ -424,7 +473,11 @@ public class TradeEvaluator {
             if (piece.asset() instanceof TradeAsset.Faab) {
                 continue;
             }
-            Valued valued = value(slots, piece, season, reading, replacement);
+            // Every player on this side is priced as the one player
+            // moving. Two backs sent together must not each be called
+            // buried behind the other: they both leave.
+            Roster alone = reading.alongside(assets, piece);
+            Valued valued = value(slots, piece, season, alone, replacement);
             values.add(valued.asset());
             total += valued.value();
         }
@@ -456,7 +509,8 @@ public class TradeEvaluator {
         Double line = replacement.get(player.position());
         double above = Math.max(0, projected.orElseThrow() - (line == null ? 0 : line));
         double scarcity = SCARCITY.getOrDefault(player.position(), NO_SCARCITY);
-        RosterFit.Factor fit = rosterFit.of(slots, reading.pool(), player.playerId());
+        RosterFit.Factor fit = rosterFit.of(slots,
+                reading.holding(player, projected.orElseThrow()).pool(), player.playerId());
         double value = above * scarcity * fit.factor();
         List<Integer> byes = season.byesFor(player.playerId());
         return new Valued(new AssetValue(
@@ -593,7 +647,10 @@ public class TradeEvaluator {
     }
 
     private static String points(double value) {
-        return String.format(Locale.ROOT, "%.1f", value);
+        // A rounded zero must never print as "-0.0", which reads as a
+        // loss of nothing rather than as nothing at all.
+        double rounded = round(value);
+        return String.format(Locale.ROOT, "%.1f", rounded == 0 ? 0.0 : rounded);
     }
 
     private static String factor(double value) {
