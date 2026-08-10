@@ -541,14 +541,16 @@ class WaiverScenarioTest extends WireSeamTest {
                 .doesNotContain("breakout")
                 .doesNotContain("target share");
 
-        // The current season's file was never asked for, because in
-        // this state it is not the file the feed names.
+        // Last season's file was read and the current season's was
+        // never asked for, which is what makes the assertion above a
+        // test of the gate rather than of an empty feed: Wandale
+        // Robinson holds a 39% share inside the file that was read.
+        nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2025_PATH)));
         nflverse.verify(0, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2026_PATH)));
 
         // And the board says what it is short of, rather than going quiet.
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(
-                        "I have no played week of this season on record yet")));
+                .withRequestBody(containing("no week of this season has been played yet")));
     }
 
     /** The board's own line for one player, whatever rank he landed at. */

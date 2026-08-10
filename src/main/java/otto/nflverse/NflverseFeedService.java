@@ -314,8 +314,9 @@ public class NflverseFeedService {
      * as absent rather than as zero: a zero would say the offence never
      * looked at him, which is a claim this file did not make.
      *
-     * "NaN" and "Infinity" parse as doubles and are refused here for
-     * the same reason. An infinite share would clear every bar the
+     * A value outside nought to one is refused for the same reason,
+     * and so are "NaN" and "Infinity", which both parse as doubles. A
+     * share of more than the whole offence would clear every bar the
      * breakout lanes hold, which is the one wrong answer this column
      * could produce on its own.
      */
@@ -326,7 +327,7 @@ public class NflverseFeedService {
         }
         try {
             double share = Double.parseDouble(value);
-            return Double.isFinite(share) ? share : null;
+            return share >= 0.0 && share <= 1.0 ? share : null;
         } catch (NumberFormatException notANumber) {
             return null;
         }

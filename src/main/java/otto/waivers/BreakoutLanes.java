@@ -116,8 +116,8 @@ public final class BreakoutLanes {
                 && games.get(games.size() - SLOW_LANE_GAMES).share() >= bars.get().slow()
                 && latest.share() >= bars.get().slow()) {
             breakout = true;
-            reasons.add(("he held %s and then %s of %s over weeks %d and %d, above the %s that "
-                    + "marks a real role in both").formatted(
+            reasons.add(("he held %s and then %s of %s over weeks %d and %d, at or above the %s "
+                    + "that marks a real role in both").formatted(
                             percent(games.get(games.size() - SLOW_LANE_GAMES).share()),
                             percent(latest.share()), kind,
                             games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week(),

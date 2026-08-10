@@ -135,8 +135,10 @@ final record, because a defence table has to say something in week 1
 and last season is the honest thing for it to say. A breakout is the
 opposite case: "he took 91% of the backfield" is a claim about a role
 now, and last December is not now. So the lanes read nothing at all
-while the feed is the prior season's, and the board says which week it
-is short of. The staleness rule above cannot cover this on its own -
+while the feed is the prior season's, and the board says that no week
+of this season has been played - which is a different note from the one
+a missing feed earns, because they are different facts. The staleness
+rule above cannot cover this on its own -
 the newest week of last season's file is week 18 of last season, which
 looks current to any rule that only compares weeks.
 
@@ -168,6 +170,14 @@ Opportunity share has no published column, so it is computed from the
 two that are already downloaded: a back's carries plus targets over the
 same total for every back his team played that week. The denominator
 comes from the same rows, so it is a real team's real game.
+
+Both new reads join the fail-soft list that "Only the projections are
+load-bearing" sets out, and each one has its own note rather than a
+shared one. No weekly stats feed means no share can be read at all. No
+week of this season played means the shares on disk are last season's,
+which is a different fact and a different sentence. No roster standings
+means nothing is season-ending. None of the three stops a board being
+priced.
 
 #17 judged that a snap-count download was not worth a second hourly
 fetch. That judgement stands and is now moot: `snap_counts` is not
@@ -444,9 +454,7 @@ was cut, so the user knows he asked for more than he got.
 ## Only the projections are load-bearing
 
 Every other input fails soft into a note: no depth charts means no
-usage points, no defence table means no stream tags, no played weeks
-means no share to read and so no usage lane, no roster standings means
-nothing is season-ending, no trending means no trending points, and
-each says so on the board. The projections are
+usage points, no defence table means no stream tags, no trending means
+no trending points, and each says so on the board. The projections are
 half the score, and a board without them would be a ranking of rumour,
 so the tool answers that it cannot price one instead.

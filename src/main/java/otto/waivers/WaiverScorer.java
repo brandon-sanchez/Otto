@@ -243,9 +243,15 @@ public class WaiverScorer {
                 notes.add("I have no defence-versus-position table yet, so I cannot tell a "
                         + "one-week matchup play from a real role");
             }
-            if (shares.isEmpty()) {
-                notes.add("I have no played week of this season on record yet, so I cannot read "
-                        + "anybody's share of his own offence");
+            // Two different reasons for the same silence, and they are
+            // not the same sentence: one says a feed is missing, the
+            // other says the season has not started.
+            if (stats.isEmpty()) {
+                notes.add("I have no weekly stats feed yet, so I cannot read anybody's share of "
+                        + "his own offence");
+            } else if (shares.isEmpty()) {
+                notes.add("no week of this season has been played yet, so I cannot read anybody's "
+                        + "share of his own offence");
             }
             if (rosters.isEmpty()) {
                 notes.add("I have no weekly roster standings yet, so I cannot tell a "
