@@ -524,33 +524,68 @@ public class WaiverScorer {
          * answer once the user can see how near the field came.
          */
         private Optional<String> nobodyBeatsTheDrop(List<WaiverCandidate> finished) {
-            if (replacing.isEmpty() || pricedDrops().isEmpty()
-                    || finished.stream().anyMatch(WaiverScorer::beatsSomebodyNamed)) {
+            // Only the named players who carry a projection were
+            // compared against anything, so only they are claimed. A
+            // board that said "nobody beats him" about a player it never
+            // measured would contradict its own notes.
+            List<Dropped> priced = replacing.stream()
+                    .filter(dropped -> dropped.projection().isPresent())
+                    .toList();
+            if (priced.isEmpty() || finished.stream().anyMatch(WaiverScorer::beatsSomebodyNamed)) {
                 return Optional.empty();
             }
-            String named = joined(replacing.stream()
+            String named = joined(priced.stream()
                     .map(dropped -> dropped.player().fullName())
                     .toList(), "or");
-            Optional<Dropped> easiest = replacing.stream()
-                    .filter(dropped -> dropped.projection().isPresent())
+            // The lowest-projecting named player is the one to measure
+            // against: beating any of them would have been enough, so he
+            // is the bar the field failed to clear, and the gap to him
+            // is the smallest gap there is.
+            Dropped easiest = priced.stream()
                     .min(Comparator.comparingDouble(
-                            dropped -> dropped.projection().orElseThrow()));
+                            dropped -> dropped.projection().orElseThrow()))
+                    .orElseThrow();
             Optional<WaiverCandidate> closest = finished.stream()
                     .filter(candidate -> projectionOf(candidate).isPresent())
                     .max(Comparator.comparingDouble(
                             candidate -> projectionOf(candidate).orElseThrow()));
-            if (easiest.isEmpty() || closest.isEmpty()) {
+            String tail = unpricedClause() + " Keep who you have.";
+            if (closest.isEmpty()) {
                 return Optional.of(("Nobody on waivers out-projects %s this week, and there is "
-                        + "nobody on this board I can price against him. Keep who you have.")
-                                .formatted(named));
+                        + "nobody on this board I can price against %s.%s").formatted(
+                                named, priced.size() == 1 ? "him" : "them", tail));
             }
-            double theirs = easiest.get().projection().orElseThrow();
+            double theirs = easiest.projection().orElseThrow();
             double best = projectionOf(closest.get()).orElseThrow();
+            String gap = points(theirs - best);
+            // A gap that rounds away is a tie, not a shortfall, and
+            // "0.0 short" reads as a number rather than as a dead heat.
+            String margin = "0.0".equals(gap)
+                    ? "so he is level with him"
+                    : "so he is %s short".formatted(gap);
             return Optional.of(("Nobody on waivers out-projects %s this week. The closest is %s, "
-                    + "who projects %s against the %s %s projects, so he is %s short. Keep who "
-                    + "you have.").formatted(named, closest.get().player(), points(best),
-                            points(theirs), easiest.get().player().fullName(),
-                            points(theirs - best)));
+                    + "who projects %s against the %s %s projects, %s.%s").formatted(
+                            named, closest.get().player(), points(best), points(theirs),
+                            easiest.player().fullName(), margin, tail));
+        }
+
+        /**
+         * What the answer owes the named players it could not price.
+         * They were named and they were not measured, so the sentence
+         * says which, rather than leaving the user to read the notes to
+         * find out his question was half answered.
+         */
+        private String unpricedClause() {
+            List<String> unpriced = replacing.stream()
+                    .filter(dropped -> dropped.projection().isEmpty())
+                    .map(dropped -> dropped.player().fullName())
+                    .toList();
+            if (unpriced.isEmpty()) {
+                return "";
+            }
+            return (" I have %s for %s, so nobody was measured against %s.").formatted(
+                    ProjectionTable.NO_PROJECTION, joined(unpriced),
+                    unpriced.size() == 1 ? "him" : "them");
         }
 
         private Optional<Double> projectionOf(WaiverCandidate candidate) {

@@ -325,7 +325,16 @@ the board. It is the answer.
 The gap is part of the answer and not decoration. "Nobody is better" and
 "nobody is better, and the nearest missed by a tenth of a point" lead to
 different decisions next week, and only one of them is worth watching
-the wire for.
+the wire for. A gap that rounds away is a tie and is said as one: "0.0
+short" reads as a number when the honest word is level.
+
+The claim covers only the named players the board could actually price.
+A player with no projection was never measured against anybody, so he is
+not in the sentence that says nobody beats him - he gets his own clause
+saying he went unmeasured. A claim the notes below it disclaim is worse
+than no claim. Where no candidate carries a projection either, there is
+no closest and no gap to report, and the answer says that rather than
+reporting one.
 
 The same sentence answers the same shape of question from `needs_only`.
 A user who is short at nothing hears that he is short at nothing and

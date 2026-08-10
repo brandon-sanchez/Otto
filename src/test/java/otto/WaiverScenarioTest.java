@@ -521,6 +521,69 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void anAnswerClaimsOnlyTheNamedPlayersItCouldActuallyPrice() {
+        // Two names, one of them with no projection this week. The
+        // board never measured anybody against Josh Jacobs, so it does
+        // not say nobody beats him - it says so about Patrick Mahomes,
+        // whom it did price, and says plainly that Jacobs went
+        // unmeasured. A claim the notes disclaim is worse than no claim.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-jacobs-unpriced.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"replacing\":[\"Patrick Mahomes\",\"Josh Jacobs\"]}",
+                "Nobody beats Mahomes, and I cannot price Jacobs.");
+
+        ask("anybody better than Mahomes or Jacobs?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes this "
+                        + "week. The closest is Michael Penix, who projects 20.6 against the "
+                        + "22.0 Patrick Mahomes projects, so he is 1.4 short. I have no "
+                        + "projection available for Josh Jacobs, so nobody was measured against "
+                        + "him. Keep who you have."))
+                // The unpriced name is never folded into the claim.
+                .withRequestBody(notContaining("out-projects Patrick Mahomes or Josh Jacobs")));
+    }
+
+    @Test
+    void anAnswerWithNothingItCanPriceOnTheBoardSaysThatInsteadOfAGap() {
+        // A quarterback board where the only free agent has no
+        // projection. Nobody can be shown to beat either name, and
+        // there is no closest and no gap to report, so the answer says
+        // that rather than inventing one. Two names, so it says "them".
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-waivers-no-qb-free-agent.json", "projections-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"QB\",\"replacing\":[\"Patrick Mahomes\",\"Jordan Love\"]}",
+                "No quarterback on waivers I can price.");
+
+        ask("any quarterback better than Mahomes or Love?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Nobody on waivers out-projects Patrick Mahomes or "
+                        + "Jordan Love this week, and there is nobody on this board I can price "
+                        + "against them. Keep who you have.")));
+    }
+
+    @Test
     void twoReferencesToTheSamePlayerArePricedAsOneDrop() {
         // The user can only drop him once, so naming him by name and
         // again by Sleeper id must not double his line or make the swap
