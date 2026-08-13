@@ -34,16 +34,32 @@ public final class OttoRuntime {
 
     private static volatile ConfigurableApplicationContext context;
 
-    static {
-        try {
-            context = start();
-        } catch (RuntimeException e) {
-            log.error("The assistant did not start during init; the next invocation"
-                    + " will try again", e);
-        }
+    private OttoRuntime() {
     }
 
-    private OttoRuntime() {
+    /**
+     * Builds the context now, and never throws.
+     *
+     * <p>A handler on SnapStart calls this from its constructor,
+     * because that is what puts a started application inside the
+     * snapshot. Doing it in a static initializer here does not: Java
+     * initializes a class on first active use, and nothing uses this
+     * one until a handler asks for a bean - which is the first
+     * invocation, long after the snapshot was taken. The context would
+     * then be built while the user waited, once per execution
+     * environment, and SnapStart would restore an application that had
+     * never started.
+     *
+     * <p>A handler without SnapStart must not call this. Init is
+     * limited to 10 seconds there, and Spring takes longer than that.
+     */
+    public static void warmUp() {
+        try {
+            started();
+        } catch (RuntimeException e) {
+            log.error("The assistant did not start during init; the first invocation"
+                    + " will try again", e);
+        }
     }
 
     private static ConfigurableApplicationContext start() {
@@ -58,9 +74,9 @@ public final class OttoRuntime {
     }
 
     /**
-     * The context, started on the first invocation that needs it if
-     * init could not start it. The happy path never reaches the
-     * synchronized method: it is the field read above.
+     * The context, built on the first call that needs it. Once it is
+     * up, every later call is the plain field read here rather than
+     * the synchronized method.
      */
     private static ConfigurableApplicationContext started() {
         ConfigurableApplicationContext running = context;
@@ -69,7 +85,6 @@ public final class OttoRuntime {
 
     private static synchronized ConfigurableApplicationContext startNow() {
         if (context == null) {
-            log.warn("Starting the assistant now, having failed to start during init");
             context = start();
         }
         return context;

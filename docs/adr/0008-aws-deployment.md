@@ -20,8 +20,22 @@ webhook function that Telegram posts to. One artifact means one build,
 one set of dependencies, and one place a behavior can live.
 
 Both run on arm64, Java 25, 1024 MB, with SnapStart on published
-versions. The Spring context is built while `OttoRuntime` loads, which
-is Lambda's init phase, so the snapshot holds a started app.
+versions.
+
+The Spring context is built from each handler's **constructor**, and
+the reason is worth stating because the obvious alternative is wrong.
+Building it in a static initializer on `OttoRuntime` looks equivalent
+and is not: Java initializes a class on first active use, and nothing
+uses that class until a handler asks it for a bean, which is the first
+invocation. The snapshot would then hold an application that had never
+started, and every execution environment would pay a full Spring start
+while the user waited. Lambda constructs the handler during init, so
+the constructor is the hook that actually runs before the snapshot is
+taken.
+
+The alarm forwarder deliberately does not do this. It has no SnapStart,
+and an init phase without SnapStart is limited to 10 seconds, which is
+less than Spring takes.
 
 SnapStart restores a *version*, never `$LATEST`. Both functions
 therefore sit behind an alias, and the schedules and the function URL

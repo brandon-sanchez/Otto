@@ -39,6 +39,16 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
      */
     static final String HEARTBEAT = "heartbeat check-completed";
 
+    /**
+     * Lambda constructs the handler during the init phase, so this is
+     * what puts a started application inside the SnapStart snapshot.
+     * Without it the context would be built during the first
+     * invocation of every execution environment instead.
+     */
+    public ScheduledHandler() {
+        OttoRuntime.warmUp();
+    }
+
     @Override
     public String handleRequest(Map<String, Object> event, Context context) {
         String job = String.valueOf(event.getOrDefault(JOB, ScheduledJob.CHECK.jobName()));

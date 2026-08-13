@@ -33,6 +33,17 @@ public class WebhookHandler
     /** The header Telegram echoes the registered secret in. */
     static final String SECRET_HEADER = "x-telegram-bot-api-secret-token";
 
+    /**
+     * Lambda constructs the handler during the init phase, so this is
+     * what puts a started application inside the SnapStart snapshot.
+     * It matters most here: the user is waiting for the reply, and the
+     * webhook is idle between messages, so nearly every message would
+     * otherwise arrive at an environment that had yet to start Spring.
+     */
+    public WebhookHandler() {
+        OttoRuntime.warmUp();
+    }
+
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent request,
             Context context) {

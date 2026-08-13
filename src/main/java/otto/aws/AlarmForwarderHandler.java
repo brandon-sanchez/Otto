@@ -22,6 +22,12 @@ public class AlarmForwarderHandler implements RequestHandler<SNSEvent, String> {
 
     private static final Logger log = LoggerFactory.getLogger(AlarmForwarderHandler.class);
 
+    // No warm-up here, unlike the other two handlers. This function has
+    // no SnapStart, and init without it is limited to 10 seconds, which
+    // is less than a Spring start takes. So the context is built on the
+    // first invocation instead. Alarms are rare and nobody waits on
+    // them, which is the same reason SnapStart was left off.
+
     @Override
     public String handleRequest(SNSEvent event, Context context) {
         TelegramClient telegram = OttoRuntime.bean(TelegramClient.class);
