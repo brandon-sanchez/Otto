@@ -89,7 +89,7 @@ mvn package
 cd infra && npx aws-cdk@2 deploy -c alertEmail=you@example.com
 ```
 
-The same app, invoked two ways: a scheduled Lambda runs the Check every minute, and a Lambda function URL takes Telegram's updates. Both use SnapStart, so a restore answers without waiting for Spring to start. Documents go to one S3 object and one DynamoDB table, secrets to Parameter Store. If the Check loop stops, an alarm texts you.
+The same app, invoked two ways: a scheduled Lambda runs the Check every minute, and a Lambda function URL takes Telegram's updates. Documents go to one S3 object and one DynamoDB table, secrets to Parameter Store. If the Check loop stops, an alarm texts you.
 
 ## Under the hood
 
