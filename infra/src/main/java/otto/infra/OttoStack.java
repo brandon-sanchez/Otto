@@ -119,11 +119,8 @@ public class OttoStack extends Stack {
                 "OTTO_PARAMETER_PATH", parameterPath);
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
-        // One scheduled run at a time. Two overlapping runs would read
-        // the same stored documents, and the second would spend a
-        // conflict retry rewriting what the first had just written.
         Function scheduled = appFunction("Scheduled", "otto.aws.ScheduledHandler",
-                SCHEDULED_TIMEOUT, scheduledLogs, environment, 1);
+                SCHEDULED_TIMEOUT, scheduledLogs, environment, scheduledConcurrency());
         Alias scheduledLive = alias("ScheduledLive", scheduled);
 
         LogGroup webhookLogs = logGroup("WebhookLogs");
@@ -167,6 +164,30 @@ public class OttoStack extends Stack {
                 .value(records.getTableName())
                 .description("The small records, one item each")
                 .build();
+    }
+
+    /**
+     * How many scheduled runs may be in flight at once. One is what the
+     * design wants: two overlapping runs read the same stored documents,
+     * and the second spends a conflict retry rewriting what the first
+     * had just written.
+     *
+     * <p>It is a context value rather than a constant because reserving
+     * concurrency spends from an account-wide pool. AWS refuses a
+     * reservation that would leave fewer than 10 unreserved executions,
+     * and a new account is capped at 10 in total - so on a new account
+     * no reservation is possible at all until the quota is raised.
+     *
+     * <p>Pass 0 to reserve nothing. That is not the same as reserving
+     * zero, which would stop the function running; it means the function
+     * draws from the shared pool like any other. The Check is then only
+     * as safe as the storage layer makes it, which is safe but louder:
+     * two overlapping runs both write, and the loser is refused and
+     * retried on the next tick rather than corrupting anything.
+     */
+    private Number scheduledConcurrency() {
+        int reserved = Integer.parseInt(context("scheduledReservedConcurrency", "1"));
+        return reserved > 0 ? reserved : null;
     }
 
     private Bucket documentsBucket() {
@@ -254,11 +275,24 @@ public class OttoStack extends Stack {
                 .effect(Effect.ALLOW)
                 .actions(List.of("ssm:GetParameter", "ssm:GetParameters",
                         "ssm:GetParametersByPath"))
+                // Two ARNs, and both are needed. GetParameter reads one
+                // parameter and is authorized against that parameter, so
+                // it needs the children. GetParametersByPath reads a path
+                // and is authorized against the path itself, which is not
+                // matched by the wildcard over what is under it. Granting
+                // only the children passes every synth assertion and then
+                // fails on the first real call.
+                //
                 // The partition comes from the stack rather than the
-                // literal "aws", so the ARN is built the same way CDK
-                // builds its own and does not assume a commercial region.
-                .resources(List.of("arn:%s:ssm:%s:%s:parameter%s/*"
-                        .formatted(getPartition(), getRegion(), getAccount(), parameterPath)))
+                // literal "aws", so the ARNs are built the way CDK builds
+                // its own and assume no particular partition.
+                .resources(List.of(
+                        "arn:%s:ssm:%s:%s:parameter%s"
+                                .formatted(getPartition(), getRegion(), getAccount(),
+                                        parameterPath),
+                        "arn:%s:ssm:%s:%s:parameter%s/*"
+                                .formatted(getPartition(), getRegion(), getAccount(),
+                                        parameterPath)))
                 .build());
     }
 

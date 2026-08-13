@@ -1,5 +1,6 @@
 package otto.infra;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +64,26 @@ class OttoStackTest {
         template.hasResourceProperties("AWS::Lambda::Function", Map.of(
                 "Handler", "otto.aws.ScheduledHandler",
                 "ReservedConcurrentExecutions", 1));
+    }
+
+    /**
+     * Reserving concurrency spends from an account-wide pool, and AWS
+     * refuses a reservation that leaves fewer than 10 unreserved. A new
+     * account is capped at 10 in total, so it can reserve nothing at
+     * all. The stack has to be able to deploy there.
+     */
+    @Test
+    void anAccountThatCannotSpareTheConcurrencyStillDeploys() {
+        Template unreserved = Template.fromStack(new OttoStack(
+                new App(AppProps.builder()
+                        .context(Map.of("alertEmail", "manager@example.com",
+                                "scheduledReservedConcurrency", "0"))
+                        .build()),
+                "OttoStack", props()));
+
+        unreserved.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Handler", "otto.aws.ScheduledHandler",
+                "ReservedConcurrentExecutions", Match.absent())));
     }
 
     @Test
@@ -187,6 +208,34 @@ class OttoStackTest {
                         "BudgetType", "COST",
                         "TimeUnit", "MONTHLY",
                         "BudgetLimit", Map.of("Amount", 20, "Unit", "USD"))))));
+    }
+
+    /**
+     * GetParametersByPath is authorized against the path, and
+     * GetParameter against the parameter under it. A grant that names
+     * only the children synthesizes fine and is denied on the first
+     * real call, which is how this was found.
+     */
+    @Test
+    void readingSecretsGrantsBothThePathAndTheParametersUnderIt() {
+        List<Object> grants = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (String.valueOf(statement.get("Action")).contains("ssm:GetParametersByPath")) {
+                    grants.add(statement.get("Resource"));
+                }
+            }
+        }
+
+        assertThat(grants)
+                .as("one grant each: the scheduled function, the webhook, the forwarder")
+                .hasSize(3)
+                .allSatisfy(resource -> assertThat((List<?>) resource)
+                        .as("the path itself, and the parameters under it")
+                        .hasSize(2));
     }
 
     @Test
