@@ -1,0 +1,9 @@
+{
+  "app": "mvn -e -q compile exec:java",
+  "context": {
+    "parameterPath": "/otto/prod",
+    "timeZone": "America/Los_Angeles",
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true
+  }
+}

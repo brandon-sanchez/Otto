@@ -1,8 +1,11 @@
 .env
 CONTEXT.md
 docs/agents/
+docs/local/
 AGENTS.md
 CLAUDE.md
 .idea/
 target/
 data/
+cdk.out/
+.impeccable/

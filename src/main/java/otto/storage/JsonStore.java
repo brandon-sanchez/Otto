@@ -2,31 +2,25 @@ package otto.storage;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
-
 /**
- * Local document storage: one JSON file per named document under the
- * configured storage directory. Writes go to a temp file first and
- * move into place, so a crash mid-write never leaves a torn document.
- * This class is the storage seam: a cloud object-store adapter can
- * replace it without touching callers.
+ * Document storage: one JSON document per name. This class is the
+ * storage seam every caller holds. It turns a document into JSON and
+ * back and hands the bytes to a {@link DocumentBackend}, so where the
+ * bytes live - a directory of files, an object in S3, a row in
+ * DynamoDB - is settled in one place.
  */
 @Component
 public class JsonStore {
 
-    private final Path dir;
+    private final DocumentBackend backend;
 
-    public JsonStore(OttoProperties properties) {
-        this.dir = Path.of(properties.storageDir());
+    public JsonStore(DocumentBackend backend) {
+        this.backend = backend;
     }
 
     public <T> Optional<T> read(String name, Class<T> type) {
@@ -34,35 +28,35 @@ public class JsonStore {
     }
 
     public <T> Optional<T> read(String name, JavaType type) {
-        Path file = fileFor(name);
-        if (!Files.exists(file)) {
+        Optional<byte[]> stored = backend.load(name);
+        if (stored.isEmpty()) {
             return Optional.empty();
         }
         try {
-            return Optional.of(OttoJson.MAPPER.readValue(file.toFile(), type));
+            return Optional.of(OttoJson.MAPPER.readValue(stored.get(), type));
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot read stored document " + name, e);
         }
     }
 
     public void write(String name, Object value) {
-        Path file = fileFor(name);
         try {
-            Files.createDirectories(dir);
-            Path temp = Files.createTempFile(dir, name, ".tmp");
-            OttoJson.MAPPER.writerWithDefaultPrettyPrinter().writeValue(temp.toFile(), value);
-            try {
-                Files.move(temp, file,
-                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
-            }
+            backend.store(name,
+                    OttoJson.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(value));
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot write stored document " + name, e);
         }
     }
 
-    private Path fileFor(String name) {
-        return dir.resolve(name + ".json");
+    /**
+     * Ends one run, so a backend that batches writes pushes them. The
+     * deployed entry points call this once their work is done, failed
+     * or not: a Check that half finished still stored what it learned.
+     * The local drivers do not, and need not - a laptop's backend
+     * stores each document as it comes rather than a run's worth at a
+     * time, so there is nothing held back to push.
+     */
+    public void flush() {
+        backend.flush();
     }
 }
