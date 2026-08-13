@@ -48,3 +48,9 @@ spring:
       chat:
         options:
           model: "gpt-5.6-luna"
+          # The Ask loop offers the model a tool on every call, and this
+          # model refuses tools on the chat-completions endpoint unless
+          # reasoning is off. It is also what this assistant wants: the
+          # thinking is done in Java, and the model only writes the
+          # sentence, so reasoning effort buys latency and nothing else.
+          reasoning-effort: "none"
