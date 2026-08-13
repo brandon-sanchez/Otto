@@ -13,6 +13,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import otto.storage.ConcurrentDocumentChange;
 import otto.storage.JsonStore;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -41,13 +42,36 @@ public class WebhookHandler
                         .handle(secretToken(request).orElse(null), body(request));
                 return answer(result == WebhookResult.OK ? 200 : 403);
             });
-        } catch (RuntimeException e) {
-            // Telegram retries what it is not told was taken, and a retry
-            // of a body that broke us would break us again. The failure is
-            // logged for the error alarm and the update is let go.
-            log.error("Webhook update dropped: {}", e.getClass().getSimpleName(), e);
-            return answer(200);
+        } catch (RuntimeException failure) {
+            return recoverFrom(failure);
         }
+    }
+
+    /**
+     * What to tell Telegram when the update did not go through. The two
+     * cases pull in opposite directions, so they are answered
+     * differently.
+     *
+     * <p>A run whose storage was refused lost the user's tap, and the
+     * user has already been told it worked - the acknowledgement goes
+     * out while the update is handled, before the run stores anything.
+     * Nothing else will ever retry it. So Telegram is asked to send it
+     * again, which it does for any answer that is not a success. A
+     * resent tap costs nothing: the Event Log keys on the event id, so
+     * applying the same tap twice appends once.
+     *
+     * <p>Anything else is a body this build cannot handle. Asking for
+     * that again would fail again, on a loop, so it is logged for the
+     * error alarm and let go.
+     */
+    APIGatewayV2HTTPResponse recoverFrom(RuntimeException failure) {
+        if (failure instanceof ConcurrentDocumentChange) {
+            log.warn("Webhook update left for Telegram to send again: {}",
+                    failure.getMessage());
+            return answer(503);
+        }
+        log.error("Webhook update dropped: {}", failure.getClass().getSimpleName(), failure);
+        return answer(200);
     }
 
     /**

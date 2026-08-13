@@ -94,10 +94,23 @@ only realistic case - this run's value was derived from a version that
 no longer exists, and writing it would drop the user's tap. There is no
 general way to merge two documents at this level, so the backend
 compares each document against what it held when the run first touched
-it and refuses loudly when that has moved. The Check then errors, the
-error alarm sees it, and the next minute's run reads the Event Log with
-the tap already in it. Losing one Check is cheap; losing a Done tap
-means re-alerting a problem the user has already dealt with.
+it and refuses loudly when that has moved.
+
+The two entry points answer that refusal differently, because what
+they lose is not the same. The Check errors: the error alarm sees it,
+and the next minute's run reads the Event Log with the tap already in
+it. Losing one Check costs a minute of latency on news that is at most
+a minute old anyway.
+
+The webhook cannot shrug in the same way. The tap is the user's, he
+has already been told it worked - the acknowledgement goes out while
+the update is handled, before the run stores anything - and no later
+run will retry it for him. So a refused webhook write answers Telegram
+with a failure, and Telegram sends the update again. That is safe
+because the Event Log keys on the event id: the same tap applied twice
+appends once. Any other failure still answers 200 and is let go, since
+a body this build cannot handle would fail the same way on every
+retry.
 
 The batching costs one guarantee the file storage gave. An Alert is
 sent to Telegram during the run, and the Event Log entry that dedups it

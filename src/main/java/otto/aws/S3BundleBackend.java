@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import otto.storage.ConcurrentDocumentChange;
 import otto.storage.DocumentBackend;
 import otto.storage.OttoJson;
 
@@ -160,14 +161,6 @@ public class S3BundleBackend implements DocumentBackend {
         return stored == null ? MissingNode.getInstance() : stored;
     }
 
-    /** Raised when two runs changed one document and neither may win. */
-    public static class ConcurrentDocumentChange extends IllegalStateException {
-
-        ConcurrentDocumentChange(String name) {
-            super("The other entry point changed " + name + " while this run held it."
-                    + " This run's copy is dropped rather than written over it.");
-        }
-    }
 
     private void put(ObjectNode merged) {
         PutObjectRequest.Builder request = PutObjectRequest.builder()

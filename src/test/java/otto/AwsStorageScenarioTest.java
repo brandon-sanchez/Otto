@@ -12,6 +12,7 @@ import otto.aws.DynamoDbBackend;
 import otto.aws.S3BundleBackend;
 import otto.harness.FakeDynamoDb;
 import otto.harness.FakeS3;
+import otto.storage.ConcurrentDocumentChange;
 import otto.storage.DocumentBackend;
 import otto.storage.JsonStore;
 
@@ -147,7 +148,7 @@ class AwsStorageScenarioTest {
         check.write("event-log", List.of("alert sent", "alert sent again"));
 
         assertThatThrownBy(check::flush)
-                .isInstanceOf(S3BundleBackend.ConcurrentDocumentChange.class)
+                .isInstanceOf(ConcurrentDocumentChange.class)
                 .hasMessageContaining("event-log");
         assertThat(s3.storedAsText(KEY)).contains("the user tapped done");
     }
@@ -157,7 +158,7 @@ class AwsStorageScenarioTest {
         store.write("event-log", List.of("mine"));
         s3.writeBehindTheCaller(KEY, "{\"event-log\":[\"theirs\"]}".getBytes());
         assertThatThrownBy(store::flush)
-                .isInstanceOf(S3BundleBackend.ConcurrentDocumentChange.class);
+                .isInstanceOf(ConcurrentDocumentChange.class);
 
         store.write("settings", new Settings(true, 1.0));
         store.flush();

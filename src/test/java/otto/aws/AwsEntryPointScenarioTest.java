@@ -7,11 +7,14 @@ import java.util.Map;
 import java.util.Properties;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.mock.env.MockEnvironment;
+
+import otto.storage.ConcurrentDocumentChange;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +67,33 @@ class AwsEntryPointScenarioTest {
         assertThat(webhook.body(request(Map.of(), encoded, true))).isEqualTo(update);
         assertThat(webhook.body(request(Map.of(), update, false))).isEqualTo(update);
         assertThat(webhook.body(request(Map.of(), null, false))).isEmpty();
+    }
+
+    /**
+     * The tap is the user's, and nothing else will retry it. He has
+     * already seen the acknowledgement, so a dropped storage write
+     * would leave him told that a Done he never stored had worked.
+     */
+    @Test
+    void aTapWhoseStorageWasRefusedIsAskedForAgain() {
+        APIGatewayV2HTTPResponse answer =
+                webhook.recoverFrom(new ConcurrentDocumentChange("event-log"));
+
+        assertThat(answer.getStatusCode())
+                .as("any answer that is not a success makes Telegram send it again")
+                .isEqualTo(503);
+    }
+
+    /**
+     * A body this build cannot handle would fail the same way on every
+     * retry, so it is let go rather than looped on.
+     */
+    @Test
+    void anUpdateThisBuildCannotHandleIsNotAskedForAgain() {
+        APIGatewayV2HTTPResponse answer =
+                webhook.recoverFrom(new IllegalArgumentException("nonsense update"));
+
+        assertThat(answer.getStatusCode()).isEqualTo(200);
     }
 
     @Test
