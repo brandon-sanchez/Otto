@@ -80,14 +80,26 @@ It also answers: your roster and how each player is doing, two players compared,
 
 Replies run a couple of lines. Reply "why" or "more" for the reasoning behind one.
 
+## Run it in the cloud
+
+One CDK stack deploys the whole assistant, so you can rebuild it from this repo. See [docs/deploy.md](docs/deploy.md).
+
+```sh
+mvn package
+cd infra && npx aws-cdk@2 deploy -c alertEmail=you@example.com
+```
+
+The same app, invoked two ways: a scheduled Lambda runs the Check every minute, and a Lambda function URL takes Telegram's updates. Documents go to one S3 object and one DynamoDB table, secrets to Parameter Store. If the Check loop stops, an alarm texts you.
+
 ## Under the hood
 
-Java 25, Spring Boot, Spring AI, Maven. No database yet: JSON files under `./data` stand in for what AWS supplies later.
+Java 25, Spring Boot, Spring AI, Maven. Storage is one seam with two backends: JSON files under `./data` on your machine, S3 plus DynamoDB when deployed.
 
 Otto runs one Check a minute. It polls Sleeper, builds a snapshot, diffs it against the last one, finds the problems, and works out what to do about them. Only the result reaches the model, and only to be turned into English.
 
 ```sh
-mvn test
+mvn test              # the app
+mvn -f infra/pom.xml test   # the stack, read back off the template it synthesizes
 ```
 
 No test touches the network or spends a token. Stub servers play Sleeper, Telegram and the model from recorded fixtures.
@@ -95,4 +107,4 @@ No test touches the network or spends a token. Stub servers play Sleeper, Telegr
 ## Not built yet
 
 - Trade evaluation ([#18](https://github.com/brandon-sanchez/Otto/issues/18))
-- Running anywhere but your own machine ([#19](https://github.com/brandon-sanchez/Otto/issues/19))
+- A live season ([#20](https://github.com/brandon-sanchez/Otto/issues/20))

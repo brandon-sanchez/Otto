@@ -20,6 +20,7 @@ public record OttoProperties(
         Sleeper sleeper,
         Telegram telegram,
         Nflverse nflverse,
+        Aws aws,
         Duration directoryCheckInterval,
         Duration preDraftCheckInterval,
         Duration sleeperCadence,
@@ -41,5 +42,14 @@ public record OttoProperties(
      */
     public record Nflverse(String apiBaseUrl, String downloadBaseUrl, String playerIdsBaseUrl,
             Duration checkInterval) {
+    }
+
+    /**
+     * Where the deployed assistant keeps its documents. The stack names
+     * the bucket and the table and hands both to the function as
+     * environment variables, so nothing here is checked in. Every field
+     * is null on a laptop, where the local file storage is used instead.
+     */
+    public record Aws(String bucket, String table) {
     }
 }

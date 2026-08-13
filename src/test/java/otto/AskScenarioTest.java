@@ -88,6 +88,24 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(notContaining("99.9")));
     }
 
+    /**
+     * The model is offered a tool on every Ask, and this model refuses
+     * tools on the chat-completions endpoint unless reasoning is off.
+     * A stub answers whatever it is asked, so nothing else here would
+     * notice the combination the real endpoint rejects.
+     */
+    @Test
+    void everyCallAsksForNoReasoningSoTheToolsAreAccepted() {
+        snapshotWithABenchEdge();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Anything you like.");
+
+        ask("what should I do this week?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("\"reasoning_effort\":\"none\"")));
+    }
+
     @Test
     void theModelIsOfferedEveryLaneATool() {
         snapshotWithABenchEdge();

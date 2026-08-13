@@ -1,0 +1,12 @@
+# The deployed assistant. The stack names the bucket and the table and
+# passes both in; the secrets arrive from SSM before this file is read.
+otto:
+  aws:
+    bucket: "${OTTO_BUCKET}"
+    table: "${OTTO_TABLE}"
+
+logging:
+  pattern:
+    # CloudWatch stamps every line already, and the request id comes
+    # from the Lambda runtime, so the pattern carries only the message.
+    console: "%-5level %logger{36} - %msg%n"

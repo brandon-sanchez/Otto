@@ -12,6 +12,7 @@ import otto.harness.WireSeamTest;
 import otto.lineup.PositionCutoffs;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
+import otto.storage.FileDocumentBackend;
 import otto.storage.JsonStore;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -232,7 +233,7 @@ class SettingsScenarioTest extends WireSeamTest {
         settingsAsk("{\"action\":\"set\",\"name\":\"edge_threshold\",\"value\":\"2.5\"}",
                 "two and a half points");
 
-        SettingsStore coldRead = new SettingsStore(new JsonStore(properties), properties);
+        SettingsStore coldRead = new SettingsStore(new JsonStore(new FileDocumentBackend(properties)), properties);
         assertThat(coldRead.current().edgeThreshold()).isEqualTo(2.5);
         assertThat(coldRead.current().enabled(Trigger.WATCHLIST)).isTrue();
     }

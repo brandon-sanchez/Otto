@@ -17,6 +17,7 @@ import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.storage.FileDocumentBackend;
 import otto.storage.JsonStore;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -684,7 +685,7 @@ class WatchlistScenarioTest extends WireSeamTest {
         nextCheck();
         checkRunner.runCheck();
 
-        WatchlistStore coldRead = new WatchlistStore(new JsonStore(properties));
+        WatchlistStore coldRead = new WatchlistStore(new JsonStore(new FileDocumentBackend(properties)));
         assertThat(coldRead.all()).singleElement()
                 .satisfies(entry -> {
                     assertThat(entry.playerId()).isEqualTo(NACUA);
