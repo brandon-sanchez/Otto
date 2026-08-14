@@ -1,0 +1,46 @@
+[
+  {
+    "type": "trade",
+    "transaction_id": "1210000000000000013",
+    "status": "reversed",
+    "status_updated": 1796752800000,
+    "created": 1796752800000,
+    "roster_ids": [
+      2,
+      3
+    ],
+    "consenter_ids": [
+      2,
+      3
+    ],
+    "adds": {
+      "4866": 3,
+      "92010": 2
+    },
+    "drops": {
+      "4866": 2,
+      "92010": 3
+    },
+    "draft_picks": [],
+    "waiver_budget": []
+  },
+  {
+    "type": "commissioner",
+    "transaction_id": "1210000000000000012",
+    "status": "complete",
+    "status_updated": 1796752800000,
+    "created": 1796752800000,
+    "roster_ids": [
+      2
+    ],
+    "consenter_ids": [
+      2
+    ],
+    "adds": null,
+    "drops": {
+      "4866": 2
+    },
+    "draft_picks": [],
+    "waiver_budget": []
+  }
+]

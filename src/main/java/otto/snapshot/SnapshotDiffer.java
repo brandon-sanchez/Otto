@@ -48,6 +48,14 @@ public class SnapshotDiffer {
     /** The fact every Snapshot Diff event carries: what the league was doing. */
     public static final String LEAGUE_STATUS = "leagueStatus";
 
+    /**
+     * The fact an event carries when a Commissioner Edit produced it.
+     * It is what separates a player the user cut from a player taken
+     * off him, which read the same in roster state and mean opposite
+     * things to him.
+     */
+    public static final String BY_COMMISSIONER = "byCommissioner";
+
     public List<Event> diff(Optional<Snapshot> previous, Snapshot current,
             List<SleeperAdapter.LeagueTransaction> transactions, Instant at) {
         if (previous.isEmpty()) {
@@ -62,8 +70,12 @@ public class SnapshotDiffer {
     }
 
     private static Event stamped(Event event, String status) {
+        return withFact(event, LEAGUE_STATUS, status);
+    }
+
+    private static Event withFact(Event event, String name, String value) {
         Map<String, String> facts = new LinkedHashMap<>(event.facts());
-        facts.put(LEAGUE_STATUS, status);
+        facts.put(name, value);
         return new Event(event.key(), event.type(), event.at(), Map.copyOf(facts));
     }
 
@@ -100,10 +112,11 @@ public class SnapshotDiffer {
 
     /**
      * The league activity in the week's transactions: one event per
-     * player a trade moved, one per player claimed off free agency, and
-     * one per player who left a roster and joined nobody else's. A
-     * trade moves every player it names, so a player in both the adds
-     * and the drops was traded, not dropped.
+     * player a trade sent across, one per player a Commissioner Edit
+     * took from one roster and put on another, one per player claimed
+     * off free agency, and one per player who left a roster and joined
+     * nobody else's. A player in both the adds and the drops crossed
+     * rosters, so he was not dropped.
      */
     private List<Event> activityEvents(Snapshot previous, Snapshot current,
             List<SleeperAdapter.LeagueTransaction> transactions, Instant at) {
@@ -114,10 +127,18 @@ public class SnapshotDiffer {
             Instant happenedAt = transaction.statusUpdated();
             if (transaction.isTrade()) {
                 transaction.adds().forEach((playerId, toRoster) ->
-                        events.add(tradeEvent(previous, current, transaction, playerId, toRoster,
-                                happenedAt)));
+                        events.add(crossedRostersEvent(DiffKind.TRADE, previous, current,
+                                transaction, playerId, toRoster, happenedAt)));
                 continue;
             }
+            if (transaction.isCommissionerEdit()) {
+                events.addAll(commissionerEvents(previous, current, transaction, happenedAt));
+                continue;
+            }
+            // A waiver claim and a free agent move add from free agency
+            // and drop to it, and so does a type nobody has seen yet:
+            // reading them by what they did to the rosters is what lets
+            // an unknown type through without a sentence about it.
             transaction.adds().forEach((playerId, toRoster) ->
                     events.add(addEvent(previous, current, transaction, playerId, toRoster,
                             happenedAt)));
@@ -146,12 +167,39 @@ public class SnapshotDiffer {
                 EventType.SNAPSHOT_DIFF, at, Map.copyOf(facts));
     }
 
-    private Event tradeEvent(Snapshot previous, Snapshot current,
+    /**
+     * One Commissioner Edit, read by what it did: players taken from
+     * one roster and put on another, players put on a roster from free
+     * agency, and players cut to free agency. Every event says the
+     * commissioner made it, because that is what tells a detector the
+     * user agreed to none of it.
+     */
+    private List<Event> commissionerEvents(Snapshot previous, Snapshot current,
+            SleeperAdapter.LeagueTransaction transaction, Instant at) {
+        List<Event> events = new ArrayList<>();
+        transaction.crossedRosters().forEach((playerId, toRoster) ->
+                events.add(crossedRostersEvent(DiffKind.COMMISSIONER, previous, current,
+                        transaction, playerId, toRoster, at)));
+        transaction.claimedFromFreeAgency().forEach((playerId, toRoster) ->
+                events.add(addEvent(previous, current, transaction, playerId, toRoster, at)));
+        transaction.droppedToFreeAgency().forEach((playerId, rosterId) ->
+                events.add(dropEvent(previous, current, transaction, playerId, rosterId, at)));
+        return events.stream()
+                .map(event -> withFact(event, BY_COMMISSIONER, "true"))
+                .toList();
+    }
+
+    /**
+     * A player who changed rosters, by trade or by Commissioner Edit.
+     * The two carry the same facts and differ only in how they came
+     * about, which the kind records and the detector reads.
+     */
+    private Event crossedRostersEvent(DiffKind kind, Snapshot previous, Snapshot current,
             SleeperAdapter.LeagueTransaction transaction, String playerId, int toRoster,
             Instant at) {
         Integer fromRoster = transaction.drops().get(playerId);
         Map<String, String> facts = playerFacts(previous, current, playerId);
-        facts.put(DiffKind.factName(), DiffKind.TRADE.fact());
+        facts.put(DiffKind.factName(), kind.fact());
         facts.put("transactionId", transaction.transactionId());
         // Named for the managers rather than "from" and "to": a status
         // event already uses those two for a health designation, and one
@@ -160,8 +208,8 @@ public class SnapshotDiffer {
         facts.put("fromManager", fromRoster == null ? "" : manager(current, fromRoster));
         facts.put("userInvolved", String.valueOf(transaction.rosterIds().stream()
                 .anyMatch(rosterId -> isUser(current, rosterId))));
-        return new Event("snapshot-diff:trade:%s:%s".formatted(
-                transaction.transactionId(), playerId),
+        return new Event("snapshot-diff:%s:%s:%s".formatted(
+                kind.fact(), transaction.transactionId(), playerId),
                 EventType.SNAPSHOT_DIFF, at, Map.copyOf(facts));
     }
 

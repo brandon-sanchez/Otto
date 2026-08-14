@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import otto.events.DiffKind;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
@@ -86,8 +87,12 @@ public class AlertActions {
                 .map(event -> event.key().substring("alert:".length()))
                 .toList();
         // A trade names several players, so muting it can only mean the
-        // class: the user is saying he does not want trade news.
-        if (problemKeys.stream().anyMatch(key -> key.startsWith("trade:"))) {
+        // class: the user is saying he does not want trade news. A
+        // Commissioner Edit that sent a player across is the same news
+        // by another route, and it goes quiet with it.
+        if (problemKeys.stream().anyMatch(key ->
+                key.startsWith(DiffKind.TRADE.fact() + ":")
+                        || key.startsWith(DiffKind.COMMISSIONER.fact() + ":"))) {
             return AlertCandidate.Source.TRADE.muteClass();
         }
         // News about one player - a status change, a drop, a Watchlist
