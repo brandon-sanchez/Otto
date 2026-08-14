@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +30,8 @@ import otto.OttoProperties;
  */
 @Component
 public class SleeperAdapter {
+
+    private static final Logger log = LoggerFactory.getLogger(SleeperAdapter.class);
 
     private final SleeperClient client;
     private final SleeperCache cache;
@@ -127,8 +131,18 @@ public class SleeperAdapter {
 
         private static final String TRADE = "trade";
 
+        /**
+         * Sleeper's fourth type, undocumented and live: a commissioner
+         * changing a roster that nobody on it agreed to.
+         */
+        private static final String COMMISSIONER = "commissioner";
+
         public boolean isTrade() {
             return TRADE.equals(type);
+        }
+
+        public boolean isCommissionerEdit() {
+            return COMMISSIONER.equals(type);
         }
 
         /**
@@ -140,6 +154,35 @@ public class SleeperAdapter {
             Map<String, Integer> dropped = new LinkedHashMap<>(drops);
             dropped.keySet().removeAll(adds.keySet());
             return dropped;
+        }
+
+        /**
+         * The players this transaction took straight from one roster and
+         * put on another, read as player id to the roster that gained
+         * them. A trade is the agreed way to do that; a Commissioner
+         * Edit is the other one, and it needs nobody's consent - which
+         * is exactly why a player leaving the user's roster this way is
+         * news.
+         */
+        public Map<String, Integer> crossedRosters() {
+            Map<String, Integer> crossed = new LinkedHashMap<>();
+            adds.forEach((playerId, toRoster) -> {
+                Integer fromRoster = drops.get(playerId);
+                if (fromRoster != null && !fromRoster.equals(toRoster)) {
+                    crossed.put(playerId, toRoster);
+                }
+            });
+            return crossed;
+        }
+
+        /**
+         * The players this transaction put on a roster from free agency:
+         * everyone it added who was on nobody else's roster.
+         */
+        public Map<String, Integer> claimedFromFreeAgency() {
+            Map<String, Integer> claimed = new LinkedHashMap<>(adds);
+            claimed.keySet().removeAll(crossedRosters().keySet());
+            return claimed;
         }
     }
 
@@ -284,9 +327,14 @@ public class SleeperAdapter {
 
     /**
      * The league's transactions for one week: trades, waiver claims,
-     * free agent moves and commissioner edits. Only completed ones are
-     * returned - a pending waiver claim has not happened yet, and a
-     * failed one never will.
+     * free agent moves and commissioner edits. Only transactions whose
+     * status says they happened are returned - {@link TransactionStatus}
+     * holds that rule and the reason each other status is refused.
+     *
+     * A status outside Sleeper's vocabulary is dropped and logged rather
+     * than guessed at. Reading it as news would put a move that may
+     * never have happened in the user's pocket; dropping it in silence
+     * would leave a Sleeper change nobody could find.
      */
     public SourceResult<List<LeagueTransaction>> transactions(String season, int week) {
         String path = leaguePath + "/transactions/" + week;
@@ -300,7 +348,15 @@ public class SleeperAdapter {
                         || !transaction.hasNonNull("type")) {
                     return schemaDrift(path, "transaction_id or type missing");
                 }
-                if (!"complete".equals(transaction.path("status").asText(null))) {
+                String status = transaction.path("status").asText(null);
+                Optional<TransactionStatus> known = TransactionStatus.of(status);
+                if (known.isEmpty()) {
+                    log.warn("Dropping transaction {} on {}: status \"{}\" is outside "
+                                    + "Sleeper's known vocabulary",
+                            transaction.get("transaction_id").asText(), path, status);
+                    continue;
+                }
+                if (!known.get().accepted()) {
                     continue;
                 }
                 // A drifted status_updated must fail loudly. The Alert

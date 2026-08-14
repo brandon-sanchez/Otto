@@ -1,0 +1,23 @@
+[
+  {
+    "type": "waiver",
+    "transaction_id": "1210000000000000014",
+    "status": "failed",
+    "status_updated": 1796752800000,
+    "created": 1796752800000,
+    "roster_ids": [
+      2
+    ],
+    "consenter_ids": [
+      2
+    ],
+    "adds": {
+      "9493": 2
+    },
+    "drops": {
+      "4866": 2
+    },
+    "draft_picks": [],
+    "waiver_budget": []
+  }
+]

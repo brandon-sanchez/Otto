@@ -20,19 +20,22 @@ import otto.lineup.PositionCutoffs;
 import otto.lineup.PositionRanking;
 import otto.lineup.PositionRankings;
 import otto.settings.SettingsStore;
+import otto.snapshot.SnapshotDiffer;
 
 /**
- * Turns league activity into Alert candidates: any trade, and the drop
- * of a Notable Player.
+ * Turns league activity into Alert candidates: any trade, any
+ * Commissioner Edit that sent a player across to another roster or
+ * took one off the user's, and the drop of a Notable Player.
  *
- * Both are informational - they report what another manager did, and
- * the user's own lineup is untouched - so they carry no swap and never
- * join the Lock Ladder. The confidence gate still governs what he
- * hears. A completed trade is a fact, so it rides at High and states
- * itself. A dropped Notable Player is a judgement about a claim, so it
- * rides at Medium with the case for and against. Any other drop rides
- * at Low, which the gate never sends: a replacement-level player
- * changing hands is an answer to a question, not a text message.
+ * All of it is informational - it reports what somebody else did, and
+ * there is no lineup swap to make - so none of it carries a swap or
+ * joins the Lock Ladder. The confidence gate still governs what he
+ * hears. A completed transaction is a fact, so it rides at High and
+ * states itself. A dropped Notable Player is a judgement about a
+ * claim, so it rides at Medium with the case for and against. Any
+ * other drop rides at Low, which the gate never sends: a
+ * replacement-level player changing hands is an answer to a question,
+ * not a text message.
  */
 @Component
 public class LeagueActivityDetector {
@@ -53,21 +56,21 @@ public class LeagueActivityDetector {
      * event would price the same week over and over.
      */
     public List<AlertCandidate> detect(List<Event> events, WeekFacts week) {
-        List<Event> trades = of(events, DiffKind.TRADE);
+        List<AlertCandidate> candidates = new ArrayList<>();
+        for (Crossing crossing : Crossing.values()) {
+            byTransaction(of(events, crossing.kind())).forEach((transactionId, crossed) ->
+                    candidates.add(crossedRosters(crossing, transactionId, crossed)));
+        }
         // A player the user dropped himself is not news to him, and
         // advising a claim on the man he just cut would be absurd. A
         // trade of his own still sends: it changes his lineup, and one
-        // confirmation of what he agreed to is worth having.
+        // confirmation of what he agreed to is worth having. So does a
+        // Commissioner Edit on his roster: it looks the same in roster
+        // state and he decided none of it.
         List<Event> drops = of(events, DiffKind.DROP).stream()
-                .filter(event -> !"true".equals(event.facts().get("userRoster")))
+                .filter(event -> !"true".equals(event.facts().get("userRoster"))
+                        || byCommissioner(event))
                 .toList();
-        if (trades.isEmpty() && drops.isEmpty()) {
-            return List.of();
-        }
-
-        List<AlertCandidate> candidates = new ArrayList<>();
-        byTransaction(trades).forEach((transactionId, moves) ->
-                candidates.add(trade(transactionId, moves)));
         if (!drops.isEmpty()) {
             Optional<PositionRanking> ranking = week.projections().flatMap(rankings::rank);
             drops.forEach(event -> candidates.add(drop(event, ranking)));
@@ -89,22 +92,67 @@ public class LeagueActivityDetector {
     }
 
     /**
-     * One trade, however many players crossed. The teams and the moves
-     * are read off the per-player events rather than stored as a
-     * sentence, so the Event Log keeps the facts and this keeps the
+     * The two ways a player crosses from one roster to another, and the
+     * words each earns. The facts are the same either way - he is on a
+     * different team and it is already done - so only the sentences
+     * differ, and they live together here rather than as branches down
+     * the middle of the message.
+     *
+     * The key prefix is the diff kind's own name, so the Event Log, the
+     * Alert key and the Mute button all spell one thing one way.
+     */
+    private enum Crossing {
+
+        TRADE(DiffKind.TRADE,
+                "League trade",
+                "%s agreed it, and it is already done",
+                "This one is yours, so your roster has changed"),
+        COMMISSIONER_EDIT(DiffKind.COMMISSIONER,
+                "Commissioner edit",
+                "The commissioner made it, and it is already done",
+                "This one is yours: your roster changed without your say");
+
+        private final DiffKind kind;
+        private final String headline;
+        private final String because;
+        private final String yours;
+
+        Crossing(DiffKind kind, String headline, String because, String yours) {
+            this.kind = kind;
+            this.headline = headline;
+            this.because = because;
+            this.yours = yours;
+        }
+
+        DiffKind kind() {
+            return kind;
+        }
+
+        String key(String transactionId) {
+            return "%s:%s".formatted(kind.fact(), transactionId);
+        }
+    }
+
+    /**
+     * One transaction that changed who holds a player, however many
+     * players crossed: a trade, or a Commissioner Edit that did the
+     * same thing without anyone agreeing to it. The teams and the
+     * players are read off the per-player events rather than stored as
+     * a sentence, so the Event Log keeps the facts and this keeps the
      * words.
      */
-    private AlertCandidate trade(String transactionId, List<Event> moves) {
+    private AlertCandidate crossedRosters(Crossing crossing, String transactionId,
+            List<Event> crossed) {
         Set<String> managers = new LinkedHashSet<>();
         List<String> lines = new ArrayList<>();
         boolean userInvolved = false;
-        for (Event move : moves) {
-            String to = move.facts().getOrDefault("toManager", "");
-            String from = move.facts().getOrDefault("fromManager", "");
+        for (Event event : crossed) {
+            String to = event.facts().getOrDefault("toManager", "");
+            String from = event.facts().getOrDefault("fromManager", "");
             managers.add(from);
             managers.add(to);
-            lines.add("%s to %s".formatted(move.facts().getOrDefault("player", "a player"), to));
-            userInvolved |= "true".equals(move.facts().get("userInvolved"));
+            lines.add("%s to %s".formatted(event.facts().getOrDefault("player", "a player"), to));
+            userInvolved |= "true".equals(event.facts().get("userInvolved"));
         }
         managers.remove("");
         String teams = String.join(" and ", managers);
@@ -113,11 +161,11 @@ public class LeagueActivityDetector {
         Recommendation recommendation = new Recommendation(
                 null,
                 teams,
-                "League trade: %s".formatted(swap),
+                "%s: %s".formatted(crossing.headline, swap),
                 Confidence.HIGH,
-                List.of("%s agreed it, and it is already done".formatted(teams),
+                List.of(crossing.because.formatted(teams),
                         userInvolved
-                                ? "This one is yours, so your roster has changed"
+                                ? crossing.yours
                                 : "Nothing to do: this is a power shift to know about"),
                 List.of());
 
@@ -128,7 +176,7 @@ public class LeagueActivityDetector {
         facts.put("userInvolved", String.valueOf(userInvolved));
         return new AlertCandidate(
                 AlertCandidate.Source.TRADE,
-                "trade:" + transactionId,
+                crossing.key(transactionId),
                 null,
                 "",
                 recommendation,
@@ -141,6 +189,11 @@ public class LeagueActivityDetector {
      * the drop stays at Low and says why: an unranked player is one this
      * system cannot judge, which is not the same as one who does not
      * matter.
+     *
+     * A player cut off the user's own roster by a Commissioner Edit is
+     * the exception, and it does not go near the cutoffs. He has lost a
+     * player he chose to hold, whatever the projection table thinks of
+     * him, and that is a fact rather than a judgement about a claim.
      */
     private AlertCandidate drop(Event event, Optional<PositionRanking> ranking) {
         String playerId = event.facts().getOrDefault("playerId", "");
@@ -149,9 +202,14 @@ public class LeagueActivityDetector {
         String manager = event.facts().getOrDefault("fromManager", "another manager");
 
         Map<String, String> facts = new HashMap<>(event.facts());
-        Recommendation recommendation = ranking
-                .map(ranked -> judge(ranked, playerId, player, position, manager, facts))
-                .orElseGet(() -> unranked(playerId, player, manager, facts));
+        Recommendation recommendation;
+        if (byCommissioner(event) && "true".equals(event.facts().get("userRoster"))) {
+            recommendation = commissionerCut(playerId, player, position);
+        } else {
+            recommendation = ranking
+                    .map(ranked -> judge(ranked, playerId, player, position, manager, facts))
+                    .orElseGet(() -> unranked(playerId, player, manager, facts));
+        }
         return new AlertCandidate(
                 AlertCandidate.Source.DROP,
                 event.key(),
@@ -159,6 +217,29 @@ public class LeagueActivityDetector {
                 event.facts().getOrDefault("team", ""),
                 recommendation,
                 facts);
+    }
+
+    /**
+     * The commissioner took a player off the user's roster. Nobody
+     * asked him, so this states what happened and points at the hole it
+     * left rather than weighing anything.
+     */
+    private static Recommendation commissionerCut(String playerId, String player,
+            String position) {
+        return new Recommendation(
+                playerId,
+                player,
+                "Commissioner edit: %s is off your roster".formatted(player),
+                Confidence.HIGH,
+                List.of("The commissioner made it, and it is already done",
+                        "You are a %s short until you fill the slot".formatted(
+                                position.isBlank() ? "player" : position)),
+                List.of());
+    }
+
+    /** True when a Commissioner Edit produced this event. */
+    private static boolean byCommissioner(Event event) {
+        return "true".equals(event.facts().get(SnapshotDiffer.BY_COMMISSIONER));
     }
 
     private Recommendation judge(PositionRanking ranking, String playerId, String player,

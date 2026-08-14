@@ -3,7 +3,13 @@ package otto;
 import java.time.Duration;
 import java.time.Instant;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.alerts.MuteStore;
@@ -13,6 +19,7 @@ import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.sleeper.SleeperAdapter;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
@@ -63,6 +70,8 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
 
     @Autowired
     private MuteStore muteStore;
+
+    private ListAppender<ILoggingEvent> adapterAppender;
 
     /** A quiet week-14 league with twelve teams and full standings. */
     private void week14League() {
@@ -325,6 +334,188 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         assertThat(eventLog.contains("alert:snapshot-diff:drop:1210000000000000004:6813"))
                 .isFalse();
+    }
+
+    /**
+     * A Commissioner Edit takes a player from one roster and puts him
+     * on another without either manager agreeing to anything. Sleeper
+     * does not document the type, but it publishes it, and a player
+     * leaving the user's roster is the loudest news the league can
+     * make.
+     */
+    @Test
+    void aCommissionerEditOffTheUsersRosterIsNews() {
+        week14League();
+        checkRunner.runCheck();
+
+        // The commissioner takes Josh Jacobs off the user's bench and
+        // puts him on GridironGoblin's roster.
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-league-after-commissioner-edit.json", "rosters-v2");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-commissioner-edit.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(eventLog.contains("alert:commissioner:1210000000000000011")).isTrue();
+        // It is a fact, so it rides at High and states itself - and it
+        // is not called a trade, because nobody traded anything.
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Josh Jacobs"))
+                .withRequestBody(containing("SenorMustache"))
+                .withRequestBody(containing("GridironGoblin"))
+                .withRequestBody(containing("Commissioner edit"))
+                .withRequestBody(containing("HIGH")));
+
+        // News once: the next Check says nothing about it.
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.ROSTERS_PATH, "rosters-v2");
+        SleeperStubs.stubNotModified(sleeper, TRANSACTIONS_PATH, "transactions-v2");
+        checkRunner.runCheck();
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    /**
+     * A commissioner drop elsewhere in the league is a drop like any
+     * other: the Notable Player rule decides whether the user hears it.
+     */
+    @Test
+    void aCommissionerDropFollowsTheNotablePlayerRule() {
+        week14League();
+        checkRunner.runCheck();
+
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-league-after-commissioner-drop.json", "rosters-v2");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-commissioner-drop.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(eventLog.contains("alert:snapshot-diff:drop:1210000000000000012:4866"))
+                .isTrue();
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Saquon Barkley"))
+                .withRequestBody(containing("Consider a claim"))
+                .withRequestBody(containing("MEDIUM")));
+    }
+
+    /**
+     * The same edit with nobody on the other end: the commissioner cuts
+     * a player off the user's roster. It reads in roster state exactly
+     * like a cut the user made himself, which is the one the assistant
+     * stays quiet about - so the event has to say who made it.
+     */
+    @Test
+    void aCommissionerCutOffTheUsersRosterIsNewsThoughHisOwnCutIsNot() {
+        week14League();
+        checkRunner.runCheck();
+
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-league-mine-dropped.json", "rosters-v2");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-commissioner-cut-mine.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(eventLog.contains("alert:snapshot-diff:drop:1210000000000000016:6813"))
+                .isTrue();
+        // He is short a tight end whatever the projection table thinks
+        // of the man: the message states the loss, it does not weigh it.
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Dallas Goedert"))
+                .withRequestBody(containing("off your roster"))
+                .withRequestBody(containing("HIGH")));
+    }
+
+    /**
+     * A commissioner add from free agency is a claim like any other:
+     * one add event, which is what a Watchlist Snipe reads. Nobody is
+     * watching Puka Nacua here, so nothing is sent.
+     */
+    @Test
+    void aCommissionerAddFromFreeAgencyIsAnAddLikeAnyOther() {
+        week14League();
+        checkRunner.runCheck();
+
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-league-after-commissioner-add.json", "rosters-v2");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-commissioner-add.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        assertThat(eventLog.contains("snapshot-diff:add:1210000000000000015:9493")).isTrue();
+        assertThat(eventLog.contains("alert:commissioner:1210000000000000015")).isFalse();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    /** A waiver claim that lost is not news: nothing happened. */
+    @Test
+    void aFailedWaiverClaimStaysOutOfTheAlertPath() {
+        week14League();
+        checkRunner.runCheck();
+
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.ROSTERS_PATH, "rosters-v1");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-failed-waiver.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(eventLog.contains("alert:snapshot-diff:drop:1210000000000000014:4866"))
+                .isFalse();
+    }
+
+    /**
+     * A status outside Sleeper's published vocabulary is dropped rather
+     * than read as news, and it is logged, so a value Sleeper starts
+     * serving is findable instead of silent. It costs that one row and
+     * not the read: the same feed carries a completed drop, and that
+     * one still arrives.
+     */
+    @Test
+    void aTransactionWithAnUnknownStatusIsDroppedAndLoggedWithoutLosingTheFeed() {
+        week14League();
+        checkRunner.runCheck();
+
+        ListAppender<ILoggingEvent> log = captureAdapterLog();
+        nextCheckWithNothingElseChanged();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-league-after-commissioner-drop.json", "rosters-v2");
+        SleeperStubs.stubJson(sleeper, TRANSACTIONS_PATH,
+                "sleeper/transactions-week14-unknown-status.json", "transactions-v2");
+        checkRunner.runCheck();
+
+        assertThat(eventLog.contains("alert:trade:1210000000000000013")).isFalse();
+        assertThat(eventLog.contains("alert:snapshot-diff:drop:1210000000000000012:4866"))
+                .isTrue();
+        assertThat(log.list)
+                .anyMatch(entry -> entry.getLevel() == Level.WARN
+                        && entry.getFormattedMessage().contains("reversed")
+                        && entry.getFormattedMessage().contains("1210000000000000013"));
+    }
+
+    /** The adapter's own log, read back for the length of one test. */
+    private ListAppender<ILoggingEvent> captureAdapterLog() {
+        adapterAppender = new ListAppender<>();
+        adapterAppender.start();
+        adapterLog().addAppender(adapterAppender);
+        return adapterAppender;
+    }
+
+    @AfterEach
+    void detachAdapterLog() {
+        if (adapterAppender != null) {
+            adapterLog().detachAppender(adapterAppender);
+            adapterAppender = null;
+        }
+    }
+
+    private static Logger adapterLog() {
+        return (Logger) LoggerFactory.getLogger(SleeperAdapter.class);
     }
 
     @Test

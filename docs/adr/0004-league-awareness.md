@@ -2,6 +2,10 @@
 
 Status: accepted (2026-08-08, issue #15)
 
+Amended (2026-08-13, issue #39): the transaction status vocabulary and
+the `commissioner` transaction type are settled below. Everything #15
+decided stands.
+
 The spec pins the three league tools, the informational Alert triggers,
 the Notable Player cutoffs and the confidence gate. It leaves the
 semantics of each open. This ADR records what implementation decided.
@@ -27,6 +31,83 @@ Tuesday, so a trade agreed in the closing minutes of a week would drop
 out of view the moment the week advanced - and stay out of view for the
 rest of the season. Reading both weeks keeps it in view for as long as
 it is still news, and costs one conditional GET.
+
+## Only a completed transaction is news, and the vocabulary is stated
+
+Sleeper's own code names six transaction statuses: `proposed`,
+`pending`, `cancelled`, `failed`, `complete` and `rejected`. A scan of
+284,671 live rows across 6,250 leagues in 2026 saw only `complete` and
+`failed` on `transactions/{week}`. The others exist inside the product
+and are not served there.
+
+`pending` is the one worth naming. Sleeper's app shows a trade that has
+been accepted and is inside the commissioner review window; the
+documented endpoint does not publish that state, and the scan confirms
+it - 20% of completed trades in a subsample sat more than a day between
+`created` and `status_updated`, so review windows were open while the
+scan ran and not one `pending` row appeared. An Alert that waits for
+that state would never fire, and the internal endpoint that serves it is
+undocumented and unversioned, which is the thing the spec ruled out when
+it ruled out scraping.
+
+`TransactionStatus` therefore holds the whole vocabulary, marks
+`complete` as the only accepted one, and states on each of the others
+why it is refused. This used to be an inline comparison against the
+string `complete`, which was right by the way the line was written
+rather than by a stated rule - and the difference matters the day
+Sleeper starts publishing a status the line has never seen.
+
+A status outside the vocabulary is dropped and logged with its
+transaction id. Reading an unknown status as news would put a move that
+may never have happened in the user's pocket; dropping it in silence
+would leave a Sleeper change nobody could find. It is one row, not the
+whole read, so the week's real activity still arrives: this is not
+schema drift, where the shape of the feed has stopped being readable.
+
+## A Commissioner Edit is a trade's fact in different words
+
+`commissioner` is the fourth transaction type - undocumented, and 6,377
+rows of it observed live. It is how a roster changes when nobody on it
+agreed to anything, and a player leaving the user's roster that way is
+as much news as any trade.
+
+A player who appears in both a transaction's adds and its drops crossed
+from one roster to another. A Commissioner Edit that does that produces
+the same per-player events a trade does; only the kind differs, and
+with it the sentence. One that adds a player from free agency, or cuts
+one to it, is already an add or a drop and rides with the rest.
+
+The message says "Commissioner edit", not "League trade", because
+calling it a trade would name an agreement that never happened. It
+rides at High for the same reason a trade does: it is a fact, and it is
+already done. It carries the same trigger and the same mute class as a
+trade - the user who asked to hear about players changing hands meant
+this too, and a second class to mute would be vocabulary he never asked
+for.
+
+A Commissioner Edit elsewhere in the league sends whoever it touched,
+the way a trade between two other managers does, rather than waiting on
+the Notable Player cutoffs. The cutoffs answer "is this man worth a
+claim"; nobody can claim a player who is already on another roster, and
+the news here is that the league's rules moved him.
+
+## A cut the commissioner made is not a cut the user made
+
+A player can also leave the user's roster with nobody gaining him.
+That is a drop, and drops on the user's own roster are filtered out as
+his own decision - which is true when he made it and false when the
+commissioner did, and the two are identical in roster state.
+
+So every event a Commissioner Edit produces is stamped as one, and the
+filter reads the stamp. His own cut still stays quiet; the
+commissioner's cut sends at High, states the loss and names the slot it
+opened. It does not go near the Notable cutoffs: he is short a player
+he chose to hold, whatever the projection table thinks of the man.
+
+The fifth type, `chopped`, was not observed live and gets no words of
+its own. It needs none: a type this code does not name is read by what
+it did to the rosters - an add, a drop - and never earns a sentence
+that names an actor nobody has seen act.
 
 ## The Event Log keeps the facts; the detector keeps the words
 

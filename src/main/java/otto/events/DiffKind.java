@@ -16,6 +16,12 @@ public enum DiffKind {
 
     STATUS,
     TRADE,
+    /**
+     * A Commissioner Edit that took a player from one roster and put
+     * him on another. It is the same fact a trade records and a
+     * different sentence, because nobody agreed to it.
+     */
+    COMMISSIONER,
     DROP,
     /** A player claimed off free agency: the Snipe, when he is watched. */
     ADD;

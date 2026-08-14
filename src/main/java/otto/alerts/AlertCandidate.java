@@ -40,6 +40,12 @@ public record AlertCandidate(
         LEGALITY(Trigger.LINEUP_LEGALITY, "class:legality", false),
         EDGE(Trigger.BENCH_EDGE, "class:edge", false),
         WATCHLIST(Trigger.WATCHLIST, "class:watchlist", true),
+        /**
+         * A player changed rosters: a trade, or the Commissioner Edit
+         * that does the same thing without anyone agreeing to it. Both
+         * are the news the user opted into when he asked to hear about
+         * trades, so one mute class covers them.
+         */
         TRADE(Trigger.LEAGUE_ACTIVITY, "class:trade", false),
         DROP(Trigger.LEAGUE_ACTIVITY, "class:drop", true);
 

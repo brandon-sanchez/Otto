@@ -90,10 +90,11 @@ public class WatchlistDetector {
             recommendation = switch (DiffKind.of(event)) {
                 case DROP -> dropped(playerId, player, event.facts());
                 case ADD -> sniped(playerId, player, event.facts());
-                // A trade between two other managers does not change
-                // whether the user can have him: he was unreachable
-                // before and is unreachable now.
-                case TRADE, STATUS -> null;
+                // A player crossing between two other rosters, by trade
+                // or by Commissioner Edit, does not change whether the
+                // user can have him: he was unreachable before and is
+                // unreachable now.
+                case TRADE, COMMISSIONER, STATUS -> null;
             };
             if (recommendation == null) {
                 return Optional.empty();
