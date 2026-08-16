@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
@@ -80,7 +82,31 @@ public class SleeperAdapter {
             int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget) {
     }
 
-    public record NflState(String season, int week) {
+    /**
+     * Where the NFL calendar is. The week counts inside the season type
+     * rather than across the year, so week 2 of the preseason and week
+     * 2 of the regular season are both "week 2" and mean opposite
+     * things about whether any game that counts has been played.
+     *
+     * @param seasonType Sleeper's own label, empty when it publishes
+     *        none. It spells the regular season "reg" on the wire and
+     *        "regular" in places, so readers ask what this is not
+     *        rather than what it is.
+     */
+    public record NflState(String season, int week, String seasonType) {
+
+        private static final Set<String> BEFORE_THE_SEASON =
+                Set.of("pre", "preseason", "off", "offseason");
+
+        /**
+         * True while the games that count are still to come. An unknown
+         * label reads as underway: the week is the only other thing
+         * this can go on, and it is right for all but a few weeks of
+         * the year.
+         */
+        public boolean beforeTheSeason() {
+            return BEFORE_THE_SEASON.contains(seasonType.toLowerCase(Locale.ROOT));
+        }
     }
 
     /** One scheduled game; players lock at startTime. */
@@ -234,7 +260,11 @@ public class SleeperAdapter {
                     || week == null || !week.isIntegralNumber() || week.asInt() < 1) {
                 return schemaDrift(path, "season or week missing or malformed");
             }
-            return ok(new NflState(season.asText(), week.asInt()));
+            // An absent season_type is not drift worth failing the read
+            // for: every Check needs the season and the week, and the
+            // one reader of the type says what it does without one.
+            return ok(new NflState(season.asText(), week.asInt(),
+                    body.path("season_type").asText("")));
         });
     }
 

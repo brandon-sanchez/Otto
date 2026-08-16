@@ -113,6 +113,35 @@ class DefenseVersusPositionScenarioTest extends WireSeamTest {
         assertThat(table.against("MIA", "RB").orElseThrow().rank()).isEqualTo(1);
     }
 
+    /**
+     * Sleeper counts the preseason in weeks of its own, so August reads
+     * as week 2 or later while no game that counts has been played.
+     * nflverse publishes a season's weekly file once there are rows to
+     * put in it, so asking for the current season here asks for a file
+     * that does not exist yet.
+     */
+    @Test
+    void thePreseasonReadsTheSameFileWeekOneDoes() {
+        SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
+                "sleeper/state-nfl-preseason-week2.json", "state-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season.json", "league-v1");
+        NflverseStubs.healthy(nflverse);
+        NflverseStubs.stubJson(nflverse, NflverseStubs.STATS_RELEASE_PATH,
+                "nflverse/release-stats-player-preseason.json");
+        OutboundStubs.telegramOk(telegram);
+        feeds.updateIfDue();
+
+        builder.build();
+
+        DefenseVersusPosition table = store.defenseVersusPosition().orElseThrow();
+        assertThat(table.basis()).isEqualTo("2025 final");
+        assertThat(table.season()).isEqualTo("2025");
+        // Nothing is wrong, so the user hears nothing. A self-report
+        // here would be the assistant reporting its own arithmetic.
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
     @Test
     void aFinishedSeasonIsRelabelledEvenThoughItsFileNeverMoves() {
         feedsReady();

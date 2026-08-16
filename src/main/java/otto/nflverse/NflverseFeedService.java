@@ -270,9 +270,16 @@ public class NflverseFeedService {
      * Week 1 has no played week of its own, so the table is last
      * season's final record. Every later week reads the current season
      * to date.
+     *
+     * The preseason reads the same way, and it has to be asked about
+     * separately: Sleeper counts preseason weeks from 1, so August
+     * reads as week 2 or later while no game that counts has been
+     * played. nflverse publishes a season's weekly file once there are
+     * rows to put in it, so reading the week alone asks for a file that
+     * does not exist and blinds the table for a month.
      */
     private static Optional<Basis> basisFor(SleeperAdapter.NflState state) {
-        if (state.week() > 1) {
+        if (state.week() > 1 && !state.beforeTheSeason()) {
             return Optional.of(new Basis(state.season(), false));
         }
         // Sleeper writes the season as text, so a drifted value must not

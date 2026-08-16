@@ -2,6 +2,10 @@
 
 Status: accepted (2026-08-08, issue #14)
 
+Amended (2026-08-15): the weekly stats feed resolves its season from
+the NFL season type as well as the week, so the preseason reads last
+season's final file. Everything else stands.
+
 The spec pins the nflverse sources, their refresh cadence, the
 defense-versus-position table and the two player tools. It leaves the
 semantics of each open. This ADR records what implementation decided.
@@ -40,6 +44,16 @@ and downloads that one file: the prior season while the week is 1, the
 current season from week 2 on. The stored document records which season
 it holds and whether it is a prior-season final, so the nightly build
 labels the table without asking Sleeper anything.
+
+The week alone does not say this, and it took a live preseason to show
+it. Sleeper counts preseason weeks from 1, so the middle of August
+reads as week 2 or later while no game that counts has been played.
+The rule is therefore the season type and the week together: the
+current season from week 2 on, once Sleeper says the season is
+underway, and the prior season's final file at every other time. An
+absent season type reads as underway, because the week is then the only
+thing left to go on and it is right for all but a few weeks of the
+year.
 
 The changeover is self-correcting: when the week rolls to 2 the asset
 name changes, so its stored timestamp no longer matches and the current
