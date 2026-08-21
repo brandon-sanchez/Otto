@@ -1,6 +1,12 @@
 # Deploy
 
-One CDK stack deploys the whole assistant to `us-east-1`.
+GitHub Actions deploys the assistant to `us-east-1` on every push to
+`main`. This page is the setup that happens once, and the manual path
+for when you need it.
+
+The CDK app holds two stacks, so every command names the one it means.
+`OttoStack` is the assistant, and Actions deploys it. `OttoDeployRoleStack`
+is the role Actions deploys as, and only a human deploys that.
 
 You need the AWS CLI signed in, Node, JDK 25 and Maven.
 
@@ -32,7 +38,7 @@ without it.
 mvn package                                          # builds the Lambda zip
 cd infra
 npx aws-cdk@2 bootstrap aws://ACCOUNT_ID/us-east-1   # once per account
-npx aws-cdk@2 deploy -c alertEmail=you@example.com
+npx aws-cdk@2 deploy OttoStack -c alertEmail=you@example.com
 ```
 
 `alertEmail` is required and the stack will not synthesize without it.
@@ -47,7 +53,27 @@ a reservation that would leave fewer than 10 unreserved - so none can be
 made. Request a quota increase for Lambda concurrent executions, then
 redeploy without the flag to limit the Check to one run at a time.
 
-## 3. Point Telegram at the webhook
+## 3. Hand the deploys to GitHub Actions
+
+Once, so the workflow can reach AWS without a stored key. `alertEmail`
+is needed here too, because the app synthesizes both stacks.
+
+```sh
+npx aws-cdk@2 deploy OttoDeployRoleStack -c alertEmail=you@example.com
+```
+
+It prints `DeployRoleArn`. Give the workflow that and the same address:
+
+```sh
+gh secret set AWS_DEPLOY_ROLE_ARN --body "$DEPLOY_ROLE_ARN"
+gh secret set ALERT_EMAIL --body 'you@example.com'
+```
+
+The role trusts one repository and one branch. Renaming either, or
+moving the repo, means editing `SUBJECT` in `DeployRoleStack` and
+deploying it again by hand.
+
+## 4. Point Telegram at the webhook
 
 The deploy prints `WebhookUrl`.
 
@@ -62,7 +88,7 @@ Telegram delivers to a webhook or to `getUpdates`, never both, so this
 stops a local run from reading messages. To go back to running locally,
 call `deleteWebhook`.
 
-## 4. Check it works
+## 5. Check it works
 
 - **The Check loop.** Tail the scheduled function's log group.
   `heartbeat check-completed` should appear once a minute.
