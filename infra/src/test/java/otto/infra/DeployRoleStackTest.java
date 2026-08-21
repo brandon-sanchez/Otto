@@ -49,20 +49,44 @@ class DeployRoleStackTest {
      * the deploy role is this one condition, matched exactly: a
      * StringLike with a wildcard would let any branch, and any fork,
      * present a token that fits.
+     *
+     * <p>Both spellings of the subject are accepted, and both are
+     * exact. GitHub sends the one carrying numeric ids; the readable
+     * one is kept in case that changes back.
      */
     @Test
     void onlyMainOnThisRepositoryCanAssumeTheRole() {
         Map<?, ?> condition = trustCondition();
+        Map<?, ?> equals = (Map<?, ?>) condition.get("StringEquals");
 
-        assertThat(condition.get("StringEquals"))
-                .as("both the audience and the subject are pinned")
-                .isEqualTo(Map.of(
-                        "token.actions.githubusercontent.com:aud", "sts.amazonaws.com",
-                        "token.actions.githubusercontent.com:sub",
-                        "repo:brandon-sanchez/Otto:ref:refs/heads/main"));
+        assertThat(equals.get("token.actions.githubusercontent.com:aud"))
+                .isEqualTo("sts.amazonaws.com");
+        assertThat((List<?>) equals.get("token.actions.githubusercontent.com:sub"))
+                .extracting(String::valueOf)
+                .containsExactlyInAnyOrder(
+                        "repo:brandon-sanchez/Otto:ref:refs/heads/main",
+                        "repo:brandon-sanchez@83891046/Otto@1325745376:ref:refs/heads/main");
         assertThat(String.valueOf(condition))
-                .as("no loose matcher alongside the exact one")
+                .as("no loose matcher alongside the exact ones")
                 .doesNotContain("StringLike");
+    }
+
+    /**
+     * The first live deploy failed because the policy listed only the
+     * readable subject and GitHub sent the one with ids. Every accepted
+     * subject must still name this repository and this branch, so a
+     * later edit cannot quietly widen the door.
+     */
+    @Test
+    void everyAcceptedSubjectNamesThisRepositoryAndOnlyMain() {
+        Map<?, ?> equals = (Map<?, ?>) trustCondition().get("StringEquals");
+
+        assertThat((List<?>) equals.get("token.actions.githubusercontent.com:sub"))
+                .allSatisfy(subject -> assertThat(String.valueOf(subject))
+                        .startsWith("repo:brandon-sanchez")
+                        .contains("/Otto")
+                        .endsWith(":ref:refs/heads/main")
+                        .doesNotContain("*"));
     }
 
     @Test

@@ -69,9 +69,19 @@ gh secret set AWS_DEPLOY_ROLE_ARN --body "$DEPLOY_ROLE_ARN"
 gh secret set ALERT_EMAIL --body 'you@example.com'
 ```
 
-The role trusts one repository and one branch. Renaming either, or
-moving the repo, means editing `SUBJECT` in `DeployRoleStack` and
-deploying it again by hand.
+The role trusts one repository and one branch, spelled two ways.
+GitHub sends a subject carrying the numeric ids of the owner and the
+repository, so a rename does not break the trust; the readable
+spelling is listed beside it in case GitHub goes back to sending that
+one. Moving the repo to another account means new ids, and so means
+editing `SUBJECTS` in `DeployRoleStack` and deploying it again by
+hand.
+
+The ids come from GitHub, not from guesswork:
+
+```sh
+gh api repos/OWNER/REPO/actions/oidc/customization/sub
+```
 
 ## 4. Point Telegram at the webhook
 

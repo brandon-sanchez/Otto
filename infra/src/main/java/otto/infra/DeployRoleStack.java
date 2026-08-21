@@ -48,8 +48,25 @@ public class DeployRoleStack extends Stack {
      * wildcard here is the standard way this goes wrong: {@code
      * repo:owner/Otto:*} would also match every pull request branch,
      * including one opened from a fork by a stranger.
+     *
+     * <p>Two spellings of the same subject, because GitHub has two.
+     * The readable one names the owner and repository; the other
+     * carries their numeric ids, which is what GitHub actually sent on
+     * the first real deploy - the run failed with {@code Not
+     * authorized to perform sts:AssumeRoleWithWebIdentity} and
+     * CloudTrail showed a subject this policy did not list. The ids
+     * are the point of that format: they survive a rename, where the
+     * readable form does not.
+     *
+     * <p>StringEquals against a list matches if any one value matches,
+     * so both are exact and neither widens what may assume the role.
+     * Both are listed rather than only the current one, because which
+     * format GitHub sends is GitHub's to change, and a deploy that
+     * stops working on their schedule is worth one extra line here.
      */
-    private static final String SUBJECT = "repo:brandon-sanchez/Otto:ref:refs/heads/main";
+    private static final List<String> SUBJECTS = List.of(
+            "repo:brandon-sanchez/Otto:ref:refs/heads/main",
+            "repo:brandon-sanchez@83891046/Otto@1325745376:ref:refs/heads/main");
 
     /**
      * The qualifier CDK bootstrapped this account with - the {@code
@@ -96,7 +113,7 @@ public class DeployRoleStack extends Stack {
                         github.getAttrArn(),
                         Map.of("StringEquals", Map.of(
                                 "token.actions.githubusercontent.com:aud", AUDIENCE,
-                                "token.actions.githubusercontent.com:sub", SUBJECT)),
+                                "token.actions.githubusercontent.com:sub", SUBJECTS)),
                         "sts:AssumeRoleWithWebIdentity"))
                 .build();
 
