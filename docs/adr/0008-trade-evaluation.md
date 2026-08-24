@@ -14,6 +14,24 @@ two teams' nets to mirror each other and made a trade that is good for
 both impossible to describe. The user replaced it with the four-way
 model recorded below.
 
+## A closed deadline marks the price instead of hiding it
+
+The league's `settings.trade_deadline` sets the last week for trades.
+Otto still prices a trade after that week because the user asked for the
+information. The first field in the tool result says when the deadline
+passed and that the trade can no longer be submitted. The Ask tool tells
+the narrator to start with that field. The user gets the requested price
+without mistaking an impossible trade for a legal one.
+
+During the deadline week, the field says that the trade remains legal
+but is nearly out of time. Before that week, the result does not include
+the field. An absent, null, zero, or negative setting means that the
+league has no deadline. It never becomes a week-zero deadline.
+
+After the deadline, Otto returns no Leverage Note. The note would tell
+the user what the partner may pay for, although the partner can no longer
+trade. The price remains useful without that prompt.
+
 ## Rest of season is a sum of weeks, because that is all Sleeper sells
 
 Sleeper publishes projections one week at a time and a schedule one week

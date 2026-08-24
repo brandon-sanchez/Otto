@@ -89,7 +89,7 @@ public class WeekFactsBuilder {
                         : Optional.empty();
 
         return new WeekFacts(
-                Optional.of("%s-w%d".formatted(season, week)),
+                Optional.of(new SeasonWeek(season, week)),
                 scoring,
                 projectionTable,
                 slots,

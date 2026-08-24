@@ -13,8 +13,11 @@ import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -92,9 +95,27 @@ class TradeScenarioTest extends WireSeamTest {
     private void snapshotOfTheLeague() {
         week12League();
         checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
+    }
+
+    private void resetOutboundStubsAfterCheck() {
         llm.resetAll();
         telegram.resetRequests();
         OutboundStubs.telegramOk(telegram);
+    }
+
+    private void snapshotInWeek(String stateFixture, int week) {
+        week12League();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
+                stateFixture, "state-week-" + week);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season.json", "league-week-" + week);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/transactions/" + week,
+                "sleeper/transactions-none.json", "transactions-week-" + week);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/transactions/" + (week - 1),
+                "sleeper/transactions-none.json", "transactions-week-" + (week - 1));
+        checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
     }
 
     private void ask(String text) {
@@ -110,6 +131,79 @@ class TradeScenarioTest extends WireSeamTest {
     /** What the model was handed, as it appears inside the chat request. */
     private static String field(String name, String value) {
         return "\\\"%s\\\":\\\"%s\\\"".formatted(name, value);
+    }
+
+    @Test
+    void aTradeBeforeTheDeadlineIsUnchanged() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "Take it: you win that one clearly.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(notContaining("\\\"tradeDeadline\\\":")));
+    }
+
+    @Test
+    void aTradeInTheDeadlineWeekSaysTimeIsNearlyUp() {
+        snapshotInWeek("sleeper/state-nfl-week13.json", 13);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "The deadline is this week, so decide now.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("tradeDeadline",
+                        "The trade deadline is this week, week 13. This trade is still legal, "
+                                + "but it is nearly out of time.")))
+                .withRequestBody(containing("leverage")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(
+                        "The deadline is this week, so decide now."))));
+    }
+
+    @Test
+    void aTradeAfterTheDeadlineIsMarkedBeforeItsPriceAndCarriesNoLeverage() {
+        snapshotInWeek("sleeper/state-nfl-week14.json", 14);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "The deadline passed after week 13. Here is what it would have been worth.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("tradeDeadline",
+                        "The trade deadline passed after week 13. This trade can no longer be "
+                                + "submitted, but here is what it would have been worth.")))
+                .withRequestBody(containing("\\\"leverage\\\":[]"))
+                .withRequestBody(notContaining("reason to pay for")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(
+                        "The deadline passed after week 13. Here is what it would have been "
+                                + "worth."))));
+    }
+
+    @Test
+    void aLeagueWithoutADeadlineDoesNotReadAsDeadlineWeekZero() {
+        week12League();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season-no-trade-deadline.json", "league-no-deadline");
+        checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "Take it: you win that one clearly.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(notContaining("\\\"tradeDeadline\\\":"))
+                .withRequestBody(notContaining("week 0")));
     }
 
     /**
