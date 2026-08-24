@@ -262,10 +262,12 @@ public class AskTools {
             teams' points of view, with a verdict, a confidence level,
             and a leverage note saying what the partner is short of. Both
             teams can come out ahead, and the verdict is always the
-            user's own. Draft picks count zero and the answer says so;
-            this league does not trade FAAB, so any is ignored. Call this
-            for "should I trade X for Y", "is this trade fair" and any
-            trade offer the user wants judged.""")
+            user's own. If tradeDeadline is present, start the answer
+            with it. Then describe the valuation. Draft picks count zero,
+            and the answer says so. This league does not trade FAAB, so
+            the tool ignores it. Call this for "should I trade X for Y",
+            "is this trade fair", and any trade offer the user wants
+            judged.""")
     public ToolAnswer<TradeEvaluator.TradeEvaluation> evaluateTrade(
             @ToolParam(description = "The trade partner, by the name they use in the league")
             String manager,

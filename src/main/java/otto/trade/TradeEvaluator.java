@@ -144,7 +144,8 @@ public class TradeEvaluator {
      *        reason to turn down a trade that is good for the user
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record TradeEvaluation(String week, String partner, String restOfSeasonWeeks,
+    public record TradeEvaluation(String tradeDeadline, String week, String partner,
+            String restOfSeasonWeeks,
             Perspective yours, Perspective theirs, String verdict, String favours,
             String gap, String confidence, String partnerOutcome, List<String> leverage,
             List<String> notes) {
@@ -185,6 +186,9 @@ public class TradeEvaluator {
                     + "cannot tell who would start for either team");
         }
 
+        Optional<TradeDeadline> deadline = TradeDeadline.assess(
+                leagueWeek.league().tradeDeadline(), leagueWeek.week().weekNumber());
+
         List<TradeAsset> incoming = TradeAsset.parse(gets);
         List<TradeAsset> outgoing = TradeAsset.parse(gives);
         if (incoming.isEmpty() || outgoing.isEmpty()) {
@@ -205,7 +209,7 @@ public class TradeEvaluator {
             return ToolAnswer.unavailable(named);
         }
 
-        return priced(leagueWeek, mine.get(), partner, resolvedIn, resolvedOut);
+        return priced(leagueWeek, mine.get(), partner, resolvedIn, resolvedOut, deadline);
     }
 
     // -- resolving what the user typed --------------------------------------
@@ -284,7 +288,8 @@ public class TradeEvaluator {
     // -- the valuation ------------------------------------------------------
 
     private ToolAnswer<TradeEvaluation> priced(LeagueWeek leagueWeek, RosterSnapshot mine,
-            RosterSnapshot partner, Resolved incoming, Resolved outgoing) {
+            RosterSnapshot partner, Resolved incoming, Resolved outgoing,
+            Optional<TradeDeadline> deadline) {
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
         addRoster(positions, teams, mine);
@@ -383,6 +388,7 @@ public class TradeEvaluator {
         }
 
         return ToolAnswer.of(new TradeEvaluation(
+                deadline.map(TradeDeadline::message).orElse(null),
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
                 "weeks %d to %d".formatted(points.weeks().getFirst(), points.weeks().getLast()),
@@ -394,7 +400,9 @@ public class TradeEvaluator {
                 String.format(Locale.ROOT, "%.1f%%", gap),
                 confidence.name(),
                 partnerOutcome(partner, theirNet),
-                leverage(leagueWeek, mine, partner),
+                deadline.filter(TradeDeadline::passed).isPresent()
+                        ? List.of()
+                        : leverage(leagueWeek, mine, partner),
                 notes));
     }
 

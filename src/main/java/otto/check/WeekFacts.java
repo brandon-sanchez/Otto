@@ -2,6 +2,7 @@ package otto.check;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import otto.directory.PlayerHealth;
 import otto.lineup.GameWeek;
@@ -23,7 +24,7 @@ import otto.snapshot.RosterSnapshot;
  * arithmetic as a projection.
  */
 public record WeekFacts(
-        Optional<String> weekKey,
+        Optional<SeasonWeek> seasonWeek,
         LeagueScoring scoring,
         Optional<ProjectionTable> projections,
         List<Slot> startingSlots,
@@ -32,6 +33,14 @@ public record WeekFacts(
     public static WeekFacts unavailable(LeagueScoring scoring, List<Slot> startingSlots) {
         return new WeekFacts(Optional.empty(), scoring, Optional.empty(), startingSlots,
                 Optional.empty());
+    }
+
+    public Optional<String> weekKey() {
+        return seasonWeek.map(SeasonWeek::key);
+    }
+
+    public OptionalInt weekNumber() {
+        return seasonWeek.stream().mapToInt(SeasonWeek::number).findFirst();
     }
 
     /**

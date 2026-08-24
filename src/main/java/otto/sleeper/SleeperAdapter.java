@@ -76,10 +76,13 @@ public class SleeperAdapter {
      *        season runs to the week before it; 0 when it does not say
      * @param waiverBudget the FAAB budget each team starts the season
      *        with, empty when the league document carries no budget
+     * @param tradeDeadline the last week trades may be submitted, empty
+     *        when Sleeper omits or disables the deadline
      */
     public record League(String leagueId, String name, String status,
             List<String> rosterPositions, Map<String, Double> scoringSettings,
-            int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget) {
+            int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget,
+            Optional<Integer> tradeDeadline) {
     }
 
     /**
@@ -239,6 +242,9 @@ public class SleeperAdapter {
             if (unreadableNumber(settings.path("waiver_budget"))) {
                 return schemaDrift(leaguePath, "settings.waiver_budget is not a whole number");
             }
+            if (unreadableNumber(settings.path("trade_deadline"))) {
+                return schemaDrift(leaguePath, "settings.trade_deadline is not a whole number");
+            }
             return ok(new League(
                     body.get("league_id").asText(),
                     body.path("name").asText(null),
@@ -247,7 +253,8 @@ public class SleeperAdapter {
                     numberMap(body.path("scoring_settings")),
                     settings.path("playoff_teams").asInt(0),
                     settings.path("playoff_week_start").asInt(0),
-                    integer(settings.path("waiver_budget"))));
+                    integer(settings.path("waiver_budget")),
+                    integer(settings.path("trade_deadline")).filter(week -> week > 0)));
         });
     }
 
