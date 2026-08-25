@@ -6,9 +6,9 @@ import otto.storage.JsonStore;
 
 /**
  * Hands out the short ids the inline buttons reference. The counter
- * persists before the send, so an id is never reused even when the
- * process dies between Telegram accepting a message and the Event Log
- * recording it. A send that never happens just leaves a gap.
+ * persists before the outbox writes pending delivery state and before
+ * the send. A stale pending delivery reuses its recorded id; only a
+ * failure before pending state is stored can leave an unused gap.
  */
 @Component
 public class AlertIdSequence {

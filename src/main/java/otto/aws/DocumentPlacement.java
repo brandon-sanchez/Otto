@@ -17,7 +17,8 @@ import java.util.Set;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, and three markers. Big means everything that grows
+ * its newest turns, three markers, and each Alert delivery record. Big
+ * means everything that grows
  * with the league, the roster of players or the season - the
  * Snapshots, the Player Directory, the nflverse feeds,
  * defense-versus-position and the Event Log.
@@ -38,6 +39,6 @@ public final class DocumentPlacement {
     }
 
     public static boolean isBig(String name) {
-        return !SMALL.contains(name);
+        return !SMALL.contains(name) && !name.startsWith("alert-delivery-");
     }
 }

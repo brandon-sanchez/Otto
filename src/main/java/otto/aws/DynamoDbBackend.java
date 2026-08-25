@@ -13,14 +13,15 @@ import otto.storage.DocumentBackend;
 
 /**
  * The small records: Settings, the Watchlist, Mutes, the conversation,
- * the last Check and the Alert id sequence, one item each. Reads are
+ * the last Check, the Alert id sequence and Alert delivery records.
+ * Reads are
  * strongly consistent, because the webhook writes what the next Check
  * reads a moment later and an eventually consistent read could answer
  * with the record the user just changed away from.
  *
  * <p>Writes go straight through. These records are small and few, so
- * batching them would buy nothing and would cost the guarantee that a
- * stored Alert id is stored before the Alert goes out.
+ * batching them would buy nothing and would cost the guarantee that
+ * pending and sent delivery state lands around the Telegram call.
  */
 public class DynamoDbBackend implements DocumentBackend {
 

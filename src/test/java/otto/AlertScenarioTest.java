@@ -6,12 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.alerts.OutboxFaults;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.storage.JsonStore;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -31,6 +33,9 @@ class AlertScenarioTest extends WireSeamTest {
 
     @Autowired
     private EventLog eventLog;
+
+    @Autowired
+    private JsonStore store;
 
     private void runHealthyBaselineCheck() {
         SleeperStubs.healthyInSeason(sleeper);
@@ -93,11 +98,65 @@ class AlertScenarioTest extends WireSeamTest {
         SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
         checkRunner.runCheck();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(PHRASE))));
+                .withRequestBody(matchingJsonPath("$.text", equalTo(PHRASE)))
+                .withRequestBody(matchingJsonPath(
+                        "$.reply_markup.inline_keyboard[0][0].callback_data",
+                        equalTo("done:1"))));
 
         // And never again after that.
         clock.advance(Duration.ofSeconds(61));
         checkRunner.runCheck();
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
+    void aSentAlertDoesNotResendWhenItsEventLogWriteWasLost() {
+        runHealthyBaselineCheck();
+        runDeclineCheck();
+
+        store.write("event-log", eventLog.all().stream()
+                .filter(event -> event.type() != EventType.ALERT_SENT)
+                .toList());
+
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(eventLog.all()).anyMatch(event ->
+                event.key().equals("alert:snapshot-diff:status:4034:ACTIVE->OUT"));
+    }
+
+    @Test
+    void aPartlyStoredMergedDeliveryRepairsEveryKeyBeforeRetrying() {
+        SleeperStubs.healthyInSeason(sleeper);
+        OutboundStubs.llmPhrases(llm, PHRASE);
+        telegram.stubFor(com.github.tomakehurst.wiremock.client.WireMock
+                .post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock
+                        .aResponse().withStatus(500)));
+        checkRunner.runCheck();
+        runDeclineCheck();
+
+        String legalityKey = "alert:legality:2026-w2:slot1:4034:locked-out";
+        OutboxFaults.pointKeyAtMissingDelivery(store, legalityKey);
+
+        telegram.resetAll();
+        OutboundStubs.telegramOk(telegram);
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        checkRunner.runCheck();
+
+        store.write("event-log", eventLog.all().stream()
+                .filter(event -> event.type() != EventType.ALERT_SENT)
+                .toList());
+        clock.advance(Duration.ofHours(4));
+        checkRunner.runCheck();
+
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 
@@ -127,4 +186,5 @@ class AlertScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", equalTo(PHRASE))));
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
+
 }
