@@ -15,12 +15,14 @@ import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.directory.PlayerDirectoryStore;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
+import otto.nflverse.NflverseStore;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.telegram.TelegramWebhook;
@@ -98,6 +100,12 @@ class WaiverScenarioTest extends WireSeamTest {
     private NflverseFeedService feeds;
 
     @Autowired
+    private NflverseStore nflverseStore;
+
+    @Autowired
+    private PlayerDirectoryStore directoryStore;
+
+    @Autowired
     private DefenseVersusPositionBuilder defenseBuilder;
 
     @Autowired
@@ -139,6 +147,16 @@ class WaiverScenarioTest extends WireSeamTest {
     private void runCheckAt(Instant when) {
         clock.set(when);
         checkRunner.runCheck();
+    }
+
+    @Test
+    void thePlayerIdMapCoversTheDirectoryBeforeSnapShareIsRead() {
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
+
+        Map<String, String> pfrIds = nflverseStore.playerIds().orElseThrow().sleeperToPfr();
+        assertThat(directoryStore.read().orElseThrow().players().keySet())
+                .as("every player retained in the Sleeper directory has a PFR join key")
+                .allMatch(pfrIds::containsKey);
     }
 
     private Optional<Event> boardEvent(String key) {
@@ -401,7 +419,7 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Ray Davis"))
                 .withRequestBody(containing("breakout"))
                 .withRequestBody(containing("$5-$12"))
-                .withRequestBody(containing("he held 58% and then 62% of opportunity share "
+                .withRequestBody(containing("he played 58% and then 62% of the snaps "
                         + "over weeks 2 and 3"))
                 .withRequestBody(containing("his share has risen every week: week 1 54%, "
                         + "week 2 58%, week 3 62%"))
@@ -429,11 +447,13 @@ class WaiverScenarioTest extends WireSeamTest {
 
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Wandale Robinson"))
-                .contains("breakout", "he took 39% of target share in week 1");
+                .contains("breakout", "he took 39% of target share in week 1",
+                        "he played 78% of the snaps in week 1");
         assertThat(targetLine(board, "Cade Otton"))
-                .contains("breakout", "he took 32% of target share in week 1");
+                .contains("breakout", "he took 32% of target share in week 1",
+                        "he played 82% of the snaps in week 1");
         assertThat(targetLine(board, "Ray Davis"))
-                .contains("breakout", "he took 91% of opportunity share in week 1");
+                .contains("breakout", "he played 71% of the snaps in week 1");
     }
 
     @Test
@@ -465,7 +485,7 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("breakout",
                         "Rachaad White is not on a list that ends his season",
-                        "he took 71% of opportunity share in week 3");
+                        "he played 71% of the snaps in week 3");
         assertThat(targetLine(board, "Wandale Robinson")).doesNotContain("breakout");
         assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
     }
@@ -489,7 +509,7 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("Rachaad White, ahead of him on that chart, is IR")
                 .contains("I cannot see Rachaad White's roster standing")
-                .doesNotContain("breakout")
+                .contains("breakout", "he played 71% of the snaps")
                 .doesNotContain("is not on a list that ends his season");
     }
 
@@ -510,7 +530,7 @@ class WaiverScenarioTest extends WireSeamTest {
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("Rachaad White is not on a list that ends his season")
-                .doesNotContain("breakout");
+                .contains("breakout", "he played 71% of the snaps");
     }
 
     @Test

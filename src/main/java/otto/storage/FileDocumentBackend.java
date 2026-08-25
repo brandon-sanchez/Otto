@@ -46,7 +46,7 @@ public class FileDocumentBackend implements DocumentBackend {
         Path file = fileFor(name);
         try {
             Files.createDirectories(dir);
-            Path temp = Files.createTempFile(dir, name, ".tmp");
+            Path temp = Files.createTempFile(dir, fileName(name), ".tmp");
             Files.write(temp, json);
             try {
                 Files.move(temp, file,
@@ -60,6 +60,13 @@ public class FileDocumentBackend implements DocumentBackend {
     }
 
     private Path fileFor(String name) {
-        return dir.resolve(name + ".json");
+        return dir.resolve(fileName(name) + ".json");
+    }
+
+    private static String fileName(String name) {
+        if (java.io.File.separatorChar != '\\') {
+            return name;
+        }
+        return name.replaceAll("[<>:\"/\\\\|?*]", "_");
     }
 }

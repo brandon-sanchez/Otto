@@ -10,6 +10,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ public class NflverseFeedService {
     private static final String WEEKLY_STATS_RELEASE = "stats_player";
     private static final String DEPTH_CHARTS_RELEASE = "depth_charts";
     private static final String WEEKLY_ROSTERS_RELEASE = "weekly_rosters";
+    private static final String SNAP_COUNTS_RELEASE = "snap_counts";
 
     private static final Set<String> KEPT_POSITIONS = Set.of("QB", "RB", "WR", "TE");
     private static final String REGULAR_SEASON = "REG";
@@ -116,7 +118,9 @@ public class NflverseFeedService {
     private static final Set<String> WEEKLY_ROSTER_COLUMNS = Set.of(
             "gsis_id", "week", "position", "game_type", "status_description_abbr");
     private static final Set<String> PLAYER_ID_COLUMNS = Set.of(
-            "sleeper_id", "gsis_id", "position");
+            "sleeper_id", "gsis_id", "pfr_id", "position");
+    private static final Set<String> SNAP_COUNT_COLUMNS = Set.of(
+            "pfr_player_id", "week", "game_type", "position", "offense_pct");
 
     private final NflverseClient client;
     private final NflverseStore store;
@@ -154,7 +158,7 @@ public class NflverseFeedService {
     }
 
     public record Result(Update weeklyStats, Update depthCharts, Update weeklyRosters,
-            Update playerIds) {
+            Update snapCounts, Update playerIds) {
     }
 
     /**
@@ -167,7 +171,61 @@ public class NflverseFeedService {
                 report(updateWeeklyStats(now)),
                 report(updateDepthCharts(now)),
                 report(updateWeeklyRosters(now)),
+                report(updateSnapCounts(now)),
                 report(updatePlayerIds(now)));
+    }
+
+    private Update updateSnapCounts(Instant now) {
+        Optional<SnapCounts> stored = store.snapCounts();
+        if (!due(stored, now)) {
+            return new Update.Skipped();
+        }
+        SourceResult<SleeperAdapter.NflState> state = sleeper.nflState();
+        if (state instanceof SourceResult.Unavailable<SleeperAdapter.NflState> unavailable) {
+            return new Update.Unavailable(unavailable.source(), unavailable.reason());
+        }
+        Optional<Basis> resolved = basisFor(
+                ((SourceResult.Ok<SleeperAdapter.NflState>) state).value());
+        if (resolved.isEmpty()) {
+            return new Update.Unavailable("sleeper:/v1/state/nfl",
+                    "season is not a year, so I cannot name the snap-count file");
+        }
+        Basis basis = resolved.get();
+        String asset = "snap_counts_%s.csv".formatted(basis.season());
+        return switch (decide(SNAP_COUNTS_RELEASE, asset, stored, basis.season())) {
+            case Decision.Blocked blocked ->
+                new Update.Unavailable(blocked.source(), blocked.reason());
+            case Decision.Touch ignored -> {
+                store.writeSnapCounts(stored.orElseThrow().withCheckedAt(now));
+                yield new Update.Unchanged();
+            }
+            case Decision.Download download -> stored(
+                    client.downloadAsset(SNAP_COUNTS_RELEASE, asset, NflverseFeedService::snapLines),
+                    rows -> store.writeSnapCounts(new SnapCounts(basis.season(),
+                            basis.priorSeasonFinal(),
+                            download.assetUpdatedAt(), now, rows)));
+        };
+    }
+
+    private static List<SnapCounts.SnapLine> snapLines(Stream<Csv.Row> rows) {
+        List<SnapCounts.SnapLine> lines = new ArrayList<>();
+        rows.forEach(row -> {
+            requireColumns(row, SNAP_COUNT_COLUMNS);
+            String pfrId = row.text("pfr_player_id");
+            if (blankOrNa(pfrId) || !REGULAR_SEASON.equals(row.text("game_type"))
+                    || !KEPT_POSITIONS.contains(row.text("position"))) {
+                return;
+            }
+            try {
+                double share = Double.parseDouble(row.text("offense_pct"));
+                if (share >= 0.0 && share <= 1.0) {
+                    lines.add(new SnapCounts.SnapLine(pfrId, row.integer("week"), share));
+                }
+            } catch (NumberFormatException ignored) {
+                // A missing published share is unknown, never zero.
+            }
+        });
+        return lines;
     }
 
     private Update report(Update update) {
@@ -557,13 +615,13 @@ public class NflverseFeedService {
             return new Update.Skipped();
         }
 
-        SourceResult<NflverseClient.Downloaded<Map<String, String>>> result =
+        SourceResult<NflverseClient.Downloaded<PlayerMappings>> result =
                 client.downloadPlayerIds(stored.map(PlayerIdMap::etag).orElse(null),
-                        NflverseFeedService::sleeperToGsis);
+                        NflverseFeedService::playerMappings);
         return switch (result) {
-            case SourceResult.Unavailable<NflverseClient.Downloaded<Map<String, String>>> unavailable ->
+            case SourceResult.Unavailable<NflverseClient.Downloaded<PlayerMappings>> unavailable ->
                 new Update.Unavailable(unavailable.source(), unavailable.reason());
-            case SourceResult.Ok<NflverseClient.Downloaded<Map<String, String>>> ok -> {
+            case SourceResult.Ok<NflverseClient.Downloaded<PlayerMappings>> ok -> {
                 if (ok.value().notModified()) {
                     if (stored.isEmpty()) {
                         yield new Update.Unavailable("nflverse:player-ids",
@@ -572,25 +630,38 @@ public class NflverseFeedService {
                     store.writePlayerIds(stored.get().withCheckedAt(now));
                     yield new Update.Unchanged();
                 }
-                store.writePlayerIds(new PlayerIdMap(ok.value().etag(), now, ok.value().value()));
-                yield new Update.Downloaded(ok.value().value().size());
+                PlayerMappings mappings = ok.value().value();
+                store.writePlayerIds(new PlayerIdMap(ok.value().etag(), now,
+                        mappings.sleeperToGsis(), mappings.sleeperToPfr()));
+                yield new Update.Downloaded(mappings.retainedPlayers());
             }
         };
     }
 
-    private static Map<String, String> sleeperToGsis(Stream<Csv.Row> rows) {
-        Map<String, String> mapping = new HashMap<>();
+    private record PlayerMappings(Map<String, String> sleeperToGsis,
+            Map<String, String> sleeperToPfr, int retainedPlayers) { }
+
+    private static PlayerMappings playerMappings(Stream<Csv.Row> rows) {
+        Map<String, String> gsis = new HashMap<>();
+        Map<String, String> pfr = new HashMap<>();
+        Set<String> retained = new HashSet<>();
         rows.forEach(row -> {
             requireColumns(row, PLAYER_ID_COLUMNS);
             String sleeperId = row.text("sleeper_id");
             String gsisId = row.text("gsis_id");
-            if (blankOrNa(sleeperId) || blankOrNa(gsisId)
-                    || !KEPT_POSITIONS.contains(row.text("position"))) {
+            String pfrId = row.text("pfr_id");
+            if (blankOrNa(sleeperId) || !KEPT_POSITIONS.contains(row.text("position"))) {
                 return;
             }
-            mapping.put(sleeperId, gsisId);
+            retained.add(sleeperId);
+            if (!blankOrNa(gsisId)) {
+                gsis.put(sleeperId, gsisId);
+            }
+            if (!blankOrNa(pfrId)) {
+                pfr.put(sleeperId, pfrId);
+            }
         });
-        return mapping;
+        return new PlayerMappings(Map.copyOf(gsis), Map.copyOf(pfr), retained.size());
     }
 
     /** The published files write a missing value as the string "NA". */

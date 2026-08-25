@@ -14,13 +14,19 @@ import java.util.Optional;
  * @param etag the ETag of the stored copy, for the conditional GET
  * @param checkedAt when the mapping was last checked
  */
-public record PlayerIdMap(String etag, Instant checkedAt, Map<String, String> sleeperToGsis) {
+public record PlayerIdMap(String etag, Instant checkedAt, Map<String, String> sleeperToGsis,
+        Map<String, String> sleeperToPfr) {
+
+    public PlayerIdMap {
+        sleeperToGsis = sleeperToGsis == null ? Map.of() : Map.copyOf(sleeperToGsis);
+        sleeperToPfr = sleeperToPfr == null ? Map.of() : Map.copyOf(sleeperToPfr);
+    }
 
     public Optional<String> gsisFor(String sleeperId) {
         return Optional.ofNullable(sleeperToGsis.get(sleeperId));
     }
 
     public PlayerIdMap withCheckedAt(Instant newCheckedAt) {
-        return new PlayerIdMap(etag, newCheckedAt, sleeperToGsis);
+        return new PlayerIdMap(etag, newCheckedAt, sleeperToGsis, sleeperToPfr);
     }
 }

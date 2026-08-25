@@ -36,6 +36,7 @@ import otto.nflverse.DefenseVersusPosition;
 import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
+import otto.nflverse.SnapCounts;
 import otto.nflverse.UsageShares;
 import otto.nflverse.WeeklyRosters;
 import otto.nflverse.WeeklyStats;
@@ -289,9 +290,12 @@ public class WaiverScorer {
         private final Optional<WeeklyRosters> rosters;
         private final Optional<DefenseVersusPosition> defenses;
         private final Optional<UsageShares> shares;
+        private final Optional<SnapCounts> snapCounts;
+        private final Map<String, List<SnapCounts.SnapLine>> snapsByPfr;
         private final Map<String, WeeklyRosters.Outlook> outlooks;
         private final Map<String, String> sleeperByGsis;
         private final Map<String, String> gsisBySleeper;
+        private final Map<String, String> pfrBySleeper;
         private final Map<String, Integer> trendingAdds;
         private final int topTrendingAdds;
 
@@ -330,9 +334,12 @@ public class WaiverScorer {
             // breakout: a share from last December is not news about a
             // role now. The lanes read nothing until a week is played.
             this.shares = stats.filter(feed -> !feed.priorSeasonFinal()).map(UsageShares::of);
+            this.snapCounts = nflverse.snapCounts().filter(feed -> !feed.priorSeasonFinal());
+            this.snapsByPfr = snapCounts.map(SnapCounts::byPlayer).orElseGet(Map::of);
             this.outlooks = rosters.map(WeeklyRosters::outlooks).orElseGet(Map::of);
             Optional<PlayerIdMap> ids = nflverse.playerIds();
             this.gsisBySleeper = ids.map(PlayerIdMap::sleeperToGsis).orElseGet(Map::of);
+            this.pfrBySleeper = ids.map(PlayerIdMap::sleeperToPfr).orElseGet(Map::of);
             this.sleeperByGsis = invert(gsisBySleeper);
 
             SourceResult<List<SleeperAdapter.TrendingPlayer>> trending =
@@ -765,6 +772,9 @@ public class WaiverScorer {
 
             BreakoutLanes.Read lanes = lanesFor(player);
             reasons.addAll(lanes.reasons());
+            if (lanes.breakout() && !"RB".equals(player.position())) {
+                snapReason(player).ifPresent(reasons::add);
+            }
 
             double trendingPoints = trendingPoints(player);
             trendingReason(player).ifPresent(reasons::add);
@@ -788,6 +798,19 @@ public class WaiverScorer {
          * says so in its notes.
          */
         private BreakoutLanes.Read lanesFor(DirectoryPlayer player) {
+            if ("RB".equals(player.position())) {
+                String pfrId = pfrBySleeper.get(player.playerId());
+                if (pfrId == null || snapCounts.isEmpty() || player.health().rulesOutPlaying()) {
+                    return new BreakoutLanes.Read(false, List.of());
+                }
+                List<UsageShares.Game> games = snapsByPfr.getOrDefault(pfrId, List.of()).stream()
+                        .sorted(Comparator.comparingInt(SnapCounts.SnapLine::week))
+                        .map(row -> new UsageShares.Game(row.week(), row.offensePct()))
+                        .toList();
+                return BreakoutLanes.of(player.position(), snapCounts.get().newestWeek(),
+                        games.isEmpty() ? Optional.empty()
+                                : Optional.of(new UsageShares.Player("snap share", games)));
+            }
             String gsisId = gsisBySleeper.get(player.playerId());
             // A man who cannot play is not breaking out, whatever last
             // week's share was. That is the week his own role ended.
@@ -796,6 +819,19 @@ public class WaiverScorer {
             }
             return BreakoutLanes.of(player.position(), shares.get().newestWeek(),
                     shares.get().of(gsisId));
+        }
+
+        private Optional<String> snapReason(DirectoryPlayer player) {
+            String pfrId = pfrBySleeper.get(player.playerId());
+            if (pfrId == null || snapCounts.isEmpty()) {
+                return Optional.empty();
+            }
+            int week = snapCounts.get().newestWeek();
+            return snapsByPfr.getOrDefault(pfrId, List.of()).stream()
+                    .filter(row -> row.week() == week)
+                    .findFirst()
+                    .map(row -> "he played %.0f%% of the snaps in week %d"
+                            .formatted(row.offensePct() * 100.0, week));
         }
 
         private double trendingPoints(DirectoryPlayer player) {

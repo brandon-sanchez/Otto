@@ -47,7 +47,7 @@ public final class BreakoutLanes {
      * the better half of a committee: the published line for a
      * two-man committee's lead back is 65-70% of the carries.
      */
-    static final double FAST_OPPORTUNITY_SHARE = 0.65;
+    static final double FAST_SNAP_SHARE = 0.70;
 
     /**
      * The slow-lane bar for receivers and tight ends. A season target
@@ -61,7 +61,7 @@ public final class BreakoutLanes {
      * The slow-lane bar for running backs. Half a backfield's work is
      * the point at which a committee has a lead back at all.
      */
-    static final double SLOW_OPPORTUNITY_SHARE = 0.50;
+    static final double SLOW_SNAP_SHARE = 0.55;
 
     /** How many straight games the slow lane asks for. */
     static final int SLOW_LANE_GAMES = 2;
@@ -108,20 +108,29 @@ public final class BreakoutLanes {
 
         if (latest.share() >= bars.get().fast()) {
             breakout = true;
-            reasons.add(("he took %s of %s in week %d, at or above the %s that marks an elite "
+            String read = "snap share".equals(kind)
+                    ? "he played %s of the snaps in week %d"
+                            .formatted(percent(latest.share()), latest.week())
+                    : "he took %s of %s in week %d"
+                            .formatted(percent(latest.share()), kind, latest.week());
+            reasons.add(("%s, at or above the %s that marks an elite "
                     + "one, so the role is his on one game").formatted(
-                            percent(latest.share()), kind, latest.week(),
-                            percent(bars.get().fast())));
+                            read, percent(bars.get().fast())));
         } else if (straightGames(games, SLOW_LANE_GAMES)
                 && games.get(games.size() - SLOW_LANE_GAMES).share() >= bars.get().slow()
                 && latest.share() >= bars.get().slow()) {
             breakout = true;
-            reasons.add(("he held %s and then %s of %s over weeks %d and %d, at or above the %s "
-                    + "that marks a real role in both").formatted(
+            String read = "snap share".equals(kind)
+                    ? "he played %s and then %s of the snaps over weeks %d and %d".formatted(
+                            percent(games.get(games.size() - SLOW_LANE_GAMES).share()),
+                            percent(latest.share()),
+                            games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week())
+                    : "he held %s and then %s of %s over weeks %d and %d".formatted(
                             percent(games.get(games.size() - SLOW_LANE_GAMES).share()),
                             percent(latest.share()), kind,
-                            games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week(),
-                            percent(bars.get().slow())));
+                            games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week());
+            reasons.add(("%s, at or above the %s that marks a real role in both")
+                    .formatted(read, percent(bars.get().slow())));
         }
 
         rising(games).ifPresent(reasons::add);
@@ -172,7 +181,7 @@ public final class BreakoutLanes {
                 case "WR", "TE" ->
                     Optional.of(new Bars(FAST_TARGET_SHARE, SLOW_TARGET_SHARE));
                 case "RB" ->
-                    Optional.of(new Bars(FAST_OPPORTUNITY_SHARE, SLOW_OPPORTUNITY_SHARE));
+                    Optional.of(new Bars(FAST_SNAP_SHARE, SLOW_SNAP_SHARE));
                 default -> Optional.empty();
             };
         }

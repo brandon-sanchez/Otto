@@ -1,0 +1,5 @@
+game_id,pfr_game_id,season,game_type,week,player,pfr_player_id,position,team,opponent,offense_snaps,offense_pct
+2026_01_TB_ATL,one,2026,REG,1,Bucky Irving,IrviBu00,RB,TB,ATL,47,0.71
+2026_01_TB_ATL,one,2026,REG,1,Cade Otton,OttoCa00,TE,TB,ATL,51,0.82
+2026_01_NYG_DAL,one,2026,REG,1,Wandale Robinson,RobiWa01,WR,NYG,DAL,49,0.78
+2026_01_BUF_MIA,one,2026,REG,1,Ray Davis,DaviRa03,RB,BUF,MIA,44,0.71

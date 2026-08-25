@@ -55,6 +55,7 @@ class NflverseScenarioTest extends WireSeamTest {
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2026_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.DEPTH_2026_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.PLAYER_IDS_PATH)));
+        nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.SNAPS_2026_PATH)));
 
         // Only the four positions the Player Directory keeps survive the
         // trim, and only regular-season rows: the kicker and the playoff
@@ -70,6 +71,11 @@ class NflverseScenarioTest extends WireSeamTest {
                 .containsEntry("5850", "00-0035700")
                 .containsEntry("8138", "00-0037248")
                 .doesNotContainKey("NA");
+        assertThat(store.playerIds().orElseThrow().sleeperToPfr())
+                .containsEntry("4034", "McCaCh01");
+        assertThat(store.snapCounts().orElseThrow().rows())
+                .extracting(row -> row.pfrId() + "=" + row.offensePct())
+                .contains("NacuPu00=0.78", "WillKy02=0.65", "AkerCa00=0.35");
     }
 
     @Test
@@ -208,5 +214,20 @@ class NflverseScenarioTest extends WireSeamTest {
         clock.advance(Duration.ofHours(1));
         feeds.updateIfDue();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
+    void aDownedSnapFeedDoesNotFailTheBoardFeeds() {
+        healthyFeeds();
+        nflverse.stubFor(get(urlEqualTo(NflverseStubs.SNAPS_RELEASE_PATH))
+                .willReturn(aResponse().withStatus(503)));
+
+        NflverseFeedService.Result result = feeds.updateIfDue();
+
+        assertThat(result.snapCounts()).isInstanceOf(NflverseFeedService.Update.Unavailable.class);
+        assertThat(store.snapCounts()).isEmpty();
+        assertThat(store.weeklyStats()).isPresent();
+        assertThat(store.depthCharts()).isPresent();
+        assertThat(store.playerIds()).isPresent();
     }
 }

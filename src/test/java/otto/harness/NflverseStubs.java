@@ -22,6 +22,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/depth_charts";
     public static final String ROSTERS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/weekly_rosters";
+    public static final String SNAPS_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/snap_counts";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
     public static final String STATS_2026_PATH = DOWNLOAD + "stats_player/stats_player_week_2026.csv";
@@ -29,6 +31,8 @@ public final class NflverseStubs {
     public static final String DEPTH_2026_PATH = DOWNLOAD + "depth_charts/depth_charts_2026.csv";
     public static final String ROSTERS_2026_PATH =
             DOWNLOAD + "weekly_rosters/roster_weekly_2026.csv";
+    public static final String SNAPS_2026_PATH = DOWNLOAD + "snap_counts/snap_counts_2026.csv";
+    public static final String SNAPS_2025_PATH = DOWNLOAD + "snap_counts/snap_counts_2025.csv";
 
     public static final String PLAYER_IDS_PATH = "/dynastyprocess/data/master/files/db_playerids.csv";
 
@@ -40,10 +44,13 @@ public final class NflverseStubs {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
+        stubJson(nflverse, SNAPS_RELEASE_PATH, "nflverse/release-snap-counts.json");
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026.csv");
         stubCsv(nflverse, STATS_2025_PATH, "nflverse/stats-player-week-2025.csv");
         stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026.csv");
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-2026.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-2026.csv");
+        stubCsv(nflverse, SNAPS_2025_PATH, "nflverse/snap-counts-2026.csv");
         stubCsv(nflverse, PLAYER_IDS_PATH, "nflverse/db-playerids.csv");
     }
 
@@ -56,9 +63,11 @@ public final class NflverseStubs {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
+        stubJson(nflverse, SNAPS_RELEASE_PATH, "nflverse/release-snap-counts.json");
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-waivers.csv");
         stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-waivers.csv");
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-waivers.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-waivers.csv");
         stubCsv(nflverse, PLAYER_IDS_PATH, "nflverse/db-playerids-waivers.csv");
     }
 
@@ -70,6 +79,7 @@ public final class NflverseStubs {
     public static void waiverWeekWithAGrowingRole(WireMockServer nflverse) {
         waiverWeek(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-usage-breakout.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-growing-role.csv");
     }
 
     /**
@@ -80,6 +90,7 @@ public final class NflverseStubs {
     public static void waiverWeekWithEarnedRoles(WireMockServer nflverse) {
         waiverWeek(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-earned-roles.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-earned-roles.csv");
     }
 
     /**
@@ -102,6 +113,7 @@ public final class NflverseStubs {
     public static void waiverWeekWithGrowingAndStaleShares(WireMockServer nflverse) {
         waiverWeekWithAReturningStarter(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-share-lanes.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-share-lanes.csv");
     }
 
     /**
