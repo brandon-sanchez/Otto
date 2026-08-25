@@ -22,24 +22,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class LineupOptimizer {
 
-    /**
-     * Higher projection wins; equal projections prefer a real player, then the
-     * lower numeric Sleeper id. Synthetic replacement IDs compare last.
-     */
-    private static final Comparator<Map.Entry<String, Double>> BEST_CANDIDATE =
-            Map.Entry.<String, Double>comparingByValue()
-                    .thenComparing(Map.Entry::getKey, LineupOptimizer::compareIds);
-
-    private static int compareIds(String left, String right) {
-        boolean leftReplacement = left.startsWith("replacement:");
-        boolean rightReplacement = right.startsWith("replacement:");
-        if (leftReplacement != rightReplacement) {
-            return leftReplacement ? -1 : 1;
-        }
-        if (leftReplacement) {
-            return right.compareTo(left);
-        }
-        return Long.compare(Long.parseLong(right), Long.parseLong(left));
+    /** Higher projection first; equal projections choose the lower stable id. */
+    private static Comparator<String> strongestFirst(Map<String, Double> points) {
+        return Comparator.comparingDouble((String playerId) -> points.get(playerId))
+                .reversed()
+                .thenComparing(Comparator.naturalOrder());
     }
 
     /**
@@ -61,13 +48,13 @@ public class LineupOptimizer {
         Set<String> used = new HashSet<>();
         for (int slotIndex : slotOrder) {
             Slot slot = slots.get(slotIndex);
-            points.entrySet().stream()
-                    .filter(candidate -> !used.contains(candidate.getKey()))
-                    .filter(candidate -> slot.accepts(positions.get(candidate.getKey())))
-                    .max(BEST_CANDIDATE)
+            points.keySet().stream()
+                    .filter(candidate -> !used.contains(candidate))
+                    .filter(candidate -> slot.accepts(positions.get(candidate)))
+                    .min(strongestFirst(points))
                     .ifPresent(best -> {
-                        assignment.put(slotIndex, best.getKey());
-                        used.add(best.getKey());
+                        assignment.put(slotIndex, best);
+                        used.add(best);
                     });
         }
         return assignment;
@@ -94,9 +81,7 @@ public class LineupOptimizer {
             Map<String, Double> points) {
         Set<String> currentIds = new HashSet<>(current);
         Set<String> optimalIds = new HashSet<>(optimal);
-        Comparator<String> strongestFirst = Comparator
-                .comparingDouble((String playerId) -> points.get(playerId))
-                .reversed();
+        Comparator<String> strongestFirst = strongestFirst(points);
         List<String> entering = optimalIds.stream()
                 .filter(points::containsKey)
                 .filter(playerId -> !currentIds.contains(playerId))

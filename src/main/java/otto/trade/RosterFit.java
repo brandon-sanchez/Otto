@@ -50,7 +50,7 @@ public class RosterFit {
      * What a replacement-level filler is called. No Sleeper player id
      * carries a colon, so a filler can never collide with a real player.
      */
-    private static final String FILLER = "replacement:";
+    private static final String FILLER = "~replacement:";
 
     private final LineupOptimizer optimizer;
 
