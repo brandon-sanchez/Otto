@@ -36,7 +36,7 @@ import otto.nflverse.DefenseVersusPosition;
 import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
-import otto.nflverse.UsageShares;
+import otto.nflverse.RoleShares;
 import otto.nflverse.WeeklyRosters;
 import otto.nflverse.WeeklyStats;
 import otto.sleeper.SleeperAdapter;
@@ -288,10 +288,9 @@ public class WaiverScorer {
         private final Optional<WeeklyStats> stats;
         private final Optional<WeeklyRosters> rosters;
         private final Optional<DefenseVersusPosition> defenses;
-        private final Optional<UsageShares> shares;
+        private final RoleShares roleShares;
+        private final Optional<PlayerIdMap> ids;
         private final Map<String, WeeklyRosters.Outlook> outlooks;
-        private final Map<String, String> sleeperByGsis;
-        private final Map<String, String> gsisBySleeper;
         private final Map<String, Integer> trendingAdds;
         private final int topTrendingAdds;
 
@@ -329,11 +328,9 @@ public class WaiverScorer {
             // answer for a defence table and the wrong one for a
             // breakout: a share from last December is not news about a
             // role now. The lanes read nothing until a week is played.
-            this.shares = stats.filter(feed -> !feed.priorSeasonFinal()).map(UsageShares::of);
+            this.ids = nflverse.playerIds();
+            this.roleShares = RoleShares.from(nflverse);
             this.outlooks = rosters.map(WeeklyRosters::outlooks).orElseGet(Map::of);
-            Optional<PlayerIdMap> ids = nflverse.playerIds();
-            this.gsisBySleeper = ids.map(PlayerIdMap::sleeperToGsis).orElseGet(Map::of);
-            this.sleeperByGsis = invert(gsisBySleeper);
 
             SourceResult<List<SleeperAdapter.TrendingPlayer>> trending =
                     withinCadence.trendingAdds(TRENDING_LOOKBACK_HOURS, TRENDING_LIMIT);
@@ -377,7 +374,7 @@ public class WaiverScorer {
             if (stats.isEmpty()) {
                 notes.add("I have no weekly stats feed yet, so I cannot read anybody's share of "
                         + "his own offence");
-            } else if (shares.isEmpty()) {
+            } else if (stats.filter(feed -> !feed.priorSeasonFinal()).isEmpty()) {
                 notes.add("no week of this season has been played yet, so I cannot read anybody's "
                         + "share of his own offence");
             }
@@ -788,14 +785,12 @@ public class WaiverScorer {
          * says so in its notes.
          */
         private BreakoutLanes.Read lanesFor(DirectoryPlayer player) {
-            String gsisId = gsisBySleeper.get(player.playerId());
             // A man who cannot play is not breaking out, whatever last
             // week's share was. That is the week his own role ended.
-            if (gsisId == null || shares.isEmpty() || player.health().rulesOutPlaying()) {
+            if (player.health().rulesOutPlaying()) {
                 return new BreakoutLanes.Read(false, List.of());
             }
-            return BreakoutLanes.of(player.position(), shares.get().newestWeek(),
-                    shares.get().of(gsisId));
+            return BreakoutLanes.of(player.position(), roleShares.of(player.playerId()));
         }
 
         private double trendingPoints(DirectoryPlayer player) {
@@ -873,12 +868,12 @@ public class WaiverScorer {
 
         /** What a candidate's own chart line says, joined through the id map. */
         private Optional<DepthCharts.Spot> spotOf(DirectoryPlayer player) {
-            String gsisId = gsisBySleeper.get(player.playerId());
-            if (gsisId == null || charts.isEmpty()) {
+            Optional<String> gsisId = ids.flatMap(map -> map.gsisFor(player.playerId()));
+            if (gsisId.isEmpty() || charts.isEmpty()) {
                 return Optional.empty();
             }
             return charts.get().rows().stream()
-                    .filter(row -> row.gsisId().equals(gsisId))
+                    .filter(row -> row.gsisId().equals(gsisId.get()))
                     .findFirst();
         }
 
@@ -901,7 +896,7 @@ public class WaiverScorer {
                     .filter(row -> row.rank() < spot.rank()
                             || (row.previousRank() > 0 && spot.previousRank() > 0
                                     && row.previousRank() < spot.previousRank()))
-                    .map(row -> Optional.ofNullable(sleeperByGsis.get(row.gsisId()))
+                    .map(row -> ids.flatMap(idMap -> idMap.sleeperForGsis(row.gsisId()))
                             .map(sleeperId -> directory.players().get(sleeperId))
                             .map(ahead -> new Ahead(row.gsisId(), ahead)))
                     .flatMap(Optional::stream)
@@ -1324,12 +1319,6 @@ public class WaiverScorer {
         Map<String, Integer> adds = new LinkedHashMap<>();
         trending.forEach(player -> adds.putIfAbsent(player.playerId(), player.adds()));
         return adds;
-    }
-
-    private static Map<String, String> invert(Map<String, String> sleeperToGsis) {
-        Map<String, String> inverted = new HashMap<>();
-        sleeperToGsis.forEach((sleeperId, gsisId) -> inverted.put(gsisId, sleeperId));
-        return inverted;
     }
 
     private static String component(double earned, double available) {

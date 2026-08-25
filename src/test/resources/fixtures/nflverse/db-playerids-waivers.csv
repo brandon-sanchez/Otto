@@ -1,9 +1,36 @@
-sleeper_id,gsis_id,position,team,name
-10001,00-0039918,RB,TBB,Bucky Irving
-10002,00-0037625,RB,TBB,Rachaad White
-10003,00-0037680,TE,TBB,Cade Otton
-10004,00-0037746,WR,NYG,Wandale Robinson
-10005,00-0039875,RB,BUF,Ray Davis
-8138,00-0037248,RB,BUF,James Cook
-5850,00-0035700,RB,GBP,Josh Jacobs
+sleeper_id,gsis_id,pfr_id,position,team,name
+10001,00-0039918,IrviBu00,RB,TBB,Bucky Irving
+10002,00-0037625,WhitRa01,RB,TBB,Rachaad White
+10003,00-0037680,OttoCa00,TE,TBB,Cade Otton
+10004,00-0037746,RobiWa01,WR,NYG,Wandale Robinson
+10005,00-0039875,DaviRa03,RB,BUF,Ray Davis
+8138,00-0037248,CookJa01,RB,BUF,James Cook
+5850,00-0035700,JacoJo01,RB,GBP,Josh Jacobs
+8112,NA,Pfr8112,QB,NA,Fixture Player 8112
+8135,NA,Pfr8135,QB,NA,Fixture Player 8135
+20210,NA,Pfr20210,QB,NA,Fixture Player 20210
+4034,NA,McCaCh01,RB,SFO,Christian McCaffrey
+6794,NA,JeffJu00,WR,MIN,Justin Jefferson
+4866,NA,Pfr4866,QB,NA,Fixture Player 4866
+20104,NA,Pfr20104,QB,NA,Fixture Player 20104
+20203,NA,Pfr20203,QB,NA,Fixture Player 20203
+20103,NA,Pfr20103,QB,NA,Fixture Player 20103
+20202,NA,Pfr20202,QB,NA,Fixture Player 20202
+20102,NA,Pfr20102,QB,NA,Fixture Player 20102
+20201,NA,Pfr20201,QB,NA,Fixture Player 20201
+20101,NA,Pfr20101,QB,NA,Fixture Player 20101
+4046,NA,MahoPa00,QB,KCC,Patrick Mahomes
+20209,NA,Pfr20209,QB,NA,Fixture Player 20209
+20208,NA,Pfr20208,QB,NA,Fixture Player 20208
+20207,NA,Pfr20207,QB,NA,Fixture Player 20207
+20206,NA,Pfr20206,QB,NA,Fixture Player 20206
+20106,NA,Pfr20106,QB,NA,Fixture Player 20106
+20205,NA,Pfr20205,QB,NA,Fixture Player 20205
+9493,NA,Pfr9493,QB,NA,Fixture Player 9493
+20105,NA,Pfr20105,QB,NA,Fixture Player 20105
+20204,NA,Pfr20204,QB,NA,Fixture Player 20204
+1466,NA,KelcTr00,TE,KCC,Travis Kelce
+6813,NA,Pfr6813,QB,NA,Fixture Player 6813
+10006,NA,Pfr10006,QB,NA,Fixture Player 10006
+9509,NA,Pfr9509,QB,NA,Fixture Player 9509
 NA,00-0041562,QB,LVR,Fernando Mendoza

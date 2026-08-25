@@ -6,6 +6,8 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
@@ -25,14 +27,17 @@ public class FileDocumentBackend implements DocumentBackend {
     private final Path dir;
 
     public FileDocumentBackend(OttoProperties properties) {
-        this.dir = Path.of(properties.storageDir());
+        this.dir = Path.of(properties.storageDir()).toAbsolutePath().normalize();
     }
 
     @Override
     public Optional<byte[]> load(String name) {
         Path file = fileFor(name);
         if (!Files.exists(file)) {
-            return Optional.empty();
+            file = legacyFileFor(name).orElse(file);
+            if (!Files.exists(file)) {
+                return Optional.empty();
+            }
         }
         try {
             return Optional.of(Files.readAllBytes(file));
@@ -46,7 +51,7 @@ public class FileDocumentBackend implements DocumentBackend {
         Path file = fileFor(name);
         try {
             Files.createDirectories(dir);
-            Path temp = Files.createTempFile(dir, name, ".tmp");
+            Path temp = Files.createTempFile(dir, "doc-" + encodedName(name), ".tmp");
             Files.write(temp, json);
             try {
                 Files.move(temp, file,
@@ -60,6 +65,19 @@ public class FileDocumentBackend implements DocumentBackend {
     }
 
     private Path fileFor(String name) {
-        return dir.resolve(name + ".json");
+        return dir.resolve(encodedName(name) + ".json");
+    }
+
+    private Optional<Path> legacyFileFor(String name) {
+        try {
+            Path legacy = dir.resolve(name + ".json").normalize();
+            return legacy.getParent().equals(dir) ? Optional.of(legacy) : Optional.empty();
+        } catch (java.nio.file.InvalidPathException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private static String encodedName(String name) {
+        return HexFormat.of().formatHex(name.getBytes(StandardCharsets.UTF_8));
     }
 }

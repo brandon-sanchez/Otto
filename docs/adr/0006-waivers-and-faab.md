@@ -90,7 +90,7 @@ waiver run that mattered. Both men kept the role. What they have in
 common is that they earned it, and what predicts that is their own
 share of the offence.
 
-## The two lanes, and the numbers on them (new, #33)
+## The two lanes, and the numbers on them (revised, #40)
 
 Either lane is enough, and both are named constants in
 `otto.waivers.BreakoutLanes`.
@@ -103,10 +103,8 @@ everybody else who waited.
   25% is the published line for an elite receiver - fewer than eight
   men in the league sustain 30% with the air-yards lead - so one game
   at that rate is the offence treating him as its first read.
-- `FAST_OPPORTUNITY_SHARE` = 65% for RB. The published line for the
-  lead back of a two-man committee is 65-70% of the carries, so a back
-  at 65% of his backfield's work is the lead back and not the better
-  half of a committee.
+- `FAST_SNAP_SHARE` = 70% for RB. This is the published workhorse line:
+  the coach trusted him with seven of every ten offensive snaps.
 
 The **slow lane** asks two consecutive games at the bar of a real role,
 which is the role that grows rather than arrives.
@@ -114,8 +112,8 @@ which is the role that grows rather than arrives.
 - `SLOW_TARGET_SHARE` = 18% for WR and TE. A season target share above
   20% is associated with WR1 finishes; 18% held over two straight games
   is the week-to-week reading of the same line.
-- `SLOW_OPPORTUNITY_SHARE` = 50% for RB. Half a backfield's work is the
-  point at which a committee has a lead back at all.
+- `SLOW_SNAP_SHARE` = 55% for RB. Holding more than half the offensive
+  snaps in two straight games identifies the lead side of a committee.
 
 `TREND_GAMES` = 3. A share that rose every week across three straight
 games goes in the reason string whatever the tag, because a role
@@ -145,7 +143,7 @@ looks current to any rule that only compares weeks.
 A quarterback has no lane. Nothing a quarterback does divides into a
 share of his own offence, and no waiver tag rests on one.
 
-## Where each share really comes from (new, #33)
+## Where each share really comes from (revised, #40)
 
 The column names were read off the published files before any threshold
 was pinned, because a threshold against a column that does not exist is
@@ -154,8 +152,7 @@ worse than no threshold at all.
 | Input | Release | Asset | Column |
 |---|---|---|---|
 | Target share | `stats_player` | `stats_player_week_YYYY.csv` | `target_share` |
-| Carries | `stats_player` | `stats_player_week_YYYY.csv` | `carries` |
-| Targets | `stats_player` | `stats_player_week_YYYY.csv` | `targets` |
+| Snap share | `snap_counts` | `snap_counts_YYYY.csv` | `offense_pct` |
 | Roster standing | `weekly_rosters` | `roster_weekly_YYYY.csv` | `status_description_abbr` |
 
 Target share is nflverse's own per-game column and needs no arithmetic
@@ -166,10 +163,8 @@ them, and a blank or an "NA" reads as absent rather than as zero - a
 zero would say the offence never looked at him, which is a claim the
 file did not make.
 
-Opportunity share has no published column, so it is computed from the
-two that are already downloaded: a back's carries plus targets over the
-same total for every back his team played that week. The denominator
-comes from the same rows, so it is a real team's real game.
+Snap share is nflverse's published offensive percentage and needs no
+local denominator. It joins through the Player-ID Map's PFR id.
 
 Both new reads join the fail-soft list that "Only the projections are
 load-bearing" sets out, and each one has its own note rather than a
@@ -179,11 +174,8 @@ which is a different fact and a different sentence. No roster standings
 means nothing is season-ending. None of the three stops a board being
 priced.
 
-#17 judged that a snap-count download was not worth a second hourly
-fetch. That judgement stands and is now moot: `snap_counts` is not
-added, because the share the tag actually wants was in the file the
-system already downloads. The only new download is `weekly_rosters`,
-and it is there for a different question.
+The snap-count release follows the same hourly timestamp check and
+download-only-on-change rule as the other seasonal feeds.
 
 ## An absence with a return date is a loan, not a breakout (revised, #33)
 
@@ -276,35 +268,33 @@ The 10 usage points are unchanged and still key off the Player
 Directory's own health: those points say the man ahead cannot play this
 Sunday, which is true either way. Only the tag reads the standing.
 
-## Snap share is still not needed (revised, #33)
+## Snap share leads the running-back workhorse read (revised, #40)
 
-The spec's usage breakout reads "snap share plus touches or targets".
-Carries and targets are translated into Sleeper's own `rush_att` and
-`rec_tgt` keys on the way in like every other column, so one vocabulary
-serves a played week and a projected one. This league scores neither,
-so no point total changes.
+The `snap_counts` feed is now checked hourly by release timestamp and
+downloaded only when its season asset changes. It publishes
+`offense_pct`, so Otto reads the coach's decision directly rather than
+reconstructing it. Sleeper players join to those rows only through the
+DynastyProcess Player-ID Map's `pfr_id`; a missing map entry or snap row
+is unknown, never zero. The directory fixture confirms the candidates
+used by the board have PFR mappings before the read is relied on.
 
-#33 asked for #17's judgement on the `snap_counts` download to be
-revisited, because #17 had refused it as a second hourly fetch for a
-signal that moves with touches anyway, and because the tag it feeds is
-the difference between a $5 bid and a $50 one. It has been revisited.
-The answer is unchanged, and the reason for it is new.
+For running backs, snap share leads: 70% in one week is the fast
+workhorse lane, and 55% in two straight weeks is the slow lead-back
+lane. Opportunity share remains useful context in weekly stats, but it
+no longer decides the RB breakout tag because touches are an outcome of
+being on the field, while snaps measure whether the coach entrusted him
+with the role. Every tagged player with a current snap row says how much
+of the offence he played in the reason string.
 
-`snap_counts` is still not downloaded, and this time not because the
-cost outweighs the signal. It is because the signal the tag actually
-wants was already in a file the system downloads: `target_share` is a
-column of `stats_player_week`, and opportunity share is arithmetic on
-two more columns of the same file. The question #33 raised - "the data
-already exists, no scraping needed" - is answered in full, and it is
-answered without adding the feed the ticket assumed would be needed.
-The one new download is `weekly_rosters`, and that is for the
-designation split, not for usage.
+Snap share is deliberately not a guard on the WR fast lane. In the 457
+WR/TE games from 2023 that cleared 25% target share, a 60% snap guard
+removed only 24 (5%), mostly established players who left early or were
+limited. It changes no useful waiver decision, so WR and TE tags still
+lead with target share; their snap share is explanation, not a gate.
 
-Snap share would still say a different thing if it were fetched: it
-measures how often a player was on the field, where target share and
-opportunity share measure what the offence did while he was there,
-which is the thing the tag is trying to see. If the lanes prove noisy
-in use, that download remains the fix.
+This supersedes #33's decision not to download snap counts. Live tag
+behaviour showed that touches answer usage while the workhorse finding
+was specifically about the role the coach put on the field.
 
 ## A stream is a matchup that explains more than half the edge
 

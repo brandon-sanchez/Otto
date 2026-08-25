@@ -1,0 +1,6 @@
+game_id,pfr_game_id,season,game_type,week,player,pfr_player_id,position,team,opponent,offense_snaps,offense_pct
+2026_01_TB_ATL,one,2026,REG,1,Bucky Irving,IrviBu00,RB,TB,ATL,30,0.48
+2026_02_TB_CAR,two,2026,REG,2,Bucky Irving,IrviBu00,RB,TB,CAR,39,0.61
+2026_03_TB_NO,three,2026,REG,3,Bucky Irving,IrviBu00,RB,TB,NO,46,0.71
+2026_01_BUF_MIA,one,2026,REG,1,Ray Davis,DaviRa03,RB,BUF,MIA,59,0.95
+2026_02_BUF_NYJ,two,2026,REG,2,Ray Davis,DaviRa03,RB,BUF,NYJ,57,0.95

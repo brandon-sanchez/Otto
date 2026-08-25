@@ -15,12 +15,15 @@ import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.directory.PlayerDirectoryStore;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
+import otto.nflverse.NflverseStore;
+import otto.nflverse.PlayerIdMap;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.telegram.TelegramWebhook;
@@ -98,6 +101,12 @@ class WaiverScenarioTest extends WireSeamTest {
     private NflverseFeedService feeds;
 
     @Autowired
+    private NflverseStore nflverseStore;
+
+    @Autowired
+    private PlayerDirectoryStore directoryStore;
+
+    @Autowired
     private DefenseVersusPositionBuilder defenseBuilder;
 
     @Autowired
@@ -139,6 +148,16 @@ class WaiverScenarioTest extends WireSeamTest {
     private void runCheckAt(Instant when) {
         clock.set(when);
         checkRunner.runCheck();
+    }
+
+    @Test
+    void thePlayerIdMapCoversTheDirectoryBeforeSnapShareIsRead() {
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
+
+        PlayerIdMap ids = nflverseStore.playerIds().orElseThrow();
+        assertThat(directoryStore.read().orElseThrow().players().keySet())
+                .as("every player retained in the Sleeper directory has a PFR join key")
+                .allMatch(playerId -> ids.pfrFor(playerId).isPresent());
     }
 
     private Optional<Event> boardEvent(String key) {
@@ -382,14 +401,6 @@ class WaiverScenarioTest extends WireSeamTest {
 
     @Test
     void twoStraightWeeksOfHalfABackfieldIsABreakoutWithoutAnyDepthChartMove() {
-        // The slow lane. Ray Davis stays RB2 behind a healthy James
-        // Cook, so the depth chart says nothing and no injury says
-        // anything either. Three played weeks do: his share of
-        // Buffalo's backfield goes 54%, 58%, 62%, so the last two both
-        // clear the 50% that marks a real role. That is a role growing
-        // rather than arriving, and it lifts his bid a band from 0-5%
-        // to 5-12%. The rise itself is on his line, because a share
-        // climbing every week is worth showing whatever the tag.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAGrowingRole);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
@@ -401,7 +412,7 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Ray Davis"))
                 .withRequestBody(containing("breakout"))
                 .withRequestBody(containing("$5-$12"))
-                .withRequestBody(containing("he held 58% and then 62% of opportunity share "
+                .withRequestBody(containing("he played 58% and then 62% of the snaps "
                         + "over weeks 2 and 3"))
                 .withRequestBody(containing("his share has risen every week: week 1 54%, "
                         + "week 2 58%, week 3 62%"))
@@ -410,17 +421,6 @@ class WaiverScenarioTest extends WireSeamTest {
 
     @Test
     void oneWeekAtTheEliteBarIsABreakoutWithNobodyInjuredAnywhere() {
-        // The fast lane, in the two shapes that made it necessary.
-        //
-        // Wandale Robinson is Nacua-shaped: 15 targets of the 39 the
-        // Giants threw, 39% of the offence in one game, with nobody
-        // hurt ahead of him.
-        // Ray Davis is Kyren-shaped: 91% of Buffalo's backfield work in
-        // week 1 while James Cook, still RB1 on the chart, is healthy.
-        // Neither man is visible to a rule that reads the label on the
-        // man ahead, and both are the week's league-winning add. Cade
-        // Otton at 32% of Tampa Bay's targets is the same claim at
-        // tight end, so all three positions the lanes cover are here.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "Three men took their own jobs.");
@@ -429,29 +429,17 @@ class WaiverScenarioTest extends WireSeamTest {
 
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Wandale Robinson"))
-                .contains("breakout", "he took 39% of target share in week 1");
+                .contains("breakout", "he took 39% of target share in week 1",
+                        "he played 78% of the snaps in week 1");
         assertThat(targetLine(board, "Cade Otton"))
-                .contains("breakout", "he took 32% of target share in week 1");
+                .contains("breakout", "he took 32% of target share in week 1",
+                        "he played 82% of the snaps in week 1");
         assertThat(targetLine(board, "Ray Davis"))
-                .contains("breakout", "he took 91% of opportunity share in week 1");
+                .contains("breakout", "he played 71% of the snaps in week 1");
     }
 
     @Test
     void aGrowingShareTagsOnlyTheManWhoHeldItInStraightWeeksUpToNow() {
-        // Three weeks on record, and four free agents whose shares say
-        // four different things.
-        //
-        // Cade Otton held 21% and then 24% of Tampa Bay's targets in
-        // weeks 2 and 3: the slow lane at tight end. Bucky Irving took
-        // 71% of the backfield in week 3, which is the fast lane, and
-        // it fires even though Rachaad White ahead of him is only
-        // designated to return - a loan the man himself has outgrown.
-        //
-        // The other two must stay quiet. Wandale Robinson cleared 18%
-        // in weeks 1 and 3 but did not play week 2, and two games with
-        // a gap between them are not two straight weeks. Ray Davis owned
-        // 95% of Buffalo's backfield in weeks 1 and 2 and has not played
-        // since, so his claim is about a role he held a fortnight ago.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithGrowingAndStaleShares);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "One grew into it, one outgrew a loan.");
@@ -465,20 +453,13 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("breakout",
                         "Rachaad White is not on a list that ends his season",
-                        "he took 71% of opportunity share in week 3");
+                        "he played 71% of the snaps in week 3");
         assertThat(targetLine(board, "Wandale Robinson")).doesNotContain("breakout");
         assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
     }
 
     @Test
     void withNoRosterStandingsTheBoardSaysSoRatherThanGuessingEitherWay() {
-        // The weekly-roster feed is down, so nothing is known about
-        // whether Rachaad White comes back. That is not the same as
-        // knowing he does, and it is not the same as knowing he does
-        // not: the board must claim neither. Bucky Irving keeps his 20
-        // usage points, because White cannot play this Sunday either
-        // way, and loses only the breakout the standing would have
-        // justified.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithNoRosterStandings);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "One feed is down.");
@@ -489,18 +470,12 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("Rachaad White, ahead of him on that chart, is IR")
                 .contains("I cannot see Rachaad White's roster standing")
-                .doesNotContain("breakout")
+                .contains("breakout", "he played 71% of the snaps")
                 .doesNotContain("is not on a list that ends his season");
     }
 
     @Test
     void aStarterWhoIsDesignatedToReturnLendsTheRoleRatherThanLosingIt() {
-        // Bucky Irving's whole case is Rachaad White's absence: he has
-        // no stat line of his own on this board. When White is on
-        // injured reserve with no way back, the job is Irving's and the
-        // bid is a breakout's. When White is designated to return, the
-        // same chart move is a loan of four games, and an aggressive
-        // bid on a loan is how a budget disappears.
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAReturningStarter);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "One loan and no breakout.");
@@ -510,18 +485,11 @@ class WaiverScenarioTest extends WireSeamTest {
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Bucky Irving"))
                 .contains("Rachaad White is not on a list that ends his season")
-                .doesNotContain("breakout");
+                .contains("breakout", "he played 71% of the snaps");
     }
 
     @Test
     void aShareFromLastSeasonIsNeverThisWeeksBreakout() {
-        // Before week 1 is played the stats feed is last season's final
-        // record, on purpose: a defence table has to say something in
-        // week 1 and last season is the honest thing to say. A breakout
-        // is the opposite case. "He took 91% of the backfield" is news
-        // about a role now, and last December is not now - so the lanes
-        // read nothing at all until a week of this season is played,
-        // and the board says which week it is short of.
         SleeperStubs.waiverWeek(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
                 "sleeper/state-nfl-week1.json", "state-week1");

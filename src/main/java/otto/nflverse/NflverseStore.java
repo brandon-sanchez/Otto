@@ -14,6 +14,7 @@ public class NflverseStore {
     private static final String DEPTH_CHARTS = "nflverse-depth-charts";
     private static final String WEEKLY_ROSTERS = "nflverse-weekly-rosters";
     private static final String PLAYER_IDS = "nflverse-player-ids";
+    private static final String SNAP_COUNTS = "nflverse-snap-counts";
     private static final String DEFENSE_VERSUS_POSITION = "defense-versus-position";
 
     private final JsonStore store;
@@ -52,6 +53,14 @@ public class NflverseStore {
 
     public void writePlayerIds(PlayerIdMap idMap) {
         store.write(PLAYER_IDS, idMap);
+    }
+
+    public Optional<SnapCounts> snapCounts() {
+        return store.read(SNAP_COUNTS, SnapCounts.class);
+    }
+
+    public void writeSnapCounts(SnapCounts counts) {
+        store.write(SNAP_COUNTS, counts);
     }
 
     public Optional<DefenseVersusPosition> defenseVersusPosition() {

@@ -44,17 +44,6 @@ public record WeeklyStats(
             Double targetShare,
             Map<String, Double> stats) {
 
-        private static final String CARRIES = "rush_att";
-        private static final String TARGETS = "rec_tgt";
-
-        /**
-         * How much work the offense gave this player: carries plus
-         * targets. Against the same total for every back his team
-         * played, it is a running back's opportunity share.
-         */
-        public double touches() {
-            return stats.getOrDefault(CARRIES, 0.0) + stats.getOrDefault(TARGETS, 0.0);
-        }
     }
 
     public WeeklyStats withCheckedAt(Instant newCheckedAt) {

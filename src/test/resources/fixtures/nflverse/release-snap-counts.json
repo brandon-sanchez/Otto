@@ -1,0 +1,13 @@
+{
+  "tag_name": "snap_counts",
+  "assets": [
+    {
+      "name": "snap_counts_2025.csv",
+      "updated_at": "2026-01-13T06:52:10Z"
+    },
+    {
+      "name": "snap_counts_2026.csv",
+      "updated_at": "2026-09-16T07:11:03Z"
+    }
+  ]
+}
