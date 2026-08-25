@@ -22,10 +22,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class LineupOptimizer {
 
-    /** Higher projection first; equal projections choose the lower stable id. */
-    private static Comparator<String> strongestFirst(Map<String, Double> points) {
+    /** Higher projection first, then the preferred player, then the stable id. */
+    private static Comparator<String> strongestFirst(Map<String, Double> points,
+            Set<String> preferredOnTie) {
         return Comparator.comparingDouble((String playerId) -> points.get(playerId))
                 .reversed()
+                .thenComparing(playerId -> !preferredOnTie.contains(playerId))
                 .thenComparing(Comparator.naturalOrder());
     }
 
@@ -35,10 +37,11 @@ public class LineupOptimizer {
      * @param slots the league's starting slots, in lineup order
      * @param points projected points per candidate player
      * @param positions position per candidate player
+     * @param preferredOnTie players to keep ahead of an equally projected alternative
      * @return slot index to player id; a slot with no eligible player left is absent
      */
     public Map<Integer, String> assign(List<Slot> slots, Map<String, Double> points,
-            Map<String, String> positions) {
+            Map<String, String> positions, Collection<String> preferredOnTie) {
         List<Integer> slotOrder = IntStream.range(0, slots.size())
                 .boxed()
                 .sorted(Comparator.comparingInt(index -> slots.get(index).eligible().size()))
@@ -46,12 +49,14 @@ public class LineupOptimizer {
 
         Map<Integer, String> assignment = new HashMap<>();
         Set<String> used = new HashSet<>();
+        Set<String> preferred = Set.copyOf(preferredOnTie);
+        Comparator<String> strongestFirst = strongestFirst(points, preferred);
         for (int slotIndex : slotOrder) {
             Slot slot = slots.get(slotIndex);
             points.keySet().stream()
                     .filter(candidate -> !used.contains(candidate))
                     .filter(candidate -> slot.accepts(positions.get(candidate)))
-                    .min(strongestFirst(points))
+                    .min(strongestFirst)
                     .ifPresent(best -> {
                         assignment.put(slotIndex, best);
                         used.add(best);
@@ -81,7 +86,7 @@ public class LineupOptimizer {
             Map<String, Double> points) {
         Set<String> currentIds = new HashSet<>(current);
         Set<String> optimalIds = new HashSet<>(optimal);
-        Comparator<String> strongestFirst = strongestFirst(points);
+        Comparator<String> strongestFirst = strongestFirst(points, Set.of());
         List<String> entering = optimalIds.stream()
                 .filter(points::containsKey)
                 .filter(playerId -> !currentIds.contains(playerId))

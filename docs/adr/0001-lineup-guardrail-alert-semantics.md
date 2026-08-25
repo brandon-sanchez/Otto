@@ -31,20 +31,19 @@ pairing. Pairing against them would price a certain zero as a small
 projection edge. The legality Alert owns those slots and points at the
 best playable replacement instead.
 
-## Equal projections choose the lexicographically lower stable ID
+## Equal projections keep the current starter
 
-The lineup, waiver and trade paths share one optimizer. When two legal
-players project the same points, the lexicographically lower Sleeper
-player ID starts. This is a total, stable rule based on the identity
-every path already uses, so reordered Sleeper roster JSON cannot change
-a Recommendation or its Event Log key. It deliberately compares the ID
-as an opaque stable identifier rather than interpreting it as a number.
+Lineup planning, bench-edge alerts, and trade valuation share one optimizer. When two legal
+players project the same points, the player already in the lineup stays
+there. A zero-point swap gives the user work without an expected gain,
+so it is not a Recommendation.
 
-Trade valuation adds synthetic players whose IDs begin with
-`~replacement:`. That prefix sorts after Sleeper's numeric IDs under the
-same rule, so the optimizer needs no trade-specific branch and a real
-player always beats a replacement-level filler on a tie. Swap pairings
-use the same ordering, keeping Recommendation and Event Log keys stable.
+When neither or both players are already preferred, the
+lexicographically lower stable ID wins. That final rule is total and
+independent of Sleeper roster order. Trade valuation prefers every real
+roster player over its synthetic replacement-level fillers on a tie,
+then uses the same stable-ID fallback. Swap pairings also use that
+fallback, keeping Recommendation and Event Log keys stable.
 
 ## The final warning is per player per week, derived from state
 

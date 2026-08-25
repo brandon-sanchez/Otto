@@ -92,12 +92,12 @@ class AskScenarioTest extends WireSeamTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"sleeper/rosters.json", "sleeper/rosters-tie-reordered.json"})
-    void equalProjectionsAlwaysStartTheLowerSleeperIdWhateverTheRosterOrder(
+    void equalProjectionsKeepTheCurrentStarterWhateverTheRosterOrder(
             String rosterFixture) {
-        assertTiedLineupUsesStablePlayerOrder(rosterFixture);
+        assertTiedLineupKeepsCurrentStarter(rosterFixture);
     }
 
-    private void assertTiedLineupUsesStablePlayerOrder(String rosterFixture) {
+    private void assertTiedLineupKeepsCurrentStarter(String rosterFixture) {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
                 rosterFixture, "rosters-tied");
@@ -115,11 +115,11 @@ class AskScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(
-                        "\\\"swaps\\\":[{\\\"start\\\":\\\"Josh Jacobs\\\","
-                                + "\\\"sit\\\":\\\"James Cook\\\""))
-                .withRequestBody(containing(
-                        "{\\\"start\\\":\\\"Dallas Goedert\\\","
-                                + "\\\"sit\\\":\\\"Travis Kelce\\\"")));
+                        "\\\"swaps\\\":[{\\\"start\\\":\\\"Dallas Goedert\\\","
+                                + "\\\"sit\\\":\\\"Travis Kelce\\\""))
+                .withRequestBody(notContaining(
+                        "\\\"start\\\":\\\"Josh Jacobs\\\","
+                                + "\\\"sit\\\":\\\"James Cook\\\"")));
     }
 
     /**
