@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
@@ -86,6 +88,38 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Josh Jacobs"))
                 .withRequestBody(containing("James Cook"))
                 .withRequestBody(notContaining("99.9")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"sleeper/rosters.json", "sleeper/rosters-tie-reordered.json"})
+    void equalProjectionsKeepTheCurrentStarterWhateverTheRosterOrder(
+            String rosterFixture) {
+        assertTiedLineupKeepsCurrentStarter(rosterFixture);
+    }
+
+    private void assertTiedLineupKeepsCurrentStarter(String rosterFixture) {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                rosterFixture, "rosters-tied");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-tied.json", "projections-tied");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "No edge alert.");
+        checkRunner.runCheck();
+
+        llm.resetAll();
+        telegram.resetRequests();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "recommend_lineup", "{}", LINEUP_PHRASE);
+        ask("lineup");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "\\\"swaps\\\":[{\\\"start\\\":\\\"Dallas Goedert\\\","
+                                + "\\\"sit\\\":\\\"Travis Kelce\\\""))
+                .withRequestBody(notContaining(
+                        "\\\"start\\\":\\\"Josh Jacobs\\\","
+                                + "\\\"sit\\\":\\\"James Cook\\\"")));
     }
 
     /**

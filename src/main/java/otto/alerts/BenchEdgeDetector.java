@@ -60,7 +60,7 @@ public class BenchEdgeDetector {
         }
 
         Map<Integer, String> optimal =
-                optimizer.assign(slots, points, roster.playerPositions());
+                optimizer.assign(slots, points, roster.playerPositions(), roster.starters());
 
         List<AlertCandidate> candidates = new ArrayList<>();
         for (LineupSwap swap : optimizer.swaps(roster.starters(), optimal.values(), points)) {

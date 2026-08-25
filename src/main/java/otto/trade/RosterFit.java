@@ -84,7 +84,8 @@ public class RosterFit {
     public Factor of(List<Slot> slots, Pool pool, String playerId) {
         Map<String, Double> candidates = withFillers(slots, pool);
         Map<String, String> positions = positionsOf(slots, pool);
-        Map<Integer, String> lineup = optimizer.assign(slots, candidates, positions);
+        Map<Integer, String> lineup = optimizer.assign(
+                slots, candidates, positions, pool.points().keySet());
         if (lineup.containsValue(playerId)) {
             return new Factor(STARTER_UPGRADE, "starts for that roster over what it has now");
         }
@@ -119,7 +120,8 @@ public class RosterFit {
     public double startingPoints(List<Slot> slots, Pool pool) {
         Map<String, Double> candidates = withFillers(slots, pool);
         Map<String, String> positions = positionsOf(slots, pool);
-        return optimizer.assign(slots, candidates, positions).values().stream()
+        return optimizer.assign(slots, candidates, positions, pool.points().keySet())
+                .values().stream()
                 .mapToDouble(candidates::get)
                 .sum();
     }

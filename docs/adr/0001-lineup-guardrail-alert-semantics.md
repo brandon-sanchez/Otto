@@ -31,6 +31,20 @@ pairing. Pairing against them would price a certain zero as a small
 projection edge. The legality Alert owns those slots and points at the
 best playable replacement instead.
 
+## Equal projections keep the current starter
+
+Lineup planning, bench-edge alerts, and trade valuation share one optimizer. When two legal
+players project the same points, the player already in the lineup stays
+there. A zero-point swap gives the user work without an expected gain,
+so it is not a Recommendation.
+
+When neither or both players are already preferred, the
+lexicographically lower stable ID wins. That final rule is total and
+independent of Sleeper roster order. Trade valuation prefers every real
+roster player over its synthetic replacement-level fillers on a tie,
+then uses the same stable-ID fallback. Swap pairings also use that
+fallback, keeping Recommendation and Event Log keys stable.
+
 ## The final warning is per player per week, derived from state
 
 The Lock Ladder's second rung fires inside the 30 minutes before a
