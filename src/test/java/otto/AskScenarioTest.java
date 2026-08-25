@@ -4,9 +4,12 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.harness.Fixtures;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -14,6 +17,8 @@ import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -86,6 +91,60 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Josh Jacobs"))
                 .withRequestBody(containing("James Cook"))
                 .withRequestBody(notContaining("99.9")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void equalProjectionsAlwaysStartTheLowerSleeperIdWhateverTheRosterOrder(boolean reverseOrder) {
+        String roster = Fixtures.read("sleeper/rosters.json");
+        String reordered = roster.replace(
+                "\"8138\",\n      \"8135\",\n      \"5850\"",
+                "\"5850\",\n      \"8135\",\n      \"8138\"");
+
+        assertTiedLineupStartsJacobs(reverseOrder ? reordered : roster,
+                reverseOrder ? "rosters-reordered" : "rosters-original");
+    }
+
+    private void assertTiedLineupStartsJacobs(String roster, String rosterEtag) {
+        SleeperStubs.healthyInSeason(sleeper);
+        String mixedWidthRoster = roster
+                .replace("\"5850\"", "\"99\"")
+                .replace("\"8138\"", "\"100\"");
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.ROSTERS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withHeader("ETag", "\"" + rosterEtag + "\"")
+                .withBody(mixedWidthRoster)));
+        String mixedWidthPlayers = Fixtures.read("sleeper/players-nfl.json")
+                .replace("\"5850\"", "\"99\"")
+                .replace("\"8138\"", "\"100\"");
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PLAYERS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withHeader("ETag", "\"players-mixed-width\"")
+                .withBody(mixedWidthPlayers)));
+        String tiedProjections = Fixtures.read("sleeper/projections-edge.json")
+                .replace("\"rush_yd\": 110", "\"rush_yd\": 75")
+                .replace("\"5850\"", "\"99\"")
+                .replace("\"8138\"", "\"100\"");
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PROJECTIONS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withHeader("ETag", "\"projections-tied\"")
+                .withBody(tiedProjections)));
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "No edge alert.");
+        checkRunner.runCheck();
+
+        llm.resetAll();
+        telegram.resetRequests();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "recommend_lineup", "{}", LINEUP_PHRASE);
+        ask("lineup");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(
+                        "\\\"start\\\":\\\"Josh Jacobs\\\",\\\"sit\\\":\\\"James Cook\\\"")));
     }
 
     /**

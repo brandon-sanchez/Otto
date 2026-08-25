@@ -23,6 +23,26 @@ import org.springframework.stereotype.Component;
 public class LineupOptimizer {
 
     /**
+     * Higher projection wins; equal projections prefer a real player, then the
+     * lower numeric Sleeper id. Synthetic replacement IDs compare last.
+     */
+    private static final Comparator<Map.Entry<String, Double>> BEST_CANDIDATE =
+            Map.Entry.<String, Double>comparingByValue()
+                    .thenComparing(Map.Entry::getKey, LineupOptimizer::compareIds);
+
+    private static int compareIds(String left, String right) {
+        boolean leftReplacement = left.startsWith("replacement:");
+        boolean rightReplacement = right.startsWith("replacement:");
+        if (leftReplacement != rightReplacement) {
+            return leftReplacement ? -1 : 1;
+        }
+        if (leftReplacement) {
+            return right.compareTo(left);
+        }
+        return Long.compare(Long.parseLong(right), Long.parseLong(left));
+    }
+
+    /**
      * Assigns players to slots for the maximum total projected points.
      *
      * @param slots the league's starting slots, in lineup order
@@ -44,7 +64,7 @@ public class LineupOptimizer {
             points.entrySet().stream()
                     .filter(candidate -> !used.contains(candidate.getKey()))
                     .filter(candidate -> slot.accepts(positions.get(candidate.getKey())))
-                    .max(Map.Entry.comparingByValue())
+                    .max(BEST_CANDIDATE)
                     .ifPresent(best -> {
                         assignment.put(slotIndex, best.getKey());
                         used.add(best.getKey());

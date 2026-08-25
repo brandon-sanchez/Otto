@@ -31,6 +31,19 @@ pairing. Pairing against them would price a certain zero as a small
 projection edge. The legality Alert owns those slots and points at the
 best playable replacement instead.
 
+## Equal projections choose the lower Sleeper player ID
+
+The lineup, waiver and trade paths share one optimizer. When two legal
+players project the same points, the lower Sleeper player ID starts.
+This is a total, stable rule based on the identity every path already
+uses, so reordered Sleeper roster JSON cannot change a Recommendation
+or its Event Log key.
+
+Trade valuation adds synthetic players whose IDs begin with
+`replacement:`. Sleeper player IDs are numeric strings, which sort
+before that prefix, so a real player always beats a replacement-level
+filler when their projections tie.
+
 ## The final warning is per player per week, derived from state
 
 The Lock Ladder's second rung fires inside the 30 minutes before a
