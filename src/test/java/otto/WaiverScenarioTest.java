@@ -23,6 +23,7 @@ import otto.harness.WireSeamTest;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseStore;
+import otto.nflverse.PlayerIdMap;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.telegram.TelegramWebhook;
@@ -153,10 +154,10 @@ class WaiverScenarioTest extends WireSeamTest {
     void thePlayerIdMapCoversTheDirectoryBeforeSnapShareIsRead() {
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithEarnedRoles);
 
-        Map<String, String> pfrIds = nflverseStore.playerIds().orElseThrow().sleeperToPfr();
+        PlayerIdMap ids = nflverseStore.playerIds().orElseThrow();
         assertThat(directoryStore.read().orElseThrow().players().keySet())
                 .as("every player retained in the Sleeper directory has a PFR join key")
-                .allMatch(pfrIds::containsKey);
+                .allMatch(playerId -> ids.pfrFor(playerId).isPresent());
     }
 
     private Optional<Event> boardEvent(String key) {

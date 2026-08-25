@@ -219,7 +219,8 @@ public class NflverseFeedService {
             try {
                 double share = Double.parseDouble(row.text("offense_pct"));
                 if (share >= 0.0 && share <= 1.0) {
-                    lines.add(new SnapCounts.SnapLine(pfrId, row.integer("week"), share));
+                    lines.add(new SnapCounts.SnapLine(pfrId, row.text("position"),
+                            row.integer("week"), share));
                 }
             } catch (NumberFormatException ignored) {
                 // A missing published share is unknown, never zero.
