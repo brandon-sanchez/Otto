@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
@@ -78,7 +78,6 @@ public class FileDocumentBackend implements DocumentBackend {
     }
 
     private static String encodedName(String name) {
-        return Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(name.getBytes(StandardCharsets.UTF_8));
+        return HexFormat.of().formatHex(name.getBytes(StandardCharsets.UTF_8));
     }
 }

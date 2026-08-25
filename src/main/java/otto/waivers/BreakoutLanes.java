@@ -41,12 +41,6 @@ public final class BreakoutLanes {
      */
     static final double FAST_TARGET_SHARE = 0.25;
 
-    /**
-     * The fast-lane bar for running backs. A back with 65% of his
-     * team's carries and targets is the lead back of a backfield, not
-     * the better half of a committee: the published line for a
-     * two-man committee's lead back is 65-70% of the carries.
-     */
     static final double FAST_SNAP_SHARE = 0.70;
 
     /**
@@ -57,10 +51,6 @@ public final class BreakoutLanes {
      */
     static final double SLOW_TARGET_SHARE = 0.18;
 
-    /**
-     * The slow-lane bar for running backs. Half a backfield's work is
-     * the point at which a committee has a lead back at all.
-     */
     static final double SLOW_SNAP_SHARE = 0.55;
 
     /** How many straight games the slow lane asks for. */

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Current-season role shares, joined to the Sleeper player directory. */
 public final class RoleShares {
 
     public enum Kind {

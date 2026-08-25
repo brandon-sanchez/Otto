@@ -73,10 +73,6 @@ public class NflverseFeedService {
      * {@link otto.lineup.LeagueScoring} prices a played week exactly as
      * it prices a projected one. nflverse's own fantasy-point columns
      * are deliberately absent - no league scoring setting names them.
-     *
-     * Carries and targets are here because they are how much work a
-     * player was given, which the waiver score reads as usage. This
-     * league scores neither, so they change no point total.
      */
     private static final Map<String, String> SLEEPER_STAT_KEYS = Map.ofEntries(
             Map.entry("carries", "rush_att"),
@@ -223,7 +219,6 @@ public class NflverseFeedService {
                             row.integer("week"), share));
                 }
             } catch (NumberFormatException ignored) {
-                // A missing published share is unknown, never zero.
             }
         });
         return lines;

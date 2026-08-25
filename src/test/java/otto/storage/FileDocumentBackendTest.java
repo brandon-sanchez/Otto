@@ -25,6 +25,17 @@ class FileDocumentBackendTest {
         assertThat(backend.load("alert:a?b").orElseThrow()).containsExactly(2);
     }
 
+    @Test
+    void documentNamesRemainDistinctOnCaseInsensitiveFilesystems() {
+        FileDocumentBackend backend = new FileDocumentBackend(properties(directory));
+
+        backend.store("00@", new byte[] { 1 });
+        backend.store("00Z", new byte[] { 2 });
+
+        assertThat(backend.load("00@").orElseThrow()).containsExactly(1);
+        assertThat(backend.load("00Z").orElseThrow()).containsExactly(2);
+    }
+
     private static OttoProperties properties(Path storageDirectory) {
         return new OttoProperties(null, null, storageDirectory.toString(), null, null, null, null,
                 null, null, null, 0.0, null, null);

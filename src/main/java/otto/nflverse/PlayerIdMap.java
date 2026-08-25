@@ -8,7 +8,6 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-/** DynastyProcess identities indexed by Sleeper player id. */
 public final class PlayerIdMap {
 
     @JsonProperty("etag")

@@ -3,7 +3,6 @@ package otto.nflverse;
 import java.time.Instant;
 import java.util.List;
 
-/** Published offensive snap share for one season. */
 public record SnapCounts(String season, boolean priorSeasonFinal, Instant assetUpdatedAt, Instant checkedAt,
         List<SnapLine> rows) implements NflverseFeed {
 
