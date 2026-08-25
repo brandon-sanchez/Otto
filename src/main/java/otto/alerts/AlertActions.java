@@ -30,13 +30,15 @@ public class AlertActions {
     private final EventLog eventLog;
     private final SnapshotStore snapshotStore;
     private final MuteStore muteStore;
+    private final AlertDeliveryOutbox outbox;
     private final Clock clock;
 
     public AlertActions(EventLog eventLog, SnapshotStore snapshotStore,
-            MuteStore muteStore, Clock clock) {
+            MuteStore muteStore, AlertDeliveryOutbox outbox, Clock clock) {
         this.eventLog = eventLog;
         this.snapshotStore = snapshotStore;
         this.muteStore = muteStore;
+        this.outbox = outbox;
         this.clock = clock;
     }
 
@@ -121,10 +123,11 @@ public class AlertActions {
     }
 
     private List<Event> alertEvents(long alertId) {
-        return eventLog.all().stream()
+        List<Event> recorded = eventLog.all().stream()
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> String.valueOf(alertId).equals(event.facts().get("alertId")))
                 .toList();
+        return recorded.isEmpty() ? outbox.sentEvents(alertId) : recorded;
     }
 
     private String firstFact(List<Event> alerts, String name) {

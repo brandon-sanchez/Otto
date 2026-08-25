@@ -12,6 +12,7 @@ import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.storage.JsonStore;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
@@ -36,6 +37,9 @@ class AlertButtonScenarioTest extends WireSeamTest {
 
     @Autowired
     private EventLog eventLog;
+
+    @Autowired
+    private JsonStore store;
 
     private void runHealthyBaselineCheck() {
         SleeperStubs.healthyInSeason(sleeper);
@@ -108,5 +112,22 @@ class AlertButtonScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH)));
         assertThat(eventLog.all().stream()
                 .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
+    }
+
+    @Test
+    void aTapStillFindsASentAlertWhenItsEventLogWriteWasLost() {
+        runHealthyBaselineCheck();
+        runDeclineCheck();
+        store.write("event-log", eventLog.all().stream()
+                .filter(event -> event.type() != EventType.ALERT_SENT)
+                .toList());
+        OutboundStubs.telegramCallbackAnswered(telegram);
+
+        WebhookResult result = webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap("done:1"));
+
+        assertThat(result).isEqualTo(WebhookResult.OK);
+        assertThat(eventLog.all()).anyMatch(event ->
+                event.key().equals("action:done:1")
+                        && event.facts().get("playerId").equals("4034"));
     }
 }

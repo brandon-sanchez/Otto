@@ -29,17 +29,16 @@ import otto.snapshot.LeagueStatus;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotDiffer;
-import otto.telegram.TelegramClient;
 
 /**
  * Turns detected problems into Alerts: detect, gate, merge, phrase,
- * send, and record. An Alert is recorded in the Event Log only when
- * Telegram accepted it, so a failed send retries on the next Check.
+ * send, and record. The delivery outbox is pending before Telegram is
+ * called and sent after acceptance; the Event Log remains the history.
  *
  * Candidates about the same player merge into one outbound message per
  * Check - a starter ruled Out is one problem, even when the status
  * transition and the now-illegal lineup both detect it. Every merged
- * candidate's key is recorded, so neither detector re-fires later.
+ * candidate's key is recorded in both, so neither detector re-fires later.
  *
  * The Lock Ladder governs timing: one Alert on detect, one final
  * warning inside the half hour before the player's game lock, nothing
@@ -73,32 +72,30 @@ public class AlertService {
     private final LeagueActivityDetector activityDetector;
     private final WatchlistDetector watchlistDetector;
     private final AlertPhraser phraser;
-    private final TelegramClient telegram;
     private final EventLog eventLog;
     private final IgnoreLedger ignoreLedger;
     private final MuteStore muteStore;
     private final SettingsStore settings;
-    private final AlertIdSequence idSequence;
+    private final AlertDeliveryOutbox outbox;
     private final Clock clock;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
             LeagueActivityDetector activityDetector, WatchlistDetector watchlistDetector,
-            AlertPhraser phraser, TelegramClient telegram, EventLog eventLog,
+            AlertPhraser phraser, EventLog eventLog,
             IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
-            AlertIdSequence idSequence, Clock clock) {
+            AlertDeliveryOutbox outbox, Clock clock) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
         this.activityDetector = activityDetector;
         this.watchlistDetector = watchlistDetector;
         this.phraser = phraser;
-        this.telegram = telegram;
         this.eventLog = eventLog;
         this.ignoreLedger = ignoreLedger;
         this.muteStore = muteStore;
         this.settings = settings;
-        this.idSequence = idSequence;
+        this.outbox = outbox;
         this.clock = clock;
     }
 
@@ -236,26 +233,18 @@ public class AlertService {
         List<Event> sent = new ArrayList<>();
         for (List<AlertCandidate> group : groups.values()) {
             List<AlertCandidate> unalerted = group.stream()
-                    .filter(candidate -> !eventLog.contains("alert:" + candidate.key()))
+                    .filter(candidate -> !outbox.alreadySent("alert:" + candidate.key()))
                     .toList();
             if (unalerted.isEmpty()) {
                 continue;
             }
             AlertCandidate primary = unalerted.stream().min(BY_CONFIDENCE).orElseThrow();
             String text = phraser.phrase(primary.facts(), primary.recommendation());
-            long alertId = idSequence.next();
-            if (!telegram.sendAlert(text, alertId)) {
-                continue;
-            }
-            for (AlertCandidate candidate : unalerted) {
-                Map<String, String> facts = new HashMap<>(alertFacts(candidate, text));
-                facts.put("alertId", String.valueOf(alertId));
-                Event alert = new Event("alert:" + candidate.key(),
-                        EventType.ALERT_SENT, now, Map.copyOf(facts));
-                if (eventLog.append(alert)) {
-                    sent.add(alert);
-                }
-            }
+            List<Event> templates = unalerted.stream()
+                    .map(candidate -> new Event("alert:" + candidate.key(),
+                            EventType.ALERT_SENT, now, alertFacts(candidate, text)))
+                    .toList();
+            sent.addAll(outbox.deliver(text, templates));
         }
         return sent;
     }
@@ -310,7 +299,7 @@ public class AlertService {
             }
 
             String key = "alert:final:%s:%s".formatted(weekKey, playerId);
-            if (eventLog.contains(key) || alertedInWindow(playerId, windowStart)) {
+            if (outbox.alreadySent(key) || alertedInWindow(playerId, windowStart)) {
                 continue;
             }
 
@@ -327,17 +316,10 @@ public class AlertService {
                     String.valueOf(Duration.between(now, lock.get()).toMinutes()));
 
             String text = phraser.phrase(facts, recommendation);
-            long alertId = idSequence.next();
-            if (!telegram.sendAlert(text, alertId)) {
-                continue;
-            }
-            facts.put("alertId", String.valueOf(alertId));
             facts.put("playerId", playerId);
             facts.put("text", text);
-            Event warning = new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts));
-            if (eventLog.append(warning)) {
-                sent.add(warning);
-            }
+            sent.addAll(outbox.deliver(text, List.of(
+                    new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
     }

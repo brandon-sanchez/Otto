@@ -1,6 +1,7 @@
 package otto;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -108,6 +109,17 @@ class AwsStorageScenarioTest {
     }
 
     @Test
+    void alertDeliveryStateWritesThroughBeforeTheRunEnds() {
+        store.write("alert-delivery-key:abc", Map.of("alertId", 1));
+        store.write("alert-delivery-id:1", Map.of("status", "SENT"));
+
+        assertThat(dynamo.writes()).isEqualTo(2);
+        assertThat(dynamo.holds("alert-delivery-key:abc")).isTrue();
+        assertThat(dynamo.holds("alert-delivery-id:1")).isTrue();
+        assertThat(s3.writes()).isZero();
+    }
+
+    @Test
     void theOtherEntryPointsWriteIsKeptWhenThisOneLands() {
         store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
         store.flush();
@@ -196,7 +208,7 @@ class AwsStorageScenarioTest {
                 "nflverse-depth-charts", "nflverse-weekly-rosters", "nflverse-player-ids");
         List<String> small = List.of("settings", "watchlist", "watchlist-observations",
                 "mutes", "conversation", "last-check", "alert-id-sequence",
-                "telegram-updates");
+                "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1");
 
         assertThat(big).allMatch(DocumentPlacement::isBig);
         assertThat(small).noneMatch(DocumentPlacement::isBig);

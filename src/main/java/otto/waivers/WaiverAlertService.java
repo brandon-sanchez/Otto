@@ -15,19 +15,17 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import otto.alerts.AlertIdSequence;
+import otto.alerts.AlertDeliveryOutbox;
 import otto.alerts.AlertPhraser;
 import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
 import otto.ask.LeagueWeek;
 import otto.events.Event;
-import otto.events.EventLog;
 import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.sleeper.SourceResult;
-import otto.telegram.TelegramClient;
 
 /**
  * The Tuesday waiver Alert: the top five free agents, their reasons,
@@ -58,22 +56,18 @@ public class WaiverAlertService {
 
     private final WaiverScorer scorer;
     private final AlertPhraser phraser;
-    private final TelegramClient telegram;
-    private final EventLog eventLog;
     private final MuteStore muteStore;
     private final SettingsStore settings;
-    private final AlertIdSequence idSequence;
+    private final AlertDeliveryOutbox outbox;
 
-    public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser, TelegramClient telegram,
-            EventLog eventLog, MuteStore muteStore, SettingsStore settings,
-            AlertIdSequence idSequence) {
+    public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
+            MuteStore muteStore, SettingsStore settings,
+            AlertDeliveryOutbox outbox) {
         this.scorer = scorer;
         this.phraser = phraser;
-        this.telegram = telegram;
-        this.eventLog = eventLog;
         this.muteStore = muteStore;
         this.settings = settings;
-        this.idSequence = idSequence;
+        this.outbox = outbox;
     }
 
     /**
@@ -90,7 +84,7 @@ public class WaiverAlertService {
         String key = "alert:waiver:" + due.toLocalDate();
         // Switched off in Settings, muted, or already sent: the board
         // is not computed at all, so a quiet Tuesday costs nothing.
-        if (eventLog.contains(key)
+        if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
             return Optional.empty();
@@ -155,15 +149,11 @@ public class WaiverAlertService {
                 caveats(board));
 
         String text = phraser.phrase(facts, recommendation);
-        long alertId = idSequence.next();
-        if (!telegram.sendAlert(text, alertId)) {
-            return Optional.empty();
-        }
         Map<String, String> recorded = new HashMap<>(facts);
-        recorded.put("alertId", String.valueOf(alertId));
         recorded.put("text", text);
-        Event event = new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded));
-        return eventLog.append(event) ? Optional.of(event) : Optional.empty();
+        return outbox.deliver(text, List.of(
+                        new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded))))
+                .stream().findFirst();
     }
 
     /** One target, as the outbound message would say it. */
