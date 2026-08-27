@@ -323,6 +323,20 @@ class AskScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void repliesCarryATelegramFormattingContract() {
+        snapshotWithABenchEdge();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Noted.");
+
+        ask("how does my roster look?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Use Telegram-friendly plain text"))
+                .withRequestBody(containing("one bullet per item"))
+                .withRequestBody(containing("blank line")));
+    }
+
+    @Test
     void anOutageReplyNeverEntersTheConversationWindow() {
         snapshotWithABenchEdge();
         OutboundStubs.telegramOk(telegram);

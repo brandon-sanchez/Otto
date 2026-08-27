@@ -41,17 +41,25 @@ public class AskService {
 
             He makes every roster change himself in the Sleeper app, so
             recommend and never claim to have acted.
+
+            Use Telegram-friendly plain text. Keep a simple answer to one
+            compact paragraph. When the answer contains several players,
+            settings, choices, steps, pros and cons, or other parallel items,
+            put one bullet per item using "- ". Put a blank line between the
+            main answer and supporting details. Do not use tables or headings.
             """;
 
     private static final String BRIEF = """
-            Answer in 2 to 5 lines: the recommendation, then a one-line
+            Answer in 2 to 5 lines. Keep every line short. Lead with the
+            recommendation or direct answer, then give only the most useful
             reason. He will ask "why" or "more" when he wants the rest.
             """;
 
     private static final String DEEP = """
-            Give the full reasoning this time: the numbers your tools
-            returned, the alternatives they ranked, and what would change
-            the call. Stay inside the tool results.
+            Give the full reasoning this time. Include the numbers your tools
+            returned, the alternatives they ranked, and what would change the
+            call. Group related details and use bullets when there is more than
+            one item. Stay inside the tool results.
             """;
 
     /** What the user gets when the model cannot be reached at all. */

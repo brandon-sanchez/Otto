@@ -78,6 +78,17 @@ class AlertScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void alertPhrasingCarriesATelegramFormattingContract() {
+        runHealthyBaselineCheck();
+        runDeclineCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Use Telegram-friendly plain text"))
+                .withRequestBody(containing("one bullet per item"))
+                .withRequestBody(containing("blank line")));
+    }
+
+    @Test
     void aTransientTelegramFailureRetriesTheAlertOnTheNextCheck() {
         SleeperStubs.healthyInSeason(sleeper);
         OutboundStubs.llmPhrases(llm, PHRASE);
