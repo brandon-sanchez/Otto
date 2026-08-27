@@ -25,6 +25,12 @@ public class AlertPhraser {
             2-5 lines. State the action when confidence is HIGH; voice the
             doubt with the pros and cons when it is MEDIUM. Use only the
             facts given. Never invent numbers, names, or reasons.
+
+            Use Telegram-friendly plain text. Keep a single simple alert in
+            one compact paragraph. When the alert contains several players,
+            recommendations, pros, cons, or waiver targets, put one bullet per item
+            using "- ". Put a blank line between the main action and supporting
+            details. Do not use tables or headings.
             """;
 
     private static final Logger log = LoggerFactory.getLogger(AlertPhraser.class);
@@ -52,10 +58,11 @@ public class AlertPhraser {
     }
 
     private String fallback(Recommendation recommendation) {
-        return "%s. Confidence: %s. Pros: %s. Cons: %s.".formatted(
-                recommendation.action(),
-                recommendation.confidence(),
-                String.join("; ", recommendation.pros()),
-                String.join("; ", recommendation.cons()));
+        StringBuilder text = new StringBuilder(recommendation.action())
+                .append("\n\nConfidence: ")
+                .append(recommendation.confidence());
+        recommendation.pros().forEach(pro -> text.append("\n- ").append(pro));
+        recommendation.cons().forEach(con -> text.append("\n- Watch out: ").append(con));
+        return text.toString();
     }
 }
