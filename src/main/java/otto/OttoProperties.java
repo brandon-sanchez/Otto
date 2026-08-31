@@ -15,7 +15,7 @@ import otto.lineup.PositionCutoffs;
 @ConfigurationProperties(prefix = "otto")
 public record OttoProperties(
         String leagueId,
-        String username,
+        String userId,
         String storageDir,
         Sleeper sleeper,
         Telegram telegram,

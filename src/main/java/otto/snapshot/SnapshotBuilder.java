@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -17,10 +18,10 @@ import otto.sleeper.SleeperAdapter;
 @Component
 public class SnapshotBuilder {
 
-    private final String username;
+    private final String userId;
 
     public SnapshotBuilder(OttoProperties properties) {
-        this.username = properties.username();
+        this.userId = Objects.requireNonNull(properties.userId(), "otto.user-id");
     }
 
     public Snapshot build(Instant at, SleeperAdapter.League league,
@@ -37,7 +38,8 @@ public class SnapshotBuilder {
 
     private RosterSnapshot toRosterSnapshot(SleeperAdapter.Roster roster,
             Map<String, String> namesByUserId, Optional<PlayerDirectory> directory) {
-        String ownerName = roster.ownerId().map(namesByUserId::get).orElse(null);
+        String ownerId = roster.ownerId().orElse(null);
+        String ownerName = namesByUserId.get(ownerId);
         Map<String, PlayerHealth> health = new HashMap<>();
         Map<String, String> names = new HashMap<>();
         Map<String, String> positions = new HashMap<>();
@@ -53,9 +55,9 @@ public class SnapshotBuilder {
                 }));
         return new RosterSnapshot(
                 roster.rosterId(),
-                roster.ownerId().orElse(null),
+                ownerId,
                 ownerName,
-                username.equals(ownerName),
+                userId.equals(ownerId),
                 roster.starters(),
                 roster.players(),
                 health,

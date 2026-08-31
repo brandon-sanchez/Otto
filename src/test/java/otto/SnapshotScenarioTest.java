@@ -53,6 +53,21 @@ class SnapshotScenarioTest extends WireSeamTest {
         assertThat(mine.playerTeams().get("4034")).isEqualTo("SF");
     }
 
+    @Test
+    void aDisplayNameChangeDoesNotDisconnectTheUsersRoster() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.USERS_PATH,
+                "sleeper/users-renamed.json", "users-renamed");
+
+        checkRunner.runCheck();
+
+        RosterSnapshot mine = snapshotStore.current().orElseThrow().rosters().stream()
+                .filter(RosterSnapshot::userRoster)
+                .findFirst().orElseThrow();
+        assertThat(mine.ownerId()).isEqualTo("777001");
+        assertThat(mine.ownerName()).isEqualTo("NewMustacheName");
+    }
+
     /**
      * Before a draft most teams have nobody in them. Sleeper answers
      * with a null owner for each one, which is a real state and not a

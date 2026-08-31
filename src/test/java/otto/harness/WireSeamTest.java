@@ -62,6 +62,7 @@ public abstract class WireSeamTest {
     @DynamicPropertySource
     static void wireProperties(DynamicPropertyRegistry registry) {
         registry.add("otto.sleeper.base-url", sleeper::baseUrl);
+        registry.add("otto.user-id", () -> "777001");
         registry.add("otto.telegram.base-url", telegram::baseUrl);
         registry.add("otto.telegram.bot-token", () -> "test-bot-token");
         registry.add("otto.telegram.chat-id", () -> String.valueOf(USER_CHAT_ID));
