@@ -11,6 +11,8 @@ import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.snapshot.LeagueStatus;
+import otto.snapshot.SnapshotStore;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -25,6 +27,9 @@ class PreDraftScenarioTest extends WireSeamTest {
     @Autowired
     private EventLog eventLog;
 
+    @Autowired
+    private SnapshotStore snapshotStore;
+
     private void stubHealthyPreDraft() {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
@@ -34,15 +39,18 @@ class PreDraftScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void preDraftDropsTheCadenceToOneCheckPerDay() {
+    void preDraftRunsTheFullSnapshotCheckOncePerDay() {
         stubHealthyPreDraft();
         checkRunner.runCheck();
         sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.LEAGUE_PATH)));
 
-        // One hour later: the Check skips entirely, no polling.
+        // One hour later: only the league status is polled, so Otto can
+        // notice a draft starting without rebuilding unchanged state.
         clock.advance(Duration.ofHours(1));
         checkRunner.runCheck();
-        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.LEAGUE_PATH)));
+        sleeper.verify(2, getRequestedFor(urlEqualTo(SleeperStubs.LEAGUE_PATH)));
+        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.ROSTERS_PATH)));
+        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.USERS_PATH)));
         sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.PLAYERS_PATH)));
 
         // Past one day: the Check polls again.
@@ -51,6 +59,25 @@ class PreDraftScenarioTest extends WireSeamTest {
         SleeperStubs.allNotModified(sleeper);
         checkRunner.runCheck();
         sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.LEAGUE_PATH)));
+    }
+
+    @Test
+    void draftingResumesTheFullCheckOnTheNextMinute() {
+        stubHealthyPreDraft();
+        checkRunner.runCheck();
+
+        clock.advance(Duration.ofMinutes(1));
+        sleeper.resetAll();
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-drafting.json", "league-v2");
+
+        checkRunner.runCheck();
+
+        assertThat(snapshotStore.current())
+                .hasValueSatisfying(snapshot ->
+                        assertThat(snapshot.leagueStatus()).isEqualTo(LeagueStatus.DRAFTING));
+        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.ROSTERS_PATH)));
     }
 
     @Test

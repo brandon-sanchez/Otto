@@ -82,7 +82,9 @@ public class CheckRunner {
     public CheckResult runCheck() {
         Instant now = clock.instant();
         Optional<LastCheck> state = stateStore.read();
-        if (withinPreDraftCadence(state, now)) {
+        SourceResult<SleeperAdapter.League> league = sleeper.league();
+        selfReport.reportIfUnavailable(league);
+        if (withinPreDraftCadence(state, now) && shouldKeepPreDraftCadence(league)) {
             return CheckResult.skippedByCadence();
         }
 
@@ -91,7 +93,7 @@ public class CheckRunner {
             selfReport.report(unavailable.source(), unavailable.reason());
         }
 
-        SnapshotStage stage = snapshotStage(now);
+        SnapshotStage stage = snapshotStage(now, league);
         // Roster Alerts fire only in season: pre-draft and drafting stay
         // quiet, and a draft would otherwise Snipe on every pick.
         List<Event> alerts = new ArrayList<>();
@@ -125,15 +127,19 @@ public class CheckRunner {
                         .compareTo(preDraftCheckInterval) < 0;
     }
 
+    private boolean shouldKeepPreDraftCadence(SourceResult<SleeperAdapter.League> league) {
+        return !(league instanceof SourceResult.Ok<SleeperAdapter.League> ok)
+                || LeagueStatus.fromSleeper(ok.value().status()) == LeagueStatus.PRE_DRAFT;
+    }
+
     private record SnapshotStage(Optional<Snapshot> snapshot, SleeperAdapter.League league,
             List<Event> newDiffEvents) {
     }
 
-    private SnapshotStage snapshotStage(Instant now) {
-        SourceResult<SleeperAdapter.League> league = sleeper.league();
+    private SnapshotStage snapshotStage(Instant now,
+            SourceResult<SleeperAdapter.League> league) {
         SourceResult<List<SleeperAdapter.Roster>> rosters = sleeper.rosters();
         SourceResult<List<SleeperAdapter.LeagueUser>> users = sleeper.users();
-        selfReport.reportIfUnavailable(league);
         selfReport.reportIfUnavailable(rosters);
         selfReport.reportIfUnavailable(users);
         if (!(league instanceof SourceResult.Ok<SleeperAdapter.League> leagueOk)
