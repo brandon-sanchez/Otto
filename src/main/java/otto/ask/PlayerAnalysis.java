@@ -247,7 +247,7 @@ public class PlayerAnalysis {
     // -- get_player_news ----------------------------------------------------
 
     public ToolAnswer<PlayerNews> news(String reference, Instant now) {
-        PlayerLookup.Match match = lookup.find(reference);
+        PlayerLookup.Match match = lookup.findFresh(reference);
         if (match instanceof PlayerLookup.Match.NotFound notFound) {
             return ToolAnswer.unavailable(notFound.reason());
         }

@@ -188,6 +188,55 @@ class PlayerAnalysisScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void playerNewsRefreshesTheDirectoryWhenAnExactNameIsMissing() {
+        aWeekOfDataOnDisk();
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PLAYERS_PATH))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withHeader("ETag", "\"players-v2\"")
+                        .withBody("""
+                                {
+                                  "7564": {
+                                    "full_name": "Ja'Marr Chase",
+                                    "position": "WR",
+                                    "team": "CIN",
+                                    "status": "Active",
+                                    "injury_status": null
+                                  }
+                                }
+                                """)));
+        SleeperStubs.stubNews(sleeper, "7564", "sleeper/news-7564.json");
+        modelCalls("get_player_news", "{\"player\":\"Ja'Marr Chase\"}",
+                "Chase is ready for Week 2.");
+
+        ask("What's the latest news on Ja'Marr Chase");
+
+        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.PLAYERS_PATH)));
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/7564/news")));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Ready for Week 2")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("Chase is ready for Week 2.")));
+    }
+
+    @Test
+    void playerNewsNamesADirectoryRefreshFailureInsteadOfBlamingTheName() {
+        aWeekOfDataOnDisk();
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PLAYERS_PATH))
+                .willReturn(aResponse().withStatus(503)));
+        modelCalls("get_player_news", "{\"player\":\"Ja'Marr Chase\"}",
+                "I cannot refresh the player directory right now.");
+
+        ask("What's the latest news on Ja'Marr Chase");
+
+        sleeper.verify(1, getRequestedFor(urlEqualTo(SleeperStubs.PLAYERS_PATH)));
+        sleeper.verify(0, getRequestedFor(urlPathEqualTo("/players/nfl/7564/news")));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("cannot refresh the player directory")));
+    }
+
+    @Test
     void otherToolsReadCachedDataUntilTheCadenceIntervalPasses() {
         aWeekOfDataOnDisk();
         modelCalls("get_league_settings", "{}", "Superflex, full PPR.");

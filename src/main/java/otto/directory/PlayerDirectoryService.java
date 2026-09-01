@@ -36,6 +36,11 @@ public class PlayerDirectoryService {
     private final Clock clock;
     private final Duration checkInterval;
 
+    private enum RefreshMode {
+        IF_DUE,
+        FULL
+    }
+
     public PlayerDirectoryService(SleeperClient sleeper, PlayerDirectoryStore store,
             EventLog eventLog, Clock clock, OttoProperties properties) {
         this.sleeper = sleeper;
@@ -61,15 +66,26 @@ public class PlayerDirectoryService {
      * Runs the players-file check when the check interval has elapsed
      * since the stored directory was last checked; skips otherwise.
      */
-    public Update updateIfDue() {
+    public synchronized Update updateIfDue() {
+        return update(RefreshMode.IF_DUE);
+    }
+
+    /** Downloads the full directory even when the stored copy was checked recently. */
+    public synchronized Update refreshNow() {
+        return update(RefreshMode.FULL);
+    }
+
+    private Update update(RefreshMode mode) {
         Instant now = clock.instant();
         Optional<PlayerDirectory> existing = store.read();
-        if (existing.isPresent()
+        if (mode == RefreshMode.IF_DUE && existing.isPresent()
                 && Duration.between(existing.get().checkedAt(), now).compareTo(checkInterval) < 0) {
             return new Update.Skipped();
         }
 
-        String knownEtag = existing.map(PlayerDirectory::etag).orElse(null);
+        String knownEtag = mode == RefreshMode.FULL
+                ? null
+                : existing.map(PlayerDirectory::etag).orElse(null);
         SourceResult<SleeperClient.Fetched> result = sleeper.get(PLAYERS_PATH, knownEtag);
         return switch (result) {
             case SourceResult.Unavailable<SleeperClient.Fetched> unavailable ->

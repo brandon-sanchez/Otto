@@ -1,5 +1,6 @@
 package otto.directory;
 
+import java.text.Normalizer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -43,12 +44,31 @@ public final class NameMatch {
         if (!exact.isEmpty()) {
             return exact;
         }
+        String canonical = canonical(needle);
+        if (canonical.isEmpty()) {
+            return List.of();
+        }
+        List<String> canonicalExact = playerIds.stream()
+                .filter(playerId -> canonical.equals(canonical(nameOf.apply(playerId))))
+                .toList();
+        if (!canonicalExact.isEmpty()) {
+            return canonicalExact;
+        }
         return playerIds.stream()
-                .filter(playerId -> lowered(nameOf.apply(playerId)).contains(lowered))
+                .filter(playerId -> canonical(nameOf.apply(playerId)).contains(canonical))
                 .toList();
     }
 
     private static String lowered(String name) {
         return name == null ? "" : name.toLowerCase(Locale.ROOT);
+    }
+
+    private static String canonical(String name) {
+        String decomposed = Normalizer.normalize(lowered(name), Normalizer.Form.NFKD);
+        StringBuilder canonical = new StringBuilder(decomposed.length());
+        decomposed.codePoints()
+                .filter(Character::isLetterOrDigit)
+                .forEach(canonical::appendCodePoint);
+        return canonical.toString();
     }
 }
