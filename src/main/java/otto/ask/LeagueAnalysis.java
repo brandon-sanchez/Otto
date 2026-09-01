@@ -301,7 +301,8 @@ public class LeagueAnalysis {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record TeamRoster(String manager, String record, String week, int seed,
             String startersProjected, List<LineupPlanner.SlotLine> starters,
-            List<LineupPlanner.BenchLine> bench, List<PositionDepth> positions,
+            List<LineupPlanner.BenchLine> bench, List<LineupPlanner.BenchLine> reserve,
+            List<LineupPlanner.BenchLine> taxi, List<PositionDepth> positions,
             List<String> strengths, List<String> gaps, List<String> notes) {
     }
 
@@ -399,6 +400,8 @@ public class LeagueAnalysis {
                 status.startersProjected(),
                 status.starters(),
                 status.bench(),
+                status.reserve(),
+                status.taxi(),
                 depth.positions(),
                 depth.strengths(),
                 depth.gaps(),

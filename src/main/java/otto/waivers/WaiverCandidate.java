@@ -32,9 +32,14 @@ public record WaiverCandidate(
         String faab,
         int faabLow,
         int faabHigh,
+        DropRecommendation recommendedDrop,
         List<Gain> gains,
         Boolean beatsSomebodyNamed,
         List<String> reasons) {
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record DropRecommendation(String player, String reason) {
+    }
 
     /**
      * What the score is made of, each capped where the spec caps it.

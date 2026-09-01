@@ -60,6 +60,8 @@ public class SnapshotBuilder {
                 userId.equals(ownerId),
                 roster.starters(),
                 roster.players(),
+                roster.reserve(),
+                roster.taxi(),
                 health,
                 names,
                 positions,

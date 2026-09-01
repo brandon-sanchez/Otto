@@ -1,6 +1,7 @@
 package otto;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,8 +85,97 @@ class AlertScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Use Telegram-friendly plain text"))
-                .withRequestBody(containing("one bullet per item"))
+                .withRequestBody(containing("IR ACTION NEEDED"))
                 .withRequestBody(containing("blank line")));
+    }
+
+    @Test
+    void aQuestionablePlayerStillOnIrGetsAnEligibilityAlert() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-ir.json", "players-v1");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Baseline.");
+        checkRunner.runCheck();
+
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-questionable.json", "players-v2");
+        OutboundStubs.llmPhrases(llm, "Jacobs is eligible to leave IR.");
+        checkRunner.runCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Josh Jacobs"))
+                .withRequestBody(containing("eligible to leave IR"))
+                .withRequestBody(containing("Keep him on IR")));
+    }
+
+    @Test
+    void aHealthyPlayerStillOnIrGetsAnActionNeededAlert() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-ir.json", "players-v1");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Baseline.");
+        checkRunner.runCheck();
+
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl.json", "players-v2");
+        OutboundStubs.llmPhrases(llm, "Move Jacobs out of IR.");
+        checkRunner.runCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("IR action needed"))
+                .withRequestBody(containing("move Josh Jacobs out of IR"))
+                .withRequestBody(containing("bench spot may need to be opened"))
+                .withRequestBody(containing("recommendedMoves"))
+                .withRequestBody(containing("proposedRoster"))
+                .withRequestBody(containing("Projected lineup gain"))
+                .withRequestBody(containing("HIGH")));
+    }
+
+    @Test
+    void anEligiblePlayerStillOnIrGetsOneReminderBeforeHisGameLocks() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-ir.json", "players-v1");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Baseline.");
+        checkRunner.runCheck();
+
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-questionable.json", "players-v2");
+        OutboundStubs.llmPhrases(llm, "Jacobs is eligible.");
+        checkRunner.runCheck();
+
+        telegram.resetRequests();
+        llm.resetAll();
+        clock.set(Instant.parse("2026-09-21T23:50:00Z"));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        OutboundStubs.llmPhrases(llm, "IR reminder.");
+        checkRunner.runCheck();
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("IR reminder"))
+                .withRequestBody(containing("Josh Jacobs")));
     }
 
     @Test

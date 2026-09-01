@@ -279,6 +279,7 @@ public class WaiverScorer {
 
         private final PlayerDirectory directory;
         private final RosterSnapshot userRoster;
+        private final SleeperAdapter.League leagueRules;
         private final WeekFacts week;
         private final Instant now;
         private final WaiverQuery query;
@@ -305,10 +306,12 @@ public class WaiverScorer {
         private final List<Dropped> replacing;
         private final Set<String> boardPositions;
         private final boolean dropOpensASlot;
+        private final Optional<Dropped> automaticDrop;
 
         private Run(PlayerDirectory directory, LeagueWeek league, RosterSnapshot userRoster,
                 Instant now, WaiverQuery query, List<Dropped> replacing) {
             this.directory = directory;
+            this.leagueRules = league.league();
             this.replacing = replacing;
             this.userRoster = userRoster;
             this.week = league.week();
@@ -360,6 +363,7 @@ public class WaiverScorer {
             // never what anybody scores.
             this.boardPositions = boardPositions();
             this.dropOpensASlot = dropOpensASlot();
+            this.automaticDrop = automaticDrop();
 
             if (charts.isEmpty()) {
                 notes.add("I have no depth charts yet, so no candidate can earn usage points");
@@ -995,9 +999,60 @@ public class WaiverScorer {
                     faab.display(),
                     faab.low(),
                     faab.high(),
+                    recommendedDrop(projected),
                     gains,
                     gains == null ? null : candidate.beatsSomebodyNamed(),
                     List.copyOf(reasons));
+        }
+
+        private WaiverCandidate.DropRecommendation recommendedDrop(
+                Optional<Double> candidateProjection) {
+            if (hasOpenRosterSpot()) {
+                return new WaiverCandidate.DropRecommendation(null,
+                        "open roster spot available");
+            }
+            if (automaticDrop.isEmpty()) {
+                return new WaiverCandidate.DropRecommendation(null,
+                        "a roster spot must be opened, but there is no safe drop recommendation");
+            }
+            Dropped drop = automaticDrop.get();
+            String comparison = candidateProjection.flatMap(candidate -> drop.projection()
+                    .map(current -> candidate >= current
+                            ? "the candidate projects %s more points this week"
+                                    .formatted(points(candidate - current))
+                            : "the candidate does not out-project him this week"))
+                    .orElse("the weekly projection comparison is unavailable");
+            return new WaiverCandidate.DropRecommendation(
+                    drop.player().fullName(),
+                    "%s; %s is the lowest-projected expendable bench player"
+                            .formatted(comparison, drop.player().fullName()));
+        }
+
+        private boolean hasOpenRosterSpot() {
+            long capacity = leagueRules.rosterPositions().stream()
+                    .filter(position -> !"IR".equals(position) && !"TAXI".equals(position))
+                    .count();
+            long active = userRoster.players().stream()
+                    .filter(playerId -> !userRoster.reserve().contains(playerId))
+                    .filter(playerId -> !userRoster.taxi().contains(playerId))
+                    .count();
+            return active < capacity;
+        }
+
+        private Optional<Dropped> automaticDrop() {
+            if (hasOpenRosterSpot()) {
+                return Optional.empty();
+            }
+            return userRoster.players().stream()
+                    .filter(playerId -> !userRoster.starters().contains(playerId))
+                    .filter(playerId -> !userRoster.reserve().contains(playerId))
+                    .filter(playerId -> !userRoster.taxi().contains(playerId))
+                    .map(directory.players()::get)
+                    .filter(Objects::nonNull)
+                    .map(player -> new Dropped(player, projections.points(
+                            player.playerId(), player.position())))
+                    .min(Comparator.comparingDouble(drop ->
+                            drop.projection().orElse(Double.NEGATIVE_INFINITY)));
         }
 
         /**

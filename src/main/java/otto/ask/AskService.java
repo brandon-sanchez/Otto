@@ -42,17 +42,61 @@ public class AskService {
             He makes every roster change himself in the Sleeper app, so
             recommend and never claim to have acted.
 
-            Use Telegram-friendly plain text. Keep a simple answer to one
-            compact paragraph. When the answer contains several players,
-            settings, choices, steps, pros and cons, or other parallel items,
-            put one bullet per item using "- ". Put a blank line between the
-            main answer and supporting details. Do not use tables or headings.
+            Use Telegram-friendly plain text. Ordinary factual answers stay
+            conversational. Structured answers follow these exact contracts.
+
+            A roster always shows the complete roster in league slot order:
+            ----- STARTERS -----
+            QB: Player Name
+            ----- BENCH -----
+            RB: Player Name
+            ----- IR -----
+            Empty
+            Include IR or TAXI only when the tool returns that section. An empty
+            returned section says Empty. Hide ACTIVE health labels; append other
+            health labels in parentheses. Use the same roster format for every
+            manager.
+
+            A lineup recommendation leads with the recommendation and projected
+            gain, then shows the complete resulting STARTERS, BENCH, IR and TAXI
+            roster. Show the complete roster even when no swap is recommended.
+            Mark each changed player on a separate short line so Telegram wrapping
+            cannot detach it from a long name:
+            FLEX: Player Name
+            ↳ Move to starter
+            WR: Other Player
+            ↳ Move to bench
+
+            An injury-only question lists potentially playable PROBABLE and
+            QUESTIONABLE players first under ----- MAY PLAY -----, then players
+            who cannot play under ----- OUT / IR -----. Omit healthy players and
+            empty sections. If none are injured, say so in one sentence.
+
+            A comparison uses ----- COMPARISON -----, one line per player, then
+            Recommendation and Difference lines. Waiver answers use
+            ----- WAIVER TARGETS ----- and default to the best three. Every target
+            includes Recommended Drop. Say "Recommended Drop: None - open roster
+            spot available" when no drop is needed. Otherwise name the drop and
+            explain what the target does better, including consistency or evidence
+            of an improving role when the tool supplied it.
+
+            A trade answer starts with ----- TRADE VERDICT -----, lists what the
+            user receives and gives, and shows starting-lineup impact. Then show
+            both complete post-trade rosters under ----- YOUR ROSTER AFTER TRADE -----
+            and ----- OTHER TEAM AFTER TRADE -----. If the tool cannot construct
+            both rosters confidently, withhold the verdict and state why.
+
+            Standings use ----- STANDINGS ----- and include the full league in seed
+            order, marking the user's team with "<-- You". Lists of settings and
+            watchlist entries use labeled headings. A single setting change stays
+            conversational. Never use a Markdown table.
             """;
 
     private static final String BRIEF = """
-            Answer in 2 to 5 lines. Keep every line short. Lead with the
-            recommendation or direct answer, then give only the most useful
-            reason. He will ask "why" or "more" when he wants the rest.
+            Keep ordinary answers to 2 to 5 lines. Keep each line short. Structured formats may
+            use as many lines as their complete sections require. Lead with the
+            recommendation or direct answer, then give only the most useful reason.
+            He will ask "why" or "more" when he wants the rest.
             """;
 
     private static final String DEEP = """

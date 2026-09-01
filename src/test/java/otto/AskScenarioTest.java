@@ -87,6 +87,8 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("+3.5"))
                 .withRequestBody(containing("Josh Jacobs"))
                 .withRequestBody(containing("James Cook"))
+                .withRequestBody(containing("\\\"bench\\\""))
+                .withRequestBody(containing("\\\"reserve\\\""))
                 .withRequestBody(notContaining("99.9")));
     }
 
@@ -237,6 +239,27 @@ class AskScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void rosterStatusSeparatesReservePlayersFromTheBench() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-reserve");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "An alert.");
+        checkRunner.runCheck();
+        llm.resetAll();
+        telegram.resetRequests();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_roster_status", "{}",
+                "Here is your roster.");
+
+        ask("who is on my team?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("\\\"reserve\\\""))
+                .withRequestBody(containing("Josh Jacobs")));
+    }
+
+    @Test
     void leagueSettingsComeFromTheLeagueDocument() {
         snapshotWithABenchEdge();
         OutboundStubs.telegramOk(telegram);
@@ -332,8 +355,12 @@ class AskScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Use Telegram-friendly plain text"))
-                .withRequestBody(containing("one bullet per item"))
-                .withRequestBody(containing("blank line")));
+                .withRequestBody(containing("----- STARTERS -----"))
+                .withRequestBody(containing("----- BENCH -----"))
+                .withRequestBody(containing("Move to starter"))
+                .withRequestBody(containing("Recommended Drop"))
+                .withRequestBody(containing("YOUR ROSTER AFTER TRADE"))
+                .withRequestBody(containing("withhold the verdict")));
     }
 
     @Test

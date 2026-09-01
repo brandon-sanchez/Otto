@@ -103,12 +103,13 @@ public class CheckRunner {
         if (inSeason.isPresent()) {
             WeekFacts week = weekFactsBuilder.build(stage.league());
             newEvents.addAll(watchlistWatcher.observe(week, now));
-            alerts.addAll(alertService.process(inSeason.get(), week));
+            LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
+            alerts.addAll(alertService.process(leagueWeek));
             // The Tuesday waiver board rides on this loop and the Event
             // Log rather than on a scheduler of its own.
             waiverAlertService
                     .considerWaiverAlert(
-                            new LeagueWeek(stage.league(), inSeason.get(), week), now)
+                            leagueWeek, now)
                     .ifPresent(alerts::add);
             verificationService.verify(inSeason.get(), week, now);
         }

@@ -24,6 +24,8 @@ public record RosterSnapshot(
         boolean userRoster,
         List<String> starters,
         List<String> players,
+        List<String> reserve,
+        List<String> taxi,
         Map<String, PlayerHealth> playerHealth,
         Map<String, String> playerNames,
         Map<String, String> playerPositions,
@@ -34,6 +36,8 @@ public record RosterSnapshot(
     public RosterSnapshot {
         starters = starters == null ? List.of() : starters;
         players = players == null ? List.of() : players;
+        reserve = reserve == null ? List.of() : reserve;
+        taxi = taxi == null ? List.of() : taxi;
         playerHealth = playerHealth == null ? Map.of() : playerHealth;
         playerNames = playerNames == null ? Map.of() : playerNames;
         playerPositions = playerPositions == null ? Map.of() : playerPositions;

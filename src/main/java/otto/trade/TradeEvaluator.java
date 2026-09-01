@@ -1,9 +1,11 @@
 package otto.trade;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -132,6 +134,16 @@ public class TradeEvaluator {
             String startersNow, String startersAfter, String startersDelta) {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record TradeRosterLine(String slot, String player, String position, String health) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record PostTradeRoster(String manager, List<TradeRosterLine> starters,
+            List<TradeRosterLine> bench, List<TradeRosterLine> reserve,
+            List<TradeRosterLine> taxi) {
+    }
+
     /**
      * @param verdict even, slight edge or clear edge, from the user's
      *        net alone - the trade is his decision and nobody else's
@@ -148,6 +160,7 @@ public class TradeEvaluator {
             String restOfSeasonWeeks,
             Perspective yours, Perspective theirs, String verdict, String favours,
             String gap, String confidence, String partnerOutcome, List<String> leverage,
+            PostTradeRoster yourRosterAfter, PostTradeRoster partnerRosterAfter,
             List<String> notes) {
     }
 
@@ -403,7 +416,72 @@ public class TradeEvaluator {
                 deadline.filter(TradeDeadline::passed).isPresent()
                         ? List.of()
                         : leverage(leagueWeek, mine, partner),
+                postTradeRoster(mine, myAfter, outgoing, incoming, slots),
+                postTradeRoster(partner, theirAfter, incoming, outgoing, slots),
                 notes));
+    }
+
+    private PostTradeRoster postTradeRoster(RosterSnapshot before, Roster after,
+            Resolved leaving, Resolved arriving, List<Slot> slots) {
+        Set<String> holdings = new LinkedHashSet<>(before.players());
+        leaving.pieces().stream().map(Piece::player).filter(Objects::nonNull)
+                .map(DirectoryPlayer::playerId).forEach(holdings::remove);
+        arriving.pieces().stream().map(Piece::player).filter(Objects::nonNull)
+                .map(DirectoryPlayer::playerId).forEach(holdings::add);
+
+        Set<String> reserve = retained(before.reserve(), holdings);
+        Set<String> taxi = retained(before.taxi(), holdings);
+        Set<String> active = new LinkedHashSet<>(holdings);
+        active.removeAll(reserve);
+        active.removeAll(taxi);
+
+        Map<Integer, String> starters = rosterFit.startingLineup(slots, after.pool(), active);
+        Set<String> startingIds = new HashSet<>(starters.values());
+        List<TradeRosterLine> starterLines = new ArrayList<>();
+        for (int index = 0; index < slots.size(); index++) {
+            String playerId = starters.get(index);
+            starterLines.add(playerId == null
+                    ? new TradeRosterLine(slots.get(index).name(), null, null, null)
+                    : rosterLine(slots.get(index).name(), playerId, before, arriving));
+        }
+        List<TradeRosterLine> bench = active.stream()
+                .filter(playerId -> !startingIds.contains(playerId))
+                .map(playerId -> rosterLine(null, playerId, before, arriving))
+                .sorted(Comparator.comparing(TradeRosterLine::position,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        return new PostTradeRoster(
+                before.manager(),
+                starterLines,
+                bench,
+                reserve.stream().map(playerId -> rosterLine(null, playerId, before, arriving))
+                        .toList(),
+                taxi.stream().map(playerId -> rosterLine(null, playerId, before, arriving))
+                        .toList());
+    }
+
+    private static Set<String> retained(List<String> players, Set<String> holdings) {
+        return players.stream().filter(holdings::contains)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private TradeRosterLine rosterLine(String slot, String playerId, RosterSnapshot before,
+            Resolved arriving) {
+        DirectoryPlayer incoming = arriving.pieces().stream()
+                .map(Piece::player)
+                .filter(Objects::nonNull)
+                .filter(player -> player.playerId().equals(playerId))
+                .findFirst()
+                .orElse(null);
+        String name = incoming == null
+                ? before.playerNames().getOrDefault(playerId, playerId) : incoming.fullName();
+        String position = incoming == null
+                ? before.playerPositions().get(playerId) : incoming.position();
+        String health = incoming == null
+                ? Optional.ofNullable(before.playerHealth().get(playerId)).map(Enum::name)
+                        .orElse(null)
+                : incoming.health().name();
+        return new TradeRosterLine(slot, name, position, health);
     }
 
     /**

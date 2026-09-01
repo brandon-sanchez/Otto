@@ -390,6 +390,8 @@ class WaiverScenarioTest extends WireSeamTest {
                 // string, so its own quotes arrive escaped.
                 .withRequestBody(containing("score\\\":42"))
                 .withRequestBody(containing("$5-$10"))
+                .withRequestBody(containing("recommendedDrop"))
+                .withRequestBody(containing("open roster spot available"))
                 .withRequestBody(containing("TE replacement level is 5.5"))
                 .withRequestBody(containing("scale to Bucky Irving"))
                 .withRequestBody(containing("Tight End One"))

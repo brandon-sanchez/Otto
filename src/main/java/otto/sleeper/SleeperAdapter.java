@@ -125,7 +125,8 @@ public class SleeperAdapter {
      *        the budget it has left is the league budget less this
      */
     public record Roster(int rosterId, Optional<String> ownerId, List<String> players,
-            List<String> starters, TeamRecord teamRecord, int waiverBudgetUsed) {
+            List<String> starters, List<String> reserve, List<String> taxi,
+            TeamRecord teamRecord, int waiverBudgetUsed) {
     }
 
     /**
@@ -355,6 +356,8 @@ public class SleeperAdapter {
                                 .map(JsonNode::asText),
                         textList(roster.path("players")),
                         textList(roster.path("starters")),
+                        textList(roster.path("reserve")),
+                        textList(roster.path("taxi")),
                         teamRecord(roster.path("settings")),
                         integer(roster.path("settings").path("waiver_budget_used")).orElse(0)));
             }

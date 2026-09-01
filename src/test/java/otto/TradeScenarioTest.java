@@ -144,6 +144,9 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing("\\\"yourRosterAfter\\\""))
+                .withRequestBody(containing("\\\"partnerRosterAfter\\\""))
+                .withRequestBody(containing("TE Depth 06"))
                 .withRequestBody(notContaining("\\\"tradeDeadline\\\":")));
     }
 

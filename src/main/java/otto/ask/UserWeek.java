@@ -102,6 +102,24 @@ public record UserWeek(
     public List<String> bench() {
         return roster.players().stream()
                 .filter(playerId -> !roster.starters().contains(playerId))
+                .filter(playerId -> !roster.reserve().contains(playerId))
+                .filter(playerId -> !roster.taxi().contains(playerId))
                 .toList();
+    }
+
+    public List<String> reserve() {
+        return roster.reserve();
+    }
+
+    public List<String> taxi() {
+        return roster.taxi();
+    }
+
+    public boolean supportsReserve() {
+        return league.rosterPositions().contains("IR");
+    }
+
+    public boolean supportsTaxi() {
+        return league.rosterPositions().contains("TAXI");
     }
 }

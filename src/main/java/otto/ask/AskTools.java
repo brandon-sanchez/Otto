@@ -68,7 +68,8 @@ public class AskTools {
     @Tool(name = "get_roster_status", description = """
             The user's current roster this week: every starting slot with
             who fills it, their projected points and what stops them
-            scoring, plus the bench with the same detail. Call this for
+            scoring, plus bench, IR and taxi sections when the league
+            supports them. Call this for
             any question about who is on the team or how they look.""")
     public ToolAnswer<LineupPlanner.RosterStatus> getRosterStatus() {
         return switch (loader.load()) {
@@ -238,7 +239,7 @@ public class AskTools {
 
     @Tool(name = "get_team_roster", description = """
             Any league mate's team: the lineup they have set with
-            projections, their bench, and where they are deep or short
+            projections, their bench, IR and taxi sections, and where they are deep or short
             against replacement level at each position. Call this to size
             up a trade partner or to answer "what does X have".""")
     public ToolAnswer<LeagueAnalysis.TeamRoster> getTeamRoster(

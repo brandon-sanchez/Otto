@@ -92,19 +92,23 @@ public class SnapshotDiffer {
                 if (healthBefore == null || healthBefore == health) {
                     return;
                 }
+                Map<String, String> facts = new LinkedHashMap<>();
+                facts.put(DiffKind.factName(), DiffKind.STATUS.fact());
+                facts.put("playerId", playerId);
+                facts.put("player", roster.playerNames().getOrDefault(playerId, playerId));
+                facts.put("position", roster.playerPositions().getOrDefault(playerId, ""));
+                facts.put("team", roster.playerTeams().getOrDefault(playerId, ""));
+                facts.put("from", healthBefore.name());
+                facts.put("to", health.name());
+                facts.put("starter", String.valueOf(roster.starters().contains(playerId)));
+                facts.put("reserve", String.valueOf(roster.reserve().contains(playerId)));
+                facts.put("taxi", String.valueOf(roster.taxi().contains(playerId)));
+                facts.put("userRoster", String.valueOf(roster.userRoster()));
                 events.add(new Event(
                         "snapshot-diff:status:%s:%s->%s".formatted(playerId, healthBefore, health),
                         EventType.SNAPSHOT_DIFF,
                         at,
-                        Map.of(
-                                DiffKind.factName(), DiffKind.STATUS.fact(),
-                                "playerId", playerId,
-                                "player", roster.playerNames().getOrDefault(playerId, playerId),
-                                "team", roster.playerTeams().getOrDefault(playerId, ""),
-                                "from", healthBefore.name(),
-                                "to", health.name(),
-                                "starter", String.valueOf(roster.starters().contains(playerId)),
-                                "userRoster", String.valueOf(roster.userRoster()))));
+                        Map.copyOf(facts)));
             });
         }
         return events;

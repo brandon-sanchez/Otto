@@ -55,7 +55,8 @@ public class LineupPlanner {
     }
 
     public record RosterStatus(String week, String manager, String startersProjected,
-            List<SlotLine> starters, List<BenchLine> bench) {
+            List<SlotLine> starters, List<BenchLine> bench, List<BenchLine> reserve,
+            List<BenchLine> taxi) {
     }
 
     /** "Start {@code start} over {@code sit}" and what it gains. */
@@ -63,7 +64,8 @@ public class LineupPlanner {
     }
 
     public record LineupPlan(String week, String currentProjected, String optimalProjected,
-            String delta, List<SlotLine> optimal, List<Swap> swaps) {
+            String delta, List<SlotLine> optimal, List<BenchLine> bench,
+            List<BenchLine> reserve, List<BenchLine> taxi, List<Swap> swaps) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -79,7 +81,24 @@ public class LineupPlanner {
                     team.starterAt(index)));
         }
 
-        List<BenchLine> bench = team.bench().stream()
+        List<BenchLine> bench = rosterLines(team, now, team.bench());
+        List<BenchLine> reserve = team.supportsReserve()
+                ? rosterLines(team, now, team.reserve()) : null;
+        List<BenchLine> taxi = team.supportsTaxi()
+                ? rosterLines(team, now, team.taxi()) : null;
+
+        return new RosterStatus(
+                team.weekKey().orElse(null),
+                team.roster().ownerName(),
+                points(lineupTotal(team, team.starters())),
+                starters,
+                bench,
+                reserve,
+                taxi);
+    }
+
+    private List<BenchLine> rosterLines(UserWeek team, Instant now, List<String> playerIds) {
+        return playerIds.stream()
                 .map(playerId -> new BenchLine(
                         team.name(playerId),
                         team.position(playerId),
@@ -87,14 +106,20 @@ public class LineupPlanner {
                         team.health(playerId).name(),
                         team.projection(playerId),
                         note(team, now, playerId)))
+                .sorted(Comparator.comparingInt(line -> positionRank(line.position())))
                 .toList();
+    }
 
-        return new RosterStatus(
-                team.weekKey().orElse(null),
-                team.roster().ownerName(),
-                points(lineupTotal(team, team.starters())),
-                starters,
-                bench);
+    private static int positionRank(String position) {
+        return switch (position == null ? "" : position) {
+            case "QB" -> 0;
+            case "RB" -> 1;
+            case "WR" -> 2;
+            case "TE" -> 3;
+            case "K" -> 4;
+            case "DEF" -> 5;
+            default -> 6;
+        };
     }
 
     public ToolAnswer<LineupPlan> recommend(UserWeek team, Instant now) {
@@ -120,6 +145,11 @@ public class LineupPlanner {
                         slotOf(slots, optimal, swap.starting()),
                         signed(swap.gain())))
                 .toList();
+        List<String> proposedBench = team.roster().players().stream()
+                .filter(playerId -> !optimal.containsValue(playerId))
+                .filter(playerId -> !team.reserve().contains(playerId))
+                .filter(playerId -> !team.taxi().contains(playerId))
+                .toList();
 
         return ToolAnswer.of(new LineupPlan(
                 team.weekKey().orElse(null),
@@ -127,6 +157,9 @@ public class LineupPlanner {
                 points(best),
                 signed(best - current),
                 lines,
+                rosterLines(team, now, proposedBench),
+                team.supportsReserve() ? rosterLines(team, now, team.reserve()) : null,
+                team.supportsTaxi() ? rosterLines(team, now, team.taxi()) : null,
                 swaps));
     }
 
@@ -286,7 +319,8 @@ public class LineupPlanner {
     private Map<String, Double> movablePoints(UserWeek team, Instant now) {
         Map<String, Double> points = new HashMap<>();
         for (String playerId : team.roster().players()) {
-            if (!team.canPlay(playerId) || team.locked(playerId, now)) {
+            if (team.reserve().contains(playerId) || team.taxi().contains(playerId)
+                    || !team.canPlay(playerId) || team.locked(playerId, now)) {
                 continue;
             }
             team.points(playerId).ifPresent(projected -> points.put(playerId, projected));

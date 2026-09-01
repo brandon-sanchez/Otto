@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Collection;
 
 import org.springframework.stereotype.Component;
 
@@ -124,6 +125,16 @@ public class RosterFit {
                 .values().stream()
                 .mapToDouble(candidates::get)
                 .sum();
+    }
+
+    public Map<Integer, String> startingLineup(List<Slot> slots, Pool pool,
+            Collection<String> eligiblePlayers) {
+        Map<String, Double> candidates = pool.points().entrySet().stream()
+                .filter(entry -> eligiblePlayers.contains(entry.getKey()))
+                .collect(LinkedHashMap::new,
+                        (map, entry) -> map.put(entry.getKey(), entry.getValue()),
+                        LinkedHashMap::putAll);
+        return optimizer.assign(slots, candidates, pool.positions(), eligiblePlayers);
     }
 
     /**

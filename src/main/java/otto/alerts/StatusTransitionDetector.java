@@ -43,7 +43,11 @@ public class StatusTransitionDetector {
         String player = event.facts().get("player");
 
         Recommendation recommendation;
-        if (to.isWorseThan(from) && starter) {
+        boolean onReserve = "true".equals(event.facts().get("reserve"));
+        if (from == PlayerHealth.IR && onReserve
+                && to.ordinal() <= PlayerHealth.QUESTIONABLE.ordinal()) {
+            recommendation = reserveImprovement(playerId, player, to);
+        } else if (to.isWorseThan(from) && starter) {
             recommendation = starterDecline(playerId, player, from, to);
         } else if (to.isWorseThan(from)) {
             recommendation = benchDecline(playerId, player, from, to);
@@ -59,6 +63,26 @@ public class StatusTransitionDetector {
                 event.facts().getOrDefault("team", ""),
                 recommendation,
                 facts));
+    }
+
+    private Recommendation reserveImprovement(String playerId, String player, PlayerHealth to) {
+        if (to == PlayerHealth.ACTIVE || to == PlayerHealth.PROBABLE) {
+            return new Recommendation(
+                    playerId,
+                    player,
+                    "IR action needed: move %s out of IR".formatted(player),
+                    Confidence.HIGH,
+                    List.of("%s is healthy and eligible to leave IR".formatted(player)),
+                    List.of("A bench spot may need to be opened before Sleeper accepts the move"));
+        }
+        return new Recommendation(
+                playerId,
+                player,
+                "IR update: %s is eligible to leave IR but can stay there while %s"
+                        .formatted(player, to),
+                Confidence.MEDIUM,
+                List.of("If active, %s may be worth a starting slot".formatted(player)),
+                List.of("Keep him on IR until his game status becomes clearer"));
     }
 
     private Recommendation starterDecline(String playerId, String player,
