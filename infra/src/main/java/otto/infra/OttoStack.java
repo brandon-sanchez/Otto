@@ -388,9 +388,9 @@ public class OttoStack extends Stack {
                         .statistic("Sum")
                         .period(Duration.minutes(5))
                         .build(),
-                1, ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+                2, ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
                 TreatMissingData.NOT_BREACHING,
-                "Otto logged an error");
+                "Otto logged at least two errors within five minutes");
     }
 
     /**

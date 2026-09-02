@@ -158,11 +158,11 @@ class OttoStackTest {
     }
 
     @Test
-    void anErrorAndAStoppedCheckLoopBothRaiseAnAlarm() {
+    void repeatedErrorsAndAStoppedCheckLoopBothRaiseAnAlarm() {
         template.hasResourceProperties("AWS::CloudWatch::Alarm", Match.objectLike(Map.of(
                 "MetricName", "Errors",
                 "ComparisonOperator", "GreaterThanOrEqualToThreshold",
-                "Threshold", 1)));
+                "Threshold", 2)));
         template.hasResourceProperties("AWS::CloudWatch::Alarm", Match.objectLike(Map.of(
                 "MetricName", "CheckCompleted",
                 "ComparisonOperator", "LessThanThreshold",
