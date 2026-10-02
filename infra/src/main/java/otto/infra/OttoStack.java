@@ -44,7 +44,6 @@ import software.amazon.awscdk.services.s3.LifecycleRule;
 import software.amazon.awscdk.services.scheduler.CfnSchedule;
 import software.amazon.awscdk.services.sns.Topic;
 import software.amazon.awscdk.services.sns.subscriptions.EmailSubscription;
-import software.amazon.awscdk.services.sns.subscriptions.LambdaSubscription;
 import software.constructs.Construct;
 
 /**
@@ -140,15 +139,13 @@ public class OttoStack extends Stack {
                 .authType(FunctionUrlAuthType.NONE)
                 .build());
 
-        LogGroup forwarderLogs = logGroup("AlarmForwarderLogs");
-        Topic alarms = alarmTopic(alertEmail, environment, parameterPath, forwarderLogs);
-        // The forwarder is watched too. It is the part that tells the
-        // user an alarm fired, so it failing quietly would cost every
-        // other alarm its voice.
+        // The retired alarm forwarder's logs, kept until their entries
+        // expire. A later change removes them.
+        logGroup("AlarmForwarderLogs");
+        Topic alarms = alarmTopic(alertEmail);
         errorAlarm(alarms, Map.of(
                 "Scheduled", scheduledLogs,
-                "Webhook", webhookLogs,
-                "AlarmForwarder", forwarderLogs));
+                "Webhook", webhookLogs));
         heartbeatAlarm(alarms, scheduledLogs);
         budget(alertEmail);
 
@@ -342,32 +339,14 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * Where an alarm goes: email, which keeps, and Telegram, which the
-     * user reads in time. The forwarder is its own function, because
-     * what it reports on is the assistant being down.
+     * Where an alarm goes: the owner's email, and nowhere else. The
+     * Telegram chat carries fantasy advice only.
      */
-    private Topic alarmTopic(String alertEmail, Map<String, String> environment,
-            String parameterPath, LogGroup forwarderLogs) {
+    private Topic alarmTopic(String alertEmail) {
         Topic topic = Topic.Builder.create(this, "Alarms")
                 .displayName("Otto alarms")
                 .build();
         topic.addSubscription(new EmailSubscription(alertEmail));
-
-        Function forwarder = Function.Builder.create(this, "AlarmForwarder")
-                .runtime(RUNTIME)
-                .architecture(ARCHITECTURE)
-                .handler("otto.aws.AlarmForwarderHandler")
-                .code(Code.fromAsset(LAMBDA_ASSET))
-                .memorySize(MEMORY_MB)
-                // No SnapStart here: alarms are rare, so this one pays a
-                // cold Spring start rather than carrying a version and an
-                // alias for the sake of a few seconds nobody waits on.
-                .timeout(Duration.seconds(60))
-                .environment(environment)
-                .logGroup(forwarderLogs)
-                .build();
-        readSecrets(forwarder, parameterPath);
-        topic.addSubscription(new LambdaSubscription(forwarder));
         return topic;
     }
 

@@ -170,14 +170,22 @@ class OttoStackTest {
                 "Threshold", 1)));
     }
 
-    /**
-     * The forwarder is what turns an alarm into a text, so an error in
-     * it would cost every other alarm its voice.
-     */
     @Test
     void everyFunctionsLogIsWatchedForErrors() {
-        template.resourceCountIs("AWS::Logs::MetricFilter", 4);
-        template.resourceCountIs("AWS::Logs::LogGroup", 3);
+        assertThat(template.findResources("AWS::Logs::MetricFilter", Match.objectLike(Map.of(
+                "Properties", Match.objectLike(Map.of("FilterPattern", "\"ERROR\""))))))
+                .as("one error filter each: the scheduled function and the webhook")
+                .hasSize(2);
+    }
+
+    /**
+     * The retired alarm forwarder's log group stays until its last
+     * entries expire. Dropping it sooner deletes them with it.
+     */
+    @Test
+    void theRetiredForwarderLogGroupIsKeptUntilItsEntriesExpire() {
+        assertThat(template.findResources("AWS::Logs::LogGroup").keySet())
+                .contains("AlarmForwarderLogsF0CE99FC");
     }
 
     @Test
@@ -191,14 +199,18 @@ class OttoStackTest {
     }
 
     @Test
-    void anAlarmReachesTheUserByEmailAndByTelegram() {
+    void anAlarmReachesTheUserByEmailOnly() {
         template.hasResourceProperties("AWS::SNS::Subscription",
                 Match.objectLike(Map.of("Protocol", "email",
                         "Endpoint", "manager@example.com")));
-        template.hasResourceProperties("AWS::SNS::Subscription",
-                Match.objectLike(Map.of("Protocol", "lambda")));
-        template.hasResourceProperties("AWS::Lambda::Function",
-                Match.objectLike(Map.of("Handler", "otto.aws.AlarmForwarderHandler")));
+        assertThat(template.findResources("AWS::SNS::Subscription", Match.objectLike(Map.of(
+                "Properties", Match.objectLike(Map.of("Protocol", "lambda"))))))
+                .as("no function subscribes to the alarm topic")
+                .isEmpty();
+        assertThat(template.findResources("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Properties", Match.objectLike(
+                        Map.of("Handler", "otto.aws.AlarmForwarderHandler"))))))
+                .isEmpty();
     }
 
     @Test
@@ -231,8 +243,8 @@ class OttoStackTest {
         }
 
         assertThat(grants)
-                .as("one grant each: the scheduled function, the webhook, the forwarder")
-                .hasSize(3)
+                .as("one grant each: the scheduled function and the webhook")
+                .hasSize(2)
                 .allSatisfy(resource -> assertThat((List<?>) resource)
                         .as("the path itself, and the parameters under it")
                         .hasSize(2));

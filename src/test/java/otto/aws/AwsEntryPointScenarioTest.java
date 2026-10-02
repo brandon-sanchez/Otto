@@ -8,7 +8,6 @@ import java.util.Properties;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
-import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
@@ -96,19 +95,6 @@ class AwsEntryPointScenarioTest {
         assertThat(answer.getStatusCode()).isEqualTo(200);
     }
 
-    @Test
-    void aForwardedAlarmSaysWhatItIsAbout() {
-        assertThat(new AlarmForwarderHandler().text(sns("ALARM: otto-check-heartbeat")))
-                .contains("otto-check-heartbeat")
-                .contains("CloudWatch");
-    }
-
-    @Test
-    void anAlarmWithNoSubjectStillReachesTheUser() {
-        assertThat(new AlarmForwarderHandler().text(sns(null)))
-                .contains("CloudWatch");
-    }
-
     /**
      * The laptop must never reach for Parameter Store. The parameter
      * path is what turns the lookup on, so an environment without one
@@ -149,9 +135,5 @@ class AwsEntryPointScenarioTest {
                 .withBody(body)
                 .withIsBase64Encoded(encoded)
                 .build();
-    }
-
-    private SNSEvent.SNS sns(String subject) {
-        return new SNSEvent.SNS().withSubject(subject).withMessage("{}");
     }
 }
