@@ -33,10 +33,6 @@ while the user waited. Lambda constructs the handler during init, so
 the constructor is the hook that actually runs before the snapshot is
 taken.
 
-The alarm forwarder deliberately does not do this. It has no SnapStart,
-and an init phase without SnapStart is limited to 10 seconds, which is
-less than Spring takes.
-
 SnapStart restores a *version*, never `$LATEST`. Both functions
 therefore sit behind an alias, and the schedules and the function URL
 target the alias. A schedule pointed at the bare function would run a
@@ -168,12 +164,11 @@ when a message failed to send.
 ## The assistant reports on itself
 
 CloudWatch logs keep 14 days. Two alarms feed one SNS topic, and the
-topic reaches the user twice: email, which keeps, and a forwarder
-Lambda that posts to the Telegram chat, which the user reads in time.
+topic reaches the owner by email only.
 
-The forwarder is its own function on purpose. What it reports on is the
-assistant being broken, and a forwarder living inside the assistant
-would be broken with it.
+Alarms previously also went to the Telegram chat through a separate
+forwarder Lambda. They were moved to email only so the fantasy chat
+holds only fantasy advice.
 
 The error alarm counts `ERROR` lines in both application log groups.
 The heartbeat alarm counts one line every Check logs, and treats
@@ -231,5 +226,4 @@ deployable must not carry the CDK libraries.
 
 IAM is least-privilege per function. The bucket grant names the one
 object key the app writes, so a function that went wrong could not fill
-the bucket with anything else. The forwarder reads secrets and nothing
-else.
+the bucket with anything else.

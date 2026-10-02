@@ -105,6 +105,6 @@ call `deleteWebhook`.
 - **The Ask loop.** Text the bot. A reply exercises the function URL, the
   secret token, the chat gate and the model.
 - **The alarm.** Disable `CheckSchedule` in the EventBridge Scheduler
-  console and wait fifteen minutes. An email and a Telegram message
-  should arrive. Re-enable it afterwards. Until it has fired once, you do
+  console and wait fifteen minutes. An alarm email should arrive.
+  Re-enable it afterwards. Until it has fired once, you do
   not know the assistant can tell you it has stopped.
