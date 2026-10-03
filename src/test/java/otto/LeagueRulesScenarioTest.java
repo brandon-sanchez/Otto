@@ -18,23 +18,10 @@ import otto.sleeper.SourceResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Each league's rules, read from its own Sleeper settings document.
- *
- * The redraft fixture carries the owner's real league settings. The
- * dynasty fixture copies a real dynasty league's waiver, IR and taxi
- * settings. The keeper fixture is synthetic: a keeper limit, a $1
- * minimum bid, and claims that run on Tuesday.
- */
 class LeagueRulesScenarioTest extends WireSeamTest {
 
-    /** Wednesday 2026-09-16, 03:00 in New York, in summer time. */
     private static final Instant SEPTEMBER_DEADLINE = Instant.parse("2026-09-16T07:00:00Z");
 
-    /**
-     * Wednesday 2026-11-04, 03:00 in New York. Daylight saving ended on
-     * 1 November, so the same wall-clock deadline is an hour later in UTC.
-     */
     private static final Instant NOVEMBER_DEADLINE = Instant.parse("2026-11-04T08:00:00Z");
 
     @Autowired

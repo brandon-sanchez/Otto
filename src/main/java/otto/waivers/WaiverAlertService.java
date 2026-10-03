@@ -32,20 +32,6 @@ import otto.sleeper.SourceResult;
  * role tags and a FAAB range each, in the user's chat at 18:00
  * America/Los_Angeles the evening before the league's own claim
  * deadline. On Sleeper's default schedule that is Tuesday evening.
- *
- * <p>It runs no scheduler of its own. Every Check asks the same
- * question - has the evening before the next claim deadline begun, and
- * does the Event Log already hold that evening's Alert? - so the
- * 1-minute loop plus one Event Log key is the whole timer. The instant
- * is derived by putting 18:00 on the evening's own date in the
- * America/Los_Angeles zone, so the summer Alert lands at 01:00Z and the
- * winter one at 02:00Z without anybody writing an offset down.
- *
- * <p>An Alert that missed its evening is dropped rather than sent late:
- * once the claim deadline passes, the next deadline is a week away and
- * its evening has not begun. A league whose claim deadline is unknown
- * gets no scheduled board rather than one timed to another league's
- * schedule.
  */
 @Component
 public class WaiverAlertService {
@@ -87,8 +73,6 @@ public class WaiverAlertService {
             return Optional.empty();
         }
         String key = "alert:waiver:" + due.toLocalDate();
-        // Switched off in Settings, muted, or already sent: the board
-        // is not computed at all, so a quiet week costs nothing.
         if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
@@ -108,13 +92,6 @@ public class WaiverAlertService {
         };
     }
 
-    /**
-     * 18:00 America/Los_Angeles on the day before the claim day. The
-     * claim day is the deadline's own date in Sleeper's claim zone, so
-     * an early-morning deadline that falls on the previous date in Los
-     * Angeles still gets the evening before its claim day, and the
-     * zone's own rules decide the offset across daylight saving.
-     */
     static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
         return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
                 .atTime(WAIVER_TIME)

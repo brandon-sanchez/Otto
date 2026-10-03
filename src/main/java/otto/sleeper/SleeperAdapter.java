@@ -38,7 +38,7 @@ public class SleeperAdapter {
 
     private static final List<String> WHOLE_NUMBER_SETTINGS = Stream.concat(
             Stream.of("waiver_budget", "trade_deadline"),
-            LeagueRules.SETTINGS_FIELDS.stream()).toList();
+            LeagueRules.WHOLE_NUMBER_FIELDS.stream()).toList();
 
     private final SleeperClient client;
     private final SleeperCache cache;
@@ -253,10 +253,6 @@ public class SleeperAdapter {
                 return schemaDrift(leaguePath, "league_id or status missing");
             }
             JsonNode settings = body.path("settings");
-            // A drifted number must fail loudly rather than read as
-            // absent: the waiver board would price every bid against a
-            // budget of nothing, or quietly stop going out because the
-            // claim day read as unknown.
             for (String field : WHOLE_NUMBER_SETTINGS) {
                 if (unreadableNumber(settings.path(field))) {
                     return schemaDrift(leaguePath, "settings." + field + " is not a whole number");

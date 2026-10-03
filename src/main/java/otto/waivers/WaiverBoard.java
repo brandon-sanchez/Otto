@@ -6,9 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * The ranked free agents, the budget they are priced against, and what
- * the ranking could not see. The waiver Alert and the
- * {@code rank_waiver_targets} tool read the same board, so a question
- * asked after the Alert gets the same math the Alert used.
+ * the ranking could not see.
  *
  * @param answer the plain answer to the question, when the honest
  *        answer is that there is nothing here worth doing: nobody beats

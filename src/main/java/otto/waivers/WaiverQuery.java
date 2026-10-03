@@ -11,8 +11,7 @@ import java.util.stream.Collectors;
 /**
  * What a caller asked the waiver board for: which positions, how many
  * candidates, who the user would drop for them, and whether to keep to
- * the positions he is short at. The waiver Alert asks for the top five
- * at every position; a chat question asks for whatever the user said.
+ * the positions he is short at.
  *
  * <p>None of it changes a score. The positions, the count, the drop
  * side and the needs filter all narrow what the board <em>shows</em>;
@@ -60,7 +59,6 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
     /** The positions the Player Directory keeps, in board order. */
     public static final List<String> ALL_POSITIONS = List.of("QB", "RB", "WR", "TE");
 
-    /** The waiver Alert's board: the top five, every position. */
     public static final int ALERT_COUNT = 5;
 
     /**

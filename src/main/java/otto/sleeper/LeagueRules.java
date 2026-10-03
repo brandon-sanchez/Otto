@@ -62,8 +62,7 @@ public record LeagueRules(
 
     public static final LocalTime CLAIM_TIME = LocalTime.of(3, 0);
 
-    /** Every whole-number settings field these rules are read from. */
-    static final List<String> SETTINGS_FIELDS = Stream.concat(
+    static final List<String> WHOLE_NUMBER_FIELDS = Stream.concat(
             Stream.of("type", "max_keepers", "waiver_type", "waiver_bid_min",
                     "daily_waivers", "waiver_day_of_week", "waiver_clear_days",
                     "reserve_slots", "taxi_slots", "taxi_years", "taxi_allow_vets",
@@ -192,7 +191,6 @@ public record LeagueRules(
         return integer(value).filter(number -> number >= 0);
     }
 
-    /** Sleeper writes a switch as 0 or 1. */
     private static Optional<Boolean> flag(JsonNode value) {
         return integer(value).filter(number -> number == 0 || number == 1)
                 .map(number -> number == 1);

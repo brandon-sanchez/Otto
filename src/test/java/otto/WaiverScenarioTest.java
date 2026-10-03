@@ -77,6 +77,9 @@ class WaiverScenarioTest extends WireSeamTest {
     /** Tuesday 2026-09-15 at 18:00 America/Los_Angeles, in summer time. */
     private static final Instant TUESDAY_EVENING = Instant.parse("2026-09-16T01:00:00Z");
 
+    private static final Instant MONDAY_EVENING_BEFORE_TUESDAY_CLAIMS =
+            Instant.parse("2026-09-22T01:00:00Z");
+
     /**
      * Tuesday 2026-11-03 at 18:00 America/Los_Angeles. Daylight saving
      * ended on 1 November, so the same local evening is an hour later
@@ -84,12 +87,7 @@ class WaiverScenarioTest extends WireSeamTest {
      */
     private static final Instant WINTER_TUESDAY_EVENING = Instant.parse("2026-11-04T02:00:00Z");
 
-    /**
-     * The league's claim deadline: Wednesday 03:00 in New York, which is
-     * midnight at the end of that Tuesday in Los Angeles. From here on
-     * the claims have processed, so the board is no longer worth sending.
-     */
-    private static final Instant LAST_CALL = Instant.parse("2026-09-16T07:00:00Z");
+    private static final Instant CLAIM_DEADLINE = Instant.parse("2026-09-16T07:00:00Z");
 
     private static final String SEPTEMBER_BOARD = "alert:waiver:2026-09-15";
     private static final String NOVEMBER_BOARD = "alert:waiver:2026-11-03";
@@ -260,7 +258,7 @@ class WaiverScenarioTest extends WireSeamTest {
 
         // A source was down at 18:00 and came back at 23:59. The whole
         // evening is still the user's to plan in, so the board goes.
-        runCheckAt(LAST_CALL.minus(Duration.ofMinutes(1)));
+        runCheckAt(CLAIM_DEADLINE.minus(Duration.ofMinutes(1)));
 
         assertThat(boardEvent(SEPTEMBER_BOARD)).isPresent();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
@@ -276,10 +274,10 @@ class WaiverScenarioTest extends WireSeamTest {
         // when claims clear. A board here is advice on bids that have
         // already processed, so nothing is sent and nothing is
         // recorded - not at midnight, and not later that day.
-        runCheckAt(LAST_CALL);
+        runCheckAt(CLAIM_DEADLINE);
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
 
-        runCheckAt(LAST_CALL.plus(Duration.ofHours(13)));
+        runCheckAt(CLAIM_DEADLINE.plus(Duration.ofHours(13)));
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
@@ -311,15 +309,10 @@ class WaiverScenarioTest extends WireSeamTest {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "Five waiver targets for Tuesday.");
 
-        // This league's claims ran at 03:00 New York time that Tuesday
-        // morning, so Tuesday evening is too late for them and too early
-        // for next week's.
         runCheckAt(TUESDAY_EVENING);
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
 
-        // Monday 2026-09-21 at 18:00 in Los Angeles, the evening before
-        // the next Tuesday run.
-        runCheckAt(Instant.parse("2026-09-22T01:00:00Z"));
+        runCheckAt(MONDAY_EVENING_BEFORE_TUESDAY_CLAIMS);
         Event board = boardEvent("alert:waiver:2026-09-21").orElseThrow();
         assertThat(board.facts())
                 .containsEntry("claimDeadline", "2026-09-22T03:00-04:00[America/New_York]");
@@ -337,8 +330,6 @@ class WaiverScenarioTest extends WireSeamTest {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "Five waiver targets.");
 
-        // Sleeper did not say when this league's claims are due, so no
-        // evening is borrowed from another league's schedule.
         runCheckAt(TUESDAY_EVENING);
 
         assertThat(eventLog.all().stream()
@@ -416,8 +407,6 @@ class WaiverScenarioTest extends WireSeamTest {
 
     @Test
     void aClaimDaySleeperGarblesStopsTheDocumentRatherThanSilencingTheBoard() {
-        // Read as unknown, a garbled claim day would quietly stop the
-        // board going out with nothing to say why.
         SleeperStubs.waiverWeek(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
                 "sleeper/league-in-season-drifted-claim-day.json", "league-drifted");
