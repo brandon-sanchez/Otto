@@ -415,6 +415,28 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aClaimDaySleeperGarblesStopsTheDocumentRatherThanSilencingTheBoard() {
+        // Read as unknown, a garbled claim day would quietly stop the
+        // board going out with nothing to say why.
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season-drifted-claim-day.json", "league-drifted");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A source is down.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
+        assertThat(eventLog.all())
+                .anyMatch(event -> event.type() == EventType.SOURCE_UNAVAILABLE
+                        && event.facts().getOrDefault("reason", "")
+                                .contains("settings.waiver_day_of_week is not a whole number"));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("waiver_day_of_week is not a whole number")));
+    }
+
+    @Test
     void rankWaiverTargetsAnswersByChatForOnePositionAndAnyCount() {
         aWaiverWeekOnDisk();
         OutboundStubs.telegramOk(telegram);

@@ -7,17 +7,24 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import static otto.sleeper.SleeperAdapter.integer;
+
 /**
  * One league's own rules, read from that league's settings document
- * alone. A rule Sleeper does not return, or returns in a shape this
- * code does not recognise, is empty: unknown, which is not the same as
- * off or zero, and never a value borrowed from another league.
+ * alone. A rule Sleeper does not return is empty: unknown, which is not
+ * the same as off or zero, and never a value borrowed from another
+ * league. A rule it returns as something other than a whole number is
+ * schema drift, which {@link SleeperAdapter#league()} reports before
+ * these rules are read.
  *
  * @param keeperLimit the most players a keeper league lets a team keep.
  *        Sleeper writes {@code max_keepers} into redraft and dynasty
@@ -55,6 +62,15 @@ public record LeagueRules(
 
     public static final LocalTime CLAIM_TIME = LocalTime.of(3, 0);
 
+    /** Every whole-number settings field these rules are read from. */
+    static final List<String> SETTINGS_FIELDS = Stream.concat(
+            Stream.of("type", "max_keepers", "waiver_type", "waiver_bid_min",
+                    "daily_waivers", "waiver_day_of_week", "waiver_clear_days",
+                    "reserve_slots", "taxi_slots", "taxi_years", "taxi_allow_vets",
+                    "taxi_deadline"),
+            Arrays.stream(ReserveDesignation.values()).map(ReserveDesignation::settingsField))
+            .toList();
+
     public enum LeagueFormat {
         REDRAFT, KEEPER, DYNASTY
     }
@@ -73,6 +89,10 @@ public record LeagueRules(
         ReserveDesignation(String sleeperKey) {
             this.sleeperKey = sleeperKey;
         }
+
+        private String settingsField() {
+            return "reserve_allow_" + sleeperKey;
+        }
     }
 
     /**
@@ -85,7 +105,7 @@ public record LeagueRules(
     public record Reserve(Optional<Integer> slots, Map<ReserveDesignation, Boolean> allowed) {
 
         public Reserve {
-            allowed = allowed.isEmpty() ? Map.of() : Map.copyOf(allowed);
+            allowed = Map.copyOf(allowed);
         }
 
         public Optional<Boolean> allows(ReserveDesignation designation) {
@@ -131,7 +151,7 @@ public record LeagueRules(
 
         Map<ReserveDesignation, Boolean> allowed = new EnumMap<>(ReserveDesignation.class);
         for (ReserveDesignation designation : ReserveDesignation.values()) {
-            flag(settings.path("reserve_allow_" + designation.sleeperKey))
+            flag(settings.path(designation.settingsField()))
                     .ifPresent(allows -> allowed.put(designation, allows));
         }
 
@@ -176,11 +196,5 @@ public record LeagueRules(
     private static Optional<Boolean> flag(JsonNode value) {
         return integer(value).filter(number -> number == 0 || number == 1)
                 .map(number -> number == 1);
-    }
-
-    private static Optional<Integer> integer(JsonNode value) {
-        return value.isIntegralNumber() && value.canConvertToInt()
-                ? Optional.of(value.asInt())
-                : Optional.empty();
     }
 }

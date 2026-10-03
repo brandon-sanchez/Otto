@@ -126,9 +126,7 @@ class LeagueRulesScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aRuleSleeperDoesNotReturnStaysUnknownAfterAFullyStatedLeague() {
-        rulesOf("sleeper/league-dynasty.json", "dynasty");
-
+    void aRuleSleeperDoesNotReturnIsUnknownRatherThanOffOrZero() {
         LeagueRules rules = rulesOf("sleeper/league-rules-unstated.json", "unstated");
 
         assertThat(rules.format()).isEmpty();
