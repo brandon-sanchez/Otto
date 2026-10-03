@@ -105,7 +105,7 @@ public class CheckRunner {
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
             alerts.addAll(alertService.process(leagueWeek));
-            // The Tuesday waiver board rides on this loop and the Event
+            // The waiver board rides on this loop and the Event
             // Log rather than on a scheduler of its own.
             waiverAlertService
                     .considerWaiverAlert(

@@ -112,7 +112,7 @@ public class AlertActions {
             return AlertCandidate.Source.EDGE.muteClass();
         }
         // A waiver board names five players, so muting it can only mean
-        // the class: the user is saying he does not want the Tuesday
+        // the class: the user is saying he does not want the weekly
         // board, not that he is done with one of the targets on it.
         if (problemKeys.stream().anyMatch(key -> key.startsWith("waiver:"))) {
             return Trigger.WAIVER.muteTarget();
