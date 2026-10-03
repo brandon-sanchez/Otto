@@ -61,6 +61,13 @@ public record RosterSnapshot(
         return unclaimedName(rosterId);
     }
 
+    public long activePlayerCount() {
+        return players.stream()
+                .filter(playerId -> !reserve.contains(playerId))
+                .filter(playerId -> !taxi.contains(playerId))
+                .count();
+    }
+
     /** What a team is called before anyone has claimed it. */
     public static String unclaimedName(int rosterId) {
         return "team " + rosterId;

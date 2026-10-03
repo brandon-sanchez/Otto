@@ -207,14 +207,7 @@ public class AlertService {
     }
 
     private static Optional<String> recommendedDrop(UserWeek team, String activatedPlayerId) {
-        long capacity = team.league().rosterPositions().stream()
-                .filter(position -> !"IR".equals(position) && !"TAXI".equals(position))
-                .count();
-        long active = team.roster().players().stream()
-                .filter(playerId -> !team.roster().reserve().contains(playerId))
-                .filter(playerId -> !team.roster().taxi().contains(playerId))
-                .count();
-        if (active <= capacity) {
+        if (team.roster().activePlayerCount() <= team.league().activeRosterSpots()) {
             return Optional.empty();
         }
         return team.bench().stream()

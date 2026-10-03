@@ -279,7 +279,7 @@ public class WaiverScorer {
 
         private final PlayerDirectory directory;
         private final RosterSnapshot userRoster;
-        private final SleeperAdapter.League leagueRules;
+        private final SleeperAdapter.League league;
         private final WeekFacts week;
         private final Instant now;
         private final WaiverQuery query;
@@ -311,7 +311,7 @@ public class WaiverScorer {
         private Run(PlayerDirectory directory, LeagueWeek league, RosterSnapshot userRoster,
                 Instant now, WaiverQuery query, List<Dropped> replacing) {
             this.directory = directory;
-            this.leagueRules = league.league();
+            this.league = league.league();
             this.replacing = replacing;
             this.userRoster = userRoster;
             this.week = league.week();
@@ -1029,14 +1029,7 @@ public class WaiverScorer {
         }
 
         private boolean hasOpenRosterSpot() {
-            long capacity = leagueRules.rosterPositions().stream()
-                    .filter(position -> !"IR".equals(position) && !"TAXI".equals(position))
-                    .count();
-            long active = userRoster.players().stream()
-                    .filter(playerId -> !userRoster.reserve().contains(playerId))
-                    .filter(playerId -> !userRoster.taxi().contains(playerId))
-                    .count();
-            return active < capacity;
+            return userRoster.activePlayerCount() < league.activeRosterSpots();
         }
 
         private Optional<Dropped> automaticDrop() {

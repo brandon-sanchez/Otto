@@ -7,7 +7,7 @@ Sleeper tells you a starter is out when you remember to open the app. Otto tells
 ## What it does
 
 - **Texts you first.** A starter ruled out, an illegal lineup before lock, a bench player projecting better than the one you started.
-- **Plans your waivers.** Every Tuesday evening: the top five free agents, what kind of pickup each one is, and what to bid out of the FAAB you have left.
+- **Plans your waivers.** The evening before your league's waiver claims are due (Tuesday on Sleeper's default schedule): the top five free agents, what kind of pickup each one is, and what to bid out of the FAAB you have left.
 - **Watches the league.** Trades, notable drops, and the moment another manager claims a player off your watchlist.
 - **Answers questions.** "Who do I start at flex?" "Is Jacobs worth $30?" "What's my playoff seed?"
 
@@ -58,7 +58,7 @@ Now text the bot. It answers in the same chat, and the buttons under an alert wo
 | Your starter is ruled out | Yes, with the best legal replacement |
 | A starting slot is empty, or on a bye | Yes, before that slot locks |
 | A bench player projects a point or more better | Yes |
-| It is Tuesday evening | Yes, the waiver board |
+| It is the evening before waiver claims are due | Yes, the waiver board |
 | Another manager claims a player you are watching | Yes, always |
 | Anyone in the league trades | Yes |
 | A top-24 running back is dropped | Yes |

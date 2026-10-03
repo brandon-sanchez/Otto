@@ -1,15 +1,14 @@
 package otto.waivers;
 
-import java.time.DayOfWeek;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalAdjusters;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,25 +24,14 @@ import otto.events.Event;
 import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
+import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 
 /**
- * The Tuesday waiver Alert: the top five free agents, their reasons,
- * their role tags and a FAAB range each, in the user's chat at 18:00
- * America/Los_Angeles the evening before Wednesday's claims clear.
- *
- * <p>It runs no scheduler of its own. Every Check asks the same
- * question - has the most recent Tuesday 18:00 passed, and does the
- * Event Log already hold that Tuesday's Alert? - so the 1-minute loop
- * plus one Event Log key is the whole timer. The instant is derived by
- * putting 18:00 on the Tuesday's own date in the America/Los_Angeles
- * zone, so the summer Alert lands at 01:00Z and the winter one at
- * 02:00Z without anybody writing an offset down.
- *
- * <p>An Alert that missed its evening is dropped rather than sent late.
- * Waivers clear on Wednesday, so the board goes out on the Tuesday it
- * is due or not at all - and the Event Log stays empty for that
- * Tuesday, which is the honest record of a board that never went out.
+ * The waiver Alert: the top five free agents, their reasons, their
+ * role tags and a FAAB range each, in the user's chat at 18:00
+ * America/Los_Angeles the evening before the league's own claim
+ * deadline. On Sleeper's default schedule that is Tuesday evening.
  */
 @Component
 public class WaiverAlertService {
@@ -51,7 +39,6 @@ public class WaiverAlertService {
     /** The user's zone. Pinned here, not read from the clock: the Check runs in UTC. */
     private static final ZoneId WAIVER_ZONE = ZoneId.of("America/Los_Angeles");
 
-    private static final DayOfWeek WAIVER_DAY = DayOfWeek.TUESDAY;
     private static final LocalTime WAIVER_TIME = LocalTime.of(18, 0);
 
     private final WaiverScorer scorer;
@@ -71,19 +58,21 @@ public class WaiverAlertService {
     }
 
     /**
-     * Sends this Tuesday's waiver Alert if it is due and has not gone
-     * out yet.
+     * Sends this week's waiver Alert if it is due and has not gone out
+     * yet.
      *
      * @return the Event recorded for a sent Alert, empty otherwise
      */
     public Optional<Event> considerWaiverAlert(LeagueWeek league, Instant now) {
-        ZonedDateTime due = mostRecentWaiverEvening(now);
-        if (!now.isBefore(lastCallFor(due))) {
+        Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now);
+        if (deadline.isEmpty()) {
+            return Optional.empty();
+        }
+        ZonedDateTime due = eveningBefore(deadline.get());
+        if (now.isBefore(due.toInstant())) {
             return Optional.empty();
         }
         String key = "alert:waiver:" + due.toLocalDate();
-        // Switched off in Settings, muted, or already sent: the board
-        // is not computed at all, so a quiet Tuesday costs nothing.
         if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
@@ -95,50 +84,30 @@ public class WaiverAlertService {
         // the next minute inside the window. A board that never
         // computed is not a board that was sent.
         return switch (scorer.rank(league, now,
-                WaiverQuery.everyPosition(WaiverQuery.TUESDAY_COUNT))) {
+                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT))) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
-                    : send(key, due, ok.value(), now);
+                    : send(key, due, deadline.get(), ok.value(), now);
         };
     }
 
-    /**
-     * The Tuesday 18:00 America/Los_Angeles that has most recently
-     * passed. Derived from the local calendar date, so the zone's own
-     * rules decide the offset and no daylight-saving change can move
-     * the Alert an hour.
-     */
-    static ZonedDateTime mostRecentWaiverEvening(Instant now) {
-        LocalDate today = now.atZone(WAIVER_ZONE).toLocalDate();
-        ZonedDateTime thisWeek = today.with(TemporalAdjusters.previousOrSame(WAIVER_DAY))
+    static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
+        return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
                 .atTime(WAIVER_TIME)
                 .atZone(WAIVER_ZONE);
-        return thisWeek.toInstant().isAfter(now) ? thisWeek.minusWeeks(1) : thisWeek;
     }
 
-    /**
-     * When the evening is over and the board is no longer worth
-     * sending: midnight at the end of the Tuesday it was due.
-     *
-     * Claims clear on Wednesday, so a board that lands on Wednesday is
-     * worse than no board - it reads as advice on bids that have
-     * already processed. Ending at the local midnight keeps the whole
-     * evening available to retry a Check that could not reach a source
-     * at 18:00, and keeps the board off Wednesday entirely. The
-     * calendar decides the instant, so a daylight-saving change moves
-     * the cutoff with the evening rather than an hour away from it.
-     */
-    private static Instant lastCallFor(ZonedDateTime due) {
-        return due.toLocalDate().plusDays(1).atStartOfDay(WAIVER_ZONE).toInstant();
-    }
-
-    private Optional<Event> send(String key, ZonedDateTime due, WaiverBoard board, Instant now) {
-        Map<String, String> facts = facts(board, due);
+    private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
+            WaiverBoard board, Instant now) {
+        String claimDay = deadline.getDayOfWeek()
+                .getDisplayName(TextStyle.FULL, Locale.US);
+        Map<String, String> facts = facts(board, due, deadline);
         Recommendation recommendation = new Recommendation(
                 null,
                 "your waiver board",
-                "Wednesday's claims: %d target%s, $%d of FAAB left".formatted(
+                "%s's claims: %d target%s, $%d of FAAB left".formatted(
+                        claimDay,
                         board.candidates().size(),
                         board.candidates().size() == 1 ? "" : "s",
                         board.remainingBudget()),
@@ -146,7 +115,7 @@ public class WaiverAlertService {
                 // doubt rather than an action: the user picks.
                 Confidence.MEDIUM,
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
-                caveats(board));
+                caveats(board, claimDay));
 
         String text = phraser.phrase(facts, recommendation);
         Map<String, String> recorded = new HashMap<>(facts);
@@ -172,17 +141,19 @@ public class WaiverAlertService {
      * What the board could not see, plus the standing caveat: a claim
      * is a projection, and the user is the one who places the bid.
      */
-    private static List<String> caveats(WaiverBoard board) {
+    private static List<String> caveats(WaiverBoard board, String claimDay) {
         List<String> caveats = new ArrayList<>(board.notes());
         caveats.add("Every number here is a projection for the coming week, not a promise");
-        caveats.add("Place the claims yourself in Sleeper before Wednesday's run");
+        caveats.add("Place the claims yourself in Sleeper before %s's run".formatted(claimDay));
         return List.copyOf(caveats);
     }
 
-    private static Map<String, String> facts(WaiverBoard board, ZonedDateTime due) {
+    private static Map<String, String> facts(WaiverBoard board, ZonedDateTime due,
+            ZonedDateTime deadline) {
         Map<String, String> facts = new HashMap<>();
         facts.put("trigger", "waiver board");
         facts.put("waiverEvening", due.toString());
+        facts.put("claimDeadline", deadline.toString());
         facts.put("week", board.week() == null ? "unknown" : board.week());
         // A board that leads with a plain answer leads with it here too,
         // so the phrasing model never buries it under the ranking.

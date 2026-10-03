@@ -77,6 +77,9 @@ class WaiverScenarioTest extends WireSeamTest {
     /** Tuesday 2026-09-15 at 18:00 America/Los_Angeles, in summer time. */
     private static final Instant TUESDAY_EVENING = Instant.parse("2026-09-16T01:00:00Z");
 
+    private static final Instant MONDAY_EVENING_BEFORE_TUESDAY_CLAIMS =
+            Instant.parse("2026-09-22T01:00:00Z");
+
     /**
      * Tuesday 2026-11-03 at 18:00 America/Los_Angeles. Daylight saving
      * ended on 1 November, so the same local evening is an hour later
@@ -84,12 +87,7 @@ class WaiverScenarioTest extends WireSeamTest {
      */
     private static final Instant WINTER_TUESDAY_EVENING = Instant.parse("2026-11-04T02:00:00Z");
 
-    /**
-     * Midnight at the end of that Tuesday, in Los Angeles. From here on
-     * it is Wednesday, which is when claims clear, so the board is no
-     * longer worth sending.
-     */
-    private static final Instant LAST_CALL = Instant.parse("2026-09-16T07:00:00Z");
+    private static final Instant CLAIM_DEADLINE = Instant.parse("2026-09-16T07:00:00Z");
 
     private static final String SEPTEMBER_BOARD = "alert:waiver:2026-09-15";
     private static final String NOVEMBER_BOARD = "alert:waiver:2026-11-03";
@@ -183,7 +181,8 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(board.facts())
                 .containsEntry("trigger", "waiver board")
                 .containsEntry("week", "2026-w2")
-                .containsEntry("remainingBudget", "100");
+                .containsEntry("remainingBudget", "100")
+                .containsEntry("claimDeadline", "2026-09-16T03:00-04:00[America/New_York]");
 
         // The breakout: every component full, the score capped at 100,
         // and the bid raised one band because the role change lasts.
@@ -259,7 +258,7 @@ class WaiverScenarioTest extends WireSeamTest {
 
         // A source was down at 18:00 and came back at 23:59. The whole
         // evening is still the user's to plan in, so the board goes.
-        runCheckAt(LAST_CALL.minus(Duration.ofMinutes(1)));
+        runCheckAt(CLAIM_DEADLINE.minus(Duration.ofMinutes(1)));
 
         assertThat(boardEvent(SEPTEMBER_BOARD)).isPresent();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
@@ -275,10 +274,10 @@ class WaiverScenarioTest extends WireSeamTest {
         // when claims clear. A board here is advice on bids that have
         // already processed, so nothing is sent and nothing is
         // recorded - not at midnight, and not later that day.
-        runCheckAt(LAST_CALL);
+        runCheckAt(CLAIM_DEADLINE);
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
 
-        runCheckAt(LAST_CALL.plus(Duration.ofHours(13)));
+        runCheckAt(CLAIM_DEADLINE.plus(Duration.ofHours(13)));
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
@@ -300,6 +299,43 @@ class WaiverScenarioTest extends WireSeamTest {
 
         runCheckAt(WINTER_TUESDAY_EVENING);
         assertThat(boardEvent(NOVEMBER_BOARD)).isPresent();
+    }
+
+    @Test
+    void aLeagueWhoseClaimsRunOnTuesdayGetsItsBoardOnMondayEvening() {
+        aWaiverWeekOnDisk();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-keeper.json", "league-keeper");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Five waiver targets for Tuesday.");
+
+        runCheckAt(TUESDAY_EVENING);
+        assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
+
+        runCheckAt(MONDAY_EVENING_BEFORE_TUESDAY_CLAIMS);
+        Event board = boardEvent("alert:waiver:2026-09-21").orElseThrow();
+        assertThat(board.facts())
+                .containsEntry("claimDeadline", "2026-09-22T03:00-04:00[America/New_York]");
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("Five waiver targets for Tuesday.")));
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Tuesday's claims")));
+    }
+
+    @Test
+    void aLeagueWithNoStatedClaimDayGetsNoScheduledBoard() {
+        aWaiverWeekOnDisk();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-rules-unstated.json", "league-unstated");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Five waiver targets.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        assertThat(eventLog.all().stream()
+                .filter(event -> event.key().startsWith("alert:waiver:"))
+                .count()).isZero();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 
     @Test
@@ -367,6 +403,26 @@ class WaiverScenarioTest extends WireSeamTest {
                 .anyMatch(event -> event.type() == EventType.SOURCE_UNAVAILABLE
                         && event.facts().getOrDefault("reason", "")
                                 .contains("waiver_budget is not a whole number"));
+    }
+
+    @Test
+    void aClaimDaySleeperGarblesStopsTheDocumentRatherThanSilencingTheBoard() {
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season-drifted-claim-day.json", "league-drifted");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A source is down.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
+        assertThat(eventLog.all())
+                .anyMatch(event -> event.type() == EventType.SOURCE_UNAVAILABLE
+                        && event.facts().getOrDefault("reason", "")
+                                .contains("settings.waiver_day_of_week is not a whole number"));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("waiver_day_of_week is not a whole number")));
     }
 
     @Test

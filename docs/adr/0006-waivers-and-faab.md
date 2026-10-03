@@ -8,6 +8,11 @@ the designation route is split into an absence that ends the season and
 one the player comes back from. The sections below marked as revised
 replace what #17 decided; everything else stands.
 
+Amended (2026-10-03, issue #111): the board is timed to the league's own
+claim deadline, read from its Sleeper settings, instead of a fixed
+Tuesday. The two sections marked (revised, #111) replace the Tuesday
+rules.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -413,18 +418,31 @@ ladder is applied uniformly - every band moves up one rung, with the
 top band's raise pinned at 40-60% as written - so a breakout is priced
 the same way whatever it scores.
 
-## The Tuesday evening is a calendar date, not an offset
+## The evening before the claim deadline is a calendar date, not an offset (revised, #111)
 
-The Alert instant is 18:00 put on the Tuesday's own date in the
-America/Los_Angeles zone. The zone's rules then decide the offset, so
-the September board lands at 01:00Z and the November one at 02:00Z
-with no offset written down anywhere. The zone is pinned in the code
-rather than read from the clock, because the Check runs in UTC.
+Each league states its claim day in `waiver_day_of_week`, counted from
+Monday: 2 is Wednesday and 1 is Tuesday. Sleeper publishes no league
+timezone. Its weekly run starts at 03:00 America/New_York on the claim
+day for every league, and claims are due when it starts. Real league
+transactions show the run at 03:04-03:12 Eastern on both sides of the
+November clock change. `LeagueRules` reads the claim day, and the
+deadline is that wall-clock time in that zone.
 
-Every Check asks one question - has the most recent Tuesday 18:00
-passed, and does the Event Log already hold that Tuesday's key? - so
-the 1-minute loop plus one key is the whole timer, and no scheduler is
+The Alert instant is 18:00 America/Los_Angeles on the local day before
+the deadline. On Sleeper's default schedule that is Tuesday evening.
+The zone's rules then decide the offset, so the September board lands
+at 01:00Z and the November one at 02:00Z with no offset written down
+anywhere. The zone is pinned in the code rather than read from the
+clock, because the Check runs in UTC.
+
+Every Check asks one question. Has the evening before the next claim
+deadline begun, and does the Event Log already hold that evening's key?
+The 1-minute loop plus one key is the whole timer, and no scheduler is
 added.
+
+A league whose claim day Sleeper does not state, or one on custom daily
+waivers, has no known deadline. It gets no scheduled board rather than
+one timed to another league's schedule.
 
 ## The board answers to the same two switches as every other Alert
 
@@ -442,25 +460,27 @@ else in this system. A trigger switched off stops the board being
 built at all - there is no Recommendation to keep, and building one
 would spend live news requests on an answer nobody will read.
 
-## A board that missed its evening is never sent late
+## A board that missed its evening is never sent late (revised, #111)
 
-Claims clear on Wednesday. A board that arrives the morning after is
-advice about a deadline that has passed, so the board goes out on the
-Tuesday it is due or not at all: the cutoff is midnight at the end of
-that Tuesday, local. The Event Log stays empty for that Tuesday, which
-is the honest record of a board that never went out.
+A board that arrives after the claim deadline is advice about claims
+that have already processed. The board goes out between its evening
+and the deadline or not at all. Once the deadline passes, the next
+deadline is a week away and its evening has not begun. The Event Log
+stays empty for the missed evening, which is the honest record of a
+board that never went out.
 
-The cutoff is the calendar day rather than a count of hours, for the
-same reason the 18:00 instant is. A duration would have to be picked
-against one of the two offsets and would be wrong under the other; the
-end of the local Tuesday is the end of the local Tuesday in both.
+The cutoff is the deadline itself, a wall-clock time in a named zone,
+for the same reason the 18:00 instant is. A duration would have to be
+picked against one of the two offsets and would be wrong under the
+other. On the default schedule the deadline, 03:00 Eastern, is
+midnight at the end of the Tuesday in Los Angeles.
 
 That leaves the whole evening to retry. A Check that could not reach
-the projections at 18:00 keeps trying every minute until midnight,
-because a board at 21:00 is still a board the user can plan Wednesday
+the projections at 18:00 keeps trying every minute until the deadline,
+because a board at 21:00 is still a board the user can plan the claims
 from. Tightening this to a few minutes of scheduler jitter would trade
-a real outage - no board at all that week - against a risk the
-midnight cutoff already removes.
+a real outage, no board at all that week, against a risk the deadline
+cutoff already removes.
 
 A board that could not be computed records nothing either, and neither
 does one with nobody on it: "no targets this week" is not worth a
