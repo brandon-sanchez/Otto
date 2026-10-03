@@ -61,6 +61,14 @@ public record RosterSnapshot(
         return unclaimedName(rosterId);
     }
 
+    /** How many of this team's players are neither on IR nor on the taxi squad. */
+    public long activePlayerCount() {
+        return players.stream()
+                .filter(playerId -> !reserve.contains(playerId))
+                .filter(playerId -> !taxi.contains(playerId))
+                .count();
+    }
+
     /** What a team is called before anyone has claimed it. */
     public static String unclaimedName(int rosterId) {
         return "team " + rosterId;

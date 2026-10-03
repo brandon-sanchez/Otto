@@ -116,17 +116,16 @@ public record UserWeek(
     }
 
     /**
-     * True when the league has IR slots. When Sleeper does not say, a
-     * player already on this team's IR is the league's own evidence.
+     * True when the league has IR slots or this team has a player on
+     * IR. A player sitting there is a fact about this team whatever the
+     * league's settings say, so he is never dropped from view.
      */
     public boolean supportsReserve() {
-        return league.rules().reserve().slots().map(slots -> slots > 0)
-                .orElse(!roster.reserve().isEmpty());
+        return league.rules().reserve().slots().orElse(0) > 0 || !roster.reserve().isEmpty();
     }
 
-    /** True when the league has a taxi squad, read the same way as IR. */
+    /** True when the league has a taxi squad or this team has a player on one. */
     public boolean supportsTaxi() {
-        return league.rules().taxi().slots().map(slots -> slots > 0)
-                .orElse(!roster.taxi().isEmpty());
+        return league.rules().taxi().slots().orElse(0) > 0 || !roster.taxi().isEmpty();
     }
 }

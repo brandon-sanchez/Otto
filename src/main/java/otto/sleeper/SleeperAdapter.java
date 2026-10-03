@@ -89,6 +89,16 @@ public class SleeperAdapter {
             List<String> rosterPositions, Map<String, Double> scoringSettings,
             int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget,
             Optional<Integer> tradeDeadline, LeagueRules rules) {
+
+        /**
+         * How many players a team may hold outside IR and the taxi
+         * squad. Sleeper counts those in {@code reserve_slots} and
+         * {@code taxi_slots}; {@code roster_positions} lists every other
+         * slot, bench included.
+         */
+        public int activeRosterSpots() {
+            return rosterPositions.size();
+        }
     }
 
     /**

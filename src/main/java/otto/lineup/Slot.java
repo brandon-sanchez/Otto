@@ -6,10 +6,10 @@ import java.util.Set;
 
 /**
  * One starting lineup slot with the positions it accepts. Built from
- * the league's roster_positions; bench-type entries (BN, IR, TAXI) are
- * not slots. An unrecognized starting slot type accepts every position,
- * so a drifted new slot name degrades to lenient instead of flagging
- * legal lineups as illegal.
+ * the league's roster_positions; the bench (BN) is not a slot. An
+ * unrecognized starting slot type accepts every position, so a drifted
+ * new slot name degrades to lenient instead of flagging legal lineups
+ * as illegal.
  *
  * Only nested eligibility sets are modeled (each set contains or is
  * contained by every overlapping set): the optimizer's greedy fill is
@@ -19,7 +19,6 @@ import java.util.Set;
  */
 public record Slot(String name, Set<String> eligible) {
 
-    private static final Set<String> BENCH_TYPES = Set.of("BN", "IR", "TAXI");
     private static final Set<String> ALL_POSITIONS = Set.of("QB", "RB", "WR", "TE");
     private static final Map<String, Set<String>> ELIGIBILITY = Map.of(
             "QB", Set.of("QB"),
@@ -35,7 +34,7 @@ public record Slot(String name, Set<String> eligible) {
      */
     public static List<Slot> startingSlots(List<String> rosterPositions) {
         return rosterPositions.stream()
-                .filter(position -> !BENCH_TYPES.contains(position))
+                .filter(position -> !"BN".equals(position))
                 .map(position -> new Slot(position,
                         ELIGIBILITY.getOrDefault(position, ALL_POSITIONS)))
                 .toList();
