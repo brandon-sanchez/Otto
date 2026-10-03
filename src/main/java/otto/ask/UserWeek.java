@@ -115,11 +115,18 @@ public record UserWeek(
         return roster.taxi();
     }
 
+    /**
+     * True when the league has IR slots. When Sleeper does not say, a
+     * player already on this team's IR is the league's own evidence.
+     */
     public boolean supportsReserve() {
-        return league.rosterPositions().contains("IR");
+        return league.rules().reserve().slots().map(slots -> slots > 0)
+                .orElse(!roster.reserve().isEmpty());
     }
 
+    /** True when the league has a taxi squad, read the same way as IR. */
     public boolean supportsTaxi() {
-        return league.rosterPositions().contains("TAXI");
+        return league.rules().taxi().slots().map(slots -> slots > 0)
+                .orElse(!roster.taxi().isEmpty());
     }
 }

@@ -78,11 +78,12 @@ public class SleeperAdapter {
      *        with, empty when the league document carries no budget
      * @param tradeDeadline the last week trades may be submitted, empty
      *        when Sleeper omits or disables the deadline
+     * @param rules this league's own format, waiver, IR and taxi rules
      */
     public record League(String leagueId, String name, String status,
             List<String> rosterPositions, Map<String, Double> scoringSettings,
             int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget,
-            Optional<Integer> tradeDeadline) {
+            Optional<Integer> tradeDeadline, LeagueRules rules) {
     }
 
     /**
@@ -255,7 +256,8 @@ public class SleeperAdapter {
                     settings.path("playoff_teams").asInt(0),
                     settings.path("playoff_week_start").asInt(0),
                     integer(settings.path("waiver_budget")),
-                    integer(settings.path("trade_deadline")).filter(week -> week > 0)));
+                    integer(settings.path("trade_deadline")).filter(week -> week > 0),
+                    LeagueRules.fromSettings(settings)));
         });
     }
 

@@ -85,9 +85,9 @@ class WaiverScenarioTest extends WireSeamTest {
     private static final Instant WINTER_TUESDAY_EVENING = Instant.parse("2026-11-04T02:00:00Z");
 
     /**
-     * Midnight at the end of that Tuesday, in Los Angeles. From here on
-     * it is Wednesday, which is when claims clear, so the board is no
-     * longer worth sending.
+     * The league's claim deadline: Wednesday 03:00 in New York, which is
+     * midnight at the end of that Tuesday in Los Angeles. From here on
+     * the claims have processed, so the board is no longer worth sending.
      */
     private static final Instant LAST_CALL = Instant.parse("2026-09-16T07:00:00Z");
 
@@ -183,7 +183,8 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(board.facts())
                 .containsEntry("trigger", "waiver board")
                 .containsEntry("week", "2026-w2")
-                .containsEntry("remainingBudget", "100");
+                .containsEntry("remainingBudget", "100")
+                .containsEntry("claimDeadline", "2026-09-16T03:00-04:00[America/New_York]");
 
         // The breakout: every component full, the score capped at 100,
         // and the bid raised one band because the role change lasts.
@@ -300,6 +301,50 @@ class WaiverScenarioTest extends WireSeamTest {
 
         runCheckAt(WINTER_TUESDAY_EVENING);
         assertThat(boardEvent(NOVEMBER_BOARD)).isPresent();
+    }
+
+    @Test
+    void aLeagueWhoseClaimsRunOnTuesdayGetsItsBoardOnMondayEvening() {
+        aWaiverWeekOnDisk();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-keeper.json", "league-keeper");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Five waiver targets for Tuesday.");
+
+        // This league's claims ran at 03:00 New York time that Tuesday
+        // morning, so Tuesday evening is too late for them and too early
+        // for next week's.
+        runCheckAt(TUESDAY_EVENING);
+        assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
+
+        // Monday 2026-09-21 at 18:00 in Los Angeles, the evening before
+        // the next Tuesday run.
+        runCheckAt(Instant.parse("2026-09-22T01:00:00Z"));
+        Event board = boardEvent("alert:waiver:2026-09-21").orElseThrow();
+        assertThat(board.facts())
+                .containsEntry("claimDeadline", "2026-09-22T03:00-04:00[America/New_York]");
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("Five waiver targets for Tuesday.")));
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Tuesday's claims")));
+    }
+
+    @Test
+    void aLeagueWithNoStatedClaimDayGetsNoScheduledBoard() {
+        aWaiverWeekOnDisk();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-rules-unstated.json", "league-unstated");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Five waiver targets.");
+
+        // Sleeper did not say when this league's claims are due, so no
+        // evening is borrowed from another league's schedule.
+        runCheckAt(TUESDAY_EVENING);
+
+        assertThat(eventLog.all().stream()
+                .filter(event -> event.key().startsWith("alert:waiver:"))
+                .count()).isZero();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 
     @Test
