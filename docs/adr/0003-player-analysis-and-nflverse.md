@@ -6,6 +6,11 @@ Amended (2026-08-15): the weekly stats feed resolves its season from
 the NFL season type as well as the week, so the preseason reads last
 season's final file. Everything else stands.
 
+Amended (2026-10-04, issue #112): a release timestamp decides whether
+to download, no longer what changed. Each stored feed now records which
+games or team-weeks it holds and when each last changed, and the
+schedule is stored as a feed to say what a week should hold.
+
 The spec pins the nflverse sources, their refresh cadence, the
 defense-versus-position table and the two player tools. It leaves the
 semantics of each open. This ADR records what implementation decided.
@@ -80,6 +85,24 @@ The DynastyProcess mapping has no release index - it is a plain file in
 a repository - so "download only on change" is a conditional GET on its
 ETag there. Both express the same rule with the mechanism each source
 actually offers.
+
+The timestamp says only that a file was republished. nflverse
+republishes a whole season file at once, often daily, and corrects
+stats through Wednesday, so a moved timestamp cannot say whether week
+2's numbers changed or week 4 was appended. Each stored feed therefore
+carries its coverage in the same document as its rows: one record per
+unit (a game, a team's week, or for the undated depth charts a team)
+with a fingerprint of the rows Otto keeps for it. A download compares
+fingerprints with the stored copy, and only a unit whose kept content
+moved counts as corrected. A reordered file, a column Otto drops, or
+FTN re-pulling old games under a new `date_pulled` does not. A copy
+stored before coverage existed is downloaded once more to gain it.
+
+Whether a week has arrived is measured against the schedule
+(`schedules/games.csv`), which is itself a stored feed: a week is
+complete in a feed when every game or team the schedule expects is
+held, and anything the schedule cannot vouch for reads as unknown
+rather than incomplete.
 
 ## nflverse rows arrive in Sleeper's stat vocabulary
 
