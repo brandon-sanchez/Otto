@@ -23,7 +23,7 @@ public record WeeklyStats(
         boolean priorSeasonFinal,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<StatLine> rows) implements NflverseFeed {
+        List<StatLine> rows) implements NflverseFeed<WeeklyStats.StatLine> {
 
     /**
      * One player's line from one game, and the defense that allowed it.
@@ -44,9 +44,5 @@ public record WeeklyStats(
             Double targetShare,
             Map<String, Double> stats) {
 
-    }
-
-    public WeeklyStats withCheckedAt(Instant newCheckedAt) {
-        return new WeeklyStats(season, priorSeasonFinal, assetUpdatedAt, newCheckedAt, rows);
     }
 }

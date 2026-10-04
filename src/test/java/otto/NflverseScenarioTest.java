@@ -12,6 +12,7 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.DepthCharts;
+import otto.nflverse.FeedId;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
@@ -224,7 +225,7 @@ class NflverseScenarioTest extends WireSeamTest {
 
         NflverseFeedService.Result result = feeds.updateIfDue();
 
-        assertThat(result.snapCounts()).isInstanceOf(NflverseFeedService.Update.Unavailable.class);
+        assertThat(result.feed(FeedId.SNAP_COUNTS)).isInstanceOf(NflverseFeedService.Update.Unavailable.class);
         assertThat(store.snapCounts()).isEmpty();
         assertThat(store.weeklyStats()).isPresent();
         assertThat(store.depthCharts()).isPresent();
