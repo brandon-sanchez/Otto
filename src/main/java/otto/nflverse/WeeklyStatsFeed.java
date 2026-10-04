@@ -103,6 +103,15 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
     }
 
     /**
+     * Keyed by the team's week rather than by game: every row names its
+     * team, and a team plays once a week.
+     */
+    @Override
+    public Coverage.Unit unit(WeeklyStats.StatLine line) {
+        return new Coverage.Unit(line.week(), line.team());
+    }
+
+    /**
      * The published target share, or nothing when the row does not
      * carry one. A blank, an "NA" or a value that is not a number reads
      * as absent rather than as zero: a zero would say the offence never
@@ -146,9 +155,9 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
      */
     @Override
     public WeeklyStats document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<WeeklyStats.StatLine> rows) {
+            List<WeeklyStats.StatLine> rows, Coverage coverage) {
         return new WeeklyStats(basis.season(), basis.priorSeasonFinal(), assetUpdatedAt, checkedAt,
-                rows);
+                coverage, rows);
     }
 
     @Override

@@ -20,7 +20,7 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, WeeklyRosters> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "gsis_id", "week", "position", "game_type", "status_description_abbr");
+            "gsis_id", "team", "week", "position", "game_type", "status_description_abbr");
 
     @Override
     public FeedId id() {
@@ -63,15 +63,21 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
                     || !REGULAR_SEASON.equals(row.text("game_type"))) {
                 return;
             }
-            standings.add(new WeeklyRosters.Standing(gsisId, row.integer("week"), code));
+            standings.add(new WeeklyRosters.Standing(gsisId, row.integer("week"), code,
+                    NflTeams.normalize(row.text("team"))));
         });
         return standings;
     }
 
     @Override
+    public Coverage.Unit unit(WeeklyRosters.Standing standing) {
+        return new Coverage.Unit(standing.week(), standing.team());
+    }
+
+    @Override
     public WeeklyRosters document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<WeeklyRosters.Standing> rows) {
-        return new WeeklyRosters(basis.season(), assetUpdatedAt, checkedAt, rows);
+            List<WeeklyRosters.Standing> rows, Coverage coverage) {
+        return new WeeklyRosters(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
     }
 
     @Override

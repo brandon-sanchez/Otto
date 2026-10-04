@@ -91,9 +91,20 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
     }
 
     @Override
+    public Coverage.Unit unit(Schedule.Game game) {
+        return new Coverage.Unit(game.week(), game.gameId());
+    }
+
+    /** A result arriving is not a schedule correction; a moved kickoff is. */
+    @Override
+    public Object content(Schedule.Game game) {
+        return List.of(game.gameId(), game.week(), game.kickoff(), game.home(), game.away());
+    }
+
+    @Override
     public Schedule document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<Schedule.Game> rows) {
-        return new Schedule(basis.season(), assetUpdatedAt, checkedAt, rows);
+            List<Schedule.Game> rows, Coverage coverage) {
+        return new Schedule(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
     }
 
     @Override

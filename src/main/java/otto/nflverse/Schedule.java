@@ -15,11 +15,13 @@ import java.util.List;
  * @param season the season Sleeper published when this copy was taken
  * @param assetUpdatedAt the release timestamp this copy was taken at
  * @param checkedAt when the hourly timestamp check last ran
+ * @param coverage which units the rows hold and when each last changed
  */
 public record Schedule(
         String season,
         Instant assetUpdatedAt,
         Instant checkedAt,
+        Coverage coverage,
         List<Game> rows) implements NflverseFeed<Schedule.Game> {
 
     /**

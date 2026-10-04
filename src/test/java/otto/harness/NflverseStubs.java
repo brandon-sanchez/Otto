@@ -154,6 +154,41 @@ public final class NflverseStubs {
         stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games.csv");
     }
 
+    /**
+     * The feeds as they stand after week 3, one row per team per week
+     * against the schedule's games. The stats hold weeks 1 to 3 but no
+     * Arizona line in week 3; the rosters run through week 4; every
+     * team's newest depth chart is dated 30 September, inside week 4's
+     * window, except New Orleans, whose newest is a week older.
+     */
+    public static void afterWeek3(WireMockServer nflverse) {
+        healthy(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks.csv");
+        stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-2026-weeks.csv");
+        stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks.csv");
+    }
+
+    /** The stats republished with San Francisco's week 2 rushing yards corrected. */
+    public static void weeklyStatsCorrected(WireMockServer nflverse) {
+        weeklyStatsRepublished(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks-corrected.csv");
+    }
+
+    /**
+     * The stats republished with the same numbers, the rows and columns in
+     * reverse order and nflverse's own fantasy points changed - a column
+     * Otto never reads.
+     */
+    public static void weeklyStatsReordered(WireMockServer nflverse) {
+        weeklyStatsRepublished(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks-reordered.csv");
+    }
+
+    /** The stats asset is republished again a day later, its bytes unchanged. */
+    public static void weeklyStatsRepublishedAgain(WireMockServer nflverse) {
+        stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player-republished.json");
+    }
+
     /** The weekly stats asset is republished: its timestamp moves forward. */
     public static void weeklyStatsRepublished(WireMockServer nflverse) {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player-refreshed.json");

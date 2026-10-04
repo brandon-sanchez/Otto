@@ -126,7 +126,7 @@ public class NflverseFeedService {
             case Decision.Touch ignored -> {
                 D current = stored.orElseThrow();
                 store.write(spec, spec.document(basis, current.assetUpdatedAt(), now,
-                        current.rows()));
+                        current.rows(), current.coverage()));
                 yield new Update.Unchanged();
             }
             case Decision.Download download -> switch (client.downloadAsset(spec.repo(),
@@ -134,8 +134,17 @@ public class NflverseFeedService {
                 case SourceResult.Unavailable<List<R>> unavailable ->
                     new Update.Unavailable(unavailable.source(), unavailable.reason());
                 case SourceResult.Ok<List<R>> ok -> {
-                    store.write(spec, spec.document(basis, download.assetUpdatedAt(), now,
-                            ok.value()));
+                    Instant published = download.assetUpdatedAt();
+                    // Last season's units share week numbers and team codes
+                    // with this season's, so only the same season's history
+                    // is carried over.
+                    Coverage previous = stored
+                            .filter(feed -> feed.season().equals(basis.season()))
+                            .map(NflverseFeed::coverage)
+                            .orElse(null);
+                    Coverage coverage = Coverage.of(ok.value(), spec, published)
+                            .carriedForward(previous, published);
+                    store.write(spec, spec.document(basis, published, now, ok.value(), coverage));
                     yield new Update.Downloaded(ok.value().size());
                 }
             };
@@ -175,6 +184,12 @@ public class NflverseFeedService {
      * come from the same season's file at the same publish time - in
      * which case the bytes on the wire are the bytes already on disk and
      * only the checked-at time needs moving.
+     *
+     * A copy whose coverage is missing, or was fingerprinted under another
+     * content version, is not current however fresh its timestamp: it was
+     * stored before this code measured it that way. Downloading it once
+     * more brings it level against the same file, so nothing that changed
+     * in the meantime is mistaken for, or hidden by, the new measure.
      */
     private Decision decide(FeedSpec<?, ?> spec, String asset,
             Optional<? extends NflverseFeed<?>> stored, String season) {
@@ -186,6 +201,8 @@ public class NflverseFeedService {
         boolean stillCurrent = stored
                 .filter(feed -> feed.season().equals(season))
                 .filter(feed -> feed.assetUpdatedAt().equals(assetUpdatedAt))
+                .filter(feed -> feed.coverage() != null
+                        && feed.coverage().contentVersion() == spec.contentVersion())
                 .isPresent();
         return stillCurrent ? new Decision.Touch() : new Decision.Download(assetUpdatedAt);
     }

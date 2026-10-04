@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -112,10 +113,28 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
                 "schema drift: dt \"%s\" is not a date this code can read".formatted(published));
     }
 
+    /** The file has no week; a team's chart is placed by the date it was published. */
+    @Override
+    public Coverage.Unit unit(DepthCharts.Spot spot) {
+        return Coverage.Unit.undated(spot.team());
+    }
+
+    @Override
+    public Optional<Instant> stamp(DepthCharts.Spot spot) {
+        return Optional.of(spot.chartedAt());
+    }
+
+    /** The same ranks republished under a newer date are not a correction. */
+    @Override
+    public Object content(DepthCharts.Spot spot) {
+        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank(),
+                spot.previousRank());
+    }
+
     @Override
     public DepthCharts document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<DepthCharts.Spot> rows) {
-        return new DepthCharts(basis.season(), assetUpdatedAt, checkedAt, rows);
+            List<DepthCharts.Spot> rows, Coverage coverage) {
+        return new DepthCharts(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
     }
 
     @Override
@@ -166,7 +185,8 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
             previous.forEach(row -> before.put(row.gsisId(), row.rank()));
             return newest.stream()
                     .map(row -> new DepthCharts.Spot(row.gsisId(), row.player(), team,
-                            row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0)))
+                            row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0),
+                            newestDate))
                     .toList();
         }
     }

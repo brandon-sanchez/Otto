@@ -22,5 +22,8 @@ public sealed interface NflverseFeed<R>
 
     Instant checkedAt();
 
+    /** Null only on a copy stored before coverage existed, which the refresh downloads again. */
+    Coverage coverage();
+
     List<R> rows();
 }
