@@ -1,6 +1,7 @@
 package otto;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import otto.nflverse.FeedId;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
+import otto.nflverse.Schedule;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
@@ -58,6 +60,21 @@ class NflverseScenarioTest extends WireSeamTest {
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.DEPTH_2026_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.PLAYER_IDS_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.SNAPS_2026_PATH)));
+        nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.SCHEDULE_PATH)));
+
+        // The schedule file carries every season since 1999; only the
+        // regular season of this season and the last one is kept.
+        Schedule schedule = store.schedule().orElseThrow();
+        assertThat(schedule.rows()).hasSize(19)
+                .allMatch(game -> game.season().equals("2026") || game.season().equals("2025"))
+                .noneMatch(game -> game.gameId().equals("2025_19_GB_CHI"));
+        assertThat(schedule.rows()).filteredOn(game -> game.gameId().equals("2026_01_SF_LA"))
+                .singleElement()
+                .isEqualTo(new Schedule.Game("2026_01_SF_LA", "2026", 1,
+                        Instant.parse("2026-09-11T00:35:00Z"), "LAR", "SF", true));
+        assertThat(schedule.rows()).filteredOn(game -> game.gameId().equals("2026_04_NE_BUF"))
+                .singleElement()
+                .extracting(Schedule.Game::finished).isEqualTo(false);
 
         // Only the four positions the Player Directory keeps survive the
         // trim, and only regular-season rows: the kicker and the playoff

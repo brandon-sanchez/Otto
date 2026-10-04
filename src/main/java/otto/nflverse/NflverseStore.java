@@ -27,6 +27,10 @@ public class NflverseStore {
         store.write(spec.documentName(), document);
     }
 
+    public Optional<Schedule> schedule() {
+        return read(Feeds.SCHEDULE);
+    }
+
     public Optional<WeeklyStats> weeklyStats() {
         return read(Feeds.WEEKLY_STATS);
     }

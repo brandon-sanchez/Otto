@@ -24,6 +24,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/weekly_rosters";
     public static final String SNAPS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/snap_counts";
+    public static final String SCHEDULE_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/schedules";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
     public static final String STATS_2026_PATH = DOWNLOAD + "stats_player/stats_player_week_2026.csv";
@@ -33,6 +35,7 @@ public final class NflverseStubs {
             DOWNLOAD + "weekly_rosters/roster_weekly_2026.csv";
     public static final String SNAPS_2026_PATH = DOWNLOAD + "snap_counts/snap_counts_2026.csv";
     public static final String SNAPS_2025_PATH = DOWNLOAD + "snap_counts/snap_counts_2025.csv";
+    public static final String SCHEDULE_PATH = DOWNLOAD + "schedules/games.csv";
 
     public static final String PLAYER_IDS_PATH = "/dynastyprocess/data/master/files/db_playerids.csv";
 
@@ -41,6 +44,7 @@ public final class NflverseStubs {
 
     /** Every nflverse feed healthy, at the timestamps the release index reports. */
     public static void healthy(WireMockServer nflverse) {
+        schedule(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -60,6 +64,7 @@ public final class NflverseStubs {
      * defences, and the id mapping the join needs.
      */
     public static void waiverWeek(WireMockServer nflverse) {
+        schedule(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -136,6 +141,17 @@ public final class NflverseStubs {
         waiverWeek(nflverse);
         nflverse.stubFor(get(urlEqualTo(ROSTERS_2026_PATH))
                 .willReturn(aResponse().withStatus(404)));
+    }
+
+    /**
+     * The 2025 and 2026 seasons as published on 2026-10-04: weeks 1 to 3
+     * final, week 4 with only its Thursday game played. Trimmed to a few
+     * games a week, plus one 2024 game and one 2025 playoff game that
+     * the feed must drop.
+     */
+    private static void schedule(WireMockServer nflverse) {
+        stubJson(nflverse, SCHEDULE_RELEASE_PATH, "nflverse/release-schedules.json");
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games.csv");
     }
 
     /** The weekly stats asset is republished: its timestamp moves forward. */

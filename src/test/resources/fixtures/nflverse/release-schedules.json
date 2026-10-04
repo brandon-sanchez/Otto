@@ -1,0 +1,28 @@
+{
+  "tag_name": "schedules",
+  "name": "schedules",
+  "published_at": "2025-10-01T11:19:34Z",
+  "assets": [
+    {
+      "name": "games.csv",
+      "content_type": "text/csv; charset=utf-8",
+      "size": 2182449,
+      "updated_at": "2026-10-04T07:46:40Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv"
+    },
+    {
+      "name": "games.parquet",
+      "content_type": "application/octet-stream",
+      "size": 521609,
+      "updated_at": "2026-10-04T07:46:40Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.parquet"
+    },
+    {
+      "name": "timestamp.json",
+      "content_type": "application/json",
+      "size": 43,
+      "updated_at": "2026-10-04T07:46:41Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/schedules/timestamp.json"
+    }
+  ]
+}
