@@ -116,10 +116,10 @@ public record UserWeek(
     }
 
     public boolean supportsReserve() {
-        return league.rosterPositions().contains("IR");
+        return league.rules().reserve().slots().orElse(0) > 0 || !roster.reserve().isEmpty();
     }
 
     public boolean supportsTaxi() {
-        return league.rosterPositions().contains("TAXI");
+        return league.rules().taxi().slots().orElse(0) > 0 || !roster.taxi().isEmpty();
     }
 }

@@ -17,7 +17,7 @@ import otto.storage.JsonStore;
  * The scheduled entry point. Three EventBridge schedules reach it and
  * name the job they want: the 1-minute Check, the hourly nflverse
  * timestamp check, and the nightly defense-versus-position build. The
- * Lock Ladder, the Tuesday waiver Alert and the 20-minute Done
+ * Lock Ladder, the weekly waiver Alert and the 20-minute Done
  * follow-up need no schedule of their own - they ride the 1-minute
  * loop and the Event Log.
  *

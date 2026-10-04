@@ -20,7 +20,7 @@
     "daily_waivers": 0,
     "daily_waivers_hour": 0,
     "daily_waivers_days": 5461,
-    "reserve_slots": 2,
+    "reserve_slots": 0,
     "reserve_allow_out": 1,
     "reserve_allow_doubtful": 1,
     "reserve_allow_sus": 0,

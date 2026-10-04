@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
@@ -34,6 +35,10 @@ import otto.OttoProperties;
 public class SleeperAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(SleeperAdapter.class);
+
+    private static final List<String> WHOLE_NUMBER_SETTINGS = Stream.concat(
+            Stream.of("waiver_budget", "trade_deadline"),
+            LeagueRules.WHOLE_NUMBER_FIELDS.stream()).toList();
 
     private final SleeperClient client;
     private final SleeperCache cache;
@@ -78,11 +83,22 @@ public class SleeperAdapter {
      *        with, empty when the league document carries no budget
      * @param tradeDeadline the last week trades may be submitted, empty
      *        when Sleeper omits or disables the deadline
+     * @param rules this league's own format, waiver, IR and taxi rules
      */
     public record League(String leagueId, String name, String status,
             List<String> rosterPositions, Map<String, Double> scoringSettings,
             int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget,
-            Optional<Integer> tradeDeadline) {
+            Optional<Integer> tradeDeadline, LeagueRules rules) {
+
+        /**
+         * How many players a team may hold outside IR and the taxi
+         * squad. Sleeper counts those in {@code reserve_slots} and
+         * {@code taxi_slots}; {@code roster_positions} lists every other
+         * slot, bench included.
+         */
+        public int activeRosterSpots() {
+            return rosterPositions.size();
+        }
     }
 
     /**
@@ -237,14 +253,10 @@ public class SleeperAdapter {
                 return schemaDrift(leaguePath, "league_id or status missing");
             }
             JsonNode settings = body.path("settings");
-            // A drifted budget must fail loudly rather than read as
-            // absent: the waiver board would price every bid against a
-            // budget of nothing and call that advice.
-            if (unreadableNumber(settings.path("waiver_budget"))) {
-                return schemaDrift(leaguePath, "settings.waiver_budget is not a whole number");
-            }
-            if (unreadableNumber(settings.path("trade_deadline"))) {
-                return schemaDrift(leaguePath, "settings.trade_deadline is not a whole number");
+            for (String field : WHOLE_NUMBER_SETTINGS) {
+                if (unreadableNumber(settings.path(field))) {
+                    return schemaDrift(leaguePath, "settings." + field + " is not a whole number");
+                }
             }
             return ok(new League(
                     body.get("league_id").asText(),
@@ -255,7 +267,8 @@ public class SleeperAdapter {
                     settings.path("playoff_teams").asInt(0),
                     settings.path("playoff_week_start").asInt(0),
                     integer(settings.path("waiver_budget")),
-                    integer(settings.path("trade_deadline")).filter(week -> week > 0)));
+                    integer(settings.path("trade_deadline")).filter(week -> week > 0),
+                    LeagueRules.fromSettings(settings)));
         });
     }
 
@@ -562,7 +575,7 @@ public class SleeperAdapter {
      * hold never reaches here - {@link #unreadableNumber} stops the
      * document first, so "empty" only ever means "Sleeper did not say".
      */
-    private static Optional<Integer> integer(JsonNode value) {
+    static Optional<Integer> integer(JsonNode value) {
         return wholeNumber(value) ? Optional.of(value.asInt()) : Optional.empty();
     }
 

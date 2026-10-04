@@ -260,6 +260,29 @@ class AskScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aPlayerOnIrStaysInViewWhenTheLeagueSaysItHasNoIrSlots() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season-no-ir-slots.json", "league-no-ir");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-reserve");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "An alert.");
+        checkRunner.runCheck();
+        llm.resetAll();
+        telegram.resetRequests();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_roster_status", "{}",
+                "Here is your roster.");
+
+        ask("who is on my team?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("\\\"reserve\\\""))
+                .withRequestBody(containing("Josh Jacobs")));
+    }
+
+    @Test
     void leagueSettingsComeFromTheLeagueDocument() {
         snapshotWithABenchEdge();
         OutboundStubs.telegramOk(telegram);
