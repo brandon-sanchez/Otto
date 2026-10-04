@@ -14,6 +14,7 @@ import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.Coverage;
 import otto.nflverse.FeedId;
+import otto.nflverse.FtnCharting;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseReadiness;
 import otto.nflverse.NflverseStore;
@@ -37,6 +38,11 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
 
     private static final Instant FIRST_RELEASE = Instant.parse("2026-09-16T07:10:12Z");
     private static final Instant CORRECTED_RELEASE = Instant.parse("2026-09-23T07:12:40Z");
+    private static final Instant FTN_RELEASE = Instant.parse("2026-10-03T11:01:21Z");
+    private static final Instant FTN_RE_PULL_RELEASE = Instant.parse("2026-10-05T17:02:14Z");
+    private static final Instant FTN_FIRST_PULL = Instant.parse("2026-09-28T17:01:50.896745Z");
+    private static final Instant FTN_WEEK_3_PULL = Instant.parse("2026-09-30T17:01:22.925940Z");
+    private static final Instant FTN_RE_PULL = Instant.parse("2026-10-05T17:02:11.104322Z");
 
     @Autowired
     private NflverseFeedService feeds;
@@ -65,6 +71,12 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
     private Coverage.UnitRecord statsUnit(int week, String team) {
         return store.weeklyStats().orElseThrow().coverage().units().stream()
                 .filter(record -> record.unit().equals(new Coverage.Unit(week, team)))
+                .findFirst().orElseThrow();
+    }
+
+    private Coverage.UnitRecord ftnUnit(int week, String gameId) {
+        return store.ftnCharting().orElseThrow().coverage().units().stream()
+                .filter(record -> record.unit().equals(new Coverage.Unit(week, gameId)))
                 .findFirst().orElseThrow();
     }
 
@@ -145,6 +157,44 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                 .isEqualTo(new WeekStatus.Incomplete(List.of("NO"), List.of()));
         assertThat(readiness.weekStatus(FeedId.DEPTH_CHARTS, "2026", 3))
                 .isInstanceOf(WeekStatus.Complete.class);
+    }
+
+    @Test
+    void ftnDatePulledIsStoredPerGameWithoutKeepingPlays() {
+        afterWeek3();
+
+        FtnCharting charting = store.ftnCharting().orElseThrow();
+        assertThat(charting.coverage().units())
+                .extracting(Coverage.UnitRecord::unit, Coverage.UnitRecord::publishedAt)
+                .contains(
+                        tuple(new Coverage.Unit(1, "2026_01_SF_LA"), FTN_FIRST_PULL),
+                        tuple(new Coverage.Unit(3, "2026_03_ATL_GB"), FTN_WEEK_3_PULL),
+                        tuple(new Coverage.Unit(4, "2026_04_PIT_CLE"),
+                                Instant.parse("2026-10-03T11:01:17.672216Z")))
+                .hasSize(13);
+        assertThat(jsonStore.read("nflverse-ftn-charting", Map.class).orElseThrow())
+                .doesNotContainKey("rows");
+        assertThat(readiness.weekStatus(FeedId.FTN_CHARTING, "2026", 4))
+                .isEqualTo(new WeekStatus.Complete(FTN_RELEASE, List.of()));
+    }
+
+    @Test
+    void anFtnBulkRePullMovesDatePulledButIsNotACorrection() {
+        afterWeek3();
+
+        NflverseStubs.ftnRePulled(nflverse);
+        nextHour();
+
+        nflverse.verify(2, getRequestedFor(urlEqualTo(NflverseStubs.FTN_2026_PATH)));
+        Coverage.UnitRecord rePulled = ftnUnit(1, "2026_01_SF_LA");
+        assertThat(rePulled.publishedAt()).isEqualTo(FTN_RE_PULL);
+        assertThat(rePulled.corrections()).isZero();
+        assertThat(rePulled.changedAt()).isEqualTo(FTN_RELEASE);
+        assertThat(readiness.weekStatus(FeedId.FTN_CHARTING, "2026", 1))
+                .isEqualTo(new WeekStatus.Complete(FTN_RELEASE, List.of()));
+        assertThat(readiness.weekStatus(FeedId.FTN_CHARTING, "2026", 3))
+                .isEqualTo(new WeekStatus.Complete(FTN_RE_PULL_RELEASE, List.of("2026_03_ATL_GB")));
+        assertThat(ftnUnit(3, "2026_03_ATL_GB").publishedAt()).isEqualTo(FTN_WEEK_3_PULL);
     }
 
     @Test

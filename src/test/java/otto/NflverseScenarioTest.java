@@ -61,6 +61,7 @@ class NflverseScenarioTest extends WireSeamTest {
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.PLAYER_IDS_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.SNAPS_2026_PATH)));
         nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.SCHEDULE_PATH)));
+        nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.FTN_2026_PATH)));
 
         // The schedule file carries every season since 1999; only the
         // regular season of this season and the last one is kept.

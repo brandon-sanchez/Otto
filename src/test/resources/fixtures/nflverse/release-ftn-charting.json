@@ -1,0 +1,28 @@
+{
+  "tag_name": "ftn_charting",
+  "name": "ftn_charting",
+  "published_at": "2023-09-03T16:14:36Z",
+  "assets": [
+    {
+      "name": "ftn_charting_2025.csv",
+      "content_type": "text/csv; charset=utf-8",
+      "size": 8128926,
+      "updated_at": "2026-09-23T03:14:31Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_2025.csv"
+    },
+    {
+      "name": "ftn_charting_2026.csv",
+      "content_type": "text/csv; charset=utf-8",
+      "size": 1413071,
+      "updated_at": "2026-10-03T11:01:21Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_2026.csv"
+    },
+    {
+      "name": "ftn_charting_2026.parquet",
+      "content_type": "application/octet-stream",
+      "size": 116047,
+      "updated_at": "2026-10-03T11:01:21Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_2026.parquet"
+    }
+  ]
+}

@@ -14,7 +14,7 @@ import java.util.List;
  * @param <R> one stored row
  */
 public sealed interface NflverseFeed<R>
-        permits Schedule, WeeklyStats, DepthCharts, WeeklyRosters, SnapCounts {
+        permits Schedule, WeeklyStats, DepthCharts, WeeklyRosters, SnapCounts, FtnCharting {
 
     String season();
 

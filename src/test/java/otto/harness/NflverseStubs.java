@@ -26,6 +26,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/snap_counts";
     public static final String SCHEDULE_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/schedules";
+    public static final String FTN_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
     public static final String STATS_2026_PATH = DOWNLOAD + "stats_player/stats_player_week_2026.csv";
@@ -36,6 +38,7 @@ public final class NflverseStubs {
     public static final String SNAPS_2026_PATH = DOWNLOAD + "snap_counts/snap_counts_2026.csv";
     public static final String SNAPS_2025_PATH = DOWNLOAD + "snap_counts/snap_counts_2025.csv";
     public static final String SCHEDULE_PATH = DOWNLOAD + "schedules/games.csv";
+    public static final String FTN_2026_PATH = DOWNLOAD + "ftn_charting/ftn_charting_2026.csv";
 
     public static final String PLAYER_IDS_PATH = "/dynastyprocess/data/master/files/db_playerids.csv";
 
@@ -45,6 +48,7 @@ public final class NflverseStubs {
     /** Every nflverse feed healthy, at the timestamps the release index reports. */
     public static void healthy(WireMockServer nflverse) {
         schedule(nflverse);
+        ftnCharting(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -65,6 +69,7 @@ public final class NflverseStubs {
      */
     public static void waiverWeek(WireMockServer nflverse) {
         schedule(nflverse);
+        ftnCharting(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -167,6 +172,27 @@ public final class NflverseStubs {
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks.csv");
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-2026-weeks.csv");
         stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks.csv");
+    }
+
+    /**
+     * FTN's 2026 charting as published on 2026-10-03, trimmed to three
+     * plays of each final game in the schedule fixture. Weeks 1 and 2
+     * carry the bulk re-pull of 28 September, week 3 its own of 30
+     * September, and week 4's Thursday game 3 October.
+     */
+    private static void ftnCharting(WireMockServer nflverse) {
+        stubJson(nflverse, FTN_RELEASE_PATH, "nflverse/release-ftn-charting.json");
+        stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026.csv");
+    }
+
+    /**
+     * FTN re-pulls weeks 1 and 2 in bulk: every one of their plays carries
+     * a new date_pulled and nothing else about them changes. The same
+     * release adds a fourth charted play to Atlanta at Green Bay in week 3.
+     */
+    public static void ftnRePulled(WireMockServer nflverse) {
+        stubJson(nflverse, FTN_RELEASE_PATH, "nflverse/release-ftn-charting-repulled.json");
+        stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026-repulled.csv");
     }
 
     /** The schedule's release index is down, and no schedule has ever been read. */

@@ -14,9 +14,10 @@ final class Feeds {
     static final SnapCountsFeed SNAP_COUNTS = new SnapCountsFeed();
     static final WeeklyRostersFeed WEEKLY_ROSTERS = new WeeklyRostersFeed();
     static final DepthChartsFeed DEPTH_CHARTS = new DepthChartsFeed();
+    static final FtnChartingFeed FTN_CHARTING = new FtnChartingFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
-            SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS);
+            SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING);
 
     private Feeds() {
     }

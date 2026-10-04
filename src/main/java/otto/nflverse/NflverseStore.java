@@ -47,6 +47,10 @@ public class NflverseStore {
         return read(Feeds.SNAP_COUNTS);
     }
 
+    public Optional<FtnCharting> ftnCharting() {
+        return read(Feeds.FTN_CHARTING);
+    }
+
     public Optional<PlayerIdMap> playerIds() {
         return store.read(PLAYER_IDS, PlayerIdMap.class);
     }
