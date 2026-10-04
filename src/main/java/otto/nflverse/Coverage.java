@@ -124,6 +124,10 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
         return new Coverage(contentVersion, merged);
     }
 
+    List<UnitRecord> inWeek(int week) {
+        return units.stream().filter(record -> record.unit().week() == week).toList();
+    }
+
     /**
      * A row's share of its unit's fingerprint. The shares are summed, so
      * the order rows arrive in cannot move the total while a changed,

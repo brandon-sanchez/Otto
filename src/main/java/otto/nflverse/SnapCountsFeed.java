@@ -37,6 +37,11 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
     }
 
     @Override
+    public Grain grain() {
+        return Grain.GAME;
+    }
+
+    @Override
     public List<SnapCounts.SnapLine> read(Basis basis, Stream<Csv.Row> rows) {
         List<SnapCounts.SnapLine> lines = new ArrayList<>();
         rows.forEach(row -> {

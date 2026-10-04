@@ -13,11 +13,16 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.Coverage;
+import otto.nflverse.FeedId;
 import otto.nflverse.NflverseFeedService;
+import otto.nflverse.NflverseReadiness;
 import otto.nflverse.NflverseStore;
+import otto.nflverse.WeekStatus;
 import otto.storage.JsonStore;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -38,6 +43,9 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
 
     @Autowired
     private NflverseStore store;
+
+    @Autowired
+    private NflverseReadiness readiness;
 
     @Autowired
     private JsonStore jsonStore;
@@ -81,6 +89,84 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
         assertThat(corrected.corrections()).isEqualTo(1);
         assertThat(statsUnit(2, "MIA").changedAt()).isEqualTo(FIRST_RELEASE);
         assertThat(statsUnit(1, "SF").changedAt()).isEqualTo(FIRST_RELEASE);
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 2))
+                .isEqualTo(new WeekStatus.Complete(CORRECTED_RELEASE, List.of("SF")));
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 1))
+                .isEqualTo(new WeekStatus.Complete(FIRST_RELEASE, List.of()));
+    }
+
+    @Test
+    void theLatestCompletedWeekComesFromTheScheduleNotTheCalendar() {
+        afterWeek3();
+
+        // Sleeper says week 2 and week 4's Thursday game is final; only
+        // week 3 has every game over.
+        assertThat(readiness.latestCompletedWeek("2026")).hasValue(3);
+    }
+
+    @Test
+    void aWeekIsCompleteOnlyWhenEveryFinalGameHasRows() {
+        afterWeek3();
+
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 3))
+                .isEqualTo(new WeekStatus.Incomplete(List.of("ARI"), List.of()));
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 2))
+                .isEqualTo(new WeekStatus.Complete(FIRST_RELEASE, List.of()));
+        // The snap fixture's games are not this schedule's, so a week of
+        // rows still holds none of the games the week expects.
+        assertThat(readiness.weekStatus(FeedId.SNAP_COUNTS, "2026", 1))
+                .isEqualTo(new WeekStatus.Incomplete(List.of("2026_01_SF_LA", "2026_01_ATL_PIT",
+                        "2026_01_BUF_HOU", "2026_01_GB_MIN"), List.of()));
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 9))
+                .isInstanceOf(WeekStatus.Unknown.class);
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2025", 1))
+                .isInstanceOf(WeekStatus.Unknown.class);
+    }
+
+    @Test
+    void rostersAreDueAtKickoffNotAtTheFinalWhistle() {
+        afterWeek3();
+
+        // Only Thursday's game is final, yet the rosters owe every team
+        // of the week, and the stats owe only Thursday's two.
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_ROSTERS, "2026", 4))
+                .isEqualTo(new WeekStatus.Incomplete(List.of("NO"), List.of()));
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_ROSTERS, "2026", 3))
+                .isInstanceOf(WeekStatus.Complete.class);
+        assertThat(readiness.weekStatus(FeedId.WEEKLY_STATS, "2026", 4))
+                .isEqualTo(new WeekStatus.Incomplete(List.of("PIT", "CLE"), List.of()));
+    }
+
+    @Test
+    void aDepthChartCountsForTheWeekItsDateFallsIn() {
+        afterWeek3();
+
+        assertThat(readiness.weekStatus(FeedId.DEPTH_CHARTS, "2026", 4))
+                .isEqualTo(new WeekStatus.Incomplete(List.of("NO"), List.of()));
+        assertThat(readiness.weekStatus(FeedId.DEPTH_CHARTS, "2026", 3))
+                .isInstanceOf(WeekStatus.Complete.class);
+    }
+
+    @Test
+    void aMissingScheduleMakesEveryAnswerUnknownNotIncomplete() {
+        SleeperStubs.healthyInSeason(sleeper);
+        NflverseStubs.afterWeek3(nflverse);
+        NflverseStubs.scheduleUnavailable(nflverse);
+        OutboundStubs.telegramOk(telegram);
+
+        feeds.updateIfDue();
+
+        assertThat(store.weeklyStats()).isPresent();
+        for (FeedId feed : FeedId.values()) {
+            for (int week = 1; week <= 4; week++) {
+                assertThat(readiness.weekStatus(feed, "2026", week))
+                        .as("%s week %d", feed, week)
+                        .isInstanceOf(WeekStatus.Unknown.class);
+            }
+        }
+        assertThat(readiness.latestCompletedWeek("2026")).isEmpty();
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("schedules")));
     }
 
     @Test

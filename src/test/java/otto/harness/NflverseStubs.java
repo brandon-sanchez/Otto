@@ -157,7 +157,8 @@ public final class NflverseStubs {
     /**
      * The feeds as they stand after week 3, one row per team per week
      * against the schedule's games. The stats hold weeks 1 to 3 but no
-     * Arizona line in week 3; the rosters run through week 4; every
+     * Arizona line in week 3; the rosters run through week 4 but have
+     * not yet listed New Orleans, who play on the Monday; every
      * team's newest depth chart is dated 30 September, inside week 4's
      * window, except New Orleans, whose newest is a week older.
      */
@@ -166,6 +167,12 @@ public final class NflverseStubs {
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks.csv");
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-2026-weeks.csv");
         stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks.csv");
+    }
+
+    /** The schedule's release index is down, and no schedule has ever been read. */
+    public static void scheduleUnavailable(WireMockServer nflverse) {
+        nflverse.stubFor(get(urlEqualTo(SCHEDULE_RELEASE_PATH))
+                .willReturn(aResponse().withStatus(503)));
     }
 
     /** The stats republished with San Francisco's week 2 rushing yards corrected. */

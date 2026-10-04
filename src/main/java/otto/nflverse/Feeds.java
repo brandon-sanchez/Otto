@@ -20,4 +20,11 @@ final class Feeds {
 
     private Feeds() {
     }
+
+    static FeedSpec<?, ?> of(FeedId id) {
+        return ALL.stream()
+                .filter(spec -> spec.id() == id)
+                .findFirst()
+                .orElseThrow();
+    }
 }

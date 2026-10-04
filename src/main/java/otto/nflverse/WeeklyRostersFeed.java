@@ -42,6 +42,16 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
         return SeasonRule.CURRENT;
     }
 
+    @Override
+    public Grain grain() {
+        return Grain.TEAM_WEEK;
+    }
+
+    @Override
+    public Due due() {
+        return Due.WHEN_SCHEDULED;
+    }
+
     /**
      * Only the standing itself is kept, and only for the four
      * positions the Player Directory keeps and the regular season this

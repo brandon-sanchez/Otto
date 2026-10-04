@@ -38,6 +38,12 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
      */
     List<R> read(Basis basis, Stream<Csv.Row> rows);
 
+    Grain grain();
+
+    default Due due() {
+        return Due.WHEN_FINAL;
+    }
+
     /** Which coverage unit a kept row belongs to. */
     Coverage.Unit unit(R row);
 
@@ -82,6 +88,32 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
 
         /** Last season's final file until a current-season week has been played. */
         LAST_PLAYED
+    }
+
+    /** What one coverage unit is, which decides what the schedule expects of a week. */
+    enum Grain {
+
+        /** One unit per game id. */
+        GAME,
+
+        /** One unit per team in each game of the week. */
+        TEAM_WEEK,
+
+        /**
+         * One unit per team with no week in the file. A team's unit counts
+         * for every week whose window opened on or before its stamp.
+         */
+        TEAM_SNAPSHOT
+    }
+
+    /** When the schedule starts expecting a game's units. */
+    enum Due {
+
+        /** Once the game has a result. */
+        WHEN_FINAL,
+
+        /** As soon as the game is on the schedule: the feed is published before kickoff. */
+        WHEN_SCHEDULED
     }
 
     /** The season a feed's file was named for, and whether it is last season's final record. */

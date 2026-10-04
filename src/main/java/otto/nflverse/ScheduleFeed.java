@@ -52,6 +52,16 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
     }
 
     @Override
+    public Grain grain() {
+        return Grain.GAME;
+    }
+
+    @Override
+    public Due due() {
+        return Due.WHEN_SCHEDULED;
+    }
+
+    @Override
     public List<Schedule.Game> read(Basis basis, Stream<Csv.Row> rows) {
         Set<String> kept = SEASON.matcher(basis.season()).matches()
                 ? Set.of(basis.season(), String.valueOf(Integer.parseInt(basis.season()) - 1))

@@ -78,6 +78,11 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
     }
 
     @Override
+    public Grain grain() {
+        return Grain.TEAM_WEEK;
+    }
+
+    @Override
     public List<WeeklyStats.StatLine> read(Basis basis, Stream<Csv.Row> rows) {
         List<WeeklyStats.StatLine> lines = new ArrayList<>();
         rows.forEach(row -> {

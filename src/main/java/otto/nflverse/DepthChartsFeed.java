@@ -55,6 +55,17 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
         return SeasonRule.CURRENT;
     }
 
+    @Override
+    public Grain grain() {
+        return Grain.TEAM_SNAPSHOT;
+    }
+
+    /** A team sets its chart for a week before that week's game, not after it. */
+    @Override
+    public Due due() {
+        return Due.WHEN_SCHEDULED;
+    }
+
     /**
      * The published file holds every chart of the season, one snapshot
      * per date. Only the newest snapshot per team describes this week,
