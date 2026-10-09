@@ -37,6 +37,11 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-schedule";
+    }
+
+    @Override
     public String tag() {
         return "schedules";
     }

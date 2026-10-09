@@ -22,6 +22,11 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-snap-counts";
+    }
+
+    @Override
     public String tag() {
         return "snap_counts";
     }

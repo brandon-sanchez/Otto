@@ -22,6 +22,11 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-ftn-charting";
+    }
+
+    @Override
     public String tag() {
         return "ftn_charting";
     }

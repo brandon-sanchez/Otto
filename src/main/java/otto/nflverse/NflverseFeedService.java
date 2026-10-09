@@ -3,6 +3,7 @@ package otto.nflverse;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -84,8 +85,16 @@ public class NflverseFeedService {
     /** Each feed's outcome in registry order, then the player-id map's. */
     public record Result(Map<FeedId, Update> feeds, Update playerIds) {
 
+        public Result {
+            feeds = Collections.unmodifiableMap(new LinkedHashMap<>(feeds));
+        }
+
         public Update feed(FeedId id) {
-            return feeds.get(id);
+            Update update = feeds.get(id);
+            if (update == null) {
+                throw new IllegalArgumentException(id + " is not in Feeds.ALL");
+            }
+            return update;
         }
     }
 

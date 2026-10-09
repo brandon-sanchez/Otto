@@ -41,6 +41,11 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-depth-charts";
+    }
+
+    @Override
     public String tag() {
         return "depth_charts";
     }

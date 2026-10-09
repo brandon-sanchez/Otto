@@ -2,7 +2,6 @@ package otto.nflverse;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -76,9 +75,12 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
 
     Class<D> type();
 
-    default String documentName() {
-        return "nflverse-" + id().name().toLowerCase(Locale.ROOT).replace('_', '-');
-    }
+    /**
+     * The key the document is stored under. Written out per feed rather
+     * than derived from {@link #id()}: renaming a constant must not move
+     * a stored file.
+     */
+    String documentName();
 
     /** Which season's file a feed names for the Sleeper week in hand. */
     enum SeasonRule {

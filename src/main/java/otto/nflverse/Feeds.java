@@ -3,9 +3,13 @@ package otto.nflverse;
 import java.util.List;
 
 /**
- * The ordered registry of release-asset feeds. A new feed is one spec and
- * one entry here. The schedule runs first, so a run that brings in a
- * week also brings in the games that say what the week should hold.
+ * The ordered registry of release-asset feeds. A new feed needs a
+ * {@link FeedId}, its spec, a field and an entry in {@link #ALL} here, and
+ * its document in {@link NflverseFeed}'s permits list. {@code FeedRegistryTest}
+ * fails when those disagree.
+ *
+ * The schedule runs first, so a run that brings in a week also brings in
+ * the games that say what the week should hold.
  */
 final class Feeds {
 
