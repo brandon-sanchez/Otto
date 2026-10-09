@@ -25,7 +25,7 @@ public record WeeklyRosters(
         String season,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<Standing> rows) implements NflverseFeed {
+        List<Standing> rows) implements NflverseFeed<WeeklyRosters.Standing> {
 
     /**
      * The roster-standing codes that carry no reversion date. Every
@@ -103,9 +103,5 @@ public record WeeklyRosters(
             return arriving.week() > held.week() ? arriving : held;
         }
         return SEASON_ENDING.contains(held.code()) ? arriving : held;
-    }
-
-    public WeeklyRosters withCheckedAt(Instant newCheckedAt) {
-        return new WeeklyRosters(season, assetUpdatedAt, newCheckedAt, rows);
     }
 }

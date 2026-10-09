@@ -10,11 +10,7 @@ import otto.storage.JsonStore;
 @Component
 public class NflverseStore {
 
-    private static final String WEEKLY_STATS = "nflverse-weekly-stats";
-    private static final String DEPTH_CHARTS = "nflverse-depth-charts";
-    private static final String WEEKLY_ROSTERS = "nflverse-weekly-rosters";
     private static final String PLAYER_IDS = "nflverse-player-ids";
-    private static final String SNAP_COUNTS = "nflverse-snap-counts";
     private static final String DEFENSE_VERSUS_POSITION = "defense-versus-position";
 
     private final JsonStore store;
@@ -23,28 +19,28 @@ public class NflverseStore {
         this.store = store;
     }
 
-    public Optional<WeeklyStats> weeklyStats() {
-        return store.read(WEEKLY_STATS, WeeklyStats.class);
+    <R, D extends NflverseFeed<R>> Optional<D> read(FeedSpec<R, D> spec) {
+        return store.read(spec.documentName(), spec.type());
     }
 
-    public void writeWeeklyStats(WeeklyStats stats) {
-        store.write(WEEKLY_STATS, stats);
+    <R, D extends NflverseFeed<R>> void write(FeedSpec<R, D> spec, D document) {
+        store.write(spec.documentName(), document);
+    }
+
+    public Optional<WeeklyStats> weeklyStats() {
+        return read(Feeds.WEEKLY_STATS);
     }
 
     public Optional<DepthCharts> depthCharts() {
-        return store.read(DEPTH_CHARTS, DepthCharts.class);
-    }
-
-    public void writeDepthCharts(DepthCharts charts) {
-        store.write(DEPTH_CHARTS, charts);
+        return read(Feeds.DEPTH_CHARTS);
     }
 
     public Optional<WeeklyRosters> weeklyRosters() {
-        return store.read(WEEKLY_ROSTERS, WeeklyRosters.class);
+        return read(Feeds.WEEKLY_ROSTERS);
     }
 
-    public void writeWeeklyRosters(WeeklyRosters rosters) {
-        store.write(WEEKLY_ROSTERS, rosters);
+    public Optional<SnapCounts> snapCounts() {
+        return read(Feeds.SNAP_COUNTS);
     }
 
     public Optional<PlayerIdMap> playerIds() {
@@ -53,14 +49,6 @@ public class NflverseStore {
 
     public void writePlayerIds(PlayerIdMap idMap) {
         store.write(PLAYER_IDS, idMap);
-    }
-
-    public Optional<SnapCounts> snapCounts() {
-        return store.read(SNAP_COUNTS, SnapCounts.class);
-    }
-
-    public void writeSnapCounts(SnapCounts counts) {
-        store.write(SNAP_COUNTS, counts);
     }
 
     public Optional<DefenseVersusPosition> defenseVersusPosition() {
