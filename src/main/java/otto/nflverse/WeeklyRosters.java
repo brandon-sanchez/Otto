@@ -27,7 +27,7 @@ public record WeeklyRosters(
         Instant assetUpdatedAt,
         Instant checkedAt,
         Coverage coverage,
-        List<Standing> rows) implements NflverseFeed<WeeklyRosters.Standing> {
+        List<Standing> rows) implements NflverseFeed {
 
     /**
      * The roster-standing codes that carry no reversion date. Every

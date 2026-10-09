@@ -25,7 +25,7 @@ public record WeeklyStats(
         Instant assetUpdatedAt,
         Instant checkedAt,
         Coverage coverage,
-        List<StatLine> rows) implements NflverseFeed<WeeklyStats.StatLine> {
+        List<StatLine> rows) implements NflverseFeed {
 
     /**
      * One player's line from one game, and the defense that allowed it.

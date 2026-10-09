@@ -8,7 +8,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static otto.nflverse.FeedRows.REGULAR_SEASON;
@@ -24,8 +23,6 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
 
     /** nflverse writes game days and kickoffs as Eastern local time. */
     static final ZoneId EASTERN = ZoneId.of("America/New_York");
-
-    private static final Pattern SEASON = Pattern.compile("\\d{4}");
 
     private static final Set<String> COLUMNS = Set.of(
             "game_id", "season", "game_type", "week", "gameday", "gametime",
@@ -57,8 +54,8 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
     }
 
     @Override
-    public Grain grain() {
-        return Grain.GAME;
+    public Grain<Schedule.Game> grain() {
+        return new Grain.PerGame<>(Schedule.Game::week, Schedule.Game::gameId);
     }
 
     @Override
@@ -68,9 +65,9 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
 
     @Override
     public List<Schedule.Game> read(Basis basis, Stream<Csv.Row> rows) {
-        Set<String> kept = SEASON.matcher(basis.season()).matches()
-                ? Set.of(basis.season(), String.valueOf(Integer.parseInt(basis.season()) - 1))
-                : Set.of(basis.season());
+        Set<String> kept = Seasons.previous(basis.season())
+                .map(previous -> Set.of(basis.season(), previous))
+                .orElse(Set.of(basis.season()));
         List<Schedule.Game> games = new ArrayList<>();
         rows.forEach(row -> {
             requireColumns(row, COLUMNS);
@@ -105,11 +102,6 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
         }
     }
 
-    @Override
-    public Coverage.Unit unit(Schedule.Game game) {
-        return new Coverage.Unit(game.week(), game.gameId());
-    }
-
     /** A result arriving is not a schedule correction; a moved kickoff is. */
     @Override
     public Object content(Schedule.Game game) {
@@ -120,6 +112,12 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
     public Schedule document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<Schedule.Game> rows, Coverage coverage) {
         return new Schedule(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
+    }
+
+    @Override
+    public Schedule recheck(Schedule current, Basis basis, Instant checkedAt) {
+        return new Schedule(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage(), current.rows());
     }
 
     @Override

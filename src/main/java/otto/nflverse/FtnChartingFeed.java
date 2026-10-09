@@ -42,8 +42,8 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
     }
 
     @Override
-    public Grain grain() {
-        return Grain.GAME;
+    public Grain<FtnCharting.Play> grain() {
+        return new Grain.PerGame<>(FtnCharting.Play::week, FtnCharting.Play::gameId);
     }
 
     @Override
@@ -71,11 +71,6 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
     }
 
     @Override
-    public Coverage.Unit unit(FtnCharting.Play play) {
-        return new Coverage.Unit(play.week(), play.gameId());
-    }
-
-    @Override
     public Optional<Instant> stamp(FtnCharting.Play play) {
         return Optional.of(play.datePulled());
     }
@@ -94,6 +89,12 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
     public FtnCharting document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<FtnCharting.Play> rows, Coverage coverage) {
         return new FtnCharting(basis.season(), assetUpdatedAt, checkedAt, coverage);
+    }
+
+    @Override
+    public FtnCharting recheck(FtnCharting current, Basis basis, Instant checkedAt) {
+        return new FtnCharting(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage());
     }
 
     @Override

@@ -13,7 +13,7 @@ import java.util.stream.Stream;
  * @param <R> the trimmed domain row the reader keeps
  * @param <D> the stored document
  */
-interface FeedSpec<R, D extends NflverseFeed<R>> {
+interface FeedSpec<R, D extends NflverseFeed> {
 
     String NFLVERSE_DATA = "nflverse/nflverse-data";
 
@@ -37,14 +37,11 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
      */
     List<R> read(Basis basis, Stream<Csv.Row> rows);
 
-    Grain grain();
+    Grain<R> grain();
 
     default Due due() {
         return Due.WHEN_FINAL;
     }
-
-    /** Which coverage unit a kept row belongs to. */
-    Coverage.Unit unit(R row);
 
     /** The feed's own publish stamp for a row, when the file carries one. */
     default Optional<Instant> stamp(R row) {
@@ -63,15 +60,16 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
     /**
      * Bumped whenever {@link #content} changes shape, so that fingerprints
      * taken before are replaced rather than read as a correction of every
-     * unit.
+     * unit. {@code FingerprintPinTest} fails when the shape moves without it.
      */
     default int contentVersion() {
         return 1;
     }
 
-    /** Builds the document to store, for a fresh download and for a re-checked unchanged one. */
     D document(Basis basis, Instant assetUpdatedAt, Instant checkedAt, List<R> rows,
             Coverage coverage);
+
+    D recheck(D current, Basis basis, Instant checkedAt);
 
     Class<D> type();
 
@@ -82,30 +80,14 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
      */
     String documentName();
 
-    /** Which season's file a feed names for the Sleeper week in hand. */
+    /** Which season's file a feed names for the week in hand. */
     enum SeasonRule {
 
         /** The Sleeper season as published. */
         CURRENT,
 
-        /** Last season's final file until a current-season week has been played. */
+        /** Last season's final file until a current-season game is final. */
         LAST_PLAYED
-    }
-
-    /** What one coverage unit is, which decides what the schedule expects of a week. */
-    enum Grain {
-
-        /** One unit per game id. */
-        GAME,
-
-        /** One unit per team in each game of the week. */
-        TEAM_WEEK,
-
-        /**
-         * One unit per team with no week in the file. A team's unit counts
-         * for every week whose window opened on or before its stamp.
-         */
-        TEAM_SNAPSHOT
     }
 
     /** When the schedule starts expecting a game's units. */
@@ -114,7 +96,7 @@ interface FeedSpec<R, D extends NflverseFeed<R>> {
         /** Once the game has a result. */
         WHEN_FINAL,
 
-        /** As soon as the game is on the schedule: the feed is published before kickoff. */
+        /** Once the week has started: the feed is published before kickoff. */
         WHEN_SCHEDULED
     }
 

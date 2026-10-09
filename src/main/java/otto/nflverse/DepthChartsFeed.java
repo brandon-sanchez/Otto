@@ -28,12 +28,14 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
      * The shapes the depth charts' publish column has been seen in: an
      * instant with a zone offset, a bare local timestamp, or a bare
      * date. All three name an unambiguous moment, so all three order
-     * correctly against each other.
+     * correctly against each other. A bare date is a day in the NFL's
+     * own zone, the one the schedule places a week's window in, so a
+     * chart dated the Tuesday a week opens falls inside that week.
      */
     private static final List<Function<String, Instant>> PUBLISH_FORMATS = List.of(
             published -> OffsetDateTime.parse(published).toInstant(),
             published -> LocalDateTime.parse(published).toInstant(ZoneOffset.UTC),
-            published -> LocalDate.parse(published).atStartOfDay(ZoneOffset.UTC).toInstant());
+            published -> LocalDate.parse(published).atStartOfDay(ScheduleFeed.EASTERN).toInstant());
 
     @Override
     public FeedId id() {
@@ -61,8 +63,8 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     }
 
     @Override
-    public Grain grain() {
-        return Grain.TEAM_SNAPSHOT;
+    public Grain<DepthCharts.Spot> grain() {
+        return new Grain.PerTeam<>(DepthCharts.Spot::team);
     }
 
     /** A team sets its chart for a week before that week's game, not after it. */
@@ -129,28 +131,27 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
                 "schema drift: dt \"%s\" is not a date this code can read".formatted(published));
     }
 
-    /** The file has no week; a team's chart is placed by the date it was published. */
-    @Override
-    public Coverage.Unit unit(DepthCharts.Spot spot) {
-        return Coverage.Unit.undated(spot.team());
-    }
-
     @Override
     public Optional<Instant> stamp(DepthCharts.Spot spot) {
         return Optional.of(spot.chartedAt());
     }
 
-    /** The same ranks republished under a newer date are not a correction. */
+    /** The rank he held on the chart before is that older chart's content, not this one's. */
     @Override
     public Object content(DepthCharts.Spot spot) {
-        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank(),
-                spot.previousRank());
+        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank());
     }
 
     @Override
     public DepthCharts document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<DepthCharts.Spot> rows, Coverage coverage) {
         return new DepthCharts(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
+    }
+
+    @Override
+    public DepthCharts recheck(DepthCharts current, Basis basis, Instant checkedAt) {
+        return new DepthCharts(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage(), current.rows());
     }
 
     @Override

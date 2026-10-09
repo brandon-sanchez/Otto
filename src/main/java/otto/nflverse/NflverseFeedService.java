@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -40,9 +39,6 @@ import static otto.nflverse.FeedRows.requireColumns;
  */
 @Component
 public class NflverseFeedService {
-
-    /** Sleeper writes the season as a four-digit year. */
-    private static final Pattern SEASON = Pattern.compile("\\d{4}");
 
     private static final Set<String> PLAYER_ID_COLUMNS = Set.of(
             "sleeper_id", "gsis_id", "pfr_id", "position");
@@ -109,7 +105,7 @@ public class NflverseFeedService {
         return new Result(feeds, report(updatePlayerIds(now)));
     }
 
-    private <R, D extends NflverseFeed<R>> Update update(FeedSpec<R, D> spec, Instant now) {
+    private <R, D extends NflverseFeed> Update update(FeedSpec<R, D> spec, Instant now) {
         Optional<D> stored = store.read(spec);
         if (!due(stored, now)) {
             return new Update.Skipped();
@@ -132,10 +128,8 @@ public class NflverseFeedService {
         return switch (decide(spec, asset, stored, basis.season())) {
             case Decision.Blocked blocked ->
                 new Update.Unavailable(blocked.source(), blocked.reason());
-            case Decision.Touch ignored -> {
-                D current = stored.orElseThrow();
-                store.write(spec, spec.document(basis, current.assetUpdatedAt(), now,
-                        current.rows(), current.coverage()));
+            case Decision.Touch _ -> {
+                store.write(spec, spec.recheck(stored.orElseThrow(), basis, now));
                 yield new Update.Unchanged();
             }
             case Decision.Download download -> switch (client.downloadAsset(spec.repo(),
@@ -167,7 +161,7 @@ public class NflverseFeedService {
         return update;
     }
 
-    private boolean due(Optional<? extends NflverseFeed<?>> stored, Instant now) {
+    private boolean due(Optional<? extends NflverseFeed> stored, Instant now) {
         return stored
                 .map(feed -> Duration.between(feed.checkedAt(), now).compareTo(checkInterval) >= 0)
                 .orElse(true);
@@ -201,7 +195,7 @@ public class NflverseFeedService {
      * in the meantime is mistaken for, or hidden by, the new measure.
      */
     private Decision decide(FeedSpec<?, ?> spec, String asset,
-            Optional<? extends NflverseFeed<?>> stored, String season) {
+            Optional<? extends NflverseFeed> stored, String season) {
         SourceResult<Instant> published = publishedAt(spec, asset);
         if (published instanceof SourceResult.Unavailable<Instant> unavailable) {
             return new Decision.Blocked(unavailable.source(), unavailable.reason());
@@ -231,29 +225,33 @@ public class NflverseFeedService {
      * Which season's file a feed names this week. A current-season feed
      * reads the season Sleeper publishes.
      *
-     * A last-played feed reads last season's final record in week 1,
-     * which has no played week of its own, and the current season to
-     * date from week 2 on. The preseason reads the same way as week 1,
-     * and it has to be asked about separately: Sleeper counts preseason
-     * weeks from 1, so August reads as week 2 or later while no game
-     * that counts has been played. nflverse publishes a season's weekly
-     * file once there are rows to put in it, so reading the week alone
-     * asks for a file that does not exist and blinds the table for a
-     * month.
+     * A last-played feed reads last season's final record until a game
+     * of this season is final, and the current season to date from
+     * then on. nflverse publishes a season's weekly file once there are
+     * rows to put in it, so asking for it earlier asks for a file that
+     * does not exist and blinds the table for a month. The stored
+     * schedule says whether a game is final; it runs first, so a run
+     * that brings in the first result reads the new file in the same
+     * hour. Only without a schedule does Sleeper's counter stand in:
+     * week 2 or later and not the preseason, which Sleeper also counts
+     * in weeks from 1.
+     *
+     * Sleeper writes the season as text, so a drifted value answers
+     * empty rather than throwing out of a job with other feeds to run.
      */
-    private static Optional<FeedSpec.Basis> basisFor(SleeperAdapter.NflState state,
+    private Optional<FeedSpec.Basis> basisFor(SleeperAdapter.NflState state,
             FeedSpec.SeasonRule rule) {
-        if (rule == FeedSpec.SeasonRule.CURRENT
-                || (state.week() > 1 && !state.beforeTheSeason())) {
+        if (rule == FeedSpec.SeasonRule.CURRENT) {
             return Optional.of(new FeedSpec.Basis(state.season(), false));
         }
-        // Sleeper writes the season as text, so a drifted value must not
-        // throw out of a job that still has other feeds to update.
-        if (!SEASON.matcher(state.season()).matches()) {
-            return Optional.empty();
+        boolean played = store.schedule()
+                .map(schedule -> schedule.anyFinal(state.season()))
+                .orElseGet(() -> state.week() > 1 && !state.beforeTheSeason());
+        if (played) {
+            return Optional.of(new FeedSpec.Basis(state.season(), false));
         }
-        return Optional.of(new FeedSpec.Basis(
-                String.valueOf(Integer.parseInt(state.season()) - 1), true));
+        return Seasons.previous(state.season())
+                .map(previous -> new FeedSpec.Basis(previous, true));
     }
 
     // -- player id mapping --------------------------------------------------

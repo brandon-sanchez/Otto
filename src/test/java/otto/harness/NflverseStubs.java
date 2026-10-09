@@ -138,7 +138,17 @@ public final class NflverseStubs {
      */
     public static void waiverWeekBeforeAnyGameIsPlayed(WireMockServer nflverse) {
         waiverWeek(nflverse);
+        beforeAnyGameIsPlayed(nflverse);
         stubCsv(nflverse, STATS_2025_PATH, "nflverse/stats-player-week-earned-roles.csv");
+    }
+
+    /**
+     * The schedule as published before the season's first kickoff: every
+     * 2026 game listed, none with a result. It is what tells the stats
+     * and snap feeds that last season's file is still the newest record.
+     */
+    public static void beforeAnyGameIsPlayed(WireMockServer nflverse) {
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games-preseason.csv");
     }
 
     /** The weekly-roster feed is gone, so no absence can be read either way. */
@@ -150,9 +160,9 @@ public final class NflverseStubs {
 
     /**
      * The 2025 and 2026 seasons as published on 2026-10-04: weeks 1 to 3
-     * final, week 4 with only its Thursday game played. Trimmed to a few
-     * games a week, plus one 2024 game and one 2025 playoff game that
-     * the feed must drop.
+     * final, week 4 with only its Thursday game played, week 5 not yet
+     * started. Trimmed to a few games a week, plus one 2024 game and one
+     * 2025 playoff game that the feed must drop.
      */
     private static void schedule(WireMockServer nflverse) {
         stubJson(nflverse, SCHEDULE_RELEASE_PATH, "nflverse/release-schedules.json");
@@ -161,17 +171,37 @@ public final class NflverseStubs {
 
     /**
      * The feeds as they stand after week 3, one row per team per week
-     * against the schedule's games. The stats hold weeks 1 to 3 but no
-     * Arizona line in week 3; the rosters run through week 4 but have
-     * not yet listed New Orleans, who play on the Monday; every
-     * team's newest depth chart is dated 30 September, inside week 4's
-     * window, except New Orleans, whose newest is a week older.
+     * against the schedule's games. The stats and snap counts hold every
+     * final game, Thursday's week 4 game included, but the stats have no
+     * Arizona line in week 3; the rosters run through week 5 but have
+     * not yet listed New Orleans in week 4, who play on the Monday;
+     * every team's newest depth chart is dated 30 September, inside
+     * week 4's window, except Pittsburgh's, dated with a bare "2026-09-29"
+     * on the Eastern day the window opens, and New Orleans', a week older.
      */
     public static void afterWeek3(WireMockServer nflverse) {
         healthy(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks.csv");
         stubCsv(nflverse, ROSTERS_2026_PATH, "nflverse/roster-weekly-2026-weeks.csv");
         stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-2026-weeks.csv");
+    }
+
+    /**
+     * The depth charts republished with a chart for New Orleans dated
+     * inside week 4, a fullback on top of the back who was RB1 before,
+     * and an older Green Bay chart from the week before on which its
+     * back was RB2. Every team's newest chart but New Orleans' is the
+     * one already held.
+     */
+    public static void depthChartsNewerForNewOrleans(WireMockServer nflverse) {
+        stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts-refreshed.json");
+        stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks-newer.csv");
+    }
+
+    public static void depthChartsRerankedForAtlanta(WireMockServer nflverse) {
+        stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts-refreshed.json");
+        stubCsv(nflverse, DEPTH_2026_PATH, "nflverse/depth-charts-2026-weeks-reranked.csv");
     }
 
     /**
@@ -220,6 +250,16 @@ public final class NflverseStubs {
     /** The stats asset is republished again a day later, its bytes unchanged. */
     public static void weeklyStatsRepublishedAgain(WireMockServer nflverse) {
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player-republished.json");
+    }
+
+    public static void weeklyStatsWithoutSanFranciscoWeek2(WireMockServer nflverse) {
+        weeklyStatsRepublished(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks-dropped-sf.csv");
+    }
+
+    public static void weeklyStatsSanFranciscoWeek2ReturnsCorrected(WireMockServer nflverse) {
+        weeklyStatsRepublishedAgain(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-2026-weeks-corrected.csv");
     }
 
     /** The weekly stats asset is republished: its timestamp moves forward. */

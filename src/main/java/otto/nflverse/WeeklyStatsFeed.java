@@ -83,8 +83,8 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
     }
 
     @Override
-    public Grain grain() {
-        return Grain.TEAM_WEEK;
+    public Grain<WeeklyStats.StatLine> grain() {
+        return new Grain.PerTeamWeek<>(WeeklyStats.StatLine::week, WeeklyStats.StatLine::team);
     }
 
     @Override
@@ -110,15 +110,6 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
                     statsOf(row)));
         });
         return lines;
-    }
-
-    /**
-     * Keyed by the team's week rather than by game: every row names its
-     * team, and a team plays once a week.
-     */
-    @Override
-    public Coverage.Unit unit(WeeklyStats.StatLine line) {
-        return new Coverage.Unit(line.week(), line.team());
     }
 
     /**
@@ -168,6 +159,12 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
             List<WeeklyStats.StatLine> rows, Coverage coverage) {
         return new WeeklyStats(basis.season(), basis.priorSeasonFinal(), assetUpdatedAt, checkedAt,
                 coverage, rows);
+    }
+
+    @Override
+    public WeeklyStats recheck(WeeklyStats current, Basis basis, Instant checkedAt) {
+        return new WeeklyStats(basis.season(), basis.priorSeasonFinal(), current.assetUpdatedAt(),
+                checkedAt, current.coverage(), current.rows());
     }
 
     @Override

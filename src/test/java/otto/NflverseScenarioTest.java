@@ -66,7 +66,7 @@ class NflverseScenarioTest extends WireSeamTest {
         // The schedule file carries every season since 1999; only the
         // regular season of this season and the last one is kept.
         Schedule schedule = store.schedule().orElseThrow();
-        assertThat(schedule.rows()).hasSize(19)
+        assertThat(schedule.rows()).hasSize(21)
                 .allMatch(game -> game.season().equals("2026") || game.season().equals("2025"))
                 .noneMatch(game -> game.gameId().equals("2025_19_GB_CHI"));
         assertThat(schedule.rows()).filteredOn(game -> game.gameId().equals("2026_01_SF_LA"))

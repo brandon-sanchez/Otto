@@ -18,7 +18,7 @@ public record DepthCharts(
         Instant assetUpdatedAt,
         Instant checkedAt,
         Coverage coverage,
-        List<Spot> rows) implements NflverseFeed<DepthCharts.Spot> {
+        List<Spot> rows) implements NflverseFeed {
 
     /**
      * One player's place on their team's chart: RB1, WR3 and so on.

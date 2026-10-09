@@ -42,8 +42,8 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
     }
 
     @Override
-    public Grain grain() {
-        return Grain.GAME;
+    public Grain<SnapCounts.SnapLine> grain() {
+        return new Grain.PerGame<>(SnapCounts.SnapLine::week, SnapCounts.SnapLine::gameId);
     }
 
     @Override
@@ -69,15 +69,16 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
     }
 
     @Override
-    public Coverage.Unit unit(SnapCounts.SnapLine line) {
-        return new Coverage.Unit(line.week(), line.gameId());
-    }
-
-    @Override
     public SnapCounts document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<SnapCounts.SnapLine> rows, Coverage coverage) {
         return new SnapCounts(basis.season(), basis.priorSeasonFinal(), assetUpdatedAt, checkedAt,
                 coverage, rows);
+    }
+
+    @Override
+    public SnapCounts recheck(SnapCounts current, Basis basis, Instant checkedAt) {
+        return new SnapCounts(basis.season(), basis.priorSeasonFinal(), current.assetUpdatedAt(),
+                checkedAt, current.coverage(), current.rows());
     }
 
     @Override

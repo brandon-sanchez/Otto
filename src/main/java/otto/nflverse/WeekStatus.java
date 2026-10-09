@@ -7,13 +7,14 @@ import java.util.List;
 public sealed interface WeekStatus {
 
     /**
-     * Every unit the schedule expects is held.
+     * Every game of the week is final where the feed waits for results,
+     * and every unit the schedule expects is held.
      *
      * @param asOf the newest change among the week's units: the version
      *        of this week the feed now holds
      * @param corrected the units whose content changed after Otto first saw them
      */
-    record Complete(Instant asOf, List<String> corrected) implements WeekStatus {
+    record Complete(Instant asOf, List<Coverage.Unit> corrected) implements WeekStatus {
     }
 
     /**
@@ -21,13 +22,15 @@ public sealed interface WeekStatus {
      *        in kickoff order
      * @param corrected the held units whose content changed after Otto first saw them
      */
-    record Incomplete(List<String> missing, List<String> corrected) implements WeekStatus {
+    record Incomplete(List<Coverage.Unit> missing, List<Coverage.Unit> corrected)
+            implements WeekStatus {
     }
 
     /**
      * Nothing can be said: there is no schedule, the feed was never
-     * downloaded or holds another season, or the week has no game yet
-     * that the feed is due for. Never a claim that the week is short.
+     * downloaded or holds another season, the week has not started or
+     * is still being played, or the snapshot that described it has been
+     * replaced by a newer one. Never a claim that the week is short.
      */
     record Unknown(String reason) implements WeekStatus {
     }

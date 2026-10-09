@@ -97,6 +97,7 @@ class DefenseVersusPositionScenarioTest extends WireSeamTest {
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
                 "sleeper/league-in-season.json", "league-v1");
         NflverseStubs.healthy(nflverse);
+        NflverseStubs.beforeAnyGameIsPlayed(nflverse);
         OutboundStubs.telegramOk(telegram);
         feeds.updateIfDue();
 
@@ -127,6 +128,7 @@ class DefenseVersusPositionScenarioTest extends WireSeamTest {
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
                 "sleeper/league-in-season.json", "league-v1");
         NflverseStubs.healthy(nflverse);
+        NflverseStubs.beforeAnyGameIsPlayed(nflverse);
         NflverseStubs.stubJson(nflverse, NflverseStubs.STATS_RELEASE_PATH,
                 "nflverse/release-stats-player-preseason.json");
         OutboundStubs.telegramOk(telegram);

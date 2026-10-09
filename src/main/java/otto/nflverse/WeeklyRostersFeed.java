@@ -48,8 +48,8 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
     }
 
     @Override
-    public Grain grain() {
-        return Grain.TEAM_WEEK;
+    public Grain<WeeklyRosters.Standing> grain() {
+        return new Grain.PerTeamWeek<>(WeeklyRosters.Standing::week, WeeklyRosters.Standing::team);
     }
 
     @Override
@@ -85,14 +85,15 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
     }
 
     @Override
-    public Coverage.Unit unit(WeeklyRosters.Standing standing) {
-        return new Coverage.Unit(standing.week(), standing.team());
-    }
-
-    @Override
     public WeeklyRosters document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<WeeklyRosters.Standing> rows, Coverage coverage) {
         return new WeeklyRosters(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
+    }
+
+    @Override
+    public WeeklyRosters recheck(WeeklyRosters current, Basis basis, Instant checkedAt) {
+        return new WeeklyRosters(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage(), current.rows());
     }
 
     @Override

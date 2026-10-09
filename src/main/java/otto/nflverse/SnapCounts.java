@@ -5,7 +5,7 @@ import java.util.List;
 
 public record SnapCounts(String season, boolean priorSeasonFinal, Instant assetUpdatedAt, Instant checkedAt,
         Coverage coverage,
-        List<SnapLine> rows) implements NflverseFeed<SnapCounts.SnapLine> {
+        List<SnapLine> rows) implements NflverseFeed {
 
     public record SnapLine(String pfrId, String position, int week, double offensePct,
             String gameId) {

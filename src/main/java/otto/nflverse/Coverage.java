@@ -12,7 +12,10 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -20,8 +23,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import otto.storage.OttoJson;
 
 /**
- * Which units a feed document holds - a game, or a team's week - and what
- * has happened to each since Otto first saw it.
+ * Which units a feed document holds - a game, a team's week, or a team's
+ * current chart - and what has happened to each since Otto first saw it.
  *
  * nflverse republishes a whole season file under one timestamp, often
  * daily, so a moved timestamp says nothing about which week changed. A
@@ -40,15 +43,27 @@ import otto.storage.OttoJson;
  */
 public record Coverage(int contentVersion, List<UnitRecord> units) {
 
-    /**
-     * One slot in a feed: a game id or a team code, in a week. Week 0
-     * for a feed whose file has no week, such as the depth charts; its
-     * stamp places it instead.
-     */
-    public record Unit(int week, String key) {
+    /** One slot in a feed. Which kind a feed uses is its {@link Grain}. */
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = Unit.Game.class, name = "game"),
+            @JsonSubTypes.Type(value = Unit.TeamWeek.class, name = "teamWeek"),
+            @JsonSubTypes.Type(value = Unit.Team.class, name = "team")})
+    public sealed interface Unit {
 
-        static Unit undated(String key) {
-            return new Unit(0, key);
+        record Game(int week, String gameId) implements Unit {
+        }
+
+        record TeamWeek(int week, String team) implements Unit {
+        }
+
+        /**
+         * A team's current snapshot in a file with no week, such as its
+         * depth chart. The record's {@code publishedAt} is the snapshot's
+         * own date and names which snapshot this is: a newer one is new
+         * data, and only the same date republished can be a correction.
+         */
+        record Team(String team) implements Unit {
         }
     }
 
@@ -62,13 +77,25 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
      *        content for the unit differed; firstSeenAt until then
      * @param corrections how many releases changed the unit's content
      *        after Otto first saw it
+     * @param held false once a release dropped the unit. The record stays
+     *        as it last was, so a unit that returns is measured against
+     *        what Otto saw before rather than read as new.
      */
     public record UnitRecord(Unit unit, long fingerprint, Instant publishedAt,
-            Instant firstSeenAt, Instant changedAt, int corrections) {
+            Instant firstSeenAt, Instant changedAt, int corrections, boolean held) {
     }
 
-    private static final Comparator<Unit> UNIT_ORDER =
-            Comparator.comparingInt(Unit::week).thenComparing(Unit::key);
+    private static final Comparator<Unit> UNIT_ORDER = Comparator
+            .comparingInt((Unit unit) -> switch (unit) {
+                case Unit.Game game -> game.week();
+                case Unit.TeamWeek teamWeek -> teamWeek.week();
+                case Unit.Team _ -> 0;
+            })
+            .thenComparing(unit -> switch (unit) {
+                case Unit.Game game -> game.gameId();
+                case Unit.TeamWeek teamWeek -> teamWeek.team();
+                case Unit.Team team -> team.team();
+            });
 
     /** Map keys sorted, so equal content always serialises to equal bytes. */
     private static final ObjectWriter CANONICAL = OttoJson.MAPPER.copy()
@@ -77,13 +104,14 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
 
     /** The coverage a freshly read file describes, before any history. */
     static <R> Coverage of(List<R> rows, FeedSpec<R, ?> spec, Instant assetUpdatedAt) {
+        MessageDigest digest = sha256();
         Map<Unit, Accumulator> byUnit = new TreeMap<>(UNIT_ORDER);
-        rows.forEach(row -> byUnit.computeIfAbsent(spec.unit(row), unit -> new Accumulator())
-                .add(fingerprint(spec.content(row)), spec.stamp(row)));
+        rows.forEach(row -> byUnit.computeIfAbsent(spec.grain().unit(row), unit -> new Accumulator())
+                .add(fingerprint(digest, spec.content(row)), spec.stamp(row)));
         List<UnitRecord> units = byUnit.entrySet().stream()
                 .map(entry -> new UnitRecord(entry.getKey(), entry.getValue().fingerprint,
                         Objects.requireNonNullElse(entry.getValue().newestStamp, assetUpdatedAt),
-                        assetUpdatedAt, assetUpdatedAt, 0))
+                        assetUpdatedAt, assetUpdatedAt, 0, true))
                 .toList();
         return new Coverage(spec.contentVersion(), units);
     }
@@ -92,8 +120,9 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
      * This file's coverage, with each unit's history carried over from the
      * stored copy. A unit whose content moved counts one more correction;
      * a unit that only moved its stamp keeps its history and takes the new
-     * stamp. A unit the file no longer holds is dropped, so it reads as
-     * missing rather than as still there.
+     * stamp. A {@link Unit.Team} whose stamp moved is a newer snapshot, so
+     * it starts afresh instead. A unit the file no longer holds stays as a
+     * tombstone.
      *
      * When the previous fingerprints were taken under another content
      * version they are replaced without being compared: the content they
@@ -110,22 +139,36 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
         boolean comparable = previous.contentVersion() == contentVersion;
         Map<Unit, UnitRecord> before = previous.units().stream()
                 .collect(Collectors.toMap(UnitRecord::unit, Function.identity()));
-        List<UnitRecord> merged = units.stream().map(fresh -> {
-            UnitRecord old = before.get(fresh.unit());
-            if (old == null) {
-                return fresh;
+        Map<Unit, UnitRecord> fresh = units.stream()
+                .collect(Collectors.toMap(UnitRecord::unit, Function.identity()));
+        Stream<UnitRecord> merged = units.stream().map(record -> {
+            UnitRecord old = before.get(record.unit());
+            if (old == null || newerSnapshot(old, record)) {
+                return record;
             }
-            boolean corrected = comparable && old.fingerprint() != fresh.fingerprint();
-            return new UnitRecord(fresh.unit(), fresh.fingerprint(), fresh.publishedAt(),
+            boolean corrected = comparable && old.fingerprint() != record.fingerprint();
+            return new UnitRecord(record.unit(), record.fingerprint(), record.publishedAt(),
                     old.firstSeenAt(),
                     corrected ? assetUpdatedAt : old.changedAt(),
-                    corrected ? old.corrections() + 1 : old.corrections());
-        }).toList();
-        return new Coverage(contentVersion, merged);
+                    corrected ? old.corrections() + 1 : old.corrections(),
+                    true);
+        });
+        Stream<UnitRecord> dropped = previous.units().stream()
+                .filter(old -> !fresh.containsKey(old.unit()))
+                .map(old -> new UnitRecord(old.unit(), old.fingerprint(), old.publishedAt(),
+                        old.firstSeenAt(), old.changedAt(), old.corrections(), false));
+        return new Coverage(contentVersion, Stream.concat(merged, dropped)
+                .sorted(Comparator.comparing(UnitRecord::unit, UNIT_ORDER))
+                .toList());
     }
 
-    List<UnitRecord> inWeek(int week) {
-        return units.stream().filter(record -> record.unit().week() == week).toList();
+    private static boolean newerSnapshot(UnitRecord old, UnitRecord fresh) {
+        return fresh.unit() instanceof Unit.Team
+                && !old.publishedAt().equals(fresh.publishedAt());
+    }
+
+    List<UnitRecord> held() {
+        return units.stream().filter(UnitRecord::held).toList();
     }
 
     /**
@@ -133,13 +176,19 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
      * the order rows arrive in cannot move the total while a changed,
      * added or removed row always does.
      */
-    private static long fingerprint(Object content) {
+    static long fingerprint(MessageDigest digest, Object content) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(CANONICAL.writeValueAsBytes(content));
-            return ByteBuffer.wrap(digest).getLong();
-        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
+            return ByteBuffer.wrap(digest.digest(CANONICAL.writeValueAsBytes(content))).getLong();
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("cannot fingerprint " + content, e);
+        }
+    }
+
+    static MessageDigest sha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 

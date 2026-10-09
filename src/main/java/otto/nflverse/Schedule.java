@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * the schedule says that week has.
  *
  * The previous season rides along because the stats and snap feeds read
- * last season's final file until a current-season week has been played.
+ * last season's final file until a current-season game is final.
  *
  * @param season the season Sleeper published when this copy was taken
  * @param assetUpdatedAt the release timestamp this copy was taken at
@@ -28,7 +28,7 @@ public record Schedule(
         Instant assetUpdatedAt,
         Instant checkedAt,
         Coverage coverage,
-        List<Game> rows) implements NflverseFeed<Schedule.Game> {
+        List<Game> rows) implements NflverseFeed {
 
     /**
      * One regular-season game, team codes in Sleeper's vocabulary.
@@ -39,12 +39,19 @@ public record Schedule(
             String away, boolean finished) {
     }
 
+    record Window(Instant start, Instant end) {
+    }
+
     /** One week's games in kickoff order. */
     List<Game> games(String season, int week) {
         return rows.stream()
                 .filter(game -> game.season().equals(season) && game.week() == week)
                 .sorted(Comparator.comparing(Game::kickoff).thenComparing(Game::gameId))
                 .toList();
+    }
+
+    boolean anyFinal(String season) {
+        return rows.stream().anyMatch(game -> game.season().equals(season) && game.finished());
     }
 
     /** The newest week every listed game of which is final; empty before week 1 is done. */
@@ -65,7 +72,7 @@ public record Schedule(
      * lists no week before it. A chart dated after that is the one teams
      * set for this week's games.
      *
-     * @param week a week the schedule lists games for
+     * @param week a week the schedule lists games for, or the one after the last listed
      */
     Instant windowStart(String season, int week) {
         List<Game> previous = games(season, week - 1);
@@ -75,5 +82,9 @@ public record Schedule(
         LocalDate lastGameDay = previous.getLast().kickoff()
                 .atZone(ScheduleFeed.EASTERN).toLocalDate();
         return lastGameDay.plusDays(1).atStartOfDay(ScheduleFeed.EASTERN).toInstant();
+    }
+
+    Window window(String season, int week) {
+        return new Window(windowStart(season, week), windowStart(season, week + 1));
     }
 }

@@ -12,4 +12,6 @@ dt,team,player_name,espn_id,gsis_id,pos_grp_id,pos_grp,pos_id,pos_name,pos_abb,p
 2026-09-30T07:30:00Z,NE,Running Back NE,NA,00-0041017,21,3WR 1TE,9,Running Back,RB,11,1
 2026-09-30T07:30:00Z,TB,Running Back TB,NA,00-0041024,21,3WR 1TE,9,Running Back,RB,11,1
 2026-09-30T07:30:00Z,DEN,Running Back DEN,NA,00-0041008,21,3WR 1TE,9,Running Back,RB,11,1
-2026-09-23T07:30:00Z,NO,Running Back NO,NA,00-0041018,21,3WR 1TE,9,Running Back,RB,11,1
+2026-10-01T07:30:00Z,NO,Fullback NO,NA,00-0049017,21,3WR 1TE,9,Running Back,RB,11,1
+2026-10-01T07:30:00Z,NO,Running Back NO,NA,00-0041018,21,3WR 1TE,9,Running Back,RB,12,2
+2026-09-23T07:30:00Z,GB,Running Back GB,NA,00-0041010,21,3WR 1TE,9,Running Back,RB,12,2
