@@ -2,7 +2,12 @@ package otto.nflverse;
 
 import java.util.List;
 
-/** The ordered registry of release-asset feeds. A new feed is one spec and one entry here. */
+/**
+ * The ordered registry of release-asset feeds. A new feed needs a
+ * {@link FeedId}, its spec, a field and an entry in {@link #ALL} here, and
+ * its document in {@link NflverseFeed}'s permits list. {@code FeedRegistryTest}
+ * fails when those disagree.
+ */
 final class Feeds {
 
     static final WeeklyStatsFeed WEEKLY_STATS = new WeeklyStatsFeed();

@@ -63,6 +63,11 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-weekly-stats";
+    }
+
+    @Override
     public String tag() {
         return "stats_player";
     }

@@ -28,6 +28,11 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
     }
 
     @Override
+    public String documentName() {
+        return "nflverse-weekly-rosters";
+    }
+
+    @Override
     public String tag() {
         return "weekly_rosters";
     }
