@@ -19,12 +19,16 @@ public class NflverseStore {
         this.store = store;
     }
 
-    <R, D extends NflverseFeed<R>> Optional<D> read(FeedSpec<R, D> spec) {
+    <R, D extends NflverseFeed> Optional<D> read(FeedSpec<R, D> spec) {
         return store.read(spec.documentName(), spec.type());
     }
 
-    <R, D extends NflverseFeed<R>> void write(FeedSpec<R, D> spec, D document) {
+    <R, D extends NflverseFeed> void write(FeedSpec<R, D> spec, D document) {
         store.write(spec.documentName(), document);
+    }
+
+    public Optional<Schedule> schedule() {
+        return read(Feeds.SCHEDULE);
     }
 
     public Optional<WeeklyStats> weeklyStats() {
@@ -41,6 +45,10 @@ public class NflverseStore {
 
     public Optional<SnapCounts> snapCounts() {
         return read(Feeds.SNAP_COUNTS);
+    }
+
+    public Optional<FtnCharting> ftnCharting() {
+        return read(Feeds.FTN_CHARTING);
     }
 
     public Optional<PlayerIdMap> playerIds() {

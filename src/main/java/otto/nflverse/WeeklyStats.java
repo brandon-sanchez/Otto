@@ -17,13 +17,15 @@ import java.util.Map;
  * @param assetUpdatedAt the release timestamp this copy was taken at;
  *        an unchanged value means no download is needed
  * @param checkedAt when the hourly timestamp check last ran
+ * @param coverage which units the rows hold and when each last changed
  */
 public record WeeklyStats(
         String season,
         boolean priorSeasonFinal,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<StatLine> rows) implements NflverseFeed<WeeklyStats.StatLine> {
+        Coverage coverage,
+        List<StatLine> rows) implements NflverseFeed {
 
     /**
      * One player's line from one game, and the defense that allowed it.

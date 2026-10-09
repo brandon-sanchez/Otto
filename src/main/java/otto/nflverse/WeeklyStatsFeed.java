@@ -83,6 +83,11 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
     }
 
     @Override
+    public Grain<WeeklyStats.StatLine> grain() {
+        return new Grain.PerTeamWeek<>(WeeklyStats.StatLine::week, WeeklyStats.StatLine::team);
+    }
+
+    @Override
     public List<WeeklyStats.StatLine> read(Basis basis, Stream<Csv.Row> rows) {
         List<WeeklyStats.StatLine> lines = new ArrayList<>();
         rows.forEach(row -> {
@@ -151,9 +156,15 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
      */
     @Override
     public WeeklyStats document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<WeeklyStats.StatLine> rows) {
+            List<WeeklyStats.StatLine> rows, Coverage coverage) {
         return new WeeklyStats(basis.season(), basis.priorSeasonFinal(), assetUpdatedAt, checkedAt,
-                rows);
+                coverage, rows);
+    }
+
+    @Override
+    public WeeklyStats recheck(WeeklyStats current, Basis basis, Instant checkedAt) {
+        return new WeeklyStats(basis.season(), basis.priorSeasonFinal(), current.assetUpdatedAt(),
+                checkedAt, current.coverage(), current.rows());
     }
 
     @Override

@@ -20,12 +20,14 @@ import java.util.Set;
  *
  * @param assetUpdatedAt the release timestamp this copy was taken at
  * @param checkedAt when the hourly timestamp check last ran
+ * @param coverage which units the rows hold and when each last changed
  */
 public record WeeklyRosters(
         String season,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<Standing> rows) implements NflverseFeed<WeeklyRosters.Standing> {
+        Coverage coverage,
+        List<Standing> rows) implements NflverseFeed {
 
     /**
      * The roster-standing codes that carry no reversion date. Every
@@ -49,7 +51,7 @@ public record WeeklyRosters(
             "R02");
 
     /** One player's roster standing in one week. */
-    public record Standing(String gsisId, int week, String code) {
+    public record Standing(String gsisId, int week, String code, String team) {
     }
 
     /** What a player's newest standing says about his coming back. */

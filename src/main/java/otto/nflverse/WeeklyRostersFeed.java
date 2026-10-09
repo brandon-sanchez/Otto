@@ -20,7 +20,7 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, WeeklyRosters> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "gsis_id", "week", "position", "game_type", "status_description_abbr");
+            "gsis_id", "team", "week", "position", "game_type", "status_description_abbr");
 
     @Override
     public FeedId id() {
@@ -47,6 +47,16 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
         return SeasonRule.CURRENT;
     }
 
+    @Override
+    public Grain<WeeklyRosters.Standing> grain() {
+        return new Grain.PerTeamWeek<>(WeeklyRosters.Standing::week, WeeklyRosters.Standing::team);
+    }
+
+    @Override
+    public Due due() {
+        return Due.WHEN_SCHEDULED;
+    }
+
     /**
      * Only the standing itself is kept, and only for the four
      * positions the Player Directory keeps and the regular season this
@@ -68,15 +78,22 @@ final class WeeklyRostersFeed implements FeedSpec<WeeklyRosters.Standing, Weekly
                     || !REGULAR_SEASON.equals(row.text("game_type"))) {
                 return;
             }
-            standings.add(new WeeklyRosters.Standing(gsisId, row.integer("week"), code));
+            standings.add(new WeeklyRosters.Standing(gsisId, row.integer("week"), code,
+                    NflTeams.normalize(row.text("team"))));
         });
         return standings;
     }
 
     @Override
     public WeeklyRosters document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<WeeklyRosters.Standing> rows) {
-        return new WeeklyRosters(basis.season(), assetUpdatedAt, checkedAt, rows);
+            List<WeeklyRosters.Standing> rows, Coverage coverage) {
+        return new WeeklyRosters(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
+    }
+
+    @Override
+    public WeeklyRosters recheck(WeeklyRosters current, Basis basis, Instant checkedAt) {
+        return new WeeklyRosters(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage(), current.rows());
     }
 
     @Override

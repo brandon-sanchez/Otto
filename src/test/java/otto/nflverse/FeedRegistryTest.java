@@ -29,9 +29,11 @@ class FeedRegistryTest {
                 .collect(Collectors.toMap(FeedSpec::id, FeedSpec::documentName));
 
         assertThat(names).containsExactlyInAnyOrderEntriesOf(Map.of(
+                FeedId.SCHEDULE, "nflverse-schedule",
                 FeedId.WEEKLY_STATS, "nflverse-weekly-stats",
                 FeedId.SNAP_COUNTS, "nflverse-snap-counts",
                 FeedId.WEEKLY_ROSTERS, "nflverse-weekly-rosters",
-                FeedId.DEPTH_CHARTS, "nflverse-depth-charts"));
+                FeedId.DEPTH_CHARTS, "nflverse-depth-charts",
+                FeedId.FTN_CHARTING, "nflverse-ftn-charting"));
     }
 }

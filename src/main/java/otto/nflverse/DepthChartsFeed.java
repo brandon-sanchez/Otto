@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -27,12 +28,14 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
      * The shapes the depth charts' publish column has been seen in: an
      * instant with a zone offset, a bare local timestamp, or a bare
      * date. All three name an unambiguous moment, so all three order
-     * correctly against each other.
+     * correctly against each other. A bare date is a day in the NFL's
+     * own zone, the one the schedule places a week's window in, so a
+     * chart dated the Tuesday a week opens falls inside that week.
      */
     private static final List<Function<String, Instant>> PUBLISH_FORMATS = List.of(
             published -> OffsetDateTime.parse(published).toInstant(),
             published -> LocalDateTime.parse(published).toInstant(ZoneOffset.UTC),
-            published -> LocalDate.parse(published).atStartOfDay(ZoneOffset.UTC).toInstant());
+            published -> LocalDate.parse(published).atStartOfDay(ScheduleFeed.EASTERN).toInstant());
 
     @Override
     public FeedId id() {
@@ -57,6 +60,17 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     @Override
     public SeasonRule seasonRule() {
         return SeasonRule.CURRENT;
+    }
+
+    @Override
+    public Grain<DepthCharts.Spot> grain() {
+        return new Grain.PerTeam<>(DepthCharts.Spot::team);
+    }
+
+    /** A team sets its chart for a week before that week's game, not after it. */
+    @Override
+    public Due due() {
+        return Due.WHEN_SCHEDULED;
     }
 
     /**
@@ -118,9 +132,26 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     }
 
     @Override
+    public Optional<Instant> stamp(DepthCharts.Spot spot) {
+        return Optional.of(spot.chartedAt());
+    }
+
+    /** The rank he held on the chart before is that older chart's content, not this one's. */
+    @Override
+    public Object content(DepthCharts.Spot spot) {
+        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank());
+    }
+
+    @Override
     public DepthCharts document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<DepthCharts.Spot> rows) {
-        return new DepthCharts(basis.season(), assetUpdatedAt, checkedAt, rows);
+            List<DepthCharts.Spot> rows, Coverage coverage) {
+        return new DepthCharts(basis.season(), assetUpdatedAt, checkedAt, coverage, rows);
+    }
+
+    @Override
+    public DepthCharts recheck(DepthCharts current, Basis basis, Instant checkedAt) {
+        return new DepthCharts(basis.season(), current.assetUpdatedAt(), checkedAt,
+                current.coverage(), current.rows());
     }
 
     @Override
@@ -171,7 +202,8 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
             previous.forEach(row -> before.put(row.gsisId(), row.rank()));
             return newest.stream()
                     .map(row -> new DepthCharts.Spot(row.gsisId(), row.player(), team,
-                            row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0)))
+                            row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0),
+                            newestDate))
                     .toList();
         }
     }
