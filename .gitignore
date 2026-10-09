@@ -9,3 +9,8 @@ target/
 data/
 cdk.out/
 .impeccable/
+
+# Local agent and design tooling
+.claude/
+.21st/
+design-explorations/
