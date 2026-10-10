@@ -11,12 +11,14 @@ import java.util.List;
  *
  * @param assetUpdatedAt the release timestamp this copy was taken at
  * @param checkedAt when the hourly timestamp check last ran
+ * @param coverage which units the rows hold and when each last changed
  */
 public record DepthCharts(
         String season,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<Spot> rows) implements NflverseFeed<DepthCharts.Spot> {
+        Coverage coverage,
+        List<Spot> rows) implements NflverseFeed {
 
     /**
      * One player's place on their team's chart: RB1, WR3 and so on.
@@ -25,9 +27,11 @@ public record DepthCharts(
      * alongside, because a waiver score turns on the move rather than
      * on the standing: RB2 to RB1 is the news, RB1 again is not. A
      * player absent from the previous chart carries rank 0.
+     *
+     * @param chartedAt when the chart this place comes from was published
      */
     public record Spot(String gsisId, String player, String team, String position, int rank,
-            int previousRank) {
+            int previousRank, Instant chartedAt) {
 
         /** How the user would say it: "RB1". */
         public String label() {

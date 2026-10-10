@@ -6,6 +6,14 @@ Amended (2026-08-15): the weekly stats feed resolves its season from
 the NFL season type as well as the week, so the preseason reads last
 season's final file. Everything else stands.
 
+Amended (2026-10-04, issue #112): a release timestamp decides whether
+to download, no longer what changed. Each stored feed now records which
+games, team-weeks or team charts it holds and when each last changed,
+and the schedule is stored as a feed to say what a week should hold.
+The schedule also decides when the weekly stats and snap feeds move
+from last season's final file to this season's, where the 2026-08-15
+amendment read Sleeper's week and season type.
+
 The spec pins the nflverse sources, their refresh cadence, the
 defense-versus-position table and the two player tools. It leaves the
 semantics of each open. This ADR records what implementation decided.
@@ -39,25 +47,25 @@ ranked the same way round.
 
 Week 1 has no played week of its own, so the spec says it uses last
 season's final ranks. Rather than hold two seasons and choose at build
-time, the hourly update resolves the season it needs from the NFL week
-and downloads that one file: the prior season while the week is 1, the
-current season from week 2 on. The stored document records which season
-it holds and whether it is a prior-season final, so the nightly build
-labels the table without asking Sleeper anything.
+time, the hourly update resolves the season it needs and downloads
+that one file: the prior season's final file until a game of this
+season is final, the current season from then on. The stored document
+records which season it holds and whether it is a prior-season final,
+so the nightly build labels the table without asking Sleeper anything.
 
-The week alone does not say this, and it took a live preseason to show
-it. Sleeper counts preseason weeks from 1, so the middle of August
-reads as week 2 or later while no game that counts has been played.
-The rule is therefore the season type and the week together: the
-current season from week 2 on, once Sleeper says the season is
-underway, and the prior season's final file at every other time. An
-absent season type reads as underway, because the week is then the only
-thing left to go on and it is right for all but a few weeks of the
-year.
+Whether a game is final comes from the stored schedule, which the
+hourly run refreshes before the weekly feeds. Sleeper's week counter
+cannot say it: it counts preseason weeks from 1, so the middle of
+August reads as week 2 or later while no game that counts has been
+played, and it took a live preseason to show that. Only when no
+schedule has been stored at all does the counter stand in, as the week
+and the season type together: the current season from week 2 on, once
+Sleeper says the season is underway, and the prior season's final file
+at every other time.
 
-The changeover is self-correcting: when the week rolls to 2 the asset
-name changes, so its stored timestamp no longer matches and the current
-season downloads on the next hourly check.
+The changeover is self-correcting: once the schedule carries the first
+result the asset name changes, so the stored timestamp no longer
+matches and the current season downloads on that hourly check.
 
 The rollover the other way needs help, because it changes nothing on
 the wire. In week 1 of the next season the same finished file answers
@@ -80,6 +88,33 @@ The DynastyProcess mapping has no release index - it is a plain file in
 a repository - so "download only on change" is a conditional GET on its
 ETag there. Both express the same rule with the mechanism each source
 actually offers.
+
+The timestamp says only that a file was republished. nflverse
+republishes a whole season file at once, often daily, and corrects
+stats through Wednesday, so a moved timestamp cannot say whether week
+2's numbers changed or week 4 was appended. Each stored feed therefore
+carries its coverage in the same document as its rows: one record per
+unit (a game, a team's week, or for the undated depth charts a team's
+current chart) with a fingerprint of the rows Otto keeps for it. A
+download compares fingerprints with the stored copy, and only a unit
+whose kept content moved counts as corrected. A reordered file, a
+column Otto drops, or FTN re-pulling old games under a new
+`date_pulled` does not. A depth chart is a snapshot dated by its own
+`dt`: a chart with a newer date is new data and starts its record
+afresh, and only the same date republished with other ranks is a
+correction. A unit that drops out of a republished file keeps its
+record as a tombstone, so one that returns is measured against what
+Otto saw before. A copy stored before coverage existed, or under an
+older content version, is downloaded once more to gain it.
+
+Whether a week has arrived is measured against the schedule
+(`schedules/games.csv`), which is itself a stored feed: a week is
+complete in a feed when every game or team the schedule expects is
+held, and anything the schedule cannot vouch for reads as unknown
+rather than incomplete. That includes a week still being played for a
+feed that waits on results, a week that has not yet started for a feed
+published before kickoff, and a depth-chart week whose charts have
+since been replaced by newer ones.
 
 ## nflverse rows arrive in Sleeper's stat vocabulary
 
