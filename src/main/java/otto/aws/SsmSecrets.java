@@ -40,7 +40,7 @@ public class SsmSecrets implements EnvironmentPostProcessor {
     /** The environment variable the stack sets to the parameter path. */
     static final String PATH_VARIABLE = "OTTO_PARAMETER_PATH";
 
-    static final String SOURCE_NAME = "otto-ssm-parameters";
+    public static final String SOURCE_NAME = "otto-ssm-parameters";
 
     private static final Duration CALL_TIMEOUT = Duration.ofSeconds(10);
 
