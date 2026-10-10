@@ -14,7 +14,7 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "pfr_player_id", "week", "game_type", "position", "offense_pct");
+            "game_id", "pfr_player_id", "week", "game_type", "position", "offense_pct");
 
     @Override
     public FeedId id() {
@@ -42,6 +42,11 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
     }
 
     @Override
+    public Grain<SnapCounts.SnapLine> grain() {
+        return new Grain.PerGame<>(SnapCounts.SnapLine::week, SnapCounts.SnapLine::gameId);
+    }
+
+    @Override
     public List<SnapCounts.SnapLine> read(Basis basis, Stream<Csv.Row> rows) {
         List<SnapCounts.SnapLine> lines = new ArrayList<>();
         rows.forEach(row -> {
@@ -55,7 +60,7 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
                 double share = Double.parseDouble(row.text("offense_pct"));
                 if (share >= 0.0 && share <= 1.0) {
                     lines.add(new SnapCounts.SnapLine(pfrId, row.text("position"),
-                            row.integer("week"), share));
+                            row.integer("week"), share, row.text("game_id")));
                 }
             } catch (NumberFormatException ignored) {
             }
@@ -65,9 +70,15 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
 
     @Override
     public SnapCounts document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
-            List<SnapCounts.SnapLine> rows) {
+            List<SnapCounts.SnapLine> rows, Coverage coverage) {
         return new SnapCounts(basis.season(), basis.priorSeasonFinal(), assetUpdatedAt, checkedAt,
-                rows);
+                coverage, rows);
+    }
+
+    @Override
+    public SnapCounts recheck(SnapCounts current, Basis basis, Instant checkedAt) {
+        return new SnapCounts(basis.season(), basis.priorSeasonFinal(), current.assetUpdatedAt(),
+                checkedAt, current.coverage(), current.rows());
     }
 
     @Override
