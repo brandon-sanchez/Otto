@@ -45,6 +45,21 @@ npx aws-cdk@2 deploy OttoStack -c alertEmail=you@example.com
 Optional: `parameterPath` (default `/otto/prod`) and `timeZone` (default
 `America/Los_Angeles`, when the nightly build runs).
 
+Two optional values shape the Decision Records bucket:
+
+- `articleTextSeasons` (default `3`). How many seasons of 365 days copied
+  article text is kept. It also sets how long every record is locked
+  against deletion. A change to the expiry applies to all stored article
+  text at once; a change to the lock applies only to objects written
+  afterwards. So lowering the value hides older article text at the new
+  age, but each hidden version stays in the bucket until its original
+  lock ends, and only then is it removed.
+- `recordReaderArns` (default none). A comma-separated list of IAM user
+  or role ARNs that may read records. The bucket denies reads to
+  everyone else except the two functions and the account root, so add
+  the identity you sign in with, for example
+  `-c recordReaderArns=arn:aws:iam::ACCOUNT_ID:user/you`.
+
 Confirm the subscription email AWS sends, or no alarm will reach you.
 
 **On a new AWS account**, add `-c scheduledReservedConcurrency=0`. New
