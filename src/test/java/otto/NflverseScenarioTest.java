@@ -12,6 +12,7 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.nflverse.DepthCharts;
+import otto.nflverse.FeedId;
 import otto.nflverse.NflverseFeedService;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
@@ -76,6 +77,26 @@ class NflverseScenarioTest extends WireSeamTest {
         assertThat(store.snapCounts().orElseThrow().rows())
                 .extracting(row -> row.pfrId() + "=" + row.offensePct())
                 .contains("NacuPu00=0.78", "WillKy02=0.65", "AkerCa00=0.35");
+    }
+
+    @Test
+    void aFinishedSeasonsSnapCountsAreRelabelledEvenThoughTheFileNeverMoves() {
+        healthyFeeds();
+        feeds.updateIfDue();
+        assertThat(store.snapCounts().orElseThrow().priorSeasonFinal()).isFalse();
+        nflverse.resetRequests();
+
+        // Week 1 of the next season reads the same, long-final 2026 file.
+        // RoleShares drops last season's shares by this flag, so it has to
+        // follow the calendar even though nothing is downloaded.
+        SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
+                "sleeper/state-nfl-2027-week1.json", "state-v2");
+        clock.advance(Duration.ofHours(2));
+        feeds.updateIfDue();
+
+        nflverse.verify(0, getRequestedFor(urlEqualTo(NflverseStubs.SNAPS_2026_PATH)));
+        assertThat(store.snapCounts().orElseThrow().season()).isEqualTo("2026");
+        assertThat(store.snapCounts().orElseThrow().priorSeasonFinal()).isTrue();
     }
 
     @Test
@@ -224,7 +245,7 @@ class NflverseScenarioTest extends WireSeamTest {
 
         NflverseFeedService.Result result = feeds.updateIfDue();
 
-        assertThat(result.snapCounts()).isInstanceOf(NflverseFeedService.Update.Unavailable.class);
+        assertThat(result.feed(FeedId.SNAP_COUNTS)).isInstanceOf(NflverseFeedService.Update.Unavailable.class);
         assertThat(store.snapCounts()).isEmpty();
         assertThat(store.weeklyStats()).isPresent();
         assertThat(store.depthCharts()).isPresent();

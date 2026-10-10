@@ -4,13 +4,9 @@ import java.time.Instant;
 import java.util.List;
 
 public record SnapCounts(String season, boolean priorSeasonFinal, Instant assetUpdatedAt, Instant checkedAt,
-        List<SnapLine> rows) implements NflverseFeed {
+        List<SnapLine> rows) implements NflverseFeed<SnapCounts.SnapLine> {
 
     public record SnapLine(String pfrId, String position, int week, double offensePct) {
-    }
-
-    public SnapCounts withCheckedAt(Instant newCheckedAt) {
-        return new SnapCounts(season, priorSeasonFinal, assetUpdatedAt, newCheckedAt, rows);
     }
 
     public int newestWeek() {

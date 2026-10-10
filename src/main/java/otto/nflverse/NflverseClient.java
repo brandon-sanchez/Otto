@@ -33,9 +33,6 @@ import otto.storage.OttoJson;
 @Component
 public class NflverseClient {
 
-    /** The nflverse-data repository, whose releases hold every season file. */
-    private static final String RELEASES = "/repos/nflverse/nflverse-data/releases/tags/";
-    private static final String DOWNLOADS = "/nflverse/nflverse-data/releases/download/";
     private static final String PLAYER_IDS = "/dynastyprocess/data/master/files/db_playerids.csv";
 
     /** Generous: these downloads are multi-megabyte CSV bodies. */
@@ -70,8 +67,8 @@ public class NflverseClient {
      * This is the timestamp check: an unchanged value means the stored
      * copy is still current and no body needs downloading.
      */
-    SourceResult<Map<String, Instant>> assetTimestamps(String releaseTag) {
-        String path = RELEASES + releaseTag;
+    SourceResult<Map<String, Instant>> assetTimestamps(String repo, String releaseTag) {
+        String path = "/repos/%s/releases/tags/%s".formatted(repo, releaseTag);
         try {
             byte[] body = api.get().uri(path).retrieve().body(byte[].class);
             JsonNode release = OttoJson.MAPPER.readTree(body);
@@ -100,10 +97,10 @@ public class NflverseClient {
      * never held whole: the reader sees rows as they arrive and keeps
      * only what it needs.
      */
-    <T> SourceResult<T> downloadAsset(String releaseTag, String asset,
+    <T> SourceResult<T> downloadAsset(String repo, String releaseTag, String asset,
             Function<Stream<Csv.Row>, T> rows) {
-        return download(downloads, DOWNLOADS + releaseTag + "/" + asset, releaseTag + "/" + asset,
-                rows);
+        return download(downloads, "/%s/releases/download/%s/%s".formatted(repo, releaseTag, asset),
+                releaseTag + "/" + asset, rows);
     }
 
     /**

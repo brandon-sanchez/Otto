@@ -16,7 +16,7 @@ public record DepthCharts(
         String season,
         Instant assetUpdatedAt,
         Instant checkedAt,
-        List<Spot> rows) implements NflverseFeed {
+        List<Spot> rows) implements NflverseFeed<DepthCharts.Spot> {
 
     /**
      * One player's place on their team's chart: RB1, WR3 and so on.
@@ -38,9 +38,5 @@ public record DepthCharts(
         public boolean promoted() {
             return previousRank > 0 && rank < previousRank;
         }
-    }
-
-    public DepthCharts withCheckedAt(Instant newCheckedAt) {
-        return new DepthCharts(season, assetUpdatedAt, newCheckedAt, rows);
     }
 }
