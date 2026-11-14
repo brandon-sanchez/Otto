@@ -232,6 +232,19 @@ public class SleeperAdapter {
         }
     }
 
+    /**
+     * One FAAB claim on one player, won or lost: how much a team bid for
+     * a free agent. A lost claim is the only record of what a rival was
+     * willing to pay and fell short with.
+     *
+     * @param bid the dollars bid, in the league's own budget
+     * @param won true when the claim completed, false when it failed
+     * @param processed when Sleeper settled the claim
+     */
+    public record WaiverClaim(String transactionId, int rosterId, String playerId, int bid,
+            boolean won, Instant processed) {
+    }
+
     public record LeagueUser(String userId, String displayName) {
     }
 
@@ -456,6 +469,48 @@ public class SleeperAdapter {
                         Instant.ofEpochMilli(updated.asLong())));
             }
             return ok(transactions);
+        });
+    }
+
+    /**
+     * The league's FAAB claims for one week, won and lost. Sleeper files
+     * a lost claim as a {@code failed} waiver transaction that still
+     * carries its bid in {@code settings.waiver_bid}. A waiver
+     * transaction with no bid is a priority claim and is left out.
+     */
+    public SourceResult<List<WaiverClaim>> waiverClaims(int week) {
+        String path = leaguePath + "/transactions/" + week;
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "transactions is not an array");
+            }
+            List<WaiverClaim> claims = new ArrayList<>();
+            for (JsonNode transaction : body) {
+                if (!"waiver".equals(transaction.path("type").asText())) {
+                    continue;
+                }
+                Optional<TransactionStatus> status =
+                        TransactionStatus.of(transaction.path("status").asText(null));
+                boolean won = status.equals(Optional.of(TransactionStatus.COMPLETE));
+                JsonNode bid = transaction.path("settings").path("waiver_bid");
+                if (!won && !status.equals(Optional.of(TransactionStatus.FAILED))
+                        || bid.isMissingNode() || bid.isNull()) {
+                    continue;
+                }
+                JsonNode updated = transaction.get("status_updated");
+                List<Integer> rosterIds = intList(transaction.path("roster_ids"));
+                Map<String, Integer> adds = rosterByPlayer(transaction.path("adds"));
+                if (!wholeNumber(bid) || bid.asInt() < 0 || updated == null
+                        || !updated.isIntegralNumber() || updated.asLong() <= 0
+                        || rosterIds.size() != 1 || adds.size() != 1) {
+                    return schemaDrift(path, "a waiver claim's bid, roster, player or "
+                            + "status_updated is missing or malformed");
+                }
+                claims.add(new WaiverClaim(transaction.path("transaction_id").asText(),
+                        rosterIds.getFirst(), adds.keySet().iterator().next(), bid.asInt(), won,
+                        Instant.ofEpochMilli(updated.asLong())));
+            }
+            return ok(claims);
         });
     }
 
