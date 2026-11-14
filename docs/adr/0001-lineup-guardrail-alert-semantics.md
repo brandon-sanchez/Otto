@@ -79,6 +79,25 @@ and no advice. A starter ruled Out is still one message: when the
 status transition and the legality problem merge, the transition leads
 and the decision also chooses how to fill his slot.
 
+## A team announcement is a football fact, not a designation
+
+A player decision keeps three facts apart: whether he plays, the
+designation Sleeper shows, and the roster moves Sleeper allows. The
+team's own announcement can state the first before Sleeper changes
+the second. It counts only when it is published on the official site
+of the team he plays for, states plainly that he plays or does not,
+and is newer than the moment Otto saw Sleeper set his designation.
+An announcement that is newer and disagrees with Sleeper is a player
+decision of its own, sent once.
+
+The legal plans are still built from the Sleeper designation alone.
+A team that rules a player out does not open IR while Sleeper lists
+him as Active, because Sleeper would refuse the move. When the team
+and Sleeper disagree, in either order, the disagreement is an unknown
+the advice must be conditional on, so the message states it rather
+than settling it. When the model is down, the code-written text says
+what the team announced and what Sleeper still shows.
+
 ## Messages say when the game starts
 
 Players are introduced by full name. A message says "game starts in
