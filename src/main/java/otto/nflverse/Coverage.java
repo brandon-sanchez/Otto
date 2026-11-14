@@ -48,7 +48,8 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = Unit.Game.class, name = "game"),
             @JsonSubTypes.Type(value = Unit.TeamWeek.class, name = "teamWeek"),
-            @JsonSubTypes.Type(value = Unit.Team.class, name = "team")})
+            @JsonSubTypes.Type(value = Unit.Team.class, name = "team"),
+            @JsonSubTypes.Type(value = Unit.Week.class, name = "week")})
     public sealed interface Unit {
 
         record Game(int week, String gameId) implements Unit {
@@ -64,6 +65,15 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
          * data, and only the same date republished can be a correction.
          */
         record Team(String team) implements Unit {
+        }
+
+        /**
+         * A whole week of one season, in a file that holds more than one
+         * season. Week 0 is a season-to-date total, which the file
+         * rewrites every week, so its record counts each weekly update
+         * as a correction; no week the schedule lists is ever week 0.
+         */
+        record Week(String season, int week) implements Unit {
         }
     }
 
@@ -90,11 +100,13 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
                 case Unit.Game game -> game.week();
                 case Unit.TeamWeek teamWeek -> teamWeek.week();
                 case Unit.Team _ -> 0;
+                case Unit.Week week -> week.week();
             })
             .thenComparing(unit -> switch (unit) {
                 case Unit.Game game -> game.gameId();
                 case Unit.TeamWeek teamWeek -> teamWeek.team();
                 case Unit.Team team -> team.team();
+                case Unit.Week week -> week.season();
             });
 
     /** Map keys sorted, so equal content always serialises to equal bytes. */

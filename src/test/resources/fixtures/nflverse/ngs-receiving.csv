@@ -1,0 +1,4 @@
+season,season_type,week,player_display_name,player_position,team_abbr,avg_cushion,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,catch_percentage,yards,rec_touchdowns,avg_yac,avg_expected_yac,avg_yac_above_expectation,player_gsis_id,player_first_name,player_last_name,player_jersey_number,player_short_name
+2026,REG,0,Justin Jefferson,WR,MIN,6.1,3.2,12.4,38.0,14,22,63.6,210,1,4.1,4.0,0.1,00-0036322,Justin,Jefferson,18,J.Jefferson
+2026,REG,1,Justin Jefferson,WR,MIN,5.9,3.4,13.0,40.1,6,9,66.7,98,1,3.9,3.5,0.4,00-0036322,Justin,Jefferson,18,J.Jefferson
+2026,REG,2,Justin Jefferson,WR,MIN,6.3,2.9,11.8,36.2,0,6,0,0,0,,,,00-0036322,Justin,Jefferson,18,J.Jefferson

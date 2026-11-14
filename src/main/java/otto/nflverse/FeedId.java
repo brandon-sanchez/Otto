@@ -3,5 +3,6 @@ package otto.nflverse;
 /** Every release-asset feed Otto reads. The player-id map is an ETag download, not a feed. */
 public enum FeedId {
     SCHEDULE, WEEKLY_STATS, SNAP_COUNTS, WEEKLY_ROSTERS, DEPTH_CHARTS, FTN_CHARTING,
-    PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS, PBP_PARTICIPATION
+    PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS, PBP_PARTICIPATION,
+    NGS_PASSING, NGS_RECEIVING, NGS_RUSHING
 }

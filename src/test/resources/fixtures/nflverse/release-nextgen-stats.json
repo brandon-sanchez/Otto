@@ -1,0 +1,42 @@
+{
+  "tag_name": "nextgen_stats",
+  "name": "nextgen_stats",
+  "published_at": "2022-01-28T16:58:03Z",
+  "assets": [
+    {
+      "name": "ngs_2024_passing.csv.gz",
+      "content_type": "application/gzip",
+      "size": 616,
+      "updated_at": "2024-09-06T07:30:58Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_2024_passing.csv.gz"
+    },
+    {
+      "name": "ngs_passing.csv.gz",
+      "content_type": "application/gzip",
+      "size": 613327,
+      "updated_at": "2026-10-01T15:01:37Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_passing.csv.gz"
+    },
+    {
+      "name": "ngs_passing.parquet",
+      "content_type": "application/octet-stream",
+      "size": 761042,
+      "updated_at": "2026-10-01T15:01:37Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_passing.parquet"
+    },
+    {
+      "name": "ngs_receiving.csv.gz",
+      "content_type": "application/gzip",
+      "size": 1033024,
+      "updated_at": "2026-10-01T15:01:51Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_receiving.csv.gz"
+    },
+    {
+      "name": "ngs_rushing.csv.gz",
+      "content_type": "application/gzip",
+      "size": 342807,
+      "updated_at": "2026-10-01T15:01:44Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_rushing.csv.gz"
+    }
+  ]
+}

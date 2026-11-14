@@ -85,6 +85,15 @@ class FingerprintPinTest {
                         Map.of("COVER_3", 3, "COVER_1", 2), 2, Map.of("00-0030506", 6)));
     }
 
+    @Test
+    void nextGenStatsContent() {
+        NextGenStats.Line line = new NextGenStats.Line("2026", 1, "00-0036264", "Jordan Love",
+                "QB", "GB", Map.of("avg_time_to_throw", 2.62, "aggressiveness", 12.1));
+        pin(Feeds.NGS_PASSING, 1, 3662716482247522388L, line);
+        pin(Feeds.NGS_RECEIVING, 1, 3662716482247522388L, line);
+        pin(Feeds.NGS_RUSHING, 1, 3662716482247522388L, line);
+    }
+
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,
             R row) {
         assertThat(spec.contentVersion())
