@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
 import otto.events.EventLog;
+import otto.harness.AdviceStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -43,6 +44,7 @@ class MuteScenarioTest extends WireSeamTest {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.telegramCallbackAnswered(telegram);
         OutboundStubs.llmPhrases(llm, "Lineup notice.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
         checkRunner.runCheck();
     }
 
@@ -51,6 +53,7 @@ class MuteScenarioTest extends WireSeamTest {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.telegramCallbackAnswered(telegram);
         OutboundStubs.llmPhrases(llm, "Lineup notice.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
         checkRunner.runCheck();
     }
 
