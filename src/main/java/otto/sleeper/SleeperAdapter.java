@@ -235,9 +235,36 @@ public class SleeperAdapter {
     public record LeagueUser(String userId, String displayName) {
     }
 
-    /** One item from a player's news feed, as Sleeper publishes it. */
+    /**
+     * One team's starting lineup for one week and what each starter
+     * scored for that team, in league scoring. The two lists align with
+     * the league's starting slots; an empty slot is Sleeper's
+     * {@code "0"} and scores 0.
+     */
+    public record StarterLine(int rosterId, List<String> starters, List<Double> points) {
+
+        /** How Sleeper writes a starting slot nobody filled. */
+        public static final String EMPTY_SLOT = "0";
+
+        public StarterLine {
+            starters = List.copyOf(starters);
+            points = List.copyOf(points);
+        }
+    }
+
+    /**
+     * One item from a player's news feed, as Sleeper publishes it.
+     *
+     * @param source the outlet Sleeper credits, such as {@code rotowire}
+     * @param sourceKey that outlet's own id for the story, Sleeper's
+     *        {@code source_key}; the research cache reads the same id with
+     *        different words as a rewrite of one story. Null when Sleeper
+     *        gives none.
+     * @param published null when Sleeper gives no publication time
+     * @param url null when the item links nowhere
+     */
     public record NewsItem(String headline, String detail, String analysis, String source,
-            Instant published, String url) {
+            String sourceKey, Instant published, String url) {
     }
 
     /**
@@ -432,6 +459,44 @@ public class SleeperAdapter {
         });
     }
 
+    /**
+     * Every team's starters for one week and the points each scored for
+     * that team. Sleeper credits a player's points to the roster that
+     * started him that week, so a player who changed teams later never
+     * carries his earlier points to his new roster.
+     */
+    public SourceResult<List<StarterLine>> matchups(int week) {
+        String path = leaguePath + "/matchups/" + week;
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "matchups is not an array");
+            }
+            List<StarterLine> lines = new ArrayList<>();
+            for (JsonNode matchup : body) {
+                JsonNode points = matchup.path("starters_points");
+                JsonNode starters = matchup.path("starters");
+                if (!matchup.path("roster_id").isIntegralNumber()
+                        || !starters.isArray() || !points.isArray()
+                        || starters.size() != points.size()) {
+                    return schemaDrift(path,
+                            "roster_id, starters or starters_points missing or misaligned");
+                }
+                List<Double> scored = new ArrayList<>();
+                for (JsonNode point : points) {
+                    if (!point.isNumber()) {
+                        return schemaDrift(path, "starters_points holds a non-number");
+                    }
+                    scored.add(point.asDouble());
+                }
+                List<String> starterIds = new ArrayList<>();
+                starters.forEach(starter -> starterIds.add(
+                        starter.isNull() ? StarterLine.EMPTY_SLOT : starter.asText()));
+                lines.add(new StarterLine(matchup.get("roster_id").asInt(), starterIds, scored));
+            }
+            return ok(lines);
+        });
+    }
+
     private static TeamRecord teamRecord(JsonNode settings) {
         if (!settings.isObject()) {
             return TeamRecord.NONE;
@@ -474,6 +539,7 @@ public class SleeperAdapter {
                         metadata.path("description").asText(null),
                         metadata.path("analysis").asText(null),
                         item.path("source").asText(null),
+                        item.path("source_key").asText(null),
                         published != null && published.isIntegralNumber()
                                 ? Instant.ofEpochMilli(published.asLong())
                                 : null,

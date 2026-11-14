@@ -15,7 +15,7 @@ deciding happens.
 ## Two entry points, one deployable
 
 The whole app deploys as one zip and is invoked through two handlers: a
-scheduled function that runs the Check and the two nflverse jobs, and a
+scheduled function that runs the Check and the other scheduled jobs, and a
 webhook function that Telegram posts to. One artifact means one build,
 one set of dependencies, and one place a behavior can live.
 
@@ -45,12 +45,12 @@ configure. The URL's auth type is NONE because Telegram signs nothing
 AWS can check; the guard is the secret token Telegram echoes, which
 `TelegramWebhook` already checks in constant time.
 
-## Three schedules, and no schedule for anything derived
+## Four schedules, and no schedule for anything derived
 
-EventBridge Scheduler holds exactly what the spec names: the 1-minute
-Check, the hourly nflverse timestamp check, and the nightly
-defense-versus-position build. Each names its job in the payload, and
-`ScheduledJob` refuses a name this build does not have rather than
+EventBridge Scheduler holds four jobs: the 1-minute Check, the hourly
+nflverse timestamp check, the nightly defense-versus-position build,
+and research discovery every 10 minutes. Each names its job in the
+payload, and `ScheduledJob` refuses a name this build does not have rather than
 falling back to a Check - a schedule naming a job that is gone is a
 deployment mistake, and running the wrong job would hide it.
 
@@ -63,7 +63,10 @@ The scheduled function is limited to one run at a time. Two overlapping
 runs would read the same stored documents and each write what the other
 had not seen. The Check does not retry - the next tick is one minute
 away and is the retry. The nflverse jobs do retry, because their next
-tick is an hour or a day away.
+tick is an hour or a day away. Research discovery does not retry
+either: it reads at most 40 news feeds a run, least recently read
+first, so a lost run is caught up by the next one and no run holds the
+Check up for more than a few seconds.
 
 ## Storage splits by how a document grows
 
@@ -72,7 +75,9 @@ table for small records, with a minute of writes batched into one
 object. `DocumentPlacement` is the rule: small means a document whose size is
 settled by its shape and stays well inside DynamoDB's 400 KB item limit
 however long the season runs - Settings, the Watchlist, Mutes, the
-conversation and three markers. Big means everything else: the
+conversation, three markers, Alert delivery records, and the research
+cache (one record per player, capped at 40 stories, plus the index of
+when each player's feed was last read). Big means everything else: the
 Snapshots, the Player Directory, the nflverse feeds,
 defense-versus-position and the Event Log.
 
@@ -139,6 +144,100 @@ because the webhook writes what the next Check reads a moment later.
 JSON, and hands bytes to a `DocumentBackend` - the local file tree or
 the AWS pair. No caller changed.
 
+## Decision Records live in a bucket of their own
+
+Every recommendation run leaves a Decision Record: what Otto knew,
+calculated and sent, kept so the advice can be reconstructed and judged
+later. Records go to a second bucket rather than a prefix in the
+documents bucket, because the two want opposite things. The documents
+bucket rewrites one object every minute and expires old versions after
+seven days. An archive of runs writes each object once and keeps it for
+years. One lifecycle policy cannot serve both.
+
+The bucket has Object Lock in governance mode, with a default retention
+equal to the article-text period. A record cannot be changed or deleted
+by mistake while it is locked. Governance rather than compliance,
+because compliance mode stops everyone, the account root included, and
+deleting an account must be able to delete its records. Governance lets
+a caller granted `s3:BypassGovernanceRetention` do it, and the bucket
+policy denies that grant, and every delete, to everyone but the account
+root.
+
+The app writes each object with `If-None-Match: *`, and the bucket
+policy denies any put without it, so a record can only be created, never
+replaced. A retried save that reuses the run id and writes the same
+bytes is treated as done; a different record under a run id already used
+is refused rather than written over. Two saves in flight on one key
+leave one with a 409, which retries until it finds the winner's object
+and compares. A retry converges only when it reuses the same run id: a
+retry that draws a new one stores a second record. So a caller that may
+be retried across invocations, such as a Lambda redelivering an event,
+derives its run id from a stable identity of the run rather than drawing
+a new one. A run id leads with the time the run started, so a league's
+records list in the order they ran.
+
+Keys are per user and per league, Hive-style so Athena can partition on
+them later:
+
+- `records/user=<userId>/league=<leagueId>/run=<runId>.json`
+- `article-text/user=<userId>/league=<leagueId>/run=<runId>.json`
+
+Everything one user owns sits under one prefix in each tree, so deleting
+an account is two prefix deletes and cannot miss a league. The ids are
+checked against `[A-Za-z0-9_-]+` before they become key segments.
+Deleting names every version and delete marker under the prefix; a
+delete by key alone would only add a marker and leave the record
+readable as an older version.
+
+Copied article text expires sooner than the facts around it. The app
+lifts each evidence item's source text out of the record and stores the
+texts beside it under `article-text/`. A lifecycle rule scoped to that
+prefix expires the text when its lock ends and removes the version that
+expiry leaves a day later. A second rule removes the delete marker left
+behind; S3 refuses one rule that both expires by age and removes expired
+delete markers. Records under `records/` never expire. A
+record whose text has gone still reads with every fact, reference and
+timestamp. The period is the `articleTextSeasons` context value, three
+seasons by default, counted as 365 days each; it sets both the expiry
+and the lock.
+
+The bucket policy enforces all of this with three denies. A deny in a
+bucket policy wins over any IAM allow, so a role in the account granted
+`s3:*` for some other job is still bound by them.
+
+- `s3:GetObject*` and `s3:ListBucket*` are denied to every principal
+  whose ARN is not one of the two function roles, the account root, or
+  an ARN listed in the `recordReaderArns` context value. Only the
+  backend and the owner read or list records.
+- `s3:PutObject` is denied whenever the request carries no
+  `If-None-Match`, so nobody writes over a record.
+- `s3:DeleteObject*`, `s3:BypassGovernanceRetention`,
+  `s3:PutObjectRetention` and `s3:PutObjectLegalHold` are denied to
+  everyone but the account root, so nobody else deletes a record or
+  shortens its lock.
+
+Credentials are never stored. A model request can carry the key it was
+sent with, so before anything is written the app replaces every value it
+read from SSM, and on the laptop the bot token, the webhook secret and
+the model key, wherever they appear inside a string value of the
+record. Property names, numbers and the record's structure are never
+touched, so a credential short enough to occur by chance cannot reshape
+a record. A secret added to the parameter path later is redacted with no
+code change. Unrelated chat needs no such pass: a record has no field
+for conversation history.
+
+Each function may put and get objects under the two prefixes, and list
+the bucket. The list grant is there only for what S3 answers about a
+missing key: without it, S3 answers 403 rather than 404, and expired
+article text would read as an access failure. No function may delete a
+record or bypass the lock, because no entry point deletes an account
+yet. Whatever entry point does will need `s3:ListBucketVersions`,
+`s3:DeleteObjectVersion` and `s3:BypassGovernanceRetention` on this
+bucket, and must be added on purpose to the principals the bucket
+policy lets delete. Nothing else should hold them. It must also stop new
+runs for the user before it deletes, or a save already in flight can
+recreate a record.
+
 ## Secrets are read once, at init
 
 The bot token, the chat id, the webhook secret and the model key are
@@ -182,7 +281,8 @@ Both alarms are log metric filters rather than a metric the app puts.
 That keeps `PutMetricData` off every function's policy and keeps the
 app free of any code that exists only to be watched.
 
-The bucket keeps versions and the table keeps point-in-time recovery.
+The documents bucket keeps versions and the table keeps point-in-time
+recovery.
 Neither was asked for, and both are kept deliberately: one object holds
 the whole season's record, so a single bad write could take all of it,
 and a version is what that is recovered from. Because the object is
@@ -199,7 +299,7 @@ invites the wrong reading: it notifies, and it does not stop spending.
 Nothing in AWS caps a Lambda, an S3 request or a DynamoDB write by
 money. The things that actually bound the spend here are the reserved
 concurrency on the scheduled function, the 14-day log retention, and
-the bucket's lifecycle rule. The Budget is how the operator finds out
+the documents bucket's lifecycle rule. The Budget is how the operator finds out
 that one of those three has failed.
 
 ## What the stack deliberately does not contain
@@ -224,6 +324,7 @@ the template and reading the ticket's acceptance criteria back off it.
 The stack lives in `infra/` with its own build, because the app's
 deployable must not carry the CDK libraries.
 
-IAM is least-privilege per function. The bucket grant names the one
-object key the app writes, so a function that went wrong could not fill
-the bucket with anything else.
+IAM is least-privilege per function. The documents bucket grant names
+the one object key the app writes, so a function that went wrong could
+not fill the bucket with anything else. The Decision Records grant
+names the two prefixes the app writes under, and allows no delete.

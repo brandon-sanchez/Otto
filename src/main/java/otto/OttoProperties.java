@@ -45,11 +45,12 @@ public record OttoProperties(
     }
 
     /**
-     * Where the deployed assistant keeps its documents. The stack names
-     * the bucket and the table and hands both to the function as
-     * environment variables, so nothing here is checked in. Every field
-     * is null on a laptop, where the local file storage is used instead.
+     * Where the deployed assistant keeps its documents and its Decision
+     * Records. The stack names the buckets and the table and hands them
+     * to the function as environment variables, so nothing here is
+     * checked in. Every field is null on a laptop, where the local file
+     * storage is used instead.
      */
-    public record Aws(String bucket, String table) {
+    public record Aws(String bucket, String table, String recordsBucket) {
     }
 }
