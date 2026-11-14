@@ -54,6 +54,24 @@ class LineupLegalityScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aPlayerOnIrIsNeverPointedToAsTheReplacement() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-reserve.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-mccaffrey-out.json", "players-v1");
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Your lineup needs attention before Sunday.");
+
+        checkRunner.runCheck();
+
+        Event lockedOut = eventLog.all().stream()
+                .filter(event -> event.key().equals("alert:legality:2026-w2:slot1:4034:locked-out"))
+                .findFirst().orElseThrow();
+        assertThat(lockedOut.facts()).containsEntry("replacement", "none on the bench");
+    }
+
+    @Test
     void everyLegalityAlertIsHighConfidenceWithAReplacementPointer() {
         stubIllegalLineup();
 

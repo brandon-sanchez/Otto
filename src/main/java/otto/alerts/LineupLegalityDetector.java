@@ -153,6 +153,8 @@ public class LineupLegalityDetector {
         Set<String> starters = new HashSet<>(roster.starters());
         Optional<String> best = roster.players().stream()
                 .filter(playerId -> !starters.contains(playerId))
+                .filter(playerId -> !roster.reserve().contains(playerId))
+                .filter(playerId -> !roster.taxi().contains(playerId))
                 .filter(playerId -> slot.accepts(roster.playerPositions().get(playerId)))
                 .filter(playerId -> week.canPlay(roster, playerId))
                 .max(Comparator.comparingDouble(playerId -> week.projections()
