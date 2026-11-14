@@ -313,8 +313,9 @@ public class AskTools {
     @Tool(name = "manage_settings", description = """
             The assistant's own settings and the mute list: which alert
             triggers are on, how many projected points make an edge worth
-            a message, where the Notable Player cutoffs sit, and what is
-            currently silenced. Call this to show them, to change one, or
+            a message, where the Notable Player cutoffs sit, the most the
+            user will bid on one waiver claim, and what is currently
+            silenced. Call this to show them, to change one, or
             to mute or unmute a class of alerts or one player's news.
             There is no settings screen, so this tool is the only way.""")
     public ToolAnswer<SettingsService.View> manageSettings(
@@ -324,14 +325,16 @@ public class AskTools {
                     What to act on. To set: a setting name -
                     status_transition, lineup_legality, bench_edge,
                     watchlist, waiver, league_activity, edge_threshold,
-                    notable_qb, notable_rb, notable_wr or notable_te. To
+                    notable_qb, notable_rb, notable_wr, notable_te or
+                    max_bid. To
                     mute or unmute: one of those trigger names, or a
                     player by name or Sleeper player id.""")
             String name,
             @ToolParam(required = false, description = """
                     The new value when setting: on or off for a trigger, a
                     number of points for the edge threshold, a rank for a
-                    Notable Player cutoff.""")
+                    Notable Player cutoff, whole dollars or none for
+                    max_bid.""")
             String value) {
         return settings.apply(action, name, value, clock.instant());
     }
