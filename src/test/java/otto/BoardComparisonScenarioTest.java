@@ -63,8 +63,10 @@ class BoardComparisonScenarioTest extends WireSeamTest {
               "hold": false,
               "opening": "A pickup stands out this week, and a receiver is worth a claim.",
               "picks": [
-                {"playerId": "10001", "reasoning": "Bucky Irving played 71% of offensive snaps."},
-                {"playerId": "10004", "reasoning": "Wandale Robinson drew 13 targets."}
+                {"playerId": "10001", "reasoning": "Bucky Irving played 71% of offensive snaps.", \
+                "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."},
+                {"playerId": "10004", "reasoning": "Wandale Robinson drew 13 targets.", \
+                "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}
               ],
               "optional": [],
               "claims": [
