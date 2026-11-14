@@ -106,7 +106,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             List<String> named = answer.entries().stream().map(BoardAnswer.Entry::playerId)
                     .toList();
             failures.addAll(check.checkAnswer(bundle, new AdviceAnswer(text, Optional.empty(),
-                    named, answer.claims(), List.of())));
+                    named, answer.claims(), List.of(), Optional.empty(), List.of())));
             if (SCORE.matcher(text).find()) {
                 failures.add("Never write a score; give the reasons instead.");
             }

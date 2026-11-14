@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoApplication;
 import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
+import otto.advice.AdviceForm;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
@@ -176,13 +177,17 @@ public class LineupAdvice {
             return sent(earlier.get(), runId);
         }
 
-        AdviceResult<AdviceAnswer> result = writer.write(draft.bundle());
+        AdviceForm<AdviceAnswer> form = kind == RunKind.PLAYER_DECISION
+                ? writer.playerDecision()
+                : writer.lineup();
+        AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
         Outcome outcome = outcome(result, draft);
         save(new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind, now, userId,
                 leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
                 new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
-                comparisons(draft.bundle()), evidence(draft.bundle()), versions(draft.bundle()),
+                comparisons(draft.bundle()), evidence(draft.bundle()),
+                versions(draft.bundle(), form),
                 result.exchanges(), outcome));
         return sent(outcome, runId);
     }
@@ -263,9 +268,9 @@ public class LineupAdvice {
                 .toList();
     }
 
-    private Versions versions(EvidenceBundle bundle) {
+    private Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form) {
         String code = Objects.requireNonNullElse(
                 OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, writer.promptVersion(), model);
+        return new Versions(bundle.identity(), code, form.promptVersion(), model);
     }
 }

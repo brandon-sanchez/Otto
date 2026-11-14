@@ -35,7 +35,7 @@ import otto.storage.OttoJson;
 @Component
 public class AdviceWriter {
 
-    private static final String SYSTEM = """
+    private static final String GROUNDING = """
             You are Otto, a fantasy football assistant texting your one user about
             their lineup and roster, the way a knowledgeable friend would.
 
@@ -47,10 +47,13 @@ public class AdviceWriter {
             when "noChangeAllowed" is true. Lead with the recommendation, then give
             the reason in one to three short sentences of plain text.
 
-            When "rosterPlans" is not empty, also decide what to do with the player:
-            choose exactly one plan by its "id", lead with it, and explain it in one
-            natural paragraph that connects his news, the league's format and rules,
-            and the roster. Name every player the plan drops or adds. Weigh the
+            """;
+
+    private static final String PLAYER_DECISION = """
+            Also decide what to do with the player whose status changed: choose
+            exactly one of "rosterPlans" by its "id", lead with it, and explain it in
+            one natural paragraph that connects his news, the league's format and
+            rules, and the roster. Name every player the plan drops or adds. Weigh the
             league's format: redraft is about this season, dynasty and keeper leagues
             also value the seasons after it. A missing projection or report is
             unknown, never zero. When "unknowns" lists evidence ids, the decision
@@ -58,12 +61,30 @@ public class AdviceWriter {
             is missing and what would change your call, and list each id in
             "conditions".
 
+            """;
+
+    private static final String VOICE = """
             Introduce every player by full name before using a surname alone. When
             "kickoffPhrase" is present, use it word for word. Never say a player or a
             game "locks". Never write a confidence label such as High or Medium; when
             something is uncertain, say exactly what is uncertain. Stay under
             "maxLength" characters. Never state a dollar amount unless "budget" is set.
 
+            """;
+
+    private static final String LINEUP_SHAPE = """
+            Answer with only this JSON object:
+            {
+              "message": "the text the user receives",
+              "move": {"start": "<playerId>", "bench": "<playerId or null>", "slot": "<slot>"},
+              "players": ["<playerId of every player the message names>"],
+              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
+              "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}]
+            }
+            Use null for "move" to recommend no change.
+            """;
+
+    private static final String DECISION_SHAPE = """
             Answer with only this JSON object:
             {
               "message": "the text the user receives",
@@ -71,7 +92,7 @@ public class AdviceWriter {
               "players": ["<playerId of every player the message names>"],
               "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
               "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}],
-              "plan": "<id of the chosen roster plan, or null when there are none>",
+              "plan": "<id of the chosen roster plan>",
               "conditions": ["<id of each unknown the advice is conditional on>"]
             }
             Use null for "move" to recommend no lineup change.
@@ -81,30 +102,30 @@ public class AdviceWriter {
 
     private final ChatClient chat;
     private final AdviceForm<AdviceAnswer> lineup;
+    private final AdviceForm<AdviceAnswer> playerDecision;
 
     public AdviceWriter(ChatClient.Builder builder, AdviceCheck check) {
         this.chat = builder.build();
-        this.lineup = new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return SYSTEM;
-            }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
-                return check.check(bundle, reply);
-            }
-        };
+        this.lineup = answerForm(GROUNDING + VOICE + LINEUP_SHAPE, check);
+        this.playerDecision = answerForm(GROUNDING + PLAYER_DECISION + VOICE + DECISION_SHAPE,
+                check);
     }
 
-    /** Identifies the lineup instructions the model wrote under, for the Decision Record. */
-    public String promptVersion() {
-        return lineup.promptVersion();
+    /**
+     * The form for bench-edge, lineup-legality and pregame advice: one
+     * lineup move, or none.
+     */
+    public AdviceForm<AdviceAnswer> lineup() {
+        return lineup;
     }
 
-    /** Asks for lineup advice, checks it, and corrects it once when it fails. */
-    public AdviceResult<AdviceAnswer> write(EvidenceBundle bundle) {
-        return write(bundle, lineup);
+    /**
+     * The form for a status change on one of the user's players: a
+     * lineup move plus one of the bundle's roster plans, conditional on
+     * every unknown the bundle lists.
+     */
+    public AdviceForm<AdviceAnswer> playerDecision() {
+        return playerDecision;
     }
 
     /** Asks for advice of one form, checks it, and corrects it once when it fails. */
@@ -144,6 +165,20 @@ public class AdviceWriter {
             conversation.add(new UserMessage(correction(failures)));
         }
         return new AdviceResult.Rejected<>(failures, exchanges);
+    }
+
+    private static AdviceForm<AdviceAnswer> answerForm(String instructions, AdviceCheck check) {
+        return new AdviceForm<>() {
+            @Override
+            public String instructions() {
+                return instructions;
+            }
+
+            @Override
+            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
+                return check.check(bundle, reply);
+            }
+        };
     }
 
     private static String correction(List<String> failures) {

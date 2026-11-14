@@ -169,7 +169,8 @@ public class WaiverEvidence {
 
         EvidenceBundle bundle = new EvidenceBundle(TASK, evidence,
                 bundlePlayers(league, user.get(), candidates.values()), List.of(), true,
-                Optional.empty(), wholeBoardLength(candidates.size()), Optional.empty());
+                Optional.empty(), wholeBoardLength(candidates.size()), Optional.empty(), List.of(),
+                List.of());
         Map<String, Object> comparisons = new LinkedHashMap<>();
         comparisons.put("lanes", picksByLane);
         comparisons.put("rosterNeeds", rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok
