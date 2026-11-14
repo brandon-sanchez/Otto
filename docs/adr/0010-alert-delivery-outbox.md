@@ -1,4 +1,4 @@
-# ADR-0010: Alert delivery gets an outbox, and a stale send resends
+# ADR-0010: Alert delivery gets an outbox, and a stale send is re-checked and resent
 
 Status: accepted (2026-08-23, issue #37)
 
@@ -51,6 +51,30 @@ and is silent. Assuming a stale pending record was delivered converts
 the ambiguity into the silent failure. Resending converts it into a
 duplicate whose window is now the milliseconds of one HTTP call
 rather than the remainder of a run.
+
+## A resend is re-checked first
+
+A pending record is not resent as stored. The resend happens on a
+later Check, and by then the player's status, his news or the lineup
+may have moved. That Check rebuilds the Alert from current state and
+hands it to the outbox, which takes one of three paths:
+
+- **Unchanged.** The Alert rests on the same facts as before, so the
+  stored text goes out. A phrased Alert matches on a fingerprint of
+  its phrasing input. Checked advice matches on its Decision Record's
+  run id. Neither asks the model again.
+- **Updated.** The facts moved, so the Alert is written and checked
+  again, and the new text goes out under the stored id.
+- **Cancelled.** The advice no longer holds. When the player's
+  designation changed again or the advice check withheld the rewrite,
+  the record is marked cancelled. When the problem is gone, no Check
+  detects it again, so the record is never resent. Either way nothing
+  is sent, and a problem that returns later is rebuilt from what is
+  true then.
+
+The re-check reads only what decides the Alert: the Check's own
+Snapshot, and one news read for the player. A transport retry
+repeats none of the research behind the advice.
 
 ## What was rejected
 

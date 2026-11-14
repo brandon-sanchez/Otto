@@ -174,6 +174,31 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aDelayedEdgeAlertOverUnchangedEvidenceIsResentWithoutAskingTheModelAgain() {
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-edge.json", "projections-v1");
+        telegram.stubFor(com.github.tomakehurst.wiremock.client.WireMock
+                .post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock
+                        .aResponse().withStatus(500)));
+        OutboundStubs.llmAdvises(llm, EDGE_ANSWER);
+        checkRunner.runCheck();
+
+        telegram.resetAll();
+        OutboundStubs.telegramOk(telegram);
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
+        assertThat(records()).hasSize(1);
+    }
+
+    @Test
     void anAnswerThatFailsTwiceIsWithheldAndNotRetriedOnUnchangedEvidence() {
         String wrong = edgeAnswer(EDGE_MESSAGE.replace("16.5", "18.0"),
                 "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}");
