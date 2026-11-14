@@ -32,6 +32,7 @@ import otto.lineup.GameWeek;
 import otto.lineup.PositionCutoffs;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
+import otto.needs.Cover;
 import otto.nflverse.DefenseVersusPosition;
 import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
@@ -1237,10 +1238,12 @@ public class WaiverScorer {
          */
         private Set<String> needPositions() {
             Set<String> starters = new HashSet<>(userRoster.starters());
+            Cover cover = Cover.of(userRoster, league, week);
             Set<String> needs = new LinkedHashSet<>();
             for (String position : WaiverQuery.ALL_POSITIONS) {
                 boolean covered = userRoster.players().stream()
                         .filter(playerId -> !starters.contains(playerId))
+                        .filter(cover::couldStart)
                         .filter(playerId -> position.equals(
                                 userRoster.playerPositions().get(playerId)))
                         .anyMatch(playerId -> projections.points(playerId, position)
