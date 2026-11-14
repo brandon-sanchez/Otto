@@ -19,11 +19,12 @@ final class Feeds {
     static final WeeklyRostersFeed WEEKLY_ROSTERS = new WeeklyRostersFeed();
     static final DepthChartsFeed DEPTH_CHARTS = new DepthChartsFeed();
     static final FtnChartingFeed FTN_CHARTING = new FtnChartingFeed();
+    static final RushingAdvancedStatsFeed RUSHING_ADVANCED_STATS = new RushingAdvancedStatsFeed();
     static final PbpParticipationFeed PBP_PARTICIPATION = new PbpParticipationFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
             SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
-            PBP_PARTICIPATION);
+            RUSHING_ADVANCED_STATS, PBP_PARTICIPATION);
 
     private Feeds() {
     }

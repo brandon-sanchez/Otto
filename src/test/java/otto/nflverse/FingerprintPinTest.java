@@ -59,6 +59,13 @@ class FingerprintPinTest {
     }
 
     @Test
+    void rushingAdvancedStatsContent() {
+        pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
+                new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
+                        "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
+    }
+
+    @Test
     void pbpParticipationContent() {
         pin(Feeds.PBP_PARTICIPATION, 1, 5781561941494782773L,
                 new PbpParticipation.TeamGame("2025_01_KC_LAC", 1, "KC", "LAC", 8, 3, 5,

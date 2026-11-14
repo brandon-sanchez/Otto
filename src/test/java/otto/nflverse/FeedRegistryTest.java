@@ -35,6 +35,7 @@ class FeedRegistryTest {
                 FeedId.WEEKLY_ROSTERS, "nflverse-weekly-rosters",
                 FeedId.DEPTH_CHARTS, "nflverse-depth-charts",
                 FeedId.FTN_CHARTING, "nflverse-ftn-charting",
+                FeedId.RUSHING_ADVANCED_STATS, "nflverse-advstats-rush",
                 FeedId.PBP_PARTICIPATION, "nflverse-pbp-participation"));
     }
 }

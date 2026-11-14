@@ -1,0 +1,13 @@
+{
+  "tag_name": "pfr_advstats",
+  "assets": [
+    {
+      "name": "advstats_week_rush_2025.csv",
+      "updated_at": "2026-02-10T08:03:55Z"
+    },
+    {
+      "name": "advstats_week_rush_2026.csv",
+      "updated_at": "2026-09-17T08:02:11Z"
+    }
+  ]
+}
