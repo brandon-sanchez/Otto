@@ -325,6 +325,28 @@ class OttoStackTest {
         assertThat(template.findOutputs("DecisionRecordsBucket")).isNotEmpty();
     }
 
+    @Test
+    void theFunctionsWriteRecordsArticleTextAndOutcomeRecords() {
+        List<String> granted = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (String.valueOf(statement.get("Action")).contains("s3:PutObject")
+                        && String.valueOf(statement.get("Resource")).contains("DecisionRecords")) {
+                    granted.add(String.valueOf(statement.get("Resource")));
+                }
+            }
+        }
+
+        assertThat(granted)
+                .as("one grant each: the scheduled function and the webhook")
+                .hasSize(2)
+                .allSatisfy(resources -> assertThat(resources)
+                        .contains("/records/*", "/article-text/*", "/outcomes/*"));
+    }
+
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> lifecycleRules(Template template) {
         Map<?, ?> bucket = template.findResources("AWS::S3::Bucket", Match.objectLike(Map.of(

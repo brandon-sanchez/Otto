@@ -110,6 +110,7 @@ public class OttoStack extends Stack {
      */
     private static final String RECORDS_PREFIX = "records/";
     private static final String ARTICLE_TEXT_PREFIX = "article-text/";
+    private static final String OUTCOMES_PREFIX = "outcomes/";
 
     private static final int DAYS_PER_SEASON = 365;
 
@@ -255,8 +256,9 @@ public class OttoStack extends Stack {
      * granted the bypass do it, and nobody else.
      *
      * <p>Copied article text expires; the facts under {@code records/}
-     * never do. A current article-text object expires when its lock
-     * ends, and the version that expiry leaves behind goes a day later.
+     * and the outcome records under {@code outcomes/} never do. A
+     * current article-text object expires when its lock ends, and the
+     * version that expiry leaves behind goes a day later.
      * The delete marker then left alone is removed by a rule of its own,
      * since S3 refuses one rule that both expires by age and removes
      * expired delete markers.
@@ -364,7 +366,8 @@ public class OttoStack extends Stack {
                 .actions(List.of("s3:PutObject", "s3:GetObject"))
                 .resources(List.of(
                         bucket.arnForObjects(RECORDS_PREFIX + "*"),
-                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*")))
+                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*"),
+                        bucket.arnForObjects(OUTCOMES_PREFIX + "*")))
                 .build());
         function.addToRolePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.ALLOW)

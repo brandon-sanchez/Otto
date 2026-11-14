@@ -181,9 +181,14 @@ them later:
 
 - `records/user=<userId>/league=<leagueId>/run=<runId>.json`
 - `article-text/user=<userId>/league=<leagueId>/run=<runId>.json`
+- `outcomes/user=<userId>/league=<leagueId>/run=<runId>.json`
+
+An outcome record judges a run once its result is known, such as the
+weekly comparison of the waiver boards after the games. It sits under
+the run id it judges, is written once like a record, and never expires.
 
 Everything one user owns sits under one prefix in each tree, so deleting
-an account is two prefix deletes and cannot miss a league. The ids are
+an account is three prefix deletes and cannot miss a league. The ids are
 checked against `[A-Za-z0-9_-]+` before they become key segments.
 Deleting names every version and delete marker under the prefix; a
 delete by key alone would only add a marker and leave the record
@@ -226,7 +231,7 @@ a record. A secret added to the parameter path later is redacted with no
 code change. Unrelated chat needs no such pass: a record has no field
 for conversation history.
 
-Each function may put and get objects under the two prefixes, and list
+Each function may put and get objects under the three prefixes, and list
 the bucket. The list grant is there only for what S3 answers about a
 missing key: without it, S3 answers 403 rather than 404, and expired
 article text would read as an access failure. No function may delete a
