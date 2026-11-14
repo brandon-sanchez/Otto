@@ -1,0 +1,20 @@
+{
+  "9001": {"player_id": "9001", "full_name": "Jonathan Jones", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Injured Reserve", "injury_status": "IR"},
+  "11564": {"player_id": "11564", "full_name": "Drake Maye", "position": "QB", "fantasy_positions": ["QB"], "team": "NE", "status": "Active", "injury_status": null},
+  "9002": {"player_id": "9002", "full_name": "Carlton Davis", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Out"},
+  "9003": {"player_id": "9003", "full_name": "Charles Woods", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Injured Reserve", "injury_status": "IR"},
+  "9004": {"player_id": "9004", "full_name": "Alex Austin", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Out"},
+  "9005": {"player_id": "9005", "full_name": "Christian Gonzalez", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Doubtful"},
+  "9006": {"player_id": "9006", "full_name": "Channing Canada", "position": "DB", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Out"},
+  "9007": {"player_id": "9007", "full_name": "Marcus Jones", "position": "CB", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Questionable"},
+  "9009": {"player_id": "9009", "full_name": "Craig Woodson", "position": "S", "fantasy_positions": ["DB"], "team": "NE", "status": "Active", "injury_status": "Out"},
+  "9010": {"player_id": "9010", "full_name": "Harold Landry", "position": "OLB", "fantasy_positions": ["DL", "LB"], "team": "NE", "status": "Active", "injury_status": "Out"},
+  "9011": {"player_id": "9011", "full_name": "Elijah Ponder", "position": "LB", "fantasy_positions": ["LB"], "team": "NE", "status": "Active", "injury_status": null},
+  "9012": {"player_id": "9012", "full_name": "Robert Spillane", "position": "LB", "fantasy_positions": ["LB"], "team": "NE", "status": "Active", "injury_status": null},
+  "9013": {"player_id": "9013", "full_name": "Christian Barmore", "position": "DT", "fantasy_positions": ["DL"], "team": "NE", "status": "Active", "injury_status": "Doubtful"},
+  "9014": {"player_id": "9014", "full_name": "Greg Rousseau", "position": "DE", "fantasy_positions": ["DL"], "team": "BUF", "status": "Active", "injury_status": "Out"},
+  "9015": {"player_id": "9015", "full_name": "Terrel Bernard", "position": "LB", "fantasy_positions": ["LB"], "team": "BUF", "status": "Active", "injury_status": "Out"},
+  "9016": {"player_id": "9016", "full_name": "Ed Oliver", "position": "DL", "fantasy_positions": ["DL"], "team": "BUF", "status": "Active", "injury_status": null},
+  "9020": {"player_id": "9020", "full_name": "Free Agent Linebacker", "position": "LB", "fantasy_positions": ["LB"], "team": null, "status": "Active", "injury_status": "Out"},
+  "9021": {"player_id": "9021", "full_name": "Backup Guard", "position": "G", "fantasy_positions": ["OL"], "team": "NE", "status": "Active", "injury_status": "Out"}
+}

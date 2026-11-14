@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -22,7 +23,7 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "dt", "team", "player_name", "gsis_id", "pos_abb", "pos_rank");
+            "dt", "team", "player_name", "gsis_id", "pos_grp", "pos_abb", "pos_rank");
 
     /**
      * The shapes the depth charts' publish column has been seen in: an
@@ -58,6 +59,11 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     }
 
     @Override
+    public int contentVersion() {
+        return 2;
+    }
+
+    @Override
     public SeasonRule seasonRule() {
         return SeasonRule.CURRENT;
     }
@@ -87,15 +93,16 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
             requireColumns(row, COLUMNS);
             String position = row.text("pos_abb");
             String team = NflTeams.normalize(row.text("team"));
+            Optional<DefensiveGroup> defense = DefensiveGroup.of(row.text("pos_grp"), position);
             // A blank or "NA" rank reads as zero, and "RB0" is not a
             // depth-chart place anyone would recognise.
-            if (!KEPT_POSITIONS.contains(position) || team.isBlank()
+            if ((defense.isEmpty() && !KEPT_POSITIONS.contains(position)) || team.isBlank()
                     || row.text("gsis_id").isBlank() || row.integer("pos_rank") < 1) {
                 return;
             }
             byTeam.computeIfAbsent(team, TeamChart::new).add(publishedAt(row.text("dt")),
-                    row.text("gsis_id"), row.text("player_name"), position,
-                    row.integer("pos_rank"));
+                    new TeamChart.Row(row.text("gsis_id"), row.text("player_name"), position,
+                            row.integer("pos_rank"), defense.orElse(null)));
         });
         return byTeam.values().stream().flatMap(chart -> chart.spots().stream()).toList();
     }
@@ -139,7 +146,8 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
     /** The rank he held on the chart before is that older chart's content, not this one's. */
     @Override
     public Object content(DepthCharts.Spot spot) {
-        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank());
+        return List.of(spot.gsisId(), spot.player(), spot.position(), spot.rank(),
+                Objects.toString(spot.defense(), ""));
     }
 
     @Override
@@ -167,7 +175,8 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
      */
     private static final class TeamChart {
 
-        private record Row(String gsisId, String player, String position, int rank) {
+        private record Row(String gsisId, String player, String position, int rank,
+                DefensiveGroup defense) {
         }
 
         private final String team;
@@ -180,8 +189,7 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
             this.team = team;
         }
 
-        void add(Instant published, String gsisId, String player, String position, int rank) {
-            Row row = new Row(gsisId, player, position, rank);
+        void add(Instant published, Row row) {
             if (newestDate == null || published.isAfter(newestDate)) {
                 previousDate = newestDate;
                 previous = newest;
@@ -203,7 +211,7 @@ final class DepthChartsFeed implements FeedSpec<DepthCharts.Spot, DepthCharts> {
             return newest.stream()
                     .map(row -> new DepthCharts.Spot(row.gsisId(), row.player(), team,
                             row.position(), row.rank(), before.getOrDefault(row.gsisId(), 0),
-                            newestDate))
+                            newestDate, row.defense()))
                     .toList();
         }
     }

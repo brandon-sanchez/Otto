@@ -83,10 +83,10 @@ class NflverseScenarioTest extends WireSeamTest {
         assertThat(store.weeklyStats().orElseThrow().rows())
                 .allMatch(row -> !row.position().equals("K"))
                 .hasSize(19);
-        // Only the newest published chart per team survives, and only
-        // its offensive skill positions: the older Green Bay snapshot
-        // and the defensive tackle are both dropped.
-        assertThat(store.depthCharts().orElseThrow().rows()).hasSize(7);
+        assertThat(store.depthCharts().orElseThrow().rows())
+                .extracting(spot -> spot.team() + " " + spot.label())
+                .containsExactlyInAnyOrder("GB RB1", "GB QB1", "GB TE1", "BUF RB1", "BUF RB2",
+                        "BUF TE1", "BUF LDT1", "LAR WR1");
         PlayerIdMap ids = store.playerIds().orElseThrow();
         assertThat(ids.gsisFor("5850")).contains("00-0035700");
         assertThat(ids.gsisFor("8138")).contains("00-0037248");

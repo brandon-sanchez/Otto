@@ -43,6 +43,10 @@ public class NflverseFeedService {
     private static final Set<String> PLAYER_ID_COLUMNS = Set.of(
             "sleeper_id", "gsis_id", "pfr_id", "position");
 
+    /** The mapping's own letters for a defender. */
+    private static final Set<String> DEFENSIVE_ID_POSITIONS = Set.of(
+            "DL", "DE", "DT", "LB", "DB", "CB", "S");
+
     private final NflverseClient client;
     private final NflverseStore store;
     private final SleeperAdapter sleeper;
@@ -298,7 +302,9 @@ public class NflverseFeedService {
             String sleeperId = row.text("sleeper_id");
             String gsisId = row.text("gsis_id");
             String pfrId = row.text("pfr_id");
-            if (blankOrNa(sleeperId) || !KEPT_POSITIONS.contains(row.text("position"))) {
+            String position = row.text("position");
+            if (blankOrNa(sleeperId) || !(KEPT_POSITIONS.contains(position)
+                    || DEFENSIVE_ID_POSITIONS.contains(position))) {
                 return;
             }
             retained.add(sleeperId);
