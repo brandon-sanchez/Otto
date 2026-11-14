@@ -17,6 +17,11 @@ Amended (2026-11-13, issue #120): running backs are read by target
 share as well as snap share. The section marked (revised, #120) adds
 the back's target-share lane; the snap-share lanes stand.
 
+Amended (2026-11-14, issue #122): an evidence-based board is built
+beside the scored one, recorded and not sent. The section "The
+evidence model" at the end describes it. Until it is sent, every other
+section still describes the board the user receives.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -678,3 +683,72 @@ The two refusals are kept apart. "He is not on your roster" and "I have
 never heard of him" are different problems with different fixes, and the
 user cannot tell a typo from somebody else's running back if both come
 back as the same sentence.
+
+## The evidence model (#122)
+
+The scored board above ranks free agents by a fixed 100-point sum. The
+evidence-based board replaces the sum with evidence the model weighs
+and code checks. During the dry run it is built at the same evening as
+the scored board, saved as a Decision Record, and not sent. The scored
+board is still the one the user receives.
+
+### Every free agent is screened, and no lane has a weight
+
+Every player at QB, RB, WR and TE with an NFL team and on no roster in
+the league is screened. Each kind of evidence is a lane:
+
+- **Role and opportunity**: snaps, targets, carries and their shares,
+  air-yards share, red-zone, end-zone and first-read work, and expected
+  points, for each of his last three games.
+- **Production**: what he scored in each of those games in the league's
+  own scoring, and the box score behind it.
+- **Projections**: this week's projection in league scoring.
+- **News**: the original reports the research cache holds about him
+  from the past week. The board reads the cache and never the live
+  feed.
+- **Trending**: Sleeper's adds over the last day. This is attention, so
+  it is context for the model and never a cutoff.
+
+Each lane names the free agents its own evidence makes worth a look:
+the three best at each position on its own measure, or the most-added
+players. The pool is the union of those names. No lane is weighed
+against another. A player whose lane value is unknown is never ranked
+by that lane, because an unknown is not a low value.
+
+The Decision Record lists every free agent screened, with the lanes
+that named him or the fact that none did.
+
+### The model ranks and writes, and the advice check holds it
+
+Each candidate goes to the model with every lane's evidence, the roster
+needs and the user's roster. Each piece of evidence carries its source,
+publication time, retrieval time and scoring basis. The model chooses
+who is worth a claim, ranks them and writes the reasoning, or opens
+with a hold when no pickup helps.
+
+The board's text passes every advice check that lineup Alerts pass:
+names, numbers, claims against their cited evidence, the voice rules
+and the dollar rule. The board adds its own checks. It may recommend
+only screened free agents, each once. It may not write a score or a
+"Cons:" list, and no opening or entry may run past 700 characters. A
+board that fails twice is withheld. The scored board is never put in
+its place.
+
+### The message is the accepted compact board
+
+The message is variant A of the waiver message prototype. It holds at
+most five ranked entries. A "View all options" line points to the
+rest, and their reasoning is checked too. A holding board lists its
+speculative moves under "If you still want to make a move". The text
+splits between entries, so each Telegram message stays under 4,096
+characters. Bids are not part of this board yet, so its message states
+no dollar amount.
+
+### One record per claim round
+
+The run id is a hash of the league and the claim deadline. Every Check
+from the evening the board is due until the deadline finds that round's
+record and stops before reading any evidence. The usage lane parses the
+stored play-by-play and charting, so this rule also keeps that cost to
+one parse per round. When there is no player directory or no roster for
+the user, nothing is recorded, and the next Check tries again.
