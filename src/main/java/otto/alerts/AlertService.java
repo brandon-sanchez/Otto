@@ -138,8 +138,9 @@ public class AlertService {
             candidates.addAll(edgeDetector.detect(roster, week, now));
         });
 
+        List<AlertCandidate> standing = cancelSuperseded(candidates, userRoster);
         Settings current = settings.current();
-        List<AlertCandidate> sendable = candidates.stream()
+        List<AlertCandidate> sendable = standing.stream()
                 .filter(candidate -> candidate.recommendation().confidence() != Confidence.LOW)
                 .filter(candidate -> current.enabled(candidate.source().trigger()))
                 .filter(candidate -> !lockSuppressed(candidate, week, now))
@@ -152,6 +153,29 @@ public class AlertService {
             sent.addAll(reserveWarnings(roster, week, now));
         });
         return sent;
+    }
+
+    private List<AlertCandidate> cancelSuperseded(List<AlertCandidate> candidates,
+            Optional<RosterSnapshot> userRoster) {
+        List<AlertCandidate> kept = new ArrayList<>();
+        for (AlertCandidate candidate : candidates) {
+            if (superseded(candidate, userRoster)) {
+                outbox.cancel(List.of("alert:" + candidate.key()),
+                        "the player's designation changed again");
+            } else {
+                kept.add(candidate);
+            }
+        }
+        return kept;
+    }
+
+    private static boolean superseded(AlertCandidate candidate,
+            Optional<RosterSnapshot> userRoster) {
+        if (candidate.source() != AlertCandidate.Source.TRANSITION || userRoster.isEmpty()) {
+            return false;
+        }
+        PlayerHealth now = userRoster.get().playerHealth().get(candidate.playerId());
+        return now != null && !now.name().equals(candidate.facts().get("to"));
     }
 
     private AlertCandidate reserveAdvice(AlertCandidate candidate, Event event,
@@ -295,8 +319,10 @@ public class AlertService {
                     "player", player,
                     "health", health.name(),
                     "irReminder", "true");
-            String text = phraser.phrase(facts, recommendation);
-            sent.addAll(outbox.deliver(text, List.of(new Event(
+            String basis = phraser.basis(facts, recommendation);
+            String text = outbox.pendingText(List.of(key), basis)
+                    .orElseGet(() -> phraser.phrase(facts, recommendation));
+            sent.addAll(outbox.deliver(text, basis, List.of(new Event(
                     key, EventType.ALERT_SENT, now, alertFacts(
                             new AlertCandidate(AlertCandidate.Source.TRANSITION, key, playerId,
                                     team, recommendation, facts), text)))));
@@ -417,22 +443,26 @@ public class AlertService {
             if (unalerted.isEmpty()) {
                 continue;
             }
+            List<String> keys = unalerted.stream()
+                    .map(candidate -> "alert:" + candidate.key())
+                    .toList();
             AlertCandidate primary = unalerted.stream().min(BY_CONFIDENCE).orElseThrow();
             Map<String, String> research = primary.playerId() == null
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
-            Optional<LineupAdvice.Written> written =
-                    alertText(primary, research, leagueWeek, userRoster, now);
-            if (written.isEmpty()) {
+            Optional<Composed> composed =
+                    alertText(keys, primary, research, leagueWeek, userRoster, now);
+            if (composed.isEmpty()) {
+                outbox.cancel(keys, "its advice was withheld");
                 continue;
             }
-            String text = written.get().text();
+            LineupAdvice.Written written = composed.get().written();
             List<Event> templates = unalerted.stream()
                     .map(candidate -> new Event("alert:" + candidate.key(),
                             EventType.ALERT_SENT, now,
-                            alertFacts(candidate, research, written.get())))
+                            alertFacts(candidate, research, written)))
                     .toList();
-            sent.addAll(outbox.deliver(text, templates));
+            sent.addAll(outbox.deliver(written.text(), composed.get().basis(), templates));
         }
         return sent;
     }
@@ -501,6 +531,7 @@ public class AlertService {
                     : lineupAdvice.forImpairedStarter(key, playerId, research, leagueWeek, roster,
                             now, kickoff);
             if (written.isEmpty()) {
+                outbox.cancel(List.of(key), "its advice was withheld");
                 continue;
             }
 
@@ -520,7 +551,7 @@ public class AlertService {
             facts.put("playerId", playerId);
             written.get().runId().ifPresent(runId -> facts.put("runId", runId));
             facts.put("text", text);
-            sent.addAll(outbox.deliver(text, List.of(
+            sent.addAll(outbox.deliver(text, written.get().runId().orElseThrow(), List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -552,22 +583,28 @@ public class AlertService {
         return Map.copyOf(facts);
     }
 
+    private record Composed(LineupAdvice.Written written, String basis) {
+    }
+
     /**
      * A lineup problem's text is written from checked evidence and may
      * be withheld; every other Alert is phrased from its Recommendation.
      * The research read right before sending reaches both.
      */
-    private Optional<LineupAdvice.Written> alertText(AlertCandidate primary,
+    private Optional<Composed> alertText(List<String> keys, AlertCandidate primary,
             Map<String, String> research, LeagueWeek leagueWeek,
             Optional<RosterSnapshot> userRoster, Instant now) {
         if (LINEUP_PROBLEMS.contains(primary.source())) {
             return lineupAdvice.forProblem("alert:" + primary.key(), primary, research,
-                    leagueWeek, userRoster.orElseThrow(), now, null);
+                    leagueWeek, userRoster.orElseThrow(), now, null)
+                    .map(written -> new Composed(written, written.runId().orElseThrow()));
         }
         Map<String, String> facts = new HashMap<>(primary.facts());
         facts.putAll(research);
-        return Optional.of(new LineupAdvice.Written(
-                phraser.phrase(facts, primary.recommendation()), Optional.empty()));
+        String basis = phraser.basis(facts, primary.recommendation()) + keys;
+        String text = outbox.pendingText(keys, basis)
+                .orElseGet(() -> phraser.phrase(facts, primary.recommendation()));
+        return Optional.of(new Composed(new LineupAdvice.Written(text, Optional.empty()), basis));
     }
 
     private Map<String, String> alertFacts(AlertCandidate candidate, String text) {
