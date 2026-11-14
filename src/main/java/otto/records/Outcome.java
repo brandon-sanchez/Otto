@@ -1,17 +1,37 @@
 package otto.records;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-/** How the run ended: one message sent, or nothing sent and why. */
+/**
+ * How the run ended: one message sent, a message built for a dry run
+ * and kept unsent, or nothing sent and why.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
+        @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
         @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld")})
 public sealed interface Outcome {
 
     /** @param message the text the user received */
     record Sent(String message) implements Outcome {
+    }
+
+    /**
+     * A message built in full and recorded so it can be reviewed, which
+     * by design never reached the user.
+     *
+     * @param messages the Telegram messages it would have gone out as,
+     *        in order, each inside Telegram's length limit
+     */
+    record DryRun(List<String> messages) implements Outcome {
+
+        public DryRun {
+            messages = List.copyOf(messages);
+        }
     }
 
     record Withheld(String reason) implements Outcome {

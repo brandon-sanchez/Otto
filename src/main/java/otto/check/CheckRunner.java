@@ -14,6 +14,7 @@ import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
+import otto.board.WaiverBoardDryRun;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -46,6 +47,7 @@ public class CheckRunner {
     private final EventLog eventLog;
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
+    private final WaiverBoardDryRun waiverBoardDryRun;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -58,6 +60,7 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
+            WaiverBoardDryRun waiverBoardDryRun,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
             OttoProperties properties) {
@@ -72,6 +75,7 @@ public class CheckRunner {
         this.eventLog = eventLog;
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
+        this.waiverBoardDryRun = waiverBoardDryRun;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -109,6 +113,7 @@ public class CheckRunner {
                     .considerWaiverAlert(
                             leagueWeek, now)
                     .ifPresent(alerts::add);
+            waiverBoardDryRun.considerDryRun(leagueWeek, now);
             verificationService.verify(inSeason.get(), week, now);
         }
 
