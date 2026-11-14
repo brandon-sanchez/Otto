@@ -11,7 +11,8 @@ import java.time.Instant;
  * declares them itself; one that keeps only coverage has none to read.
  */
 public sealed interface NflverseFeed
-        permits Schedule, WeeklyStats, DepthCharts, WeeklyRosters, SnapCounts, FtnCharting {
+        permits Schedule, WeeklyStats, DepthCharts, WeeklyRosters, SnapCounts, FtnCharting,
+        PbpParticipation {
 
     String season();
 

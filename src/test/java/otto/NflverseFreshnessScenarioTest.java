@@ -322,7 +322,9 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         new WeekStatus.Complete(ROSTERS_RELEASE, List.of())),
                 Map.entry(FeedId.DEPTH_CHARTS, new WeekStatus.Unknown(
                         "8 of 8 teams' 2026 week 3 charts have been replaced by newer ones")),
-                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())));
+                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())),
+                Map.entry(FeedId.PBP_PARTICIPATION, new WeekStatus.Unknown(
+                        "PBP_PARTICIPATION holds the 2025 season, not 2026")));
     }
 
     @Test
