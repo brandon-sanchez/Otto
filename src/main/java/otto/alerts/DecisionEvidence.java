@@ -2,6 +2,7 @@ package otto.alerts;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -19,6 +20,7 @@ import otto.advice.LineupMove;
 import otto.advice.RosterPlan;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerHealth;
@@ -44,7 +46,8 @@ final class DecisionEvidence {
     }
 
     static LineupEvidence.Draft draft(AlertCandidate transition, AlertCandidate legality,
-            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Map<String, String> research, PlayerAvailability availability,
+            LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, Instant now) {
         WeekFacts week = leagueWeek.week();
@@ -53,19 +56,23 @@ final class DecisionEvidence {
         String name = builder.name(playerId);
         PlayerHealth from = PlayerHealth.valueOf(transition.facts().get("from"));
         PlayerHealth to = PlayerHealth.valueOf(transition.facts().get("to"));
-        builder.addPlayer(playerId, "the player whose status changed");
-        Map<String, String> change = new LinkedHashMap<>();
-        change.put("player", name);
-        change.put("from", RosterPlans.designation(from));
-        change.put("to", RosterPlans.designation(to));
-        builder.addItem(new EvidenceItem("status-change", "sleeper:players", Optional.empty(),
-                leagueWeek.snapshot().at(), "the designation change this decision is about",
-                change));
+        boolean announced = transition.facts().containsKey(OfficialUpdateDetector.ANNOUNCEMENT);
+        builder.addPlayer(playerId, announced ? "the player his team made an announcement about"
+                : "the player whose status changed");
+        if (!announced) {
+            Map<String, String> change = new LinkedHashMap<>();
+            change.put("player", name);
+            change.put("from", RosterPlans.designation(from));
+            change.put("to", RosterPlans.designation(to));
+            builder.addItem(new EvidenceItem("status-change", "sleeper:players", Optional.empty(),
+                    leagueWeek.snapshot().at(), "the designation change this decision is about",
+                    change));
+        }
 
         boolean reported = research.containsKey("latestReport");
-        List<String> unknowns = reported || !to.isWorseThan(PlayerHealth.PROBABLE)
+        List<String> unknowns = new ArrayList<>(reported || !to.isWorseThan(PlayerHealth.PROBABLE)
                 ? List.of()
-                : unknownRecovery(builder, research, name, now);
+                : unknownRecovery(builder, research, name, now));
 
         Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
                 directory);
@@ -93,11 +100,21 @@ final class DecisionEvidence {
         profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
+        unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
+                leagueWeek.snapshot().at(), now));
 
-        String urgent = "%s went from %s to %s.".formatted(name, RosterPlans.designation(from),
-                RosterPlans.designation(to));
-        String task = "Advise what to do with %s after his status change: choose one of "
-                .formatted(name) + "rosterPlans.";
+        String urgent = announced
+                ? AvailabilityEvidence.announced(name, availability)
+                : "%s went from %s to %s.".formatted(name, RosterPlans.designation(from),
+                        RosterPlans.designation(to))
+                        + AvailabilityEvidence.disagreementSuffix(availability);
+        String task = "Advise what to do with %s after %s: choose one of rosterPlans."
+                .formatted(name, announced ? "his team's announcement" : "his status change");
+        if (legality == null && announced && availability.ruledOut()
+                && roster.starters().contains(playerId)) {
+            return withAnnouncedSlotFix(builder, roster.starters().indexOf(playerId), week, task,
+                    plans, unknowns, urgent);
+        }
         if (legality == null) {
             return builder.decisionDraft(task, List.of(), true, plans.legal(), unknowns,
                     Optional.of(urgent), false);
@@ -236,6 +253,26 @@ final class DecisionEvidence {
                         + "advise how to fill it from legalMoves.", moves, moves.isEmpty(),
                 plans.legal(), unknowns,
                 Optional.of(urgent + " " + slotFact + " " + builder.bestOption(moves)), false);
+    }
+
+    /**
+     * His team ruled out a starter Sleeper still lets the user start, so
+     * the slot is worth filling, but keeping him in is a move Sleeper
+     * allows.
+     */
+    private static LineupEvidence.Draft withAnnouncedSlotFix(LineupEvidence builder,
+            int slotIndex, WeekFacts week, String task, RosterPlans.Plans plans,
+            List<String> unknowns, String urgent) {
+        Slot slot = week.startingSlots().get(slotIndex);
+        Map<String, String> problem = new LinkedHashMap<>();
+        problem.put("problem", "his team ruled out a starter Sleeper still lets you start");
+        problem.put("slot", slot.name());
+        builder.addProblem(problem);
+        List<LineupMove> moves = builder.legalStarts(slotIndex);
+        return builder.decisionDraft(task + " He is in your %s slot, so also advise whether to "
+                        .formatted(slot.name()) + "replace him there from legalMoves.", moves,
+                true, plans.legal(), unknowns,
+                Optional.of(urgent + " " + builder.bestOption(moves)), false);
     }
 
     private static Optional<DirectoryPlayer> bestProjectedFreeAgent(String playerId, RosterSnapshot roster,

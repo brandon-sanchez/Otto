@@ -31,6 +31,16 @@ public interface EvidenceLane {
     Read read(Inputs inputs);
 
     /**
+     * Returns whether the lane measures attention, such as trending
+     * adds, rather than the player's football. When the latest week's
+     * data is late, a free agent only such lanes name is left out of the
+     * pool, because nothing else backs him.
+     */
+    default boolean popularity() {
+        return false;
+    }
+
+    /**
      * What one board is built for.
      *
      * @param user the user's roster in the league's latest Snapshot

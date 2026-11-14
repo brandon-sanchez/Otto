@@ -1,5 +1,6 @@
 package otto.alerts;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,6 +64,12 @@ public class StatusTransitionDetector {
                 playerId,
                 event.facts().getOrDefault("team", ""),
                 change,
-                Map.copyOf(event.facts())));
+                facts(event)));
+    }
+
+    private static Map<String, String> facts(Event event) {
+        Map<String, String> facts = new HashMap<>(event.facts());
+        facts.put(OfficialUpdateDetector.DESIGNATED_SINCE, event.at().toString());
+        return Map.copyOf(facts);
     }
 }

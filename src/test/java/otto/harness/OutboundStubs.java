@@ -28,7 +28,7 @@ public final class OutboundStubs {
 
     private static final String ADVICE_REQUEST = "legalMoves";
 
-    private static final int ADVICE_PRIORITY = 1;
+    static final int ADVICE_PRIORITY = 1;
 
     private static final String ADVICE_RUN = "fact-checked-advice";
 

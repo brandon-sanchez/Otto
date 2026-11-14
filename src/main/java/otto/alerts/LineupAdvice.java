@@ -28,9 +28,11 @@ import otto.advice.EvidenceBundle;
 import otto.advice.LineupMove;
 import otto.advice.Sha256;
 import otto.ask.LeagueWeek;
+import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
+import otto.directory.PlayerHealth;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
@@ -42,6 +44,8 @@ import otto.records.Outcome;
 import otto.records.RosterContext;
 import otto.records.RunKind;
 import otto.records.Versions;
+import otto.research.OfficialUpdate;
+import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
@@ -74,6 +78,7 @@ public class LineupAdvice {
     private final SettingsStore settings;
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
+    private final ResearchCache researchCache;
     private final RoleSlipLedger ledger;
     private final MuteStore muteStore;
     private final AlertDeliveryOutbox outbox;
@@ -81,14 +86,16 @@ public class LineupAdvice {
     private final String model;
 
     public LineupAdvice(AdviceWriter writer, DecisionRecords records, SettingsStore settings,
-            PlayerDirectoryStore directory, NflverseStore nflverse, RoleSlipLedger ledger,
-            MuteStore muteStore, AlertDeliveryOutbox outbox, OttoProperties properties,
+            PlayerDirectoryStore directory, NflverseStore nflverse,
+            ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
+            AlertDeliveryOutbox outbox, OttoProperties properties,
             @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
         this.writer = writer;
         this.records = records;
         this.settings = settings;
         this.directory = directory;
         this.nflverse = nflverse;
+        this.researchCache = researchCache;
         this.ledger = ledger;
         this.muteStore = muteStore;
         this.outbox = outbox;
@@ -136,12 +143,17 @@ public class LineupAdvice {
      * to do with him, chosen from the roster plans legal in this league,
      * and how to fill his slot when he is a starter who now scores zero.
      *
-     * @param transition the status-transition candidate
+     * @param transition the status-transition candidate, or the
+     *        {@link OfficialUpdateDetector} candidate for a team
+     *        announcement Sleeper has not caught up with
      * @param legality the lineup-legality candidate for the same player
      *        in this Check, or null when his slot is not a problem
      * @param research the facts read for him right before sending; his
      *        latest report joins the evidence, and without one his
-     *        recovery is an unknown the advice must be conditional on
+     *        recovery is an unknown the advice must be conditional on.
+     *        His team's latest announcement is read from the research
+     *        cache that read refreshed, and is kept apart from his
+     *        Sleeper designation, which alone decides the legal plans.
      * @return the checked advice, or the verified status change when the
      *         advice cannot be had; empty when he has left the roster
      */
@@ -155,7 +167,8 @@ public class LineupAdvice {
                 .map(stored -> stored.players().values())
                 .orElse(List.of());
         LineupEvidence.Draft draft = DecisionEvidence.draft(transition, legality, research,
-                leagueWeek, roster, players, this::profile, now);
+                availability(transition, roster, now), leagueWeek, roster, players,
+                this::profile, now);
         return write(alertKey, RunKind.PLAYER_DECISION,
                 draft.withNews(transition.playerId(), research, now), leagueWeek, roster, now);
     }
@@ -269,6 +282,16 @@ public class LineupAdvice {
                 .flatMap(Optional::stream)
                 .min(Comparator.naturalOrder()));
         return firstKickoff.map(kickoff -> kickoff.isBefore(boardDue)).orElse(true);
+    }
+
+    private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,
+            Instant now) {
+        String playerId = transition.playerId();
+        return new PlayerAvailability(PlayerHealth.valueOf(transition.facts().get("to")),
+                Optional.ofNullable(transition.facts().get(OfficialUpdateDetector.DESIGNATED_SINCE))
+                        .map(Instant::parse),
+                OfficialUpdate.latest(researchCache.read(playerId), roster.playerTeams().get(playerId),
+                        now));
     }
 
     private Optional<Players.Player> profile(String sleeperId) {

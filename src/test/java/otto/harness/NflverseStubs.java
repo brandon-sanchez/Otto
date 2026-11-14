@@ -106,6 +106,42 @@ public final class NflverseStubs {
     }
 
     /**
+     * The waiver week with the player register, under a schedule whose
+     * only final week is week 1's three games, and with week 1 held in
+     * full by the weekly stats and the snap counts: the waiver board's
+     * latest completed week has arrived.
+     */
+    public static void waiverWeekReadyForTheBoard(WireMockServer nflverse) {
+        waiverWeekWithThePlayerRegister(nflverse);
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games-waivers.csv");
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-waivers-every-team.csv");
+    }
+
+    /**
+     * The board-ready waiver week, except that the snap counts have not
+     * yet published week 1's Buffalo at Miami game.
+     */
+    public static void waiverWeekMissingAGame(WireMockServer nflverse) {
+        waiverWeekReadyForTheBoard(nflverse);
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-waivers-short.csv");
+    }
+
+    /**
+     * The board-ready waiver week under a schedule that has not yet
+     * recorded week 1's results, though Sleeper has moved on to week 2.
+     */
+    public static void waiverWeekWithAnUnscoredSchedule(WireMockServer nflverse) {
+        waiverWeekReadyForTheBoard(nflverse);
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games-waivers-unscored.csv");
+    }
+
+    /** Republishes the snap counts with week 1's Buffalo at Miami game in them. */
+    public static void lateSnapCountsArrive(WireMockServer nflverse) {
+        stubJson(nflverse, SNAPS_RELEASE_PATH, "nflverse/release-snap-counts-late.json");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-waivers.csv");
+    }
+
+    /**
      * The same waiver week with three played weeks on record, over
      * which one back's share of his own backfield climbs 54%, 58%, 62%.
      * That is the slow lane and the rising trend in one file.
