@@ -753,6 +753,37 @@ stored play-by-play and charting, so this rule also keeps that cost to
 one parse per round. When there is no player directory or no roster for
 the user, nothing is recorded, and the next Check tries again.
 
+### The board waits for the latest week, then falls back
+
+A board built before the latest completed week arrives would present an
+older week's numbers as the latest. So the board checks that week
+first. The week owed is the newer of two weeks: the schedule's latest
+completed week, and the week before Sleeper's current week. When the
+schedule's results lag behind Sleeper, the board still owes the week
+Sleeper has moved past. That week's games then read as unfinished, and
+the board holds. An older complete week never passes for the latest.
+
+The board waits for the weekly stats and the snap counts, because they
+carry every candidate's production and role. The play-by-play, the FTN
+charting and the expected points add optional metrics, which read as
+unknown when absent. Their gaps go into the board's missing data, but
+the board never waits for them.
+
+While a required feed lacks the week, each Check records nothing and
+tries again on the next minute. From three hours before the league's
+claim deadline, the board is built from what has arrived. That
+fallback board opens with a note that code writes, not the model. The
+note names each missing game or team and says what the advice rests on
+instead. The same gaps go to the model as missing data. A free agent
+whom only the trending lane names is left out of a fallback pool. The
+lanes that would back him with football are short a week, so
+popularity alone cannot carry him. The Decision Record lists him with
+that reason.
+
+The fallback is built once, like any other board, so a round whose
+first Check falls inside the buffer still gets it before the deadline.
+Data that arrives after the fallback does not rebuild the round.
+
 ### The boards are compared every week
 
 The scored board keeps running silently beside the evidence-based

@@ -24,6 +24,8 @@
     <aws-sdk.version>2.51.3</aws-sdk.version>
     <aws-lambda-core.version>1.4.0</aws-lambda-core.version>
     <aws-lambda-events.version>3.16.1</aws-lambda-events.version>
+    <surefire.groups></surefire.groups>
+    <surefire.excludedGroups>real-model</surefire.excludedGroups>
   </properties>
 
   <dependencyManagement>
@@ -152,6 +154,14 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <groups>${surefire.groups}</groups>
+          <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+        </configuration>
+      </plugin>
       <!--
         The Lambda deployable. Lambda's Java runtime reads classes from
         the zip root and jars from lib/, so the dependencies stay whole:
@@ -181,4 +191,14 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>real-model</id>
+      <properties>
+        <surefire.groups>real-model</surefire.groups>
+        <surefire.excludedGroups></surefire.excludedGroups>
+      </properties>
+    </profile>
+  </profiles>
 </project>

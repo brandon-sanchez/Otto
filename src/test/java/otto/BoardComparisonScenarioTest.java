@@ -96,7 +96,7 @@ class BoardComparisonScenarioTest extends WireSeamTest {
 
     private void tuesdayEveningWithTheModelAnswering(String... answers) {
         SleeperStubs.waiverWeek(sleeper);
-        NflverseStubs.waiverWeekWithThePlayerRegister(nflverse);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
         checkRunner.runCheck();
@@ -113,6 +113,10 @@ class BoardComparisonScenarioTest extends WireSeamTest {
     }
 
     private void weekTwoIsPlayed() {
+        NflverseStubs.stubJson(nflverse, NflverseStubs.SCHEDULE_RELEASE_PATH,
+                "nflverse/release-schedules-week-2-played.json");
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH,
+                "nflverse/games-waivers-week-2-played.csv");
         NflverseStubs.stubJson(nflverse, NflverseStubs.STATS_RELEASE_PATH,
                 "nflverse/release-stats-player-refreshed.json");
         NflverseStubs.stubCsv(nflverse, NflverseStubs.STATS_2026_PATH,

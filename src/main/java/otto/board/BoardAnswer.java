@@ -32,8 +32,19 @@ public record BoardAnswer(
         claims = List.copyOf(claims);
     }
 
-    /** One player on the board and the model's reasoning for him. */
-    public record Entry(String playerId, String reasoning) {
+    /**
+     * One player on the board and the model's reasoning for him.
+     *
+     * @param outsideFocus why he beats the players at the positions the
+     *        user asked to focus on, for a player outside them; empty
+     *        otherwise
+     */
+    public record Entry(String playerId, String reasoning, String outsideFocus) {
+
+        /** An entry with no reason to explain against a focus. */
+        public Entry(String playerId, String reasoning) {
+            this(playerId, reasoning, "");
+        }
     }
 
     /** Returns the entries the board ranks, picks or optional moves, best first. */
