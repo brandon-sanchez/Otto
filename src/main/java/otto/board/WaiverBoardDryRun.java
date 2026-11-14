@@ -119,11 +119,14 @@ public class WaiverBoardDryRun {
 
     private void record(String runId, LeagueWeek league, WaiverEvidence.Screen screen,
             Instant now) {
-        BoardForm form = new BoardForm(check, screen.candidates());
+        BoardForm form = new BoardForm(check, screen.candidates(),
+                new BidCheck(screen.bidding().policy(), screen.user(),
+                        league.league().activeRosterSpots(), screen.candidates()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved ->
-                    new Outcome.DryRun(BoardMessage.render(approved.answer(), screen.candidates()));
+                    new Outcome.DryRun(BoardMessage.render(approved.answer(), screen,
+                            league.league().waiverBudget()));
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
                     "The board failed its checks twice: " + String.join(" ", rejected.failures()));
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
@@ -133,8 +136,7 @@ public class WaiverBoardDryRun {
                 RunKind.WAIVER_BOARD, now, userId, league.league().leagueId(),
                 OttoJson.MAPPER.valueToTree(league.league()),
                 new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
-                        league.league().waiverBudget().map(budget ->
-                                Math.max(0, budget - screen.user().waiverBudgetUsed()))),
+                        screen.bidding().policy().budget()),
                 OttoJson.MAPPER.valueToTree(settings.current()), screen.screened(),
                 screen.comparisons(), evidenceOf(screen.bundle()),
                 versions(screen.bundle(), form), result.exchanges(), outcome));

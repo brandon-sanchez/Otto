@@ -57,11 +57,14 @@ class WaiverBoardDryRunScenarioTest extends WireSeamTest {
     private static final String IRVING = """
             {"playerId": "10001", "reasoning": "Bucky Irving played 71% of offensive snaps in \
             his latest game, and his coach named him the starter. He projects 19.0 points this \
-            week."}""";
+            week.", "bid": {"low": 7, "target": 9, "high": 12}, "limit": "Past that you pay \
+            for more than a lead role."}""";
 
     private static final String ROBINSON = """
             {"playerId": "10004", "reasoning": "Wandale Robinson drew 13 targets, a target \
-            share of 22%, on 78% of offensive snaps."}""";
+            share of 22%, on 78% of offensive snaps.", "bid": {"low": 3, "target": 5, \
+            "high": 8}, "limit": "A receiver this deep in the order rarely draws a bigger bid."}\
+            """;
 
     private static final String OPENING = "A pickup stands out this week, and a receiver "
             + "is worth a claim behind him.";
@@ -100,7 +103,9 @@ class WaiverBoardDryRunScenarioTest extends WireSeamTest {
     }
 
     private static String entry(String playerId, String reasoning) {
-        return "{\"playerId\": \"%s\", \"reasoning\": \"%s\"}".formatted(playerId, reasoning);
+        return ("{\"playerId\": \"%s\", \"reasoning\": \"%s\", \"bid\": {\"low\": 1, "
+                + "\"target\": 2, \"high\": 3}, \"limit\": \"He is a depth add.\"}")
+                .formatted(playerId, reasoning);
     }
 
     private void aWaiverWeekOnDisk() {
@@ -138,8 +143,10 @@ class WaiverBoardDryRunScenarioTest extends WireSeamTest {
         List<String> messages = ((Outcome.DryRun) record.outcome()).messages();
         assertThat(messages).singleElement().satisfies(message -> assertThat(message)
                 .startsWith("Your waiver options\n\n" + OPENING)
-                .contains("1. Bucky Irving · RB, TB\nBucky Irving played 71% of offensive snaps")
-                .contains("2. Wandale Robinson · WR, NYG\nWandale Robinson drew 13 targets")
+                .contains("1. Bucky Irving · RB, TB\nOtto: bid $9 · Suggested range $7–$12.\n"
+                        + "Bucky Irving played 71% of offensive snaps")
+                .contains("2. Wandale Robinson · WR, NYG\nOtto: bid $5 · Suggested range $3–$8.\n"
+                        + "Wandale Robinson drew 13 targets")
                 .doesNotContain("View all options")
                 .doesNotContainIgnoringCase("score")
                 .doesNotContainIgnoringCase("confidence"));

@@ -25,7 +25,7 @@ import otto.storage.OttoJson;
  * board's text goes through every {@link AdviceCheck} rule, and the
  * board itself must recommend only screened free agents, each once,
  * with no score, no "Cons:" list and nothing longer than an entry may
- * be.
+ * be, and its bids and drops must pass {@link BidCheck}.
  */
 final class BoardForm implements AdviceForm<BoardAnswer> {
 
@@ -59,14 +59,37 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             roster fit. Introduce every player by full name before using a surname
             alone. Never write a score, a confidence label such as High or Medium, or a
             "Cons:" list; when something is uncertain, say exactly what is uncertain.
-            Never say a player "locks". Never state a dollar amount.
+            Never say a player "locks".
+
+            Bids follow the "faab" evidence. When it says bids are allowed, give every
+            entry a "bid" in whole dollars with low <= target <= high, inside its
+            minimum bid and highest legal bid. You choose the range and the target, from
+            the player's ceiling, how long his value lasts, scarcity at his position, the
+            user's lineup gain and the cost of the drop: a one-week patch costs less than
+            a lasting upgrade. Read the league's own bidding in "competition" first,
+            including the claims that lost, and every rival's budget left; use the
+            published consensus only as a cross-check behind it. In "limit", say in one
+            sentence why the high is where the user should stop. You may go to most or
+            all of the budget in an exceptional or late-season case; then say what it
+            costs him. When bids are withheld or the league claims by priority, leave
+            out "bid", leave "limit" empty and state no dollar amount anywhere.
+
+            When the user's roster has no open spot, name in "drop" the rostered player
+            each claim replaces. List in "together" the picks meant to land together:
+            they must drop different players and stay affordable together at the top of
+            their ranges. Every pick not in "together" is an alternative for the same
+            roster spot.
 
             Answer with only this JSON object:
             {
               "hold": false,
               "opening": "the board's first paragraph",
-              "picks": [{"playerId": "<candidate playerId>", "reasoning": "<why>"}],
-              "optional": [{"playerId": "<candidate playerId>", "reasoning": "<why>"}],
+              "picks": [{"playerId": "<candidate playerId>", "reasoning": "<why>",
+                         "bid": {"low": 7, "target": 9, "high": 12},
+                         "limit": "<why the high is where to stop>",
+                         "drop": "<rostered playerId, or null for an open spot>"}],
+              "optional": [<entries shaped like picks>],
+              "together": ["<playerId of a pick>"],
               "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}]
             }
             """;
@@ -79,11 +102,13 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
 
     private final AdviceCheck check;
     private final Map<String, DirectoryPlayer> candidates;
+    private final BidCheck bids;
 
     /** @param candidates the screened pool, the only players the board may recommend */
-    BoardForm(AdviceCheck check, Map<String, DirectoryPlayer> candidates) {
+    BoardForm(AdviceCheck check, Map<String, DirectoryPlayer> candidates, BidCheck bids) {
         this.check = check;
         this.candidates = Map.copyOf(candidates);
+        this.bids = bids;
     }
 
     @Override
@@ -102,6 +127,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         BoardAnswer answer = parsed.get();
         List<String> failures = new ArrayList<>(checkShape(answer));
         if (failures.isEmpty()) {
+            failures.addAll(bids.check(answer));
             String text = BoardMessage.checkedText(answer, candidates);
             List<String> named = answer.entries().stream().map(BoardAnswer.Entry::playerId)
                     .toList();
@@ -182,15 +208,30 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             claim.path("evidence").forEach(id -> evidence.add(id.asText()));
             claims.add(new AdviceAnswer.Claim(claim.path("text").asText(""), evidence));
         });
+        List<String> together = new ArrayList<>();
+        root.path("together").forEach(id -> together.add(id.asText()));
         return Optional.of(new BoardAnswer(root.path("hold").asBoolean(false),
                 root.path("opening").asText(), entries(root.path("picks")),
-                entries(root.path("optional")), claims));
+                entries(root.path("optional")), together, claims));
     }
 
     private static List<BoardAnswer.Entry> entries(JsonNode array) {
         List<BoardAnswer.Entry> entries = new ArrayList<>();
         array.forEach(entry -> entries.add(new BoardAnswer.Entry(
-                entry.path("playerId").asText(""), entry.path("reasoning").asText(""))));
+                entry.path("playerId").asText(""), entry.path("reasoning").asText(""),
+                bid(entry.path("bid")), entry.path("limit").asText(""),
+                Optional.of(entry.path("drop"))
+                        .filter(drop -> drop.isTextual() && !drop.asText().isBlank())
+                        .map(JsonNode::asText))));
         return entries;
+    }
+
+    private static Optional<BoardAnswer.Bid> bid(JsonNode bid) {
+        if (!bid.path("low").isNumber() || !bid.path("target").isNumber()
+                || !bid.path("high").isNumber()) {
+            return Optional.empty();
+        }
+        return Optional.of(new BoardAnswer.Bid(bid.path("low").asDouble(),
+                bid.path("target").asDouble(), bid.path("high").asDouble()));
     }
 }

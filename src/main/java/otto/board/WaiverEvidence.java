@@ -56,6 +56,9 @@ public class WaiverEvidence {
     /** The longest opening or entry the model may write, in characters. */
     static final int PART_MAX_LENGTH = 700;
 
+    /** The longest explanation of a bid's upper limit, in characters. */
+    static final int LIMIT_MAX_LENGTH = 300;
+
     /** Room for an entry's heading and the break before it, in characters. */
     private static final int HEADING_ALLOWANCE = 100;
 
@@ -65,12 +68,14 @@ public class WaiverEvidence {
     private final PlayerDirectoryStore directory;
     private final RosterNeedsService needs;
     private final List<EvidenceLane> lanes;
+    private final FaabEvidence faab;
 
-    public WaiverEvidence(PlayerDirectoryStore directory, RosterNeedsService needs,
-            List<EvidenceLane> lanes) {
+    WaiverEvidence(PlayerDirectoryStore directory, RosterNeedsService needs,
+            List<EvidenceLane> lanes, FaabEvidence faab) {
         this.directory = directory;
         this.needs = needs;
         this.lanes = List.copyOf(lanes);
+        this.faab = faab;
     }
 
     /**
@@ -81,10 +86,14 @@ public class WaiverEvidence {
      * @param screened every free agent screened, each kept in the pool
      *        or left out with the reason
      * @param comparisons what code worked out for the run: each lane's
-     *        picks and the roster needs, for the Decision Record
+     *        picks, the roster needs and the bid bounds, for the Decision
+     *        Record
+     * @param bidding the bid bounds and each candidate's published
+     *        suggestions
      */
     public record Screen(EvidenceBundle bundle, Map<String, DirectoryPlayer> candidates,
-            List<Candidate> screened, JsonNode comparisons, RosterSnapshot user) {
+            List<Candidate> screened, JsonNode comparisons, RosterSnapshot user,
+            FaabEvidence.Bidding bidding) {
 
         public Screen {
             candidates = Collections.unmodifiableMap(new LinkedHashMap<>(candidates));
@@ -150,8 +159,11 @@ public class WaiverEvidence {
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
+        FaabEvidence.Bidding bidding = faab.read(league, user.get(), players.get().players(),
+                candidates.values(), now);
         List<String> gaps = new ArrayList<>();
         reads.forEach(read -> gaps.addAll(read.gaps()));
+        gaps.addAll(bidding.gaps());
         if (rosterNeeds instanceof SourceResult.Unavailable<RosterNeeds> down) {
             gaps.add("the roster needs could not be worked out: " + down.reason());
         }
@@ -162,30 +174,34 @@ public class WaiverEvidence {
             evidence.add(needsItem(league, ok.value(), now));
         }
         evidence.add(rosterItem(league, user.get(), now));
+        evidence.addAll(bidding.league());
         for (DirectoryPlayer player : candidates.values()) {
             evidence.add(candidateItem(player, reasons.get(player.playerId()), now));
             reads.forEach(read -> evidence.addAll(read.evidence(player)));
+            evidence.add(bidding.candidates().get(player.playerId()));
         }
 
         EvidenceBundle bundle = new EvidenceBundle(TASK, evidence,
                 bundlePlayers(league, user.get(), candidates.values()), List.of(), true,
-                Optional.empty(), wholeBoardLength(candidates.size()), Optional.empty(), List.of(),
-                List.of());
+                Optional.empty(), wholeBoardLength(candidates.size()), bidding.policy().budget(),
+                List.of(), List.of());
         Map<String, Object> comparisons = new LinkedHashMap<>();
         comparisons.put("lanes", picksByLane);
         comparisons.put("rosterNeeds", rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok
                 ? ok.value() : null);
+        comparisons.put("bidPolicy", bidding.policy().toString());
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
-                OttoJson.MAPPER.valueToTree(comparisons), user.get()));
+                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding));
     }
 
     /**
      * The longest checked board text: an opening and one entry per
-     * candidate, each with its heading. Each part's own limit is checked
-     * by the board, so this only bounds the whole.
+     * candidate, each with its heading and the explanation of its bid's
+     * limit. Each part's own limit is checked by the board, so this only
+     * bounds the whole.
      */
     private static int wholeBoardLength(int candidates) {
-        return (PART_MAX_LENGTH + HEADING_ALLOWANCE) * (candidates + 1);
+        return (PART_MAX_LENGTH + LIMIT_MAX_LENGTH + HEADING_ALLOWANCE) * (candidates + 1);
     }
 
     private static List<BundlePlayer> bundlePlayers(LeagueWeek league, RosterSnapshot user,
