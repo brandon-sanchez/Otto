@@ -47,6 +47,8 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
     private static final Instant DEPTH_RELEASE = Instant.parse("2026-09-15T07:43:44Z");
     private static final Instant DEPTH_REFRESHED_RELEASE = Instant.parse("2026-10-01T07:41:09Z");
     private static final Instant FTN_RELEASE = Instant.parse("2026-10-03T11:01:21Z");
+    private static final Instant PFR_DEFENSE_RELEASE = Instant.parse("2026-10-01T12:03:04Z");
+    private static final Instant PFR_PASSING_RELEASE = Instant.parse("2026-10-01T12:02:53Z");
     private static final Instant FTN_RE_PULL_RELEASE = Instant.parse("2026-10-05T17:02:14Z");
     private static final Instant FTN_FIRST_PULL = Instant.parse("2026-09-28T17:01:50.896745Z");
     private static final Instant FTN_WEEK_3_PULL = Instant.parse("2026-09-30T17:01:22.925940Z");
@@ -322,7 +324,11 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         new WeekStatus.Complete(ROSTERS_RELEASE, List.of())),
                 Map.entry(FeedId.DEPTH_CHARTS, new WeekStatus.Unknown(
                         "8 of 8 teams' 2026 week 3 charts have been replaced by newer ones")),
-                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())));
+                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())),
+                Map.entry(FeedId.PFR_DEFENSE,
+                        new WeekStatus.Complete(PFR_DEFENSE_RELEASE, List.of())),
+                Map.entry(FeedId.PFR_PASSING,
+                        new WeekStatus.Complete(PFR_PASSING_RELEASE, List.of())));
     }
 
     @Test
