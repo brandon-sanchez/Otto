@@ -28,6 +28,12 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/schedules";
     public static final String FTN_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
+    public static final String PBP_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/pbp";
+    public static final String PLAYERS_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/players";
+    public static final String EXPECTED_POINTS_RELEASE_PATH =
+            "/repos/ffverse/ffopportunity/releases/tags/latest-data";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
     public static final String STATS_2026_PATH = DOWNLOAD + "stats_player/stats_player_week_2026.csv";
@@ -39,6 +45,13 @@ public final class NflverseStubs {
     public static final String SNAPS_2025_PATH = DOWNLOAD + "snap_counts/snap_counts_2025.csv";
     public static final String SCHEDULE_PATH = DOWNLOAD + "schedules/games.csv";
     public static final String FTN_2026_PATH = DOWNLOAD + "ftn_charting/ftn_charting_2026.csv";
+    public static final String PBP_2026_PATH = DOWNLOAD + "pbp/play_by_play_2026.csv";
+    public static final String PBP_2025_PATH = DOWNLOAD + "pbp/play_by_play_2025.csv";
+    public static final String PLAYERS_PATH = DOWNLOAD + "players/players.csv";
+    public static final String EXPECTED_POINTS_2026_PATH =
+            "/ffverse/ffopportunity/releases/download/latest-data/ep_weekly_2026.csv";
+    public static final String EXPECTED_POINTS_2025_PATH =
+            "/ffverse/ffopportunity/releases/download/latest-data/ep_weekly_2025.csv";
 
     public static final String PLAYER_IDS_PATH = "/dynastyprocess/data/master/files/db_playerids.csv";
 
@@ -49,6 +62,7 @@ public final class NflverseStubs {
     public static void healthy(WireMockServer nflverse) {
         schedule(nflverse);
         ftnCharting(nflverse);
+        usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -70,6 +84,7 @@ public final class NflverseStubs {
     public static void waiverWeek(WireMockServer nflverse) {
         schedule(nflverse);
         ftnCharting(nflverse);
+        usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -124,6 +139,17 @@ public final class NflverseStubs {
         waiverWeekWithAReturningStarter(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-share-lanes.csv");
         stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-share-lanes.csv");
+    }
+
+    /**
+     * Three played weeks over which one back's receiving role grows, 10%,
+     * 17% and then 21% of his team's targets, while he never plays more
+     * than 44% of the snaps. Only his target share can tag him.
+     */
+    public static void waiverWeekWithAReceivingBack(WireMockServer nflverse) {
+        waiverWeekWithAReturningStarter(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-receiving-back.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-receiving-back.csv");
     }
 
     /**
@@ -223,6 +249,30 @@ public final class NflverseStubs {
     public static void ftnRePulled(WireMockServer nflverse) {
         stubJson(nflverse, FTN_RELEASE_PATH, "nflverse/release-ftn-charting-repulled.json");
         stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026-repulled.csv");
+    }
+
+    private static void usageSources(WireMockServer nflverse) {
+        stubJson(nflverse, PBP_RELEASE_PATH, "nflverse/release-play-by-play.json");
+        stubJson(nflverse, PLAYERS_RELEASE_PATH, "nflverse/release-players.json");
+        stubJson(nflverse, EXPECTED_POINTS_RELEASE_PATH, "nflverse/release-ffopportunity.json");
+        stubCsv(nflverse, PBP_2026_PATH, "nflverse/play-by-play-usage.csv");
+        stubCsv(nflverse, PBP_2025_PATH, "nflverse/play-by-play-usage.csv");
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-usage.csv");
+        stubCsv(nflverse, EXPECTED_POINTS_2026_PATH, "nflverse/ep-weekly-usage.csv");
+        stubCsv(nflverse, EXPECTED_POINTS_2025_PATH, "nflverse/ep-weekly-usage.csv");
+    }
+
+    /**
+     * The Chargers' weeks 4 and 5 of 2026 as nflverse, FTN and
+     * ffopportunity published them, every row real. Week 4 at Seattle is
+     * held by every source. Week 5 is in the weekly stats alone: the
+     * other files were trimmed to week 4, as if they had not caught up.
+     */
+    public static void chargersUsage(WireMockServer nflverse) {
+        healthy(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-usage.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-usage.csv");
+        stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-usage.csv");
     }
 
     /** The schedule's release index is down, and no schedule has ever been read. */

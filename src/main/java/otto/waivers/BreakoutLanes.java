@@ -1,9 +1,10 @@
 package otto.waivers;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 import otto.nflverse.RoleShares;
 
@@ -53,6 +54,10 @@ public final class BreakoutLanes {
 
     static final double SLOW_SNAP_SHARE = 0.55;
 
+    static final double FAST_BACK_TARGET_SHARE = 0.25;
+
+    static final double SLOW_BACK_TARGET_SHARE = 0.15;
+
     /** How many straight games the slow lane asks for. */
     static final int SLOW_LANE_GAMES = 2;
 
@@ -71,7 +76,9 @@ public final class BreakoutLanes {
     }
 
     /**
-     * Reads the lanes for one player.
+     * Reads the lanes for one player. Receivers and tight ends are read by
+     * target share. Running backs are read by snap share and by target
+     * share, and either one can tag him.
      *
      * @param position his position; a quarterback has no share of his
      *        own offence to read, so no lane fires for one
@@ -79,52 +86,88 @@ public final class BreakoutLanes {
      *        no line for him
      */
     public static Read of(String position, Optional<RoleShares.Reading> shares) {
-        Optional<Bars> bars = Bars.forPosition(position);
-        if (bars.isEmpty() || shares.isEmpty()) {
+        if (shares.isEmpty()) {
             return Read.nothing();
         }
-        RoleShares.Player role = shares.get().role();
-        List<RoleShares.Game> games = role.games();
-        if (games.isEmpty() || games.getLast().week() != role.newestWeek()) {
-            return Read.nothing();
-        }
-
-        List<String> reasons = new ArrayList<>();
+        RoleShares.Reading reading = shares.get();
+        List<Lane> lanes = switch (position) {
+            case "WR", "TE" -> List.of(new Lane(reading.targets(),
+                    new Bars(FAST_TARGET_SHARE, SLOW_TARGET_SHARE)));
+            case "RB" -> List.of(
+                    new Lane(reading.snaps(), new Bars(FAST_SNAP_SHARE, SLOW_SNAP_SHARE)),
+                    new Lane(reading.targets(),
+                            new Bars(FAST_BACK_TARGET_SHARE, SLOW_BACK_TARGET_SHARE)));
+            default -> List.of();
+        };
+        Set<String> reasons = new LinkedHashSet<>();
         boolean breakout = false;
-        RoleShares.Game latest = games.getLast();
-
-        if (latest.share() >= bars.get().fast()) {
-            breakout = true;
-            String read = role.kind() == RoleShares.Kind.SNAP
-                    ? "he played %s of the snaps in week %d"
-                            .formatted(percent(latest.share()), latest.week())
-                    : "he took %s of %s in week %d"
-                            .formatted(percent(latest.share()), "target share", latest.week());
-            reasons.add(("%s, at or above the %s that marks an elite "
-                    + "one, so the role is his on one game").formatted(
-                            read, percent(bars.get().fast())));
-        } else if (straightGames(games, SLOW_LANE_GAMES)
-                && games.get(games.size() - SLOW_LANE_GAMES).share() >= bars.get().slow()
-                && latest.share() >= bars.get().slow()) {
-            breakout = true;
-            String read = role.kind() == RoleShares.Kind.SNAP
-                    ? "he played %s and then %s of the snaps over weeks %d and %d".formatted(
-                            percent(games.get(games.size() - SLOW_LANE_GAMES).share()),
-                            percent(latest.share()),
-                            games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week())
-                    : "he held %s and then %s of %s over weeks %d and %d".formatted(
-                            percent(games.get(games.size() - SLOW_LANE_GAMES).share()),
-                            percent(latest.share()), "target share",
-                            games.get(games.size() - SLOW_LANE_GAMES).week(), latest.week());
-            reasons.add(("%s, at or above the %s that marks a real role in both")
-                    .formatted(read, percent(bars.get().slow())));
+        boolean snapsSaid = false;
+        for (Lane lane : lanes) {
+            Optional<LaneRead> read = lane.read();
+            if (read.isEmpty()) {
+                continue;
+            }
+            read.get().crossed().ifPresent(reasons::add);
+            read.get().rising().ifPresent(reasons::add);
+            if (read.get().crossed().isPresent()) {
+                breakout = true;
+                snapsSaid |= read.get().kind() == RoleShares.Kind.SNAP;
+            }
         }
-
-        rising(games).ifPresent(reasons::add);
-        if (breakout && role.kind() != RoleShares.Kind.SNAP) {
-            shares.get().latestSnap().map(BreakoutLanes::snapReason).ifPresent(reasons::add);
+        if (breakout && !snapsSaid) {
+            reading.latestSnap().map(BreakoutLanes::snapReason).ifPresent(reasons::add);
         }
         return new Read(breakout, List.copyOf(reasons));
+    }
+
+    private record Lane(Optional<RoleShares.Player> role, Bars bars) {
+
+        Optional<LaneRead> read() {
+            if (role.isEmpty()) {
+                return Optional.empty();
+            }
+            RoleShares.Player player = role.get();
+            List<RoleShares.Game> games = player.games();
+            if (games.isEmpty() || games.getLast().week() != player.newestWeek()) {
+                return Optional.empty();
+            }
+            return Optional.of(new LaneRead(player.kind(), crossed(player.kind(), games),
+                    rising(player.kind(), games)));
+        }
+
+        private Optional<String> crossed(RoleShares.Kind kind, List<RoleShares.Game> games) {
+            RoleShares.Game latest = games.getLast();
+            if (latest.share() >= bars.fast()) {
+                String read = kind == RoleShares.Kind.SNAP
+                        ? "he played %s of the snaps in week %d"
+                                .formatted(percent(latest.share()), latest.week())
+                        : "he took %s of target share in week %d"
+                                .formatted(percent(latest.share()), latest.week());
+                return Optional.of(("%s, at or above the %s that marks an elite "
+                        + "one, so the role is his on one game").formatted(
+                                read, percent(bars.fast())));
+            }
+            if (!straightGames(games, SLOW_LANE_GAMES)) {
+                return Optional.empty();
+            }
+            RoleShares.Game before = games.get(games.size() - SLOW_LANE_GAMES);
+            if (before.share() < bars.slow() || latest.share() < bars.slow()) {
+                return Optional.empty();
+            }
+            String read = kind == RoleShares.Kind.SNAP
+                    ? "he played %s and then %s of the snaps over weeks %d and %d".formatted(
+                            percent(before.share()), percent(latest.share()), before.week(),
+                            latest.week())
+                    : "he held %s and then %s of target share over weeks %d and %d".formatted(
+                            percent(before.share()), percent(latest.share()), before.week(),
+                            latest.week());
+            return Optional.of(("%s, at or above the %s that marks a real role in both")
+                    .formatted(read, percent(bars.slow())));
+        }
+    }
+
+    private record LaneRead(RoleShares.Kind kind, Optional<String> crossed,
+            Optional<String> rising) {
     }
 
     private static String snapReason(RoleShares.Game snap) {
@@ -138,7 +181,7 @@ public final class BreakoutLanes {
      * score line, so it is worth saying out loud even when it has not
      * yet crossed a bar.
      */
-    private static Optional<String> rising(List<RoleShares.Game> games) {
+    private static Optional<String> rising(RoleShares.Kind kind, List<RoleShares.Game> games) {
         if (!straightGames(games, TREND_GAMES)) {
             return Optional.empty();
         }
@@ -148,7 +191,8 @@ public final class BreakoutLanes {
                 return Optional.empty();
             }
         }
-        return Optional.of("his share has risen every week: %s".formatted(
+        return Optional.of("his %s share has risen every week: %s".formatted(
+                kind == RoleShares.Kind.SNAP ? "snap" : "target",
                 String.join(", ", window.stream()
                         .map(game -> "week %d %s".formatted(game.week(), percent(game.share())))
                         .toList())));
@@ -168,18 +212,7 @@ public final class BreakoutLanes {
         return true;
     }
 
-    /** The two bars one position is read against. */
     private record Bars(double fast, double slow) {
-
-        static Optional<Bars> forPosition(String position) {
-            return switch (position) {
-                case "WR", "TE" ->
-                    Optional.of(new Bars(FAST_TARGET_SHARE, SLOW_TARGET_SHARE));
-                case "RB" ->
-                    Optional.of(new Bars(FAST_SNAP_SHARE, SLOW_SNAP_SHARE));
-                default -> Optional.empty();
-            };
-        }
     }
 
     private static String percent(double share) {

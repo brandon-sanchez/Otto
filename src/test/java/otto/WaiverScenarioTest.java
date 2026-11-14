@@ -472,7 +472,7 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("$5-$12"))
                 .withRequestBody(containing("he played 58% and then 62% of the snaps "
                         + "over weeks 2 and 3"))
-                .withRequestBody(containing("his share has risen every week: week 1 54%, "
+                .withRequestBody(containing("his snap share has risen every week: week 1 54%, "
                         + "week 2 58%, week 3 62%"))
                 .withRequestBody(containing("raised one band to 5-12% for a breakout")));
     }
@@ -514,6 +514,24 @@ class WaiverScenarioTest extends WireSeamTest {
                         "he played 71% of the snaps in week 3");
         assertThat(targetLine(board, "Wandale Robinson")).doesNotContain("breakout");
         assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
+    }
+
+    @Test
+    void aBacksGrowingTargetShareIsABreakoutWhileHisSnapsLagBehind() {
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAReceivingBack);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A back became a receiver.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Ray Davis"))
+                .contains("breakout",
+                        "he held 17% and then 21% of target share over weeks 2 and 3, at or "
+                                + "above the 15% that marks a real role in both",
+                        "his target share has risen every week: week 1 10%, week 2 17%, "
+                                + "week 3 21%",
+                        "he played 44% of the snaps in week 3");
     }
 
     @Test

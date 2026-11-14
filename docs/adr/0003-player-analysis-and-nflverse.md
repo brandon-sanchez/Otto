@@ -14,6 +14,11 @@ The schedule also decides when the weekly stats and snap feeds move
 from last season's final file to this season's, where the 2026-08-15
 amendment read Sleeper's week and season type.
 
+Amended (2026-11-13, issue #120): three feeds join the registry, the
+play-by-play, ffopportunity's expected points and the player register,
+and the stats, snap and FTN feeds keep more of each row. The section
+"Free usage evidence, and what unknown means" records the decisions.
+
 The spec pins the nflverse sources, their refresh cadence, the
 defense-versus-position table and the two player tools. It leaves the
 semantics of each open. This ADR records what implementation decided.
@@ -191,3 +196,47 @@ leaves the stored table alone. An empty table would read as "every
 defense is equal", which is a claim the data does not support; a
 missing one lets `compare_players` say plainly that it cannot see
 matchup context, which is the honest answer.
+
+## Free usage evidence, and what unknown means
+
+`PlayerUsage` joins every free usage source into one record per player
+per regular-season game, keyed by gsis id:
+
+- **Weekly stats** keep `air_yards_share`, `wopr`, `racr` and
+  `receiving_epa`, and each line stores its team's targets and carries
+  for that game. Carry share is the player's carries over the team's,
+  counted across every position the file lists.
+- **Snap counts** keep each player's team and raw offensive snaps beside
+  `offense_pct`, so a team's backs can be set side by side.
+- **Play-by-play** (`pbp/play_by_play_YYYY.csv`) keeps every target and
+  carry. Two-point tries, kneels, spikes and plays a penalty erased are
+  not opportunities. A red-zone play starts at or inside the opponent's
+  20. An end-zone target is thrown at least as far as the goal line,
+  so `air_yards` is at least `yardline_100`.
+- **FTN charting** keeps the `read_thrown` code of every play with a
+  throw. FTN's data dictionary describes the codes differently from
+  the data. The real file puts `1` on the first read, and the code
+  follows the real file and a fixture recorded from it. A first-read
+  target is a play-by-play target whose game and play id carry code `1`.
+- **ffopportunity** (`ffverse/ffopportunity`, release `latest-data`,
+  `ep_weekly_YYYY.csv`) gives touchdowns beside expected touchdowns and
+  fantasy points beside expected fantasy points. Its points use its own
+  full-PPR scoring, so they compare players and never stand in for a
+  league's points. The file has no season type, so weeks after 18 are
+  dropped as playoffs.
+- **The player register** (`players/players.csv`) gives birth dates,
+  draft capital and the PFR id that joins the snap counts. Only skill
+  players from this season or the last are kept. A player the file
+  names no complete pick for has no draft capital: undrafted and
+  unrecorded look the same in the file, so neither is claimed.
+
+The register has no weeks, so it is one coverage unit, and readiness
+answers unknown for it in any week.
+
+Each part of a game record is null when its source does not hold the
+player's team in that week. It is zero only when the source holds the
+week and lists nothing for him. A back on the field for 35 snaps with no
+touches has zero targets, but a week the snap file has not reached
+has unknown snaps. A blank optional column, such as `racr` for a player
+with no air yards, is null and never zero. A source stored for a
+different season than the weekly stats is left out of the join.
