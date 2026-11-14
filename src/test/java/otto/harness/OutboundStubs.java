@@ -23,6 +23,9 @@ public final class OutboundStubs {
     public static final String GET_UPDATES_PATH = "/bottest-bot-token/getUpdates";
     public static final String CHAT_COMPLETIONS_PATH = "(/v1)?/chat/completions";
 
+    /** Text only a waiver board's advice request carries: the start of its task. */
+    public static final String WAIVER_BOARD_REQUEST = "Rank this week's waiver candidates";
+
     private static final String ADVICE_REQUEST = "legalMoves";
 
     private static final int ADVICE_PRIORITY = 1;
@@ -168,6 +171,28 @@ public final class OutboundStubs {
                 .withRequestBody(containing(ADVICE_REQUEST))
                 .withRequestBody(containing(requestContains))
                 .willReturn(completion(contentBody(answer))));
+    }
+
+    /**
+     * The model's answers, in the order it gives them, to every advice
+     * request whose body contains the given text; the last one repeats.
+     * Other advice requests are left to the other stubs.
+     */
+    public static void llmAdvisesInOrderOn(WireMockServer llm, String requestContains,
+            String... answers) {
+        String run = "advice-on-" + requestContains;
+        for (int index = 0; index < answers.length; index++) {
+            String state = index == 0 ? Scenario.STARTED : "answer-" + index;
+            String next = index == answers.length - 1 ? state : "answer-" + (index + 1);
+            llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                    .atPriority(ADVICE_PRIORITY)
+                    .withRequestBody(containing(ADVICE_REQUEST))
+                    .withRequestBody(containing(requestContains))
+                    .inScenario(run)
+                    .whenScenarioStateIs(state)
+                    .willReturn(completion(contentBody(answers[index])))
+                    .willSetStateTo(next));
+        }
     }
 
     /** The model is unreachable: a request error the SDK does not retry. */

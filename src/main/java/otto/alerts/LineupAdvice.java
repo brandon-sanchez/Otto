@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import otto.OttoApplication;
 import otto.OttoProperties;
+import otto.advice.AdviceAnswer;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
@@ -175,7 +176,7 @@ public class LineupAdvice {
             return sent(earlier.get(), runId);
         }
 
-        AdviceResult result = writer.write(draft.bundle());
+        AdviceResult<AdviceAnswer> result = writer.write(draft.bundle());
         Outcome outcome = outcome(result, draft);
         save(new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind, now, userId,
                 leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
@@ -186,18 +187,20 @@ public class LineupAdvice {
         return sent(outcome, runId);
     }
 
-    private static Outcome outcome(AdviceResult result, LineupEvidence.Draft draft) {
+    private static Outcome outcome(AdviceResult<AdviceAnswer> result,
+            LineupEvidence.Draft draft) {
         return switch (result) {
-            case AdviceResult.Approved approved when approved.answer().move().isEmpty()
-                    && draft.holdStaysSilent() ->
+            case AdviceResult.Approved<AdviceAnswer> approved
+                    when approved.answer().move().isEmpty() && draft.holdStaysSilent() ->
                     new Outcome.Withheld("The model advised no change, which is not sent unasked.");
-            case AdviceResult.Approved approved -> new Outcome.Sent(approved.answer().message());
-            case AdviceResult.Rejected rejected -> draft.urgentFacts()
+            case AdviceResult.Approved<AdviceAnswer> approved ->
+                    new Outcome.Sent(approved.answer().message());
+            case AdviceResult.Rejected<AdviceAnswer> rejected -> draft.urgentFacts()
                     .<Outcome>map(Outcome.Sent::new)
                     .orElseGet(() -> new Outcome.Withheld(
                             "The advice failed its checks twice: "
                                     + String.join(" ", rejected.failures())));
-            case AdviceResult.Unavailable unavailable -> draft.urgentFacts()
+            case AdviceResult.Unavailable<AdviceAnswer> unavailable -> draft.urgentFacts()
                     .<Outcome>map(Outcome.Sent::new)
                     .orElseGet(() -> new Outcome.Withheld(unavailable.reason()));
         };
@@ -263,6 +266,6 @@ public class LineupAdvice {
     private Versions versions(EvidenceBundle bundle) {
         String code = Objects.requireNonNullElse(
                 OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, AdviceWriter.promptVersion(), model);
+        return new Versions(bundle.identity(), code, writer.promptVersion(), model);
     }
 }

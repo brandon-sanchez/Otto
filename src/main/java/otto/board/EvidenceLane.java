@@ -1,0 +1,61 @@
+package otto.board;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+import otto.advice.EvidenceItem;
+import otto.ask.LeagueWeek;
+import otto.directory.DirectoryPlayer;
+import otto.snapshot.RosterSnapshot;
+
+/**
+ * One kind of evidence the waiver board screens free agents with and
+ * hands the model, such as role and opportunity, production,
+ * projections or news. Every lane is a Spring bean, and
+ * {@link WaiverEvidence} runs every lane it finds, so a new kind of
+ * evidence is a new bean and nothing else.
+ *
+ * <p>A lane has no weight. It names the free agents its own evidence
+ * makes worth a look, and the board's pool is the union of every
+ * lane's picks; the model weighs the lanes against each other.
+ */
+public interface EvidenceLane {
+
+    /**
+     * Reads the lane's sources once for one board.
+     *
+     * <p>Side effects: whatever reads the lane's sources make, such as
+     * a Sleeper request or a research cache read.
+     */
+    Read read(Inputs inputs);
+
+    /**
+     * What one board is built for.
+     *
+     * @param user the user's roster in the league's latest Snapshot
+     */
+    record Inputs(LeagueWeek league, RosterSnapshot user, Instant now) {
+    }
+
+    /** One lane's sources, as read for one board. */
+    interface Read {
+
+        /**
+         * Returns the free agents this lane's evidence makes worth a
+         * look, each with the reason in plain words, best first.
+         */
+        Map<String, String> shortlist(List<DirectoryPlayer> freeAgents);
+
+        /**
+         * Returns the lane's evidence about one player; empty when the
+         * lane holds none. Each item's id is unique to the lane and the
+         * player, and a value the source does not hold is written as
+         * unknown, never as zero.
+         */
+        List<EvidenceItem> evidence(DirectoryPlayer player);
+
+        /** Returns one sentence per source the lane could not read. */
+        List<String> gaps();
+    }
+}

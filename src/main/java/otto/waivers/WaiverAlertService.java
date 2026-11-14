@@ -92,7 +92,12 @@ public class WaiverAlertService {
         };
     }
 
-    static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
+    /**
+     * Returns when a waiver board for this claim deadline is due: 18:00
+     * America/Los_Angeles on the calendar day before it, read in the
+     * zone Sleeper runs claims in.
+     */
+    public static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
         return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
                 .atTime(WAIVER_TIME)
                 .atZone(WAIVER_ZONE);

@@ -97,6 +97,15 @@ public final class NflverseStubs {
     }
 
     /**
+     * The waiver week with a player register that holds the free agents
+     * the snap counts list, so their snaps join their usage.
+     */
+    public static void waiverWeekWithThePlayerRegister(WireMockServer nflverse) {
+        waiverWeek(nflverse);
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-waivers.csv");
+    }
+
+    /**
      * The same waiver week with three played weeks on record, over
      * which one back's share of his own backfield climbs 54%, 58%, 62%.
      * That is the slow lane and the rising trend in one file.
