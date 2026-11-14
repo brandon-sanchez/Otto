@@ -100,7 +100,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
                 .withHeader("Content-Type", "application/json")
                 .withHeader("ETag", "\"league-v1\"")
                 .withBody(claimingOnWednesday(Fixtures.read(league)))));
-        NflverseStubs.waiverWeekWithThePlayerRegister(nflverse);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
         checkRunner.runCheck();

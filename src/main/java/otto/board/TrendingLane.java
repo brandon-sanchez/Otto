@@ -39,6 +39,11 @@ class TrendingLane implements EvidenceLane {
     }
 
     @Override
+    public boolean popularity() {
+        return true;
+    }
+
+    @Override
     public Read read(Inputs inputs) {
         SourceResult<List<SleeperAdapter.TrendingPlayer>> trending =
                 sleeper.trendingAdds(LOOKBACK_HOURS, LIMIT);

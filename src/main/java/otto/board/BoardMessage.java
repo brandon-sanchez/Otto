@@ -34,10 +34,20 @@ final class BoardMessage {
     private BoardMessage() {
     }
 
-    /** Returns the board as the Telegram messages it goes out as, in order. */
-    static List<String> render(BoardAnswer answer, Map<String, DirectoryPlayer> candidates) {
+    /**
+     * Returns the board as the Telegram messages it goes out as, in
+     * order.
+     *
+     * @param notes text written by code rather than the model, such as
+     *        which data is missing, placed between the heading and the
+     *        model's opening; empty for none
+     */
+    static List<String> render(BoardAnswer answer, Map<String, DirectoryPlayer> candidates,
+            List<String> notes) {
         List<String> blocks = new ArrayList<>();
-        blocks.add(HEADING + BREAK + answer.opening().strip());
+        List<String> opening = new ArrayList<>(notes);
+        opening.add(answer.opening().strip());
+        blocks.add(HEADING + BREAK + String.join(BREAK, opening));
         List<BoardAnswer.Entry> entries = answer.entries();
         if (answer.hold() && !entries.isEmpty()) {
             blocks.add(STILL_A_MOVE);

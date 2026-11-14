@@ -102,7 +102,7 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
 
     private void aWaiverWeekOnDisk() {
         SleeperStubs.waiverWeek(sleeper);
-        NflverseStubs.waiverWeekWithThePlayerRegister(nflverse);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
         checkRunner.runCheck();
