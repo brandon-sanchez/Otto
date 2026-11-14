@@ -55,7 +55,7 @@ import otto.waivers.WaiverAlertService;
  * Compares the waiver board with its baselines every claim round, so
  * the board can be judged and rolled back.
  *
- * <p>In the same window as {@link WaiverBoardDryRun}, from the evening
+ * <p>In the same window as {@link WaiverBoardService}, from the evening
  * the board is due until the claim deadline, and while the waiver
  * trigger is on, it records the round's baselines once, the scored
  * board among them, as a {@link RunKind#WAIVER_BASELINES} Decision
@@ -210,7 +210,7 @@ public class BoardComparison {
                         Objects.requireNonNullElse(user.playerPositions().get(playerId), "")));
         ComparisonRound round = new ComparisonRound(week.season(), week.number(),
                 deadline.toInstant(),
-                WaiverBoardDryRun.runId(league.league().leagueId(), deadline),
+                WaiverBoardService.runId(league.league().leagueId(), deadline),
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
                 lineupPool, built.picks(), built.unavailable());

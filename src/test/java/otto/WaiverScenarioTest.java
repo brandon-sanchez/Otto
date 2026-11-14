@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
 
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
@@ -40,7 +41,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Waivers: the Tuesday board and the same board by chat.
+ * Waivers: the scored Tuesday board, sent while it is the rollback board,
+ * and the same board by chat.
  *
  * The fixture week is 2026 week 2 with $100 of FAAB unspent. Five free
  * agents matter, and every number below is arithmetic anyone can repeat:
@@ -72,6 +74,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * table at all, and an unknown matchup is never called a soft one.</li>
  * </ul>
  */
+@TestPropertySource(properties = "otto.sent-waiver-board=SCORED")
 class WaiverScenarioTest extends WireSeamTest {
 
     /** Tuesday 2026-09-15 at 18:00 America/Los_Angeles, in summer time. */

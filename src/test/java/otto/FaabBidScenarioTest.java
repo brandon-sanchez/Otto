@@ -173,7 +173,7 @@ class FaabBidScenarioTest extends WireSeamTest {
                 .anySatisfy(failure -> assertThat(failure).contains("low <= target <= high"))
                 .anySatisfy(failure -> assertThat(failure)
                         .contains("high of $120 is more than the $100 the user has left"));
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
     }
 
     @Test
@@ -369,8 +369,8 @@ class FaabBidScenarioTest extends WireSeamTest {
     }
 
     private static String onlyMessage(DecisionRecord record) {
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
-        return String.join("\n\n", ((Outcome.DryRun) record.outcome()).messages());
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
+        return String.join("\n\n", ((Outcome.SentBoard) record.outcome()).messages());
     }
 
     private DecisionRecord onlyBoardRecord() {

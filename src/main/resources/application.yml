@@ -22,6 +22,10 @@ otto:
   # Ceiling means a fresh poll would not be fresher anyway.
   sleeper-cadence: 60s
   edge-threshold: 1.0
+  # Which waiver board reaches the chat: EVIDENCE or SCORED. Both are
+  # built every round, so SCORED is the rollback; docs/deploy.md has the
+  # steps.
+  sent-waiver-board: EVIDENCE
   # A dropped player inside these ranks of the weekly projection table is
   # league news. The quarterback line stays at 12: this league starts two
   # of them, so a top-12 quarterback is a starter on most rosters.

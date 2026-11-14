@@ -15,7 +15,8 @@ import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
 import otto.board.BoardComparison;
-import otto.board.WaiverBoardDryRun;
+import otto.board.SentWaiverBoard;
+import otto.board.WaiverBoardService;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -48,7 +49,7 @@ public class CheckRunner {
     private final EventLog eventLog;
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
-    private final WaiverBoardDryRun waiverBoardDryRun;
+    private final WaiverBoardService waiverBoard;
     private final BoardComparison boardComparison;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
@@ -62,7 +63,7 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
-            WaiverBoardDryRun waiverBoardDryRun, BoardComparison boardComparison,
+            WaiverBoardService waiverBoard, BoardComparison boardComparison,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
             OttoProperties properties) {
@@ -77,7 +78,7 @@ public class CheckRunner {
         this.eventLog = eventLog;
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
-        this.waiverBoardDryRun = waiverBoardDryRun;
+        this.waiverBoard = waiverBoard;
         this.boardComparison = boardComparison;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
@@ -112,11 +113,10 @@ public class CheckRunner {
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
             alerts.addAll(alertService.process(leagueWeek));
-            waiverAlertService
-                    .considerWaiverAlert(
-                            leagueWeek, now)
-                    .ifPresent(alerts::add);
-            waiverBoardDryRun.considerDryRun(leagueWeek, now);
+            if (waiverBoard.sent() == SentWaiverBoard.SCORED) {
+                waiverAlertService.considerWaiverAlert(leagueWeek, now).ifPresent(alerts::add);
+            }
+            waiverBoard.considerBoard(leagueWeek, now).ifPresent(alerts::add);
             boardComparison.considerComparison(leagueWeek, now);
             verificationService.verify(inSeason.get(), week, now);
         }

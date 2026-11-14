@@ -53,14 +53,29 @@ public class TelegramClient {
      * @return true when Telegram accepted the message
      */
     public boolean sendAlert(String text, long alertId) {
+        return sendAlert(text, alertId, false);
+    }
+
+    /**
+     * Sends one Alert as {@link #sendAlert(String, long)} does, adding a
+     * View all options button on a row of its own when asked. Its tap
+     * arrives as "all:5".
+     *
+     * @return true when Telegram accepted the message
+     */
+    public boolean sendAlert(String text, long alertId, boolean viewAllOptions) {
         List<Map<String, String>> buttons = List.of(
                 Map.of("text", "Done", "callback_data", "done:" + alertId),
                 Map.of("text", "Ignore", "callback_data", "ignore:" + alertId),
                 Map.of("text", "Mute", "callback_data", "mute:" + alertId));
+        List<List<Map<String, String>>> rows = viewAllOptions
+                ? List.of(buttons, List.of(Map.of("text", "View all options",
+                        "callback_data", "all:" + alertId)))
+                : List.of(buttons);
         return post("sendMessage", Map.of(
                 "chat_id", chatId,
                 "text", text,
-                "reply_markup", Map.of("inline_keyboard", List.of(buttons))));
+                "reply_markup", Map.of("inline_keyboard", rows)));
     }
 
     /**

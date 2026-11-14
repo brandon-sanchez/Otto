@@ -6,13 +6,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * How the run ended: one message sent, a message built for a dry run
- * and kept unsent, a message held for the next waiver board, nothing
- * sent and why, or a run that never had a message to send.
+ * How the run ended: one message sent, a waiver board sent, a message
+ * built for a dry run and kept unsent, a message held for the next
+ * waiver board, nothing sent and why, or a run that never had a message
+ * to send.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
+        @JsonSubTypes.Type(value = Outcome.SentBoard.class, name = "sent-board"),
         @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
         @JsonSubTypes.Type(value = Outcome.HeldForBoard.class, name = "held-for-board"),
         @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld"),
@@ -21,6 +23,24 @@ public sealed interface Outcome {
 
     /** @param message the text the user received */
     record Sent(String message) implements Outcome {
+    }
+
+    /**
+     * A waiver board sent to the user. Advice held for the board goes
+     * out under it and is recorded in its own runs, not here.
+     *
+     * @param messages the Telegram messages the board went out as, in
+     *        order, each inside Telegram's length limit
+     * @param allOptions every entry the board ranks, as the messages its
+     *        View all options button sends; empty when the board shows
+     *        them all and has no such button
+     */
+    record SentBoard(List<String> messages, List<String> allOptions) implements Outcome {
+
+        public SentBoard {
+            messages = List.copyOf(messages);
+            allOptions = List.copyOf(allOptions);
+        }
     }
 
     /**

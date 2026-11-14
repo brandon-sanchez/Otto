@@ -19,7 +19,9 @@ import otto.directory.DirectoryPlayer;
  * under the opening. An entry outside the positions the user asked to
  * focus on carries its reason under "Outside your focus". The text is
  * split between entries into Telegram messages that each stay under
- * Telegram's limit.
+ * Telegram's limit. The full list behind "View all options" and the
+ * advice held for the board under "About your roster" are laid out here
+ * too.
  */
 final class BoardMessage {
 
@@ -33,6 +35,8 @@ final class BoardMessage {
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
     static final String OUTSIDE_FOCUS = "Outside your focus: ";
+    static final String ALL_HEADING = "All your waiver options";
+    static final String ABOUT_YOUR_ROSTER = "About your roster";
 
     private static final String BREAK = "\n\n";
 
@@ -71,6 +75,43 @@ final class BoardMessage {
             blocks.add("%s: %d more player%s on the full board.".formatted(VIEW_ALL, more,
                     more == 1 ? "" : "s"));
         }
+        return pack(blocks);
+    }
+
+    /**
+     * Returns every entry the board ranks, as the Telegram messages its
+     * View all options button sends; empty when the board shows them all.
+     *
+     * @param leagueBudget as for {@link #render}
+     */
+    static List<String> renderAll(BoardAnswer answer, WaiverEvidence.Screen screen,
+            Optional<Integer> leagueBudget) {
+        List<BoardAnswer.Entry> entries = answer.entries();
+        if (entries.size() <= SHOWN) {
+            return List.of();
+        }
+        List<String> blocks = new ArrayList<>();
+        blocks.add(ALL_HEADING);
+        for (int index = 0; index < entries.size(); index++) {
+            blocks.add((index + 1) + ". " + entry(entries.get(index), screen, leagueBudget));
+        }
+        return pack(blocks);
+    }
+
+    /**
+     * Returns the board's messages with advice held for it added under
+     * {@link #ABOUT_YOUR_ROSTER}, each message still inside Telegram's
+     * limit.
+     *
+     * @param held the advice's checked text, oldest first; empty for none
+     */
+    static List<String> withHeldAdvice(List<String> messages, List<String> held) {
+        if (held.isEmpty()) {
+            return messages;
+        }
+        List<String> blocks = new ArrayList<>(messages);
+        blocks.add(ABOUT_YOUR_ROSTER);
+        blocks.addAll(held);
         return pack(blocks);
     }
 
