@@ -51,6 +51,14 @@ public class NflverseStore {
         return read(Feeds.FTN_CHARTING);
     }
 
+    public Optional<PfrDefense> pfrDefense() {
+        return read(Feeds.PFR_DEFENSE);
+    }
+
+    public Optional<PfrPassing> pfrPassing() {
+        return read(Feeds.PFR_PASSING);
+    }
+
     public Optional<RushingAdvancedStats> rushingAdvancedStats() {
         return read(Feeds.RUSHING_ADVANCED_STATS);
     }

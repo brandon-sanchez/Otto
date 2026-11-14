@@ -59,6 +59,19 @@ class FingerprintPinTest {
     }
 
     @Test
+    void pfrDefenseContent() {
+        pin(Feeds.PFR_DEFENSE, 1, -8736477101758348270L,
+                new PfrDefense.GamePressures("2026_01_SF_LA", 1, "SF", "LAR", 8));
+    }
+
+    @Test
+    void pfrPassingContent() {
+        pin(Feeds.PFR_PASSING, 1, 762639672109501786L,
+                new PfrPassing.PasserLine("2026_01_SF_LA", 1, "SF", "LAR", "PurdBr00",
+                        "Brock Purdy", 3, 0.083));
+    }
+
+    @Test
     void rushingAdvancedStatsContent() {
         pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
                 new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
