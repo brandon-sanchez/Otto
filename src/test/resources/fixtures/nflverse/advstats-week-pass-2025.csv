@@ -1,0 +1,5 @@
+game_id,pfr_game_id,season,week,game_type,team,opponent,pfr_player_name,pfr_player_id,passing_drops,passing_drop_pct,receiving_drop,receiving_drop_pct,passing_bad_throws,passing_bad_throw_pct,times_sacked,times_blitzed,times_hurried,times_hit,times_pressured,times_pressured_pct,def_times_blitzed,def_times_hurried,def_times_hitqb
+2025_01_KC_LAC,202509050sdg,2025,1,REG,LAC,KC,Justin Herbert,HerbJu00,0,0,,,0,0,3,0,0,0,3,0.073,,,
+2025_01_KC_LAC,202509050sdg,2025,1,REG,KC,LAC,Patrick Mahomes,MahoPa00,0,0,,,0,0,2,0,0,0,2,0.043,,,
+2025_01_TB_ATL,202509070atl,2025,1,REG,ATL,TB,Michael Penix,PeniMi00,1,0.024,,,5,0.122,1,10,1,3,5,0.106,,,
+2025_01_TB_ATL,202509070atl,2025,1,REG,TB,ATL,Baker Mayfield,MayfBa00,0,0,,,5,0.172,1,10,0,1,2,0.054,,,
