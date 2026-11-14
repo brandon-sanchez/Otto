@@ -31,6 +31,13 @@ public class PreSendResearch {
      */
     static final Duration REPORT_WINDOW = Duration.ofDays(3);
 
+    /**
+     * The facts {@link #factsFor} returns about the read itself rather
+     * than about the player, so two reads that found the same news can
+     * differ only in these.
+     */
+    public static final Set<String> READ_STATUS_FACTS = Set.of("newsReadAt", "newsUnavailable");
+
     private final ResearchCache cache;
     private final Clock clock;
 

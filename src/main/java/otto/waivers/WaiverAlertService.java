@@ -122,10 +122,12 @@ public class WaiverAlertService {
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
 
-        String text = phraser.phrase(facts, recommendation);
+        String basis = phraser.basis(facts, recommendation);
+        String text = outbox.pendingText(List.of(key), basis)
+                .orElseGet(() -> phraser.phrase(facts, recommendation));
         Map<String, String> recorded = new HashMap<>(facts);
         recorded.put("text", text);
-        return outbox.deliver(text, List.of(
+        return outbox.deliver(text, basis, List.of(
                         new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded))))
                 .stream().findFirst();
     }
