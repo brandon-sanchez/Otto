@@ -48,11 +48,12 @@ public class AdviceCheck {
     /**
      * The outcome of checking one reply.
      *
+     * @param <T> the shape the reply is read into
      * @param answer the parsed answer, empty when the reply could not be
      *        read as one
      * @param failures empty when the answer passed every check
      */
-    public record Verdict(Optional<AdviceAnswer> answer, List<String> failures) {
+    public record Verdict<T>(Optional<T> answer, List<String> failures) {
 
         public Verdict {
             failures = List.copyOf(failures);
@@ -63,15 +64,25 @@ public class AdviceCheck {
         }
     }
 
-    /** Checks one raw model reply against the bundle it was written from. */
-    public Verdict check(EvidenceBundle bundle, String reply) {
+    /** Checks one raw lineup-advice reply against the bundle it was written from. */
+    public Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
         Optional<AdviceAnswer> parsed = parse(reply);
         if (parsed.isEmpty()) {
-            return new Verdict(Optional.empty(), List.of(
+            return new Verdict<>(Optional.empty(), List.of(
                     "The answer is not the JSON object the instructions ask for, with a "
                             + "non-empty \"message\"."));
         }
-        AdviceAnswer answer = parsed.get();
+        return new Verdict<>(parsed, checkAnswer(bundle, parsed.get()));
+    }
+
+    /**
+     * Checks an answer another form of advice has already read from its
+     * reply, so every form holds its text to the same rules.
+     *
+     * @return one failure per broken rule, written for the model; empty
+     *         when the answer passed every check
+     */
+    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer answer) {
         List<String> failures = new ArrayList<>();
         checkPlayers(bundle, answer, failures);
         checkNumbers(bundle, answer, failures);
@@ -80,7 +91,7 @@ public class AdviceCheck {
         checkMove(bundle, answer, failures);
         checkBudget(bundle, answer, failures);
         checkVoice(bundle, answer, failures);
-        return new Verdict(parsed, failures);
+        return failures;
     }
 
     private void checkPlayers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
@@ -96,8 +107,8 @@ public class AdviceCheck {
         }
         for (BundlePlayer player : bundle.players()) {
             int fullName = message.indexOf(player.fullName());
-            Matcher surname = word(lastName(player.fullName())).matcher(message);
-            if (surname.find() && (fullName < 0 || surname.start() < fullName)) {
+            int surname = firstSurnameOutsideOtherNames(player, bundle, message);
+            if (surname >= 0 && (fullName < 0 || surname < fullName)) {
                 failures.add("Introduce %s by full name before using his surname alone."
                         .formatted(player.fullName()));
             }
@@ -283,6 +294,30 @@ public class AdviceCheck {
 
     private static String name(EvidenceBundle bundle, String playerId) {
         return bundle.player(playerId).map(BundlePlayer::fullName).orElse(playerId);
+    }
+
+    private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
+            String message) {
+        Matcher surname = word(lastName(player.fullName())).matcher(message);
+        while (surname.find()) {
+            int at = surname.start();
+            boolean insideAnotherName = bundle.players().stream()
+                    .map(BundlePlayer::fullName)
+                    .filter(name -> !name.equals(player.fullName()))
+                    .anyMatch(name -> {
+                        Matcher other = word(name).matcher(message);
+                        while (other.find()) {
+                            if (other.start() <= at && at < other.end()) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+            if (!insideAnotherName) {
+                return at;
+            }
+        }
+        return -1;
     }
 
     private static String lastName(String fullName) {

@@ -24,13 +24,13 @@ import otto.storage.OttoJson;
 /**
  * Gets advice the model writes from an evidence bundle, checked before
  * anyone sees it. The model forms the opinion and writes the message;
- * {@link AdviceCheck} holds it to the evidence. An answer that fails
- * gets exactly one correction attempt, which is handed the specific
- * failures; if that fails too, the advice is rejected, never patched up
- * by code.
+ * its {@link AdviceForm}, built on {@link AdviceCheck}, holds it to the
+ * evidence. An answer that fails gets exactly one correction attempt,
+ * which is handed the specific failures; if that fails too, the advice
+ * is rejected, never patched up by code.
  *
- * <p>Each call to {@link #write} makes one or two model calls with no
- * tools.
+ * <p>Each call to a {@code write} method makes one or two model calls
+ * with no tools.
  */
 @Component
 public class AdviceWriter {
@@ -64,59 +64,73 @@ public class AdviceWriter {
             Use null for "move" to recommend no change.
             """;
 
-    private static final String PROMPT_VERSION = Sha256.hex(SYSTEM).substring(0, 12);
-
     private static final Logger log = LoggerFactory.getLogger(AdviceWriter.class);
 
     private final ChatClient chat;
-    private final AdviceCheck check;
+    private final AdviceForm<AdviceAnswer> lineup;
 
     public AdviceWriter(ChatClient.Builder builder, AdviceCheck check) {
         this.chat = builder.build();
-        this.check = check;
+        this.lineup = new AdviceForm<>() {
+            @Override
+            public String instructions() {
+                return SYSTEM;
+            }
+
+            @Override
+            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
+                return check.check(bundle, reply);
+            }
+        };
     }
 
-    /** Identifies the instructions the model wrote under, for the Decision Record. */
-    public static String promptVersion() {
-        return PROMPT_VERSION;
+    /** Identifies the lineup instructions the model wrote under, for the Decision Record. */
+    public String promptVersion() {
+        return lineup.promptVersion();
     }
 
-    /** Asks for advice, checks it, and corrects it once when it fails. */
-    public AdviceResult write(EvidenceBundle bundle) {
+    /** Asks for lineup advice, checks it, and corrects it once when it fails. */
+    public AdviceResult<AdviceAnswer> write(EvidenceBundle bundle) {
+        return write(bundle, lineup);
+    }
+
+    /** Asks for advice of one form, checks it, and corrects it once when it fails. */
+    public <T> AdviceResult<T> write(EvidenceBundle bundle, AdviceForm<T> form) {
         List<Message> conversation = new ArrayList<>();
         conversation.add(new UserMessage(json(bundle)));
         List<ModelExchange> exchanges = new ArrayList<>();
         List<String> failures = List.of();
         for (int attempt = 1; attempt <= 2; attempt++) {
-            JsonNode request = request(conversation);
+            JsonNode request = request(form, conversation);
             String reply;
             try {
-                reply = chat.prompt().system(SYSTEM).messages(conversation).call().content();
+                reply = chat.prompt().system(form.instructions()).messages(conversation).call()
+                        .content();
             } catch (RuntimeException e) {
                 log.warn("Advice model call failed on attempt {}", attempt, e);
                 String reason = "The model could not be reached: " + e.getClass().getSimpleName();
                 exchanges.add(new ModelExchange(attempt, request, NullNode.getInstance(),
                         List.of(reason)));
-                return new AdviceResult.Unavailable(reason, exchanges);
+                return new AdviceResult.Unavailable<>(reason, exchanges);
             }
             if (reply == null || reply.isBlank()) {
                 String reason = "The model answered with nothing.";
                 exchanges.add(new ModelExchange(attempt, request, TextNode.valueOf(""),
                         List.of(reason)));
-                return new AdviceResult.Unavailable(reason, exchanges);
+                return new AdviceResult.Unavailable<>(reason, exchanges);
             }
-            AdviceCheck.Verdict verdict = check.check(bundle, reply);
+            AdviceCheck.Verdict<T> verdict = form.check(bundle, reply);
             exchanges.add(new ModelExchange(attempt, request, response(reply),
                     verdict.failures()));
             if (verdict.passed()) {
-                return new AdviceResult.Approved(verdict.answer().orElseThrow(), exchanges);
+                return new AdviceResult.Approved<>(verdict.answer().orElseThrow(), exchanges);
             }
             failures = verdict.failures();
             log.info("Advice attempt {} failed its checks: {}", attempt, failures);
             conversation.add(new AssistantMessage(reply));
             conversation.add(new UserMessage(correction(failures)));
         }
-        return new AdviceResult.Rejected(failures, exchanges);
+        return new AdviceResult.Rejected<>(failures, exchanges);
     }
 
     private static String correction(List<String> failures) {
@@ -125,11 +139,11 @@ public class AdviceWriter {
         return text.append("\nReturn the corrected JSON answer.").toString();
     }
 
-    private static JsonNode request(List<Message> conversation) {
+    private static JsonNode request(AdviceForm<?> form, List<Message> conversation) {
         ObjectNode request = OttoJson.MAPPER.createObjectNode();
-        request.put("promptVersion", PROMPT_VERSION);
+        request.put("promptVersion", form.promptVersion());
         ArrayNode messages = request.putArray("messages");
-        messages.addObject().put("role", "system").put("content", SYSTEM);
+        messages.addObject().put("role", "system").put("content", form.instructions());
         conversation.forEach(message -> messages.addObject()
                 .put("role", message instanceof AssistantMessage ? "assistant" : "user")
                 .put("content", message.getText()));

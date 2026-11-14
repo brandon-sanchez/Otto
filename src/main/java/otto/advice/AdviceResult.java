@@ -7,13 +7,15 @@ import otto.records.ModelExchange;
 /**
  * How one attempt to get checked advice from the model ended. Every
  * outcome carries each model call made, for the Decision Record.
+ *
+ * @param <T> the shape an approved answer is read into
  */
-public sealed interface AdviceResult {
+public sealed interface AdviceResult<T> {
 
     List<ModelExchange> exchanges();
 
     /** An answer that passed every check, on the first try or the correction. */
-    record Approved(AdviceAnswer answer, List<ModelExchange> exchanges) implements AdviceResult {
+    record Approved<T>(T answer, List<ModelExchange> exchanges) implements AdviceResult<T> {
 
         public Approved {
             exchanges = List.copyOf(exchanges);
@@ -21,8 +23,8 @@ public sealed interface AdviceResult {
     }
 
     /** Both answers failed the checks; the failures are the second answer's. */
-    record Rejected(List<String> failures, List<ModelExchange> exchanges)
-            implements AdviceResult {
+    record Rejected<T>(List<String> failures, List<ModelExchange> exchanges)
+            implements AdviceResult<T> {
 
         public Rejected {
             failures = List.copyOf(failures);
@@ -31,7 +33,8 @@ public sealed interface AdviceResult {
     }
 
     /** The model could not be reached or answered with nothing. */
-    record Unavailable(String reason, List<ModelExchange> exchanges) implements AdviceResult {
+    record Unavailable<T>(String reason, List<ModelExchange> exchanges)
+            implements AdviceResult<T> {
 
         public Unavailable {
             exchanges = List.copyOf(exchanges);
