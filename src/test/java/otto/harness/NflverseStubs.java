@@ -272,6 +272,29 @@ public final class NflverseStubs {
     }
 
     /**
+     * Weeks 1 to 3 in Buffalo: James Cook plays 72% and 70% of the snaps,
+     * then 38% in week 3 while Ray Davis takes his carries. The player
+     * register joins Cook's snaps to his stats.
+     */
+    public static void jamesCooksRoleSlips(WireMockServer nflverse) {
+        healthy(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-role-slip.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-role-slip.csv");
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-waivers.csv");
+    }
+
+    /**
+     * The same weeks, except that in week 3 James Cook keeps 71% of the
+     * snaps and his carries, and scores 2.6 points.
+     */
+    public static void jamesCookHasAQuietGame(WireMockServer nflverse) {
+        healthy(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-quiet-game.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-quiet-game.csv");
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-waivers.csv");
+    }
+
+    /**
      * The Chargers' weeks 4 and 5 of 2026 as nflverse, FTN and
      * ffopportunity published them, every row real. Week 4 at Seattle is
      * held by every source. Week 5 is in the weekly stats alone: the

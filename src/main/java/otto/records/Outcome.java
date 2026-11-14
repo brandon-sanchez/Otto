@@ -7,12 +7,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * How the run ended: one message sent, a message built for a dry run
- * and kept unsent, or nothing sent and why.
+ * and kept unsent, a message held for the next waiver board, or nothing
+ * sent and why.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
         @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
+        @JsonSubTypes.Type(value = Outcome.HeldForBoard.class, name = "held-for-board"),
         @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld")})
 public sealed interface Outcome {
 
@@ -32,6 +34,15 @@ public sealed interface Outcome {
         public DryRun {
             messages = List.copyOf(messages);
         }
+    }
+
+    /**
+     * Checked advice that waits for the next waiver board, because
+     * sending it alone would not let the user act any sooner.
+     *
+     * @param message the text the board carries
+     */
+    record HeldForBoard(String message) implements Outcome {
     }
 
     record Withheld(String reason) implements Outcome {
