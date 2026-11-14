@@ -30,6 +30,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
     public static final String ADVSTATS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pfr_advstats";
+    public static final String PARTICIPATION_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/pbp_participation";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
     public static final String STATS_2026_PATH = DOWNLOAD + "stats_player/stats_player_week_2026.csv";
@@ -53,6 +55,8 @@ public final class NflverseStubs {
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2026.csv";
     public static final String PFR_PASSING_2025_PATH =
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2025.csv";
+    public static final String PARTICIPATION_2025_PATH =
+            DOWNLOAD + "pbp_participation/pbp_participation_2025.csv";
 
     public static final String PLAYER_IDS_PATH = "/dynastyprocess/data/master/files/db_playerids.csv";
 
@@ -65,6 +69,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -88,6 +93,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -245,6 +251,22 @@ public final class NflverseStubs {
         stubCsv(nflverse, PFR_DEFENSE_2025_PATH, "nflverse/advstats-week-def-2025.csv");
         stubCsv(nflverse, PFR_PASSING_2026_PATH, "nflverse/advstats-week-pass-2026.csv");
         stubCsv(nflverse, PFR_PASSING_2025_PATH, "nflverse/advstats-week-pass-2025.csv");
+    }
+
+    /**
+     * Last season's participation file as published on 2026-02-10, the
+     * newest season file nflverse has. Trimmed to the first plays of
+     * three 2025 regular-season games, Kansas City's weeks 1 and 3 among
+     * them, and of one playoff game the feed must drop.
+     */
+    private static void participation(WireMockServer nflverse) {
+        stubJson(nflverse, PARTICIPATION_RELEASE_PATH, "nflverse/release-pbp-participation.json");
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025.csv");
+    }
+
+    /** The participation file renamed the column that says man or zone. */
+    public static void participationDrifted(WireMockServer nflverse) {
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025-drifted.csv");
     }
 
     /**

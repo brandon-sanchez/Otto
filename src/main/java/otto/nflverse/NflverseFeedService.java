@@ -223,7 +223,8 @@ public class NflverseFeedService {
 
     /**
      * Which season's file a feed names this week. A current-season feed
-     * reads the season Sleeper publishes.
+     * reads the season Sleeper publishes, and a previous-season feed the
+     * one before it.
      *
      * A last-played feed reads last season's final record until a game
      * of this season is final, and the current season to date from
@@ -243,6 +244,10 @@ public class NflverseFeedService {
             FeedSpec.SeasonRule rule) {
         if (rule == FeedSpec.SeasonRule.CURRENT) {
             return Optional.of(new FeedSpec.Basis(state.season(), false));
+        }
+        if (rule == FeedSpec.SeasonRule.PREVIOUS) {
+            return Seasons.previous(state.season())
+                    .map(previous -> new FeedSpec.Basis(previous, true));
         }
         boolean played = store.schedule()
                 .map(schedule -> schedule.anyFinal(state.season()))
