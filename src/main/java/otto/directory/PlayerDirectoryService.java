@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,17 @@ public class PlayerDirectoryService {
 
     private static final String PLAYERS_PATH = "/v1/players/nfl";
     private static final Set<String> KEPT_POSITIONS = Set.of("QB", "RB", "WR", "TE");
+
+    /** Every letter Sleeper's players file writes for a defender. */
+    private static final Set<String> DEFENSIVE_POSITIONS = Set.of(
+            "DL", "DE", "DT", "NT", "LB", "OLB", "ILB", "DB", "CB", "S", "SS", "FS");
+
+    private static final Predicate<JsonNode> OFFENSE =
+            player -> KEPT_POSITIONS.contains(player.path("position").asText());
+
+    private static final Predicate<JsonNode> DEFENDER_ON_A_TEAM =
+            player -> DEFENSIVE_POSITIONS.contains(player.path("position").asText())
+                    && player.hasNonNull("team");
 
     private final SleeperClient sleeper;
     private final PlayerDirectoryStore store;
@@ -99,7 +111,9 @@ public class PlayerDirectoryService {
                 if (ok.value().notModified()) {
                     updated = existing.orElseThrow().withCheckedAt(now);
                 } else {
-                    updated = new PlayerDirectory(ok.value().etag(), now, trim(ok.value().body()));
+                    JsonNode playersFile = ok.value().body();
+                    updated = new PlayerDirectory(ok.value().etag(), now,
+                            trim(playersFile, OFFENSE), trim(playersFile, DEFENDER_ON_A_TEAM));
                     existing.ifPresent(previous -> emitStatusEvents(previous, updated, now));
                 }
                 store.write(updated);
@@ -124,18 +138,18 @@ public class PlayerDirectoryService {
         });
     }
 
-    private Map<String, DirectoryPlayer> trim(JsonNode playersFile) {
+    private static Map<String, DirectoryPlayer> trim(JsonNode playersFile,
+            Predicate<JsonNode> kept) {
         Map<String, DirectoryPlayer> players = new HashMap<>();
         playersFile.properties().forEach(entry -> {
             JsonNode player = entry.getValue();
-            String position = player.path("position").asText();
-            if (!KEPT_POSITIONS.contains(position)) {
+            if (!kept.test(player)) {
                 return;
             }
             players.put(entry.getKey(), new DirectoryPlayer(
                     entry.getKey(),
                     player.path("full_name").asText(),
-                    position,
+                    player.path("position").asText(),
                     player.path("team").asText(null),
                     PlayerHealth.from(
                             player.path("status").asText(null),

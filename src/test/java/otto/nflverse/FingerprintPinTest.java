@@ -47,9 +47,16 @@ class FingerprintPinTest {
 
     @Test
     void depthChartsContent() {
-        pin(Feeds.DEPTH_CHARTS, 1, -3244690983820737895L,
+        pin(Feeds.DEPTH_CHARTS, 2, -3758123469200249864L,
                 new DepthCharts.Spot("00-0041021", "Running Back SF", "SF", "RB", 1, 2,
-                        CHARTED_AT));
+                        CHARTED_AT, null));
+    }
+
+    @Test
+    void defensiveDepthChartsContent() {
+        pin(Feeds.DEPTH_CHARTS, 2, 8551938250441289245L,
+                new DepthCharts.Spot("00-0041022", "Corner SF", "SF", "LCB", 2, 1,
+                        CHARTED_AT, DefensiveGroup.CORNERBACK));
     }
 
     @Test
