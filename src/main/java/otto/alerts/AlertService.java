@@ -86,6 +86,7 @@ public class AlertService {
     private final Clock clock;
     private final LineupPlanner lineupPlanner;
     private final PreSendResearch preSendResearch;
+    private final LineupAdvice lineupAdvice;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
@@ -93,7 +94,7 @@ public class AlertService {
             AlertPhraser phraser, EventLog eventLog,
             IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, Clock clock, LineupPlanner lineupPlanner,
-            PreSendResearch preSendResearch) {
+            PreSendResearch preSendResearch, LineupAdvice lineupAdvice) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
@@ -108,6 +109,7 @@ public class AlertService {
         this.clock = clock;
         this.lineupPlanner = lineupPlanner;
         this.preSendResearch = preSendResearch;
+        this.lineupAdvice = lineupAdvice;
     }
 
     /**
@@ -144,9 +146,9 @@ public class AlertService {
                 .filter(candidate -> !muted(candidate))
                 .toList();
 
-        List<Event> sent = new ArrayList<>(sendMerged(sendable, now));
+        List<Event> sent = new ArrayList<>(sendMerged(sendable, leagueWeek, userRoster, now));
         userRoster.ifPresent(roster -> {
-            sent.addAll(finalWarnings(roster, week, sendable, now));
+            sent.addAll(finalWarnings(roster, leagueWeek, sendable, now));
             sent.addAll(reserveWarnings(roster, week, now));
         });
         return sent;
@@ -397,7 +399,8 @@ public class AlertService {
         };
     }
 
-    private List<Event> sendMerged(List<AlertCandidate> sendable, Instant now) {
+    private List<Event> sendMerged(List<AlertCandidate> sendable, LeagueWeek leagueWeek,
+            Optional<RosterSnapshot> userRoster, Instant now) {
         Map<String, List<AlertCandidate>> groups = new LinkedHashMap<>();
         for (AlertCandidate candidate : sendable) {
             String groupKey = candidate.playerId() != null
@@ -418,12 +421,16 @@ public class AlertService {
             Map<String, String> research = primary.playerId() == null
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
-            Map<String, String> facts = new HashMap<>(primary.facts());
-            facts.putAll(research);
-            String text = phraser.phrase(facts, primary.recommendation());
+            Optional<LineupAdvice.Written> written =
+                    alertText(primary, research, leagueWeek, userRoster, now);
+            if (written.isEmpty()) {
+                continue;
+            }
+            String text = written.get().text();
             List<Event> templates = unalerted.stream()
                     .map(candidate -> new Event("alert:" + candidate.key(),
-                            EventType.ALERT_SENT, now, alertFacts(candidate, research, text)))
+                            EventType.ALERT_SENT, now,
+                            alertFacts(candidate, research, written.get())))
                     .toList();
             sent.addAll(outbox.deliver(text, templates));
         }
@@ -437,8 +444,9 @@ public class AlertService {
      * still carrying an uncertain designation. An Alert about the
      * player already sent inside the window counts as the warning.
      */
-    private List<Event> finalWarnings(RosterSnapshot roster, WeekFacts week,
+    private List<Event> finalWarnings(RosterSnapshot roster, LeagueWeek leagueWeek,
             List<AlertCandidate> sendable, Instant now) {
+        WeekFacts week = leagueWeek.week();
         if (week.weekKey().isEmpty() || week.games().isEmpty()) {
             return List.of();
         }
@@ -484,8 +492,19 @@ public class AlertService {
                 continue;
             }
 
-            String player = roster.playerNames().getOrDefault(playerId, playerId);
             Optional<AlertCandidate> primary = problems.stream().min(BY_CONFIDENCE);
+            Instant kickoff = lock.get();
+            Map<String, String> research = preSendResearch.factsFor(playerId);
+            Optional<LineupAdvice.Written> written = primary.isPresent()
+                    ? lineupAdvice.forProblem(key, primary.get(), research, leagueWeek, roster,
+                            now, kickoff)
+                    : lineupAdvice.forImpairedStarter(key, playerId, research, leagueWeek, roster,
+                            now, kickoff);
+            if (written.isEmpty()) {
+                continue;
+            }
+
+            String player = roster.playerNames().getOrDefault(playerId, playerId);
             Recommendation recommendation = primary
                     .map(AlertCandidate::recommendation)
                     .orElseGet(() -> impairedWarning(playerId, player, health));
@@ -495,10 +514,11 @@ public class AlertService {
             facts.put("finalWarning", "true");
             facts.put("minutesToLock",
                     String.valueOf(Duration.between(now, lock.get()).toMinutes()));
-            facts.putAll(preSendResearch.factsFor(playerId));
+            facts.putAll(research);
 
-            String text = phraser.phrase(facts, recommendation);
+            String text = written.get().text();
             facts.put("playerId", playerId);
+            written.get().runId().ifPresent(runId -> facts.put("runId", runId));
             facts.put("text", text);
             sent.addAll(outbox.deliver(text, List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
@@ -522,6 +542,32 @@ public class AlertService {
                 Confidence.MEDIUM,
                 List.of("Replacing him now avoids a possible zero"),
                 List.of("%s may still play and outscore the bench".formatted(player)));
+    }
+
+    private Map<String, String> alertFacts(AlertCandidate candidate,
+            Map<String, String> research, LineupAdvice.Written written) {
+        Map<String, String> facts =
+                new HashMap<>(alertFacts(candidate, research, written.text()));
+        written.runId().ifPresent(runId -> facts.put("runId", runId));
+        return Map.copyOf(facts);
+    }
+
+    /**
+     * A lineup problem's text is written from checked evidence and may
+     * be withheld; every other Alert is phrased from its Recommendation.
+     * The research read right before sending reaches both.
+     */
+    private Optional<LineupAdvice.Written> alertText(AlertCandidate primary,
+            Map<String, String> research, LeagueWeek leagueWeek,
+            Optional<RosterSnapshot> userRoster, Instant now) {
+        if (LINEUP_PROBLEMS.contains(primary.source())) {
+            return lineupAdvice.forProblem("alert:" + primary.key(), primary, research,
+                    leagueWeek, userRoster.orElseThrow(), now, null);
+        }
+        Map<String, String> facts = new HashMap<>(primary.facts());
+        facts.putAll(research);
+        return Optional.of(new LineupAdvice.Written(
+                phraser.phrase(facts, primary.recommendation()), Optional.empty()));
     }
 
     private Map<String, String> alertFacts(AlertCandidate candidate, String text) {
