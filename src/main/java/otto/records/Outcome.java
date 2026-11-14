@@ -7,13 +7,15 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * How the run ended: one message sent, a message built for a dry run
- * and kept unsent, or nothing sent and why.
+ * and kept unsent, nothing sent and why, or a run that never had a
+ * message to send.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
         @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
-        @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld")})
+        @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld"),
+        @JsonSubTypes.Type(value = Outcome.Silent.class, name = "silent")})
 public sealed interface Outcome {
 
     /** @param message the text the user received */
@@ -35,5 +37,14 @@ public sealed interface Outcome {
     }
 
     record Withheld(String reason) implements Outcome {
+    }
+
+    /**
+     * A run that by design has no message, such as the baseline boards
+     * kept only to judge the waiver board against.
+     *
+     * @param reason why the run was never meant to send anything
+     */
+    record Silent(String reason) implements Outcome {
     }
 }

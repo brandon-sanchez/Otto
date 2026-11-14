@@ -140,7 +140,7 @@ public class WaiverBoardDryRun {
                 versions(screen.bundle(), form), result.exchanges(), outcome));
     }
 
-    private static String runId(String leagueId, ZonedDateTime deadline) {
+    static String runId(String leagueId, ZonedDateTime deadline) {
         return RUN_ID_PREFIX + Sha256.hex(leagueId + "\n" + deadline.toInstant())
                 .substring(0, RUN_ID_HASH_LENGTH);
     }

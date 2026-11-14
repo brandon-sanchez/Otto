@@ -116,15 +116,7 @@ public class WaiverEvidence {
             return new SourceResult.Unavailable<>("waivers",
                     "the Snapshot holds no roster for the user");
         }
-        Set<String> rostered = league.rosters().stream()
-                .flatMap(roster -> roster.players().stream())
-                .collect(Collectors.toSet());
-        List<DirectoryPlayer> freeAgents = players.get().players().values().stream()
-                .filter(player -> POSITIONS.contains(player.position()))
-                .filter(player -> player.team() != null && !player.team().isBlank())
-                .filter(player -> !rostered.contains(player.playerId()))
-                .sorted(Comparator.comparing(DirectoryPlayer::playerId))
-                .toList();
+        List<DirectoryPlayer> freeAgents = freeAgents(players.get(), league);
 
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
         List<EvidenceLane.Read> reads = lanes.stream().map(lane -> lane.read(inputs)).toList();
@@ -177,6 +169,23 @@ public class WaiverEvidence {
                 ? ok.value() : null);
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
                 OttoJson.MAPPER.valueToTree(comparisons), user.get()));
+    }
+
+    /**
+     * Returns the players the user may claim in this league: every
+     * player at QB, RB, WR and TE with an NFL team who is on no roster
+     * in the league, by player id.
+     */
+    static List<DirectoryPlayer> freeAgents(PlayerDirectory players, LeagueWeek league) {
+        Set<String> rostered = league.rosters().stream()
+                .flatMap(roster -> roster.players().stream())
+                .collect(Collectors.toSet());
+        return players.players().values().stream()
+                .filter(player -> POSITIONS.contains(player.position()))
+                .filter(player -> player.team() != null && !player.team().isBlank())
+                .filter(player -> !rostered.contains(player.playerId()))
+                .sorted(Comparator.comparing(DirectoryPlayer::playerId))
+                .toList();
     }
 
     /**
