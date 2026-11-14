@@ -21,10 +21,11 @@ final class Feeds {
     static final FtnChartingFeed FTN_CHARTING = new FtnChartingFeed();
     static final PfrDefenseFeed PFR_DEFENSE = new PfrDefenseFeed();
     static final PfrPassingFeed PFR_PASSING = new PfrPassingFeed();
+    static final RushingAdvancedStatsFeed RUSHING_ADVANCED_STATS = new RushingAdvancedStatsFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
             SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
-            PFR_DEFENSE, PFR_PASSING);
+            PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS);
 
     private Feeds() {
     }

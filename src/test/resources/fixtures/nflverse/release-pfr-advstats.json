@@ -1,7 +1,5 @@
 {
   "tag_name": "pfr_advstats",
-  "name": "pfr_advstats",
-  "published_at": "2022-01-28T02:14:24Z",
   "assets": [
     {
       "name": "advstats_week_def_2025.csv",
@@ -32,32 +30,12 @@
       "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_pass_2026.csv"
     },
     {
-      "name": "advstats_week_rec_2025.csv",
-      "content_type": "text/csv; charset=utf-8",
-      "size": 396008,
-      "updated_at": "2026-02-11T13:24:15Z",
-      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_rec_2025.csv"
-    },
-    {
-      "name": "advstats_week_rec_2026.csv",
-      "content_type": "text/csv; charset=utf-8",
-      "size": 71311,
-      "updated_at": "2026-10-01T12:03:00Z",
-      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_rec_2026.csv"
-    },
-    {
       "name": "advstats_week_rush_2025.csv",
-      "content_type": "text/csv; charset=utf-8",
-      "size": 205195,
-      "updated_at": "2026-02-11T13:24:12Z",
-      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_rush_2025.csv"
+      "updated_at": "2026-02-10T08:03:55Z"
     },
     {
       "name": "advstats_week_rush_2026.csv",
-      "content_type": "text/csv; charset=utf-8",
-      "size": 36420,
-      "updated_at": "2026-10-01T12:02:57Z",
-      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_rush_2026.csv"
+      "updated_at": "2026-09-17T08:02:11Z"
     }
   ]
 }

@@ -328,7 +328,9 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                 Map.entry(FeedId.PFR_DEFENSE,
                         new WeekStatus.Complete(PFR_DEFENSE_RELEASE, List.of())),
                 Map.entry(FeedId.PFR_PASSING,
-                        new WeekStatus.Complete(PFR_PASSING_RELEASE, List.of())));
+                        new WeekStatus.Complete(PFR_PASSING_RELEASE, List.of())),
+                Map.entry(FeedId.RUSHING_ADVANCED_STATS, new WeekStatus.Complete(
+                        Instant.parse("2026-09-17T08:02:11Z"), List.of())));
     }
 
     @Test

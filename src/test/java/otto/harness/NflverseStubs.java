@@ -28,7 +28,7 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/schedules";
     public static final String FTN_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
-    public static final String PFR_RELEASE_PATH =
+    public static final String ADVSTATS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pfr_advstats";
 
     private static final String DOWNLOAD = "/nflverse/nflverse-data/releases/download/";
@@ -40,6 +40,10 @@ public final class NflverseStubs {
     public static final String SNAPS_2026_PATH = DOWNLOAD + "snap_counts/snap_counts_2026.csv";
     public static final String SNAPS_2025_PATH = DOWNLOAD + "snap_counts/snap_counts_2025.csv";
     public static final String SCHEDULE_PATH = DOWNLOAD + "schedules/games.csv";
+    public static final String ADVSTATS_RUSH_2026_PATH =
+            DOWNLOAD + "pfr_advstats/advstats_week_rush_2026.csv";
+    public static final String ADVSTATS_RUSH_2025_PATH =
+            DOWNLOAD + "pfr_advstats/advstats_week_rush_2025.csv";
     public static final String FTN_2026_PATH = DOWNLOAD + "ftn_charting/ftn_charting_2026.csv";
     public static final String PFR_DEFENSE_2026_PATH =
             DOWNLOAD + "pfr_advstats/advstats_week_def_2026.csv";
@@ -60,6 +64,7 @@ public final class NflverseStubs {
         schedule(nflverse);
         ftnCharting(nflverse);
         pressure(nflverse);
+        rushingAdvancedStats(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -82,6 +87,7 @@ public final class NflverseStubs {
         schedule(nflverse);
         ftnCharting(nflverse);
         pressure(nflverse);
+        rushingAdvancedStats(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
         stubJson(nflverse, ROSTERS_RELEASE_PATH, "nflverse/release-weekly-rosters.json");
@@ -235,7 +241,6 @@ public final class NflverseStubs {
      * hold the two 2025 games in the schedule fixture.
      */
     private static void pressure(WireMockServer nflverse) {
-        stubJson(nflverse, PFR_RELEASE_PATH, "nflverse/release-pfr-advstats.json");
         stubCsv(nflverse, PFR_DEFENSE_2026_PATH, "nflverse/advstats-week-def-2026.csv");
         stubCsv(nflverse, PFR_DEFENSE_2025_PATH, "nflverse/advstats-week-def-2025.csv");
         stubCsv(nflverse, PFR_PASSING_2026_PATH, "nflverse/advstats-week-pass-2026.csv");
@@ -250,6 +255,19 @@ public final class NflverseStubs {
     public static void ftnRePulled(WireMockServer nflverse) {
         stubJson(nflverse, FTN_RELEASE_PATH, "nflverse/release-ftn-charting-repulled.json");
         stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026-repulled.csv");
+    }
+
+    private static void rushingAdvancedStats(WireMockServer nflverse) {
+        stubJson(nflverse, ADVSTATS_RELEASE_PATH, "nflverse/release-pfr-advstats.json");
+        stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH, "nflverse/advstats-week-rush-2026-weeks.csv");
+        stubCsv(nflverse, ADVSTATS_RUSH_2025_PATH, "nflverse/advstats-week-rush-2026-weeks.csv");
+    }
+
+    /** The rushing file republished with McCaffrey's week 2 yards before contact corrected. */
+    public static void rushingAdvancedStatsCorrected(WireMockServer nflverse) {
+        stubJson(nflverse, ADVSTATS_RELEASE_PATH, "nflverse/release-pfr-advstats-refreshed.json");
+        stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH,
+                "nflverse/advstats-week-rush-2026-weeks-corrected.csv");
     }
 
     /** The schedule's release index is down, and no schedule has ever been read. */

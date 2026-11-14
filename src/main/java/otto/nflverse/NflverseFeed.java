@@ -12,7 +12,7 @@ import java.time.Instant;
  */
 public sealed interface NflverseFeed
         permits Schedule, WeeklyStats, DepthCharts, WeeklyRosters, SnapCounts, FtnCharting,
-                PfrDefense, PfrPassing {
+                PfrDefense, PfrPassing, RushingAdvancedStats {
 
     String season();
 

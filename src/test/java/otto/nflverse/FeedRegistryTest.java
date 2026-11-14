@@ -36,6 +36,7 @@ class FeedRegistryTest {
                 FeedId.DEPTH_CHARTS, "nflverse-depth-charts",
                 FeedId.FTN_CHARTING, "nflverse-ftn-charting",
                 FeedId.PFR_DEFENSE, "nflverse-pfr-defense",
-                FeedId.PFR_PASSING, "nflverse-pfr-passing"));
+                FeedId.PFR_PASSING, "nflverse-pfr-passing",
+                FeedId.RUSHING_ADVANCED_STATS, "nflverse-advstats-rush"));
     }
 }
