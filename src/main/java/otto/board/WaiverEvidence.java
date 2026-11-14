@@ -129,15 +129,7 @@ public class WaiverEvidence {
             return new SourceResult.Unavailable<>("waivers",
                     "the Snapshot holds no roster for the user");
         }
-        Set<String> rostered = league.rosters().stream()
-                .flatMap(roster -> roster.players().stream())
-                .collect(Collectors.toSet());
-        List<DirectoryPlayer> freeAgents = players.get().players().values().stream()
-                .filter(player -> POSITIONS.contains(player.position()))
-                .filter(player -> player.team() != null && !player.team().isBlank())
-                .filter(player -> !rostered.contains(player.playerId()))
-                .sorted(Comparator.comparing(DirectoryPlayer::playerId))
-                .toList();
+        List<DirectoryPlayer> freeAgents = freeAgents(players.get(), league);
 
         Optional<WaiverPreference> only = preference
                 .filter(stated -> stated.mode() == WaiverPreference.Mode.ONLY);
@@ -221,6 +213,23 @@ public class WaiverEvidence {
                         "only popularity named him while the latest week's data is late: "
                                 + named)
                 : new Candidate(player.playerId(), player.fullName(), true, named);
+    }
+
+    /**
+     * Returns the players the user may claim in this league: every
+     * player at QB, RB, WR and TE with an NFL team who is on no roster
+     * in the league, by player id.
+     */
+    static List<DirectoryPlayer> freeAgents(PlayerDirectory players, LeagueWeek league) {
+        Set<String> rostered = league.rosters().stream()
+                .flatMap(roster -> roster.players().stream())
+                .collect(Collectors.toSet());
+        return players.players().values().stream()
+                .filter(player -> POSITIONS.contains(player.position()))
+                .filter(player -> player.team() != null && !player.team().isBlank())
+                .filter(player -> !rostered.contains(player.playerId()))
+                .sorted(Comparator.comparing(DirectoryPlayer::playerId))
+                .toList();
     }
 
     /**

@@ -14,6 +14,7 @@ import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
+import otto.board.BoardComparison;
 import otto.board.WaiverBoardDryRun;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
@@ -48,6 +49,7 @@ public class CheckRunner {
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
     private final WaiverBoardDryRun waiverBoardDryRun;
+    private final BoardComparison boardComparison;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -60,7 +62,7 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
-            WaiverBoardDryRun waiverBoardDryRun,
+            WaiverBoardDryRun waiverBoardDryRun, BoardComparison boardComparison,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
             OttoProperties properties) {
@@ -76,6 +78,7 @@ public class CheckRunner {
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
         this.waiverBoardDryRun = waiverBoardDryRun;
+        this.boardComparison = boardComparison;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -114,6 +117,7 @@ public class CheckRunner {
                             leagueWeek, now)
                     .ifPresent(alerts::add);
             waiverBoardDryRun.considerDryRun(leagueWeek, now);
+            boardComparison.considerComparison(leagueWeek, now);
             verificationService.verify(inSeason.get(), week, now);
         }
 

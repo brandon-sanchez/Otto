@@ -206,7 +206,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         return all;
     }
 
-    private static Optional<BoardAnswer> parse(String reply) {
+    static Optional<BoardAnswer> parse(String reply) {
         String text = reply.strip();
         Matcher fence = CODE_FENCE.matcher(text);
         if (fence.matches()) {
