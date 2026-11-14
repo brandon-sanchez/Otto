@@ -118,6 +118,16 @@ public final class NflverseStubs {
     }
 
     /**
+     * Republishes the board-ready week's stats with a stat correction:
+     * Wandale Robinson's 13 targets become 11, a 19% target share.
+     */
+    public static void waiverWeekStatsCorrected(WireMockServer nflverse) {
+        weeklyStatsRepublished(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH,
+                "nflverse/stats-player-week-waivers-every-team-corrected.csv");
+    }
+
+    /**
      * The board-ready waiver week, except that the snap counts have not
      * yet published week 1's Buffalo at Miami game.
      */

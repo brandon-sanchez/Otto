@@ -121,7 +121,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         assertThat(last.checkFailures())
                 .as("check failures on the model's board %s", last.response())
                 .isEmpty();
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options"))));
         return last.response();

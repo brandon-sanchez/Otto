@@ -123,3 +123,18 @@ call `deleteWebhook`.
   console and wait fifteen minutes. An alarm email should arrive.
   Re-enable it afterwards. Until it has fired once, you do
   not know the assistant can tell you it has stopped.
+
+## 6. Roll back the waiver board
+
+The evidence-based waiver board is the one sent. The scored board is
+still built every round, so it can take over at once:
+
+1. In the Lambda console, set `OTTO_SENT_WAIVER_BOARD` to `SCORED` on the
+   scheduled function. The next Check sends the scored board, and the
+   evidence-based board is recorded unsent.
+2. The next deploy replaces the function's environment, which removes
+   the variable. To keep the rollback, change `sent-waiver-board` in
+   `src/main/resources/application.yml` to `SCORED` and merge it.
+
+Set it back to `EVIDENCE`, or remove the variable, to send the
+evidence-based board again.

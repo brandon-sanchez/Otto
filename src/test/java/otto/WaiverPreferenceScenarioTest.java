@@ -169,8 +169,8 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
         assertThat(record.exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure)
                         .contains("Bucky Irving", "outside the focus"));
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
-        assertThat(String.join("\n\n", ((Outcome.DryRun) record.outcome()).messages()))
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
+        assertThat(String.join("\n\n", ((Outcome.SentBoard) record.outcome()).messages()))
                 .contains("1. Bucky Irving · RB, TB\nOtto: bid $2 · Suggested range $1–$3.\n"
                         + "Bucky Irving played 71% of offensive snaps "
                         + "in his latest game.\nOutside your focus: His coach named him the "
@@ -191,7 +191,7 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
         assertThat(record.evidence()).extracting(evidence -> evidence.id())
                 .doesNotContain("preference")
                 .contains("candidate-10001");
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
     }
 
     @Test
@@ -216,7 +216,7 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
         assertThat(record.evidence()).extracting(evidence -> evidence.id())
                 .contains("candidate-10003")
                 .doesNotContain("candidate-10001");
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
     }
 
     @Test
@@ -240,7 +240,7 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
         assertThat(nextRound.preferences().path("waiverPreference").isNull()).isTrue();
         assertThat(nextRound.evidence()).extracting(evidence -> evidence.id())
                 .doesNotContain("preference");
-        assertThat(nextRound.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(nextRound.outcome()).isInstanceOf(Outcome.SentBoard.class);
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(BOARD_REQUEST))
                 .withRequestBody(notContaining("focus on TE")));

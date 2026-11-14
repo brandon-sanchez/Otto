@@ -72,6 +72,14 @@ class RoleSlipScenarioTest extends WireSeamTest {
     private static final String KEEP = AdviceStubs.decision(KEEP_MESSAGE, "hold", "null",
             List.of(COOK), List.of());
 
+    private static final String BOARD = """
+            {"hold": false, "opening": "A pickup stands out this week.",
+             "picks": [{"playerId": "10001", "reasoning": "Bucky Irving played 71% of \
+            offensive snaps.", "bid": {"low": 1, "target": 2, "high": 3}, \
+            "limit": "He is a depth add."}],
+             "optional": [], "claims": []}
+            """;
+
     @Autowired
     private CheckRunner checkRunner;
 
@@ -294,11 +302,12 @@ class RoleSlipScenarioTest extends WireSeamTest {
     @Test
     void heldAdviceGoesOutWithTheNextWaiverBoard() {
         SleeperStubs.waiverWeek(sleeper);
-        NflverseStubs.waiverWeek(nflverse);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
         OutboundStubs.telegramOk(telegram);
-        OutboundStubs.llmPhrases(llm, "Five waiver targets for Wednesday.");
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
         cooksRoleIsReported("\"rotowire\"", "James Cook lost his starting job to Ray Davis");
         OutboundStubs.llmAdvisesInOrderOn(llm, ROLE_SLIP_REQUEST, BENCH_AND_KEEP);
+        OutboundStubs.llmAdvisesInOrderOn(llm, OutboundStubs.WAIVER_BOARD_REQUEST, BOARD);
         checkRunner.runCheck();
         feeds.updateIfDue();
         assertThat(roleSlips.heldForBoard()).hasSize(1);
@@ -307,8 +316,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text",
-                        containing("Five waiver targets for Wednesday.")))
+                .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options")))
                 .withRequestBody(matchingJsonPath("$.text", containing("About your roster")))
                 .withRequestBody(matchingJsonPath("$.text", containing(BENCH_AND_KEEP_MESSAGE))));
         assertThat(roleSlips.heldForBoard()).isEmpty();
