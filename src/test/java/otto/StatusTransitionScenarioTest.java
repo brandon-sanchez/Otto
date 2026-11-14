@@ -56,7 +56,8 @@ class StatusTransitionScenarioTest extends WireSeamTest {
         assertThat(benchDecline.facts())
                 .containsEntry("player", "Josh Jacobs")
                 .containsEntry("confidence", "MEDIUM");
-        assertThat(benchDecline.facts().get("action")).contains("No lineup change needed");
+        assertThat(benchDecline.facts().get("action"))
+                .isEqualTo("Josh Jacobs went from Active to Questionable");
 
         runPlayersFileCheck("sleeper/players-nfl-jacobs-ir.json", "players-v3");
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
@@ -73,7 +74,7 @@ class StatusTransitionScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void anImprovementAlertsAsAMediumStatusUpdate() {
+    void anImprovementAlertsAtMedium() {
         runHealthyBaselineCheck();
         runPlayersFileCheck("sleeper/players-nfl-mccaffrey-out.json", "players-v2");
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
@@ -86,6 +87,7 @@ class StatusTransitionScenarioTest extends WireSeamTest {
                         .equals("alert:snapshot-diff:status:4034:OUT->QUESTIONABLE"))
                 .findFirst().orElseThrow();
         assertThat(improvement.facts()).containsEntry("confidence", "MEDIUM");
-        assertThat(improvement.facts().get("action")).contains("improved from OUT to QUESTIONABLE");
+        assertThat(improvement.facts().get("action"))
+                .isEqualTo("Christian McCaffrey went from Out to Questionable");
     }
 }

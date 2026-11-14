@@ -17,9 +17,6 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 import otto.ask.LeagueWeek;
-import otto.ask.LineupPlanner;
-import otto.ask.ToolAnswer;
-import otto.ask.UserWeek;
 import otto.check.WeekFacts;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
@@ -84,7 +81,6 @@ public class AlertService {
     private final SettingsStore settings;
     private final AlertDeliveryOutbox outbox;
     private final Clock clock;
-    private final LineupPlanner lineupPlanner;
     private final PreSendResearch preSendResearch;
     private final LineupAdvice lineupAdvice;
 
@@ -93,7 +89,7 @@ public class AlertService {
             LeagueActivityDetector activityDetector, WatchlistDetector watchlistDetector,
             AlertPhraser phraser, EventLog eventLog,
             IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
-            AlertDeliveryOutbox outbox, Clock clock, LineupPlanner lineupPlanner,
+            AlertDeliveryOutbox outbox, Clock clock,
             PreSendResearch preSendResearch, LineupAdvice lineupAdvice) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
@@ -107,7 +103,6 @@ public class AlertService {
         this.settings = settings;
         this.outbox = outbox;
         this.clock = clock;
-        this.lineupPlanner = lineupPlanner;
         this.preSendResearch = preSendResearch;
         this.lineupAdvice = lineupAdvice;
     }
@@ -127,9 +122,7 @@ public class AlertService {
 
         List<Event> diffEvents = recentDiffEvents(now);
         List<AlertCandidate> candidates = new ArrayList<>(diffEvents.stream()
-                .flatMap(event -> transitionDetector.detect(event)
-                        .map(candidate -> reserveAdvice(candidate, event, leagueWeek, now))
-                        .stream())
+                .flatMap(event -> transitionDetector.detect(event).stream())
                 .toList());
         candidates.addAll(activityDetector.detect(diffEvents, week));
         candidates.addAll(watchlistDetector.detect(diffEvents));
@@ -176,106 +169,6 @@ public class AlertService {
         }
         PlayerHealth now = userRoster.get().playerHealth().get(candidate.playerId());
         return now != null && !now.name().equals(candidate.facts().get("to"));
-    }
-
-    private AlertCandidate reserveAdvice(AlertCandidate candidate, Event event,
-            LeagueWeek leagueWeek, Instant now) {
-        if (!"true".equals(event.facts().get("reserve"))
-                || !PlayerHealth.IR.name().equals(event.facts().get("from"))) {
-            return candidate;
-        }
-        Optional<RosterSnapshot> current = leagueWeek.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
-        if (current.isEmpty()) {
-            return candidate;
-        }
-        String playerId = event.facts().get("playerId");
-        RosterSnapshot activated = withoutReserve(current.get(), playerId);
-        UserWeek team = new UserWeek(leagueWeek.league(), activated, leagueWeek.week());
-        ToolAnswer<LineupPlanner.LineupPlan> answer = lineupPlanner.recommend(team, now);
-        if (answer.facts() == null) {
-            return candidate;
-        }
-        LineupPlanner.LineupPlan plan = answer.facts();
-        PlayerHealth health = PlayerHealth.valueOf(event.facts().get("to"));
-        boolean healthy = health == PlayerHealth.ACTIVE || health == PlayerHealth.PROBABLE;
-        List<String> moves = new ArrayList<>();
-        moves.add((healthy ? "Move %s out of IR" : "If active, move %s out of IR")
-                .formatted(candidate.recommendation().player()));
-        plan.swaps().stream()
-                .filter(swap -> swap.start().equals(candidate.recommendation().player()))
-                .findFirst()
-                .ifPresent(swap -> {
-                    moves.add("Start %s at %s".formatted(swap.start(), swap.slot()));
-                    moves.add("Move %s to the bench".formatted(swap.sit()));
-                });
-        recommendedDrop(team, playerId).ifPresent(drop -> moves.add(
-                "%s %s if Sleeper requires a roster spot".formatted(
-                        healthy ? "Drop" : "You may need to drop", drop)));
-
-        Map<String, String> facts = new HashMap<>(candidate.facts());
-        facts.put("recommendedMoves", String.join("; ", moves));
-        facts.put("projectedGain", plan.delta());
-        facts.put("proposedRoster", proposedRoster(plan));
-        Recommendation before = candidate.recommendation();
-        Recommendation recommendation = new Recommendation(
-                before.playerId(), before.player(), before.action(), before.confidence(),
-                List.of(String.join("; ", moves), "Projected lineup gain: " + plan.delta()),
-                before.cons());
-        return new AlertCandidate(candidate.source(), candidate.key(), candidate.playerId(),
-                candidate.team(), recommendation, Map.copyOf(facts));
-    }
-
-    private static RosterSnapshot withoutReserve(RosterSnapshot roster, String playerId) {
-        List<String> reserve = roster.reserve().stream()
-                .filter(id -> !id.equals(playerId))
-                .toList();
-        return new RosterSnapshot(roster.rosterId(), roster.ownerId(), roster.ownerName(),
-                roster.userRoster(), roster.starters(), roster.players(), reserve, roster.taxi(),
-                roster.playerHealth(), roster.playerNames(), roster.playerPositions(),
-                roster.playerTeams(), roster.teamRecord(), roster.waiverBudgetUsed());
-    }
-
-    private static Optional<String> recommendedDrop(UserWeek team, String activatedPlayerId) {
-        if (team.roster().activePlayerCount() <= team.league().activeRosterSpots()) {
-            return Optional.empty();
-        }
-        return team.bench().stream()
-                .filter(playerId -> !playerId.equals(activatedPlayerId))
-                .min(Comparator.comparingDouble(playerId -> team.points(playerId)
-                        .orElse(Double.NEGATIVE_INFINITY)))
-                .map(team::name);
-    }
-
-    private static String proposedRoster(LineupPlanner.LineupPlan plan) {
-        StringBuilder text = new StringBuilder("----- STARTERS -----");
-        plan.optimal().forEach(line -> text.append('\n').append(line.slot()).append(": ")
-                .append(line.player() == null ? "Empty" : line.player()));
-        text.append("\n----- BENCH -----");
-        if (plan.bench().isEmpty()) {
-            text.append("\nEmpty");
-        } else {
-            plan.bench().forEach(line -> text.append('\n').append(line.position()).append(": ")
-                    .append(line.player()));
-        }
-        appendReserve(text, "IR", plan.reserve());
-        appendReserve(text, "TAXI", plan.taxi());
-        return text.toString();
-    }
-
-    private static void appendReserve(StringBuilder text, String heading,
-            List<LineupPlanner.BenchLine> players) {
-        if (players == null) {
-            return;
-        }
-        text.append("\n----- ").append(heading).append(" -----");
-        if (players.isEmpty()) {
-            text.append("\nEmpty");
-        } else {
-            players.forEach(line -> text.append('\n').append(line.position()).append(": ")
-                    .append(line.player()));
-        }
     }
 
     private List<Event> reserveWarnings(RosterSnapshot roster, WeekFacts week, Instant now) {
@@ -334,9 +227,11 @@ public class AlertService {
         return eventLog.all().stream()
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> playerId.equals(event.facts().get("playerId")))
-                .map(event -> event.facts().getOrDefault("action", ""))
-                .anyMatch(action -> action.startsWith("IR update:")
-                        || action.startsWith("IR action needed:"));
+                .filter(event -> "true".equals(event.facts().get("reserve")))
+                .filter(event -> PlayerHealth.IR.name().equals(event.facts().get("from")))
+                .map(event -> event.facts().get("to"))
+                .anyMatch(to -> to != null
+                        && PlayerHealth.valueOf(to).ordinal() <= PlayerHealth.QUESTIONABLE.ordinal());
     }
 
     /**
@@ -451,7 +346,7 @@ public class AlertService {
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
             Optional<Composed> composed =
-                    alertText(keys, primary, research, leagueWeek, userRoster, now);
+                    alertText(keys, primary, unalerted, research, leagueWeek, userRoster, now);
             if (composed.isEmpty()) {
                 outbox.cancel(keys, "its advice was withheld");
                 continue;
@@ -586,14 +481,18 @@ public class AlertService {
     private record Composed(LineupAdvice.Written written, String basis) {
     }
 
-    /**
-     * A lineup problem's text is written from checked evidence and may
-     * be withheld; every other Alert is phrased from its Recommendation.
-     * The research read right before sending reaches both.
-     */
     private Optional<Composed> alertText(List<String> keys, AlertCandidate primary,
-            Map<String, String> research, LeagueWeek leagueWeek,
+            List<AlertCandidate> group, Map<String, String> research, LeagueWeek leagueWeek,
             Optional<RosterSnapshot> userRoster, Instant now) {
+        if (primary.source() == AlertCandidate.Source.TRANSITION && userRoster.isPresent()) {
+            AlertCandidate legality = group.stream()
+                    .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY)
+                    .findFirst()
+                    .orElse(null);
+            return lineupAdvice.forStatusChange("alert:" + primary.key(), primary, legality,
+                    research, leagueWeek, userRoster.get(), now)
+                    .map(written -> new Composed(written, written.runId().orElseThrow()));
+        }
         if (LINEUP_PROBLEMS.contains(primary.source())) {
             return lineupAdvice.forProblem("alert:" + primary.key(), primary, research,
                     leagueWeek, userRoster.orElseThrow(), now, null)

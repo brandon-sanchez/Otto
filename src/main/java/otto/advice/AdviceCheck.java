@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
@@ -22,8 +23,10 @@ import otto.storage.OttoJson;
  * Holds a model-written answer to its evidence bundle before anything is
  * sent. It checks player identities and names, every number, every
  * comparison, the recommended move against the legal moves, any dollar
- * amount against the verified budget, that every claim cites evidence
- * that supports it, and the message's voice: no "lock", no confidence
+ * amount against the verified budget, the chosen roster plan against
+ * the legal plans and the players it moves, that the advice is
+ * conditional on every unknown, that every claim cites evidence that
+ * supports it, and the message's voice: no "lock", no confidence
  * labels, the kickoff phrase when one is required, and the length limit.
  *
  * <p>Each failure is written for the model to read, because the
@@ -78,6 +81,8 @@ public class AdviceCheck {
         checkClaims(bundle, answer, failures);
         checkComparisons(bundle, answer, failures);
         checkMove(bundle, answer, failures);
+        checkPlan(bundle, answer, failures);
+        checkConditions(bundle, answer, failures);
         checkBudget(bundle, answer, failures);
         checkVoice(bundle, answer, failures);
         return new Verdict(parsed, failures);
@@ -195,6 +200,54 @@ public class AdviceCheck {
         }
     }
 
+    private static void checkPlan(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        if (bundle.rosterPlans().isEmpty()) {
+            answer.plan().ifPresent(plan -> failures.add(
+                    "There are no roster plans to choose from; set \"plan\" to null."));
+            return;
+        }
+        String ids = bundle.rosterPlans().stream()
+                .map(plan -> "\"" + plan.id() + "\"")
+                .collect(Collectors.joining(", "));
+        if (answer.plan().isEmpty()) {
+            failures.add("Choose one roster plan in \"plan\". The legal plans are: %s."
+                    .formatted(ids));
+            return;
+        }
+        Optional<RosterPlan> plan = bundle.rosterPlan(answer.plan().get());
+        if (plan.isEmpty()) {
+            failures.add("The plan \"%s\" is not legal. The legal plans are: %s."
+                    .formatted(answer.plan().get(), ids));
+            return;
+        }
+        Stream.of(plan.get().drop(), plan.get().add())
+                .flatMap(Optional::stream)
+                .filter(playerId -> !answer.players().contains(playerId)
+                        || bundle.player(playerId)
+                                .filter(player -> answer.message().contains(player.fullName()))
+                                .isEmpty())
+                .forEach(playerId -> failures.add(
+                        "The plan \"%s\" moves %s, so the message must name him by full name."
+                                .formatted(plan.get().id(), name(bundle, playerId))));
+    }
+
+    private static void checkConditions(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        answer.conditions().stream()
+                .filter(condition -> !bundle.unknowns().contains(condition))
+                .forEach(condition -> failures.add(
+                        "The condition %s is not one of the unknowns in the evidence."
+                                .formatted(condition)));
+        bundle.unknowns().stream()
+                .filter(unknown -> !answer.conditions().contains(unknown))
+                .forEach(unknown -> failures.add(("The advice depends on %s, which no source "
+                        + "supplied: say in the message what is missing and what would change "
+                        + "your call, and list %s in \"conditions\".").formatted(
+                                bundle.item(unknown).map(item -> item.facts().get("missing"))
+                                        .orElse(unknown), unknown)));
+    }
+
     private static void checkBudget(EvidenceBundle bundle, AdviceAnswer answer,
             List<String> failures) {
         Matcher dollars = DOLLARS.matcher(answer.message());
@@ -267,7 +320,8 @@ public class AdviceCheck {
                 new AdviceAnswer.Comparison(text(comparison, "higher"),
                         text(comparison, "lower"), text(comparison, "basis"))));
         return Optional.of(new AdviceAnswer(root.path("message").asText(), lineupMove,
-                strings(root.path("players")), claims, comparisons));
+                strings(root.path("players")), claims, comparisons,
+                Optional.ofNullable(text(root, "plan")), strings(root.path("conditions"))));
     }
 
     private static String text(JsonNode node, String field) {

@@ -37,7 +37,7 @@ public class AdviceWriter {
 
     private static final String SYSTEM = """
             You are Otto, a fantasy football assistant texting your one user about
-            their lineup, the way a knowledgeable friend would.
+            their lineup and roster, the way a knowledgeable friend would.
 
             The user message is an evidence bundle as JSON. State facts only from the
             evidence bundle: never from memory, never invented. Every number you write
@@ -46,6 +46,17 @@ public class AdviceWriter {
             Decide what the user should do. Choose one of "legalMoves", or no change
             when "noChangeAllowed" is true. Lead with the recommendation, then give
             the reason in one to three short sentences of plain text.
+
+            When "rosterPlans" is not empty, also decide what to do with the player:
+            choose exactly one plan by its "id", lead with it, and explain it in one
+            natural paragraph that connects his news, the league's format and rules,
+            and the roster. Name every player the plan drops or adds. Weigh the
+            league's format: redraft is about this season, dynasty and keeper leagues
+            also value the seasons after it. A missing projection or report is
+            unknown, never zero. When "unknowns" lists evidence ids, the decision
+            depends on facts no source supplied: make the advice conditional, say what
+            is missing and what would change your call, and list each id in
+            "conditions".
 
             Introduce every player by full name before using a surname alone. When
             "kickoffPhrase" is present, use it word for word. Never say a player or a
@@ -59,9 +70,11 @@ public class AdviceWriter {
               "move": {"start": "<playerId>", "bench": "<playerId or null>", "slot": "<slot>"},
               "players": ["<playerId of every player the message names>"],
               "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}]
+              "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}],
+              "plan": "<id of the chosen roster plan, or null when there are none>",
+              "conditions": ["<id of each unknown the advice is conditional on>"]
             }
-            Use null for "move" to recommend no change.
+            Use null for "move" to recommend no lineup change.
             """;
 
     private static final String PROMPT_VERSION = Sha256.hex(SYSTEM).substring(0, 12);

@@ -49,10 +49,35 @@ key and what the evidence says, leaving out read times and the minutes
 to kickoff, so a later Check over the same evidence repeats the stored
 outcome without asking the model again. New evidence is a new run.
 
-A starter ruled Out is still one message: when the status transition
-and the legality problem merge, the transition leads and is phrased
-from its Recommendation, which is the player-decision path's job, not
-this one's.
+## Status changes are player decisions
+
+A status-change Alert is a player decision written the same way. Code
+builds every complete roster plan that is legal in that league: hold
+him, move him to or off IR, keep him and add the best projected free
+agent at his position into an open spot, drop someone else for that
+free agent, or drop him. The bundle carries each plan, the plans ruled
+out and why, the league's format and IR rules, his latest report, and
+his age and draft position when nflverse has them. The model chooses
+one plan, leads with it, and explains it; the check also holds the
+plan to the legal set and requires the message to name every player
+the plan drops or adds.
+
+Legality is verified, never assumed. IR is offered only when the league
+states its IR slot count, a slot is free, the league allows his
+designation there, and his game has not kicked off. Taxi moves are
+never offered, because Sleeper's taxi eligibility depends on facts Otto
+does not read. Dropping him is offered only when a current report
+explains his status. Without one, his recovery is an unknown the
+advice must be conditional on, and an unknown recovery is never a
+reason to cut him. The format is evidence, not a rule: there are no age,
+draft-round or playoff-week cutoffs.
+
+The status change itself is a verified fact the user asked to hear.
+When the model is down or its advice fails twice, the change goes out
+as code-written text, with the lineup fix when his slot scores zero,
+and no advice. A starter ruled Out is still one message: when the
+status transition and the legality problem merge, the transition leads
+and the decision also chooses how to fill his slot.
 
 ## Messages say when the game starts
 

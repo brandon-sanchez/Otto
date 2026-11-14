@@ -34,13 +34,8 @@ public class AlertPhraser {
             availability or roster report, read just now: mention it and
             credit latestReportSource.
 
-            Use Telegram-friendly plain text. An IR eligibility alert starts
-            with ----- IR UPDATE -----. An alert that requires a healthy player
-            to leave IR starts with ----- IR ACTION NEEDED -----. Put each
-            recommended roster move on its own numbered line. When the facts
-            include proposedRoster, print that complete roster after the moves.
-            For other alerts,
-            use one compact paragraph and "- " bullets for parallel details.
+            Use Telegram-friendly plain text: one compact paragraph and "- "
+            bullets for parallel details.
             Put a blank line between the action and supporting details. Never use
             a Markdown table.
             """;
