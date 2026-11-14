@@ -89,6 +89,9 @@ public class NflverseReadiness {
     /** The only place a grain and a due rule turn into the units a week should hold. */
     static WeekStatus status(Schedule schedule, Grain<?> grain, FeedSpec.Due due,
             Coverage coverage, String season, int week, Instant now) {
+        if (grain instanceof Grain.Whole<?>) {
+            return new WeekStatus.Unknown("the file has no weeks, so no week is owed by it");
+        }
         List<Schedule.Game> games = schedule.games(season, week);
         if (games.isEmpty()) {
             return new WeekStatus.Unknown("the schedule published %s lists no %s week %d games"
@@ -126,6 +129,7 @@ public class NflverseReadiness {
             case Grain.PerTeam<?> _ -> teams.stream()
                     .<Coverage.Unit>map(Coverage.Unit.Team::new)
                     .toList();
+            case Grain.Whole<?> _ -> List.of();
         };
         Map<Coverage.Unit, Coverage.UnitRecord> held = coverage.held().stream()
                 .collect(Collectors.toMap(Coverage.UnitRecord::unit, Function.identity()));

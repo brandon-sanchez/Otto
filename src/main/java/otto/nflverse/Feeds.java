@@ -19,9 +19,13 @@ final class Feeds {
     static final WeeklyRostersFeed WEEKLY_ROSTERS = new WeeklyRostersFeed();
     static final DepthChartsFeed DEPTH_CHARTS = new DepthChartsFeed();
     static final FtnChartingFeed FTN_CHARTING = new FtnChartingFeed();
+    static final PlayByPlayFeed PLAY_BY_PLAY = new PlayByPlayFeed();
+    static final ExpectedPointsFeed EXPECTED_POINTS = new ExpectedPointsFeed();
+    static final PlayersFeed PLAYERS = new PlayersFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
-            SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING);
+            SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
+            PLAY_BY_PLAY, EXPECTED_POINTS, PLAYERS);
 
     private Feeds() {
     }

@@ -1,0 +1,13 @@
+{
+  "tag_name": "players",
+  "assets": [
+    {
+      "name": "players.csv",
+      "updated_at": "2026-10-06T15:51:27Z"
+    },
+    {
+      "name": "players.csv.gz",
+      "updated_at": "2026-10-06T15:51:27Z"
+    }
+  ]
+}

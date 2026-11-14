@@ -48,7 +48,8 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = Unit.Game.class, name = "game"),
             @JsonSubTypes.Type(value = Unit.TeamWeek.class, name = "teamWeek"),
-            @JsonSubTypes.Type(value = Unit.Team.class, name = "team")})
+            @JsonSubTypes.Type(value = Unit.Team.class, name = "team"),
+            @JsonSubTypes.Type(value = Unit.File.class, name = "file")})
     public sealed interface Unit {
 
         record Game(int week, String gameId) implements Unit {
@@ -64,6 +65,10 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
          * data, and only the same date republished can be a correction.
          */
         record Team(String team) implements Unit {
+        }
+
+        /** The whole of a file that has neither weeks nor teams, such as the player register. */
+        record File() implements Unit {
         }
     }
 
@@ -89,12 +94,13 @@ public record Coverage(int contentVersion, List<UnitRecord> units) {
             .comparingInt((Unit unit) -> switch (unit) {
                 case Unit.Game game -> game.week();
                 case Unit.TeamWeek teamWeek -> teamWeek.week();
-                case Unit.Team _ -> 0;
+                case Unit.Team _, Unit.File _ -> 0;
             })
             .thenComparing(unit -> switch (unit) {
                 case Unit.Game game -> game.gameId();
                 case Unit.TeamWeek teamWeek -> teamWeek.team();
                 case Unit.Team team -> team.team();
+                case Unit.File _ -> "";
             });
 
     /** Map keys sorted, so equal content always serialises to equal bytes. */

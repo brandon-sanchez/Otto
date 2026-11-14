@@ -34,4 +34,17 @@ final class FeedRows {
     static boolean blankOrNa(String value) {
         return value.isBlank() || "NA".equals(value);
     }
+
+    static Double optionalNumber(Csv.Row row, String column) {
+        String value = row.text(column).trim();
+        if (blankOrNa(value)) {
+            return null;
+        }
+        try {
+            double number = Double.parseDouble(value);
+            return Double.isFinite(number) ? number : null;
+        } catch (NumberFormatException notANumber) {
+            return null;
+        }
+    }
 }

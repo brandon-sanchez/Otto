@@ -1,6 +1,7 @@
 package otto.nflverse;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -28,15 +29,16 @@ class FingerprintPinTest {
 
     @Test
     void weeklyStatsContent() {
-        pin(Feeds.WEEKLY_STATS, 1, -4954135196257438353L,
+        pin(Feeds.WEEKLY_STATS, 2, -8389613619742044895L,
                 new WeeklyStats.StatLine("00-0041021", "Running Back SF", "RB", "SF", "LAR", 1,
-                        0.22, Map.of("rush_att", 13.0, "rush_yd", 53.0)));
+                        new WeeklyStats.Usage(31, 26, 0.22, 0.5, 0.04, 0.36, 1.2, null),
+                        Map.of("rush_att", 13.0, "rush_yd", 53.0)));
     }
 
     @Test
     void snapCountsContent() {
-        pin(Feeds.SNAP_COUNTS, 1, -3172303126358366611L,
-                new SnapCounts.SnapLine("RbSF00", "RB", 1, 0.62, "2026_01_SF_LA"));
+        pin(Feeds.SNAP_COUNTS, 2, 6830604234731868491L,
+                new SnapCounts.SnapLine("RbSF00", "RB", "SF", 1, 41, 0.62, "2026_01_SF_LA"));
     }
 
     @Test
@@ -54,8 +56,29 @@ class FingerprintPinTest {
 
     @Test
     void ftnChartingContent() {
-        pin(Feeds.FTN_CHARTING, 1, -3431614496028758167L,
-                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT));
+        pin(Feeds.FTN_CHARTING, 2, -120343720081376180L,
+                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT, "1"));
+    }
+
+    @Test
+    void playByPlayContent() {
+        pin(Feeds.PLAY_BY_PLAY, 1, -3036200583563890729L,
+                new PlayByPlay.Opportunity("2026_01_SF_LA", "40", 1, "SF", "LAR",
+                        PlayByPlay.Kind.TARGET, "00-0041021", 14, 9));
+    }
+
+    @Test
+    void expectedPointsContent() {
+        pin(Feeds.EXPECTED_POINTS, 1, -763215299568986574L,
+                new ExpectedPoints.Line("00-0041021", "RB", "SF", 1, "2026_01_SF_LA", 1.0, 0.78,
+                        17.3, 11.05));
+    }
+
+    @Test
+    void playersContent() {
+        pin(Feeds.PLAYERS, 1, 4702601717725977452L,
+                new Players.Player("00-0041021", "BackRu00", "Running Back SF", "RB",
+                        LocalDate.parse("2003-03-16"), new Players.Draft(2025, 1, 22, "SF")));
     }
 
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,

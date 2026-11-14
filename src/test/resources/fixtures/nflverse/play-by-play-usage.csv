@@ -1,0 +1,188 @@
+play_id,game_id,home_team,away_team,season_type,week,posteam,defteam,yardline_100,play_type,desc,pass_attempt,rush_attempt,sack,qb_scramble,two_point_attempt,air_yards,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name,touchdown,season
+1,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,,GAME,,,,0,,,,,,,,,2026
+39,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 34-K.Mitchell to LAC 31 for 28 yards (30-A.Finley; 28-N.Pritchett).,0,0,0,0,0,,,,,,,0,2026
+62,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,pass,(14:53) 10-J.Herbert pass short middle intended for 86-O.Gadsden INTERCEPTED by 32-D.Thomas at LAC 45. 32-D.Thomas to LAC 45 for no gain (86-O.Gadsden).,1,0,0,0,0,14,00-0036355,00-0040189,O.Gadsden,,,0,2026
+89,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,45,pass,(14:46) 14-S.Darnold pass short left intended for 23-E.Wilson INTERCEPTED by 45-T.Tuipulotu at LAC 44. 45-T.Tuipulotu to LAC 48 for 4 yards (23-E.Wilson).,1,0,0,0,0,1,00-0034869,00-0038797,E.Wilson,,,0,2026
+116,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,52,run,(14:38) (Shotgun) 77-T.Burke reported in as eligible. 8-O.Hampton up the middle to SEA 49 for 3 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+140,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,49,pass,(14:03) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell to SEA 41 for 8 yards (3-N.Emmanwori).,1,0,0,0,0,6,00-0036355,00-0038454,K.Mitchell,,,0,2026
+165,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,pass,(13:30) 10-J.Herbert pass incomplete short right to 28-K.Vidal.,1,0,0,0,0,-3,00-0036355,00-0039391,K.Vidal,,,0,2026
+200,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by LAC at 13:26.,0,0,0,0,0,,,,,,,0,2026
+188,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,pass,(13:26) (Shotgun) 77-T.Burke reported in as eligible. 10-J.Herbert pass short left to 9-T.Harris to SEA 28 for 13 yards (3-N.Emmanwori).,1,0,0,0,0,11,00-0036355,00-0040727,T.Harris,,,0,2026
+222,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,28,no_play,"(12:48) 8-O.Hampton right tackle to SEA 23 for 5 yards (3-N.Emmanwori; 58-D.Hall). PENALTY on SEA-7-U.Nwosu, Defensive Offside, 5 yards, enforced at SEA 28 - No Play.",0,0,0,0,0,,,,,,,0,2026
+255,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,pass,(12:32) (Shotgun) 10-J.Herbert pass incomplete short right to 34-K.Mitchell.,1,0,0,0,0,-5,00-0036355,00-0038454,K.Mitchell,,,0,2026
+278,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,run,"(12:30) 28-K.Vidal left guard to SEA 22 for 1 yard (13-E.Jones). Penalty on SEA-29-J.Jobe, Unsportsmanlike Conduct, offsetting. Penalty on LAC-9-T.Harris, Unsportsmanlike Conduct, offsetting.",0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+311,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,22,pass,(12:03) (Shotgun) 10-J.Herbert pass incomplete deep left to 1-Q.Johnston.,1,0,0,0,0,22,00-0036355,00-0038544,Q.Johnston,,,0,2026
+334,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,22,field_goal,"(11:58) 11-C.Dicker 40 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+361,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to end zone, Touchback to the SEA 35.",0,0,0,0,0,,,,,,,0,2026
+378,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,no_play,"(11:54) 74-J.Jones reported in as eligible. 23-E.Wilson left end to SEA 44 for 9 yards (20-C.Hart). PENALTY on SEA-74-J.Jones, Offensive Holding, 10 yards, enforced at SEA 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+413,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,run,(11:34) (Shotgun) 23-E.Wilson left tackle to SEA 40 for 15 yards (20-C.Hart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+435,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,60,run,(11:00) (Shotgun) 23-E.Wilson right guard to SEA 42 for 2 yards (0-D.Henley; 52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+457,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,58,pass,"(10:23) (Shotgun) 14-S.Darnold pass incomplete short left [45-T.Tuipulotu]. PENALTY on SEA-14-S.Darnold, Intentional Grounding, 10 yards, enforced at SEA 42.",1,0,0,0,0,-6,00-0034869,,,,,0,2026
+500,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,punt,"(10:13) 4-M.Dickson punts 45 yards to LAC 23, Center-41-C.Stoll. 12-D.Davis MUFFS catch, touched at LAC 25, RECOVERED by SEA-57-C.O'Toole at LAC 23.",0,0,0,0,0,,,,,,,0,2026
+530,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,23,pass,"(10:03) (Shotgun) 14-S.Darnold pass short right to 23-E.Wilson for 23 yards, TOUCHDOWN.",1,0,0,0,0,-5,00-0034869,00-0038797,E.Wilson,,,1,2026
+556,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+571,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 64 yards from SEA 35 to LAC 1. 12-D.Davis to LAC 31 for 30 yards (94-M.Morris).,0,0,0,0,0,,,,,,,0,2026
+601,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,pass,(9:48) (Shotgun) 10-J.Herbert pass incomplete short right [7-U.Nwosu].,1,0,0,0,0,-4,00-0036355,,,,,0,2026
+624,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,run,(9:44) (Shotgun) 28-K.Vidal up the middle to LAC 30 for -1 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+646,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,70,pass,(9:03) (Shotgun) 10-J.Herbert pass short middle to 86-O.Gadsden to LAC 38 for 8 yards (21-D.Witherspoon).,1,0,0,0,0,8,00-0036355,00-0040189,O.Gadsden,,,0,2026
+671,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,62,punt,"(8:20) 16-J.Scott punts 44 yards to SEA 18, Center-47-J.Harris, fair catch by 22-R.Shaheed.",0,0,0,0,0,,,,,,,0,2026
+691,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,82,no_play,"(8:14) (Shotgun) 23-E.Wilson left end to SEA 20 for 2 yards (92-J.Eboigbe). PENALTY on LAC-93-T.Tart, Defensive Offside, 5 yards, enforced at SEA 18 - No Play.",0,0,0,0,0,,,,,,,0,2026
+731,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,77,pass,(8:05) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba to SEA 32 for 9 yards (26-D.Jackson).,1,0,0,0,0,7,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+756,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,run,"(7:33) 36-G.Holani left end to SEA 41 for 9 yards (23-T.Jefferson). PENALTY on LAC-93-T.Tart, Defensive Holding, 5 yards, enforced at SEA 41.",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+789,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,54,pass,"(7:10) (Shotgun) 14-S.Darnold pass short right to 23-E.Wilson to SEA 49 for 3 yards (90-A.Mesidor) [93-T.Tart]. PENALTY on SEA-38-B.Russell, Unnecessary Roughness, 15 yards, enforced at SEA 49.",1,0,0,0,0,-6,00-0034869,00-0038797,E.Wilson,,,0,2026
+825,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,66,run,(6:35) (Shotgun) 36-G.Holani right end to SEA 33 for -1 yards (23-T.Jefferson).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+847,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,67,run,(5:54) (Shotgun) 36-G.Holani left guard to SEA 37 for 4 yards (23-T.Jefferson; 27-R.Mickens).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+869,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,63,punt,"(5:11) 4-M.Dickson punts 45 yards to LAC 18, Center-41-C.Stoll. 12-D.Davis to LAC 18 for no gain (57-C.O'Toole). PENALTY on SEA-57-C.O'Toole, Lowering the Head to Make Forcible Contact, 15 yards, enforced at LAC 18.",0,0,0,0,0,,,,,,,0,2026
+913,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,67,run,(5:02) 77-T.Burke reported in as eligible. 28-K.Vidal right tackle to LAC 42 for 9 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+937,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,58,run,(4:26) (Shotgun) 8-O.Hampton right guard to SEA 43 for 15 yards (13-E.Jones; 20-J.Love).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+959,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,run,(3:55) (Shotgun) 8-O.Hampton up the middle to SEA 41 for 2 yards (56-D.Fowler).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+981,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,run,(3:16) (Shotgun) 1-Q.Johnston left end pushed ob at SEA 45 for -4 yards (0-D.Lawrence).,0,1,0,0,0,,,,,00-0038544,Q.Johnston,0,2026
+1020,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by SEA at 02:44.,0,0,0,0,0,,,,,,,0,2026
+1008,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,45,pass,(2:44) (Shotgun) 10-J.Herbert pass incomplete short middle to 15-L.McConkey.,1,0,0,0,0,8,00-0036355,00-0039915,L.McConkey,,,0,2026
+1043,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,45,punt,"(2:40) 16-J.Scott punts 45 yards to end zone, Center-47-J.Harris, Touchback.",0,0,0,0,0,,,,,,,0,2026
+1061,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,80,run,(2:32) 23-E.Wilson right end to SEA 19 for -1 yards (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1090,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,81,pass,(1:54) (Shotgun) 14-S.Darnold pass short left to 11-J.Smith-Njigba to SEA 25 for 6 yards (27-R.Mickens).,1,0,0,0,0,5,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1115,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,pass,(1:15) (Shotgun) 14-S.Darnold pass incomplete short right to 88-A.Barner.,1,0,0,0,0,3,00-0034869,00-0039793,A.Barner,,,0,2026
+1138,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,punt,"(1:12) 4-M.Dickson punts 54 yards to LAC 21, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+1164,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,79,pass,(1:05) 10-J.Herbert pass short middle to 8-O.Hampton to LAC 26 for 5 yards (21-D.Witherspoon; 13-E.Jones).,1,0,0,0,0,5,00-0036355,00-0040666,O.Hampton,,,0,2026
+1196,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,74,run,(:27) 34-K.Mitchell right end pushed ob at LAC 27 for 1 yard (21-D.Witherspoon).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1223,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,,,END QUARTER 1,,,,0,,,,,,,,,2026
+1243,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,73,pass,(15:00) (Shotgun) 10-J.Herbert sacked at LAC 20 for -7 yards (91-B.Murphy).,1,0,1,0,0,,00-0036355,,,,,0,2026
+1263,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,80,punt,"(14:20) 16-J.Scott punts 40 yards to SEA 40, Center-47-J.Harris. 22-R.Shaheed to SEA 41 for 1 yard (33-D.Leonard). PENALTY on SEA-1-J.Neal, Illegal Use of Hands, 10 yards, enforced at SEA 40.",0,0,0,0,0,,,,,,,0,2026
+1300,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,70,run,(14:11) 23-E.Wilson right end to SEA 33 for 3 yards (90-A.Mesidor; 92-J.Eboigbe).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1322,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,67,pass,(13:36) 14-S.Darnold pass deep right to 22-R.Shaheed ran ob at LAC 47 for 20 yards (24-R.Shelley).,1,0,0,0,0,19,00-0034869,00-0037545,R.Shaheed,,,0,2026
+1352,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,47,run,(13:15) (No Huddle) 23-E.Wilson right end to LAC 44 for 3 yards (90-A.Mesidor; 93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1374,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,44,run,"(12:37) (Shotgun) 36-G.Holani right end to LAC 46 for -2 yards (0-D.Henley, 99-J.Caldwell).",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+1396,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,46,pass,(11:57) (Shotgun) 14-S.Darnold pass incomplete deep left to 22-R.Shaheed [0-D.Henley].,1,0,0,0,0,24,00-0034869,00-0037545,R.Shaheed,,,0,2026
+1419,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,46,punt,"(11:51) 4-M.Dickson punts 34 yards to LAC 12, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+1446,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,88,run,(11:44) (Shotgun) 8-O.Hampton left guard to LAC 18 for 6 yards (32-D.Thomas).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+1468,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,run,(11:11) 34-K.Mitchell right end to LAC 18 for no gain (21-D.Witherspoon).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1490,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,pass,(10:32) 10-J.Herbert pass incomplete short left to 86-O.Gadsden (20-J.Love) [32-D.Thomas].,1,0,0,0,0,1,00-0036355,00-0040189,O.Gadsden,,,0,2026
+1513,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,punt,"(10:30) 16-J.Scott punts 47 yards to SEA 35, Center-47-J.Harris, fair catch by 22-R.Shaheed.",0,0,0,0,0,,,,,,,0,2026
+1540,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,(10:23) 14-S.Darnold sacked at SEA 27 for -8 yards (52-K.Mack).,1,0,1,0,0,,00-0034869,,,,,0,2026
+1560,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,73,pass,(9:38) 14-S.Darnold pass short middle to 36-G.Holani to SEA 29 for 2 yards (53-D.Phillips).,1,0,0,0,0,2,00-0034869,00-0039299,G.Holani,,,0,2026
+1585,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,71,pass,(8:55) (Shotgun) 14-S.Darnold pass deep right to 11-J.Smith-Njigba to LAC 43 for 28 yards (22-G.Smith) [93-T.Tart].,1,0,0,0,0,21,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1610,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,43,run,(8:16) 23-E.Wilson right tackle to LAC 40 for 3 yards (93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1632,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,40,run,(7:40) 23-E.Wilson right guard to LAC 34 for 6 yards (90-A.Mesidor).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1654,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,34,run,(7:00) 74-J.Jones reported in as eligible. 23-E.Wilson right guard to LAC 28 for 6 yards (20-C.Hart; 2-E.Molden).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1678,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,28,run,"(6:19) 22-R.Shaheed left end for 28 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0037545,R.Shaheed,1,2026
+1701,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is No Good, Wide Right, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+1716,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 43 yards from SEA 35 to LAC 22, short of landing zone. PENALTY on SEA-5-J.Myers, Kickoff Short of Landing Zone, placed at LAC 40.",0,0,0,0,0,,,,,,,0,2026
+1752,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,60,run,(6:12) (Shotgun) 10-J.Herbert scrambles right end to LAC 41 for 1 yard (29-J.Jobe).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+1774,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,59,no_play,"(5:25) (Shotgun) PENALTY on LAC-70-R.Slater, False Start, 5 yards, enforced at LAC 41 - No Play.",0,0,0,0,0,,,,,,,0,2026
+1798,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,run,(5:05) 77-T.Burke reported in as eligible. 34-K.Mitchell left tackle to LAC 39 for 3 yards (13-E.Jones; 3-N.Emmanwori).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1822,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,61,pass,(4:21) (Shotgun) 10-J.Herbert sacked at LAC 31 for -8 yards (13-E.Jones).,1,0,1,0,0,,00-0036355,,,,,0,2026
+1842,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,punt,"(3:37) 16-J.Scott punts 44 yards to SEA 25, Center-47-J.Harris. 22-R.Shaheed to SEA 37 for 12 yards (32-K.Williamson).",0,0,0,0,0,,,,,,,0,2026
+1877,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,63,run,"(3:26) 23-E.Wilson right tackle to SEA 36 for -1 yards (45-T.Tuipulotu, 92-J.Eboigbe).",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1899,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,64,pass,(2:46) (Shotgun) 14-S.Darnold pass incomplete short right to 10-C.Kupp (4-T.Still).,1,0,0,0,0,9,00-0034869,00-0033908,C.Kupp,,,0,2026
+1922,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,64,no_play,"(2:39) (Shotgun) PENALTY on SEA-61-J.Sundell, False Start, 5 yards, enforced at SEA 36 - No Play.",0,0,0,0,0,,,,,,,0,2026
+1946,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,69,pass,(2:39) (Shotgun) 14-S.Darnold pass short middle to 11-J.Smith-Njigba to SEA 44 for 13 yards (0-D.Henley). The ball spot was assisted by replay.,1,0,0,0,0,5,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1971,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,56,punt,"(2:00) 4-M.Dickson punts 30 yards to LAC 26, Center-41-C.Stoll, downed by SEA-30-A.Finley.",0,0,0,0,0,,,,,,,0,2026
+2011,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,74,run,(1:50) (Shotgun) 86-O.Gadsden left end to LAC 28 for 2 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0040189,O.Gadsden,0,2026
+2040,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,72,pass,"(1:29) (No Huddle, Shotgun) 10-J.Herbert pass short right intended for 15-L.McConkey INTERCEPTED by 13-E.Jones at LAC 40. 13-E.Jones to LAC 20 for 20 yards (28-K.Vidal; 10-J.Herbert).",1,0,0,0,0,12,00-0036355,00-0039915,L.McConkey,,,0,2026
+2067,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,20,pass,(1:20) (Shotgun) 14-S.Darnold pass short middle to 88-A.Barner to LAC 8 for 12 yards (2-E.Molden).,1,0,0,0,0,5,00-0034869,00-0039793,A.Barner,,,0,2026
+2092,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,8,run,"(:47) (Shotgun) 23-E.Wilson left guard for 8 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0038797,E.Wilson,1,2026
+2115,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+2130,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 65 yards from SEA 35 to LAC 0. 12-D.Davis to LAC 34 for 34 yards (52-P.O'Connell).,0,0,0,0,0,,,,,,,0,2026
+2153,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,66,pass,(:38) (Shotgun) 10-J.Herbert pass short left to 28-K.Vidal to LAC 36 for 2 yards (13-E.Jones).,1,0,0,0,0,-4,00-0036355,00-0039391,K.Vidal,,,0,2026
+2183,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by LAC at 00:31.,0,0,0,0,0,,,,,,,0,2026
+2190,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,pass,(:31) (Shotgun) 10-J.Herbert pass incomplete short right to 13-M.Valdes-Scantling (28-N.Pritchett).,1,0,0,0,0,9,00-0036355,00-0034272,M.Valdes-Scantling,,,0,2026
+2213,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,run,(:27) (Shotgun) 10-J.Herbert scrambles up the middle to SEA 38 for 26 yards (24-R.Thomas).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+2247,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #3 by LAC at 00:18.,0,0,0,0,0,,,,,,,0,2026
+2235,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,38,no_play,"(:18) (Shotgun) PENALTY on LAC-75-T.Penning, False Start, 5 yards, enforced at SEA 38 - No Play.",0,0,0,0,0,,,,,,,0,2026
+2278,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by SEA at 00:18.,0,0,0,0,0,,,,,,,0,2026
+2266,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,run,"(:18) (Shotgun) 28-K.Vidal left tackle to SEA 36 for 7 yards (13-E.Jones). PENALTY on SEA-3-N.Emmanwori, Unnecessary Roughness, 15 yards, enforced at SEA 36.",0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+2306,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,21,field_goal,"(:05) 11-C.Dicker 39 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+2326,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,,END QUARTER 2,,,,0,,,,,,,,,2026
+2344,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,11-C.Dicker kicks 64 yards from LAC 35 to SEA 1. 22-R.Shaheed to SEA 32 for 31 yards (43-T.Dye).,0,0,0,0,0,,,,,,,0,2026
+2367,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,pass,(14:55) 14-S.Darnold pass short right to 11-J.Smith-Njigba pushed ob at LAC 48 for 20 yards (0-D.Henley).,1,0,0,0,0,15,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+2397,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,48,run,"(14:20) 23-E.Wilson right guard to LAC 44 for 4 yards (93-T.Tart; 53-D.Phillips). PENALTY on LAC-99-J.Caldwell, Defensive Holding, 5 yards, enforced at LAC 44.",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2430,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,39,run,(13:55) 23-E.Wilson up the middle to LAC 36 for 3 yards (45-T.Tuipulotu; 52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2452,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,36,run,(13:11) (Shotgun) 14-S.Darnold scrambles left end ran ob at LAC 28 for 8 yards (45-T.Tuipulotu).,0,1,0,1,0,,,,,00-0034869,S.Darnold,0,2026
+2479,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,28,pass,(12:33) (Shotgun) 14-S.Darnold pass short middle to 10-C.Kupp to LAC 15 for 13 yards (2-E.Molden).,1,0,0,0,0,8,00-0034869,00-0033908,C.Kupp,,,0,2026
+2504,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,run,(11:51) 22-R.Shaheed left end to LAC 10 for 5 yards (20-C.Hart; 90-A.Mesidor).,0,1,0,0,0,,,,,00-0037545,R.Shaheed,0,2026
+2526,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,10,run,(11:10) (Shotgun) 23-E.Wilson up the middle to LAC 6 for 4 yards (90-A.Mesidor; 53-D.Phillips).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2560,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by SEA at 10:26.,0,0,0,0,0,,,,,,,0,2026
+2548,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,6,pass,"(10:26) 74-J.Jones reported in as eligible. 14-S.Darnold pass short right to 15-T.Horton for 6 yards, TOUCHDOWN.",1,0,0,0,0,4,00-0034869,00-0040648,T.Horton,,,1,2026
+2583,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+2598,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 28-K.Vidal to LAC 41 for 38 yards (81-E.Saubert). PENALTY on LAC-81-P.Herbert, Offensive Holding, 10 yards, enforced at LAC 29.",0,0,0,0,0,,,,,,,0,2026
+2644,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,81,run,"(10:15) 34-K.Mitchell right end to LAC 16 for -3 yards (21-D.Witherspoon). PENALTY on SEA-21-D.Witherspoon, Unnecessary Roughness, 15 yards, enforced at LAC 16.",0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+2682,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,run,(9:54) (Shotgun) 10-J.Herbert scrambles right end pushed ob at LAC 32 for 1 yard (0-D.Lawrence).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+2709,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,68,pass,(9:23) (Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to LAC 37 for 5 yards (32-D.Thomas; 13-E.Jones).,1,0,0,0,0,-4,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2739,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,63,pass,"(8:48) (Shotgun) 10-J.Herbert pass short right to 34-K.Mitchell to LAC 39 for 2 yards (3-N.Emmanwori). PENALTY on SEA-3-N.Emmanwori, Face Mask, 15 yards, enforced at LAC 39.",1,0,0,0,0,-1,00-0036355,00-0038454,K.Mitchell,,,0,2026
+2780,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,(8:35) 10-J.Herbert pass deep right to 9-T.Harris pushed ob at SEA 20 for 26 yards (20-J.Love).,1,0,0,0,0,24,00-0036355,00-0040727,T.Harris,,,0,2026
+2810,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,20,no_play,"(7:58) PENALTY on LAC-9-T.Harris, False Start, 5 yards, enforced at SEA 20 - No Play.",0,0,0,0,0,,,,,,,0,2026
+2843,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,25,run,(7:46) (Shotgun) 8-O.Hampton up the middle to SEA 26 for -1 yards (0-D.Lawrence).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+2870,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,26,pass,(7:07) (Shotgun) 10-J.Herbert pass short right to 34-K.Mitchell ran ob at SEA 23 for 3 yards (21-D.Witherspoon).,1,0,0,0,0,-3,00-0036355,00-0038454,K.Mitchell,,,0,2026
+2900,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,pass,(6:34) (Shotgun) 10-J.Herbert pass short left to 86-O.Gadsden to SEA 14 for 9 yards (21-D.Witherspoon).,1,0,0,0,0,6,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2925,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,14,pass,(5:54) (Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to SEA 9 for 5 yards (21-D.Witherspoon) [99-L.Williams].,1,0,0,0,0,5,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2950,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,9,pass,(5:05) (Shotgun) 9-T.Harris pass incomplete short left to 10-J.Herbert (3-N.Emmanwori) [7-U.Nwosu].,1,0,0,0,0,9,00-0040727,00-0036355,J.Herbert,,,0,2026
+2973,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,9,pass,"(4:58) (Shotgun) 10-J.Herbert pass short middle to 28-K.Vidal for 9 yards, TOUCHDOWN. The touchdown was assisted by replay.",1,0,0,0,0,-2,00-0036355,00-0039391,K.Vidal,,,1,2026
+3004,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,15,no_play,"(Kick formation) PENALTY on LAC-77-T.Burke, False Start, 5 yards, enforced at SEA 15 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3039,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,20,extra_point,"11-C.Dicker extra point is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+3054,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,11-C.Dicker kicks 59 yards from LAC 35 to SEA 6. 22-R.Shaheed to SEA 31 for 25 yards (58-M.Wax).,0,0,0,0,0,,,,,,,0,2026
+3084,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,69,run,"(4:48) 23-E.Wilson up the middle to SEA 33 for 2 yards (45-T.Tuipulotu). FUMBLES (45-T.Tuipulotu), and recovers at SEA 35.",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3106,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,"(4:05) 14-S.Darnold pass short left to 23-E.Wilson to SEA 48 for 13 yards (93-T.Tart). PENALTY on LAC-27-R.Mickens, Low Block, 15 yards, enforced at SEA 48.",1,0,0,0,0,-4,00-0034869,00-0038797,E.Wilson,,,0,2026
+3142,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,37,run,(3:42) 36-G.Holani up the middle to LAC 35 for 2 yards (91-N.Barrett).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+3164,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,pass,(3:05) 14-S.Darnold pass incomplete short left.,1,0,0,0,0,5,00-0034869,,,,,0,2026
+3187,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,pass,(2:58) (Shotgun) 14-S.Darnold pass incomplete deep right to 22-R.Shaheed [27-R.Mickens].,1,0,0,0,0,22,00-0034869,00-0037545,R.Shaheed,,,0,2026
+3227,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,no_play,"(2:53) 5-J.Myers 53 yard field goal is No Good, Wide Right, Center-41-C.Stoll, Holder-4-M.Dickson. PENALTY on LAC-45-T.Tuipulotu, Leverage, 15 yards, enforced at LAC 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3259,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,20,run,(2:49) 23-E.Wilson left tackle to LAC 21 for -1 yards (99-J.Caldwell).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3281,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,21,run,(2:08) 23-E.Wilson up the middle to LAC 17 for 4 yards (91-N.Barrett).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3308,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,17,pass,(1:26) (Shotgun) 14-S.Darnold pass incomplete short middle to 11-J.Smith-Njigba (4-T.Still).,1,0,0,0,0,13,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+3331,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,17,field_goal,"(1:22) 5-J.Myers 35 yard field goal is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+3358,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 28-K.Vidal to LAC 25 for 22 yards (94-M.Morris). PENALTY on LAC-58-M.Wax, Offensive Holding, 10 yards, enforced at LAC 25.",0,0,0,0,0,,,,,,,0,2026
+3392,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,85,pass,(1:13) 10-J.Herbert pass incomplete deep right to 9-T.Harris.,1,0,0,0,0,30,00-0036355,00-0040727,T.Harris,,,0,2026
+3415,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,85,run,(1:06) (Shotgun) 34-K.Mitchell left end pushed ob at LAC 16 for 1 yard (24-R.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3442,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,84,pass,(:31) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell ran ob at LAC 30 for 14 yards (58-D.Hall).,1,0,0,0,0,-1,00-0036355,00-0038454,K.Mitchell,,,0,2026
+3472,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,,,END QUARTER 3,,,,0,,,,,,,,,2026
+3492,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,70,run,(15:00) 10-J.Herbert scrambles left guard to LAC 33 for 3 yards (13-E.Jones).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+3514,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,67,no_play,"(14:18) 10-J.Herbert pass incomplete deep right to 1-Q.Johnston. PENALTY on LAC-77-T.Burke, Offensive Holding, 10 yards, enforced at LAC 33 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3548,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,77,no_play,"(14:11) (Shotgun) 10-J.Herbert sacked at LAC 16 for -7 yards (0-D.Lawrence). PENALTY on SEA-0-D.Lawrence, Roughing the Passer, 15 yards, enforced at LAC 23 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3579,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,62,run,(14:02) 34-K.Mitchell left tackle to LAC 46 for 8 yards (20-J.Love).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3601,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,54,run,(13:28) 34-K.Mitchell right end pushed ob at SEA 34 for 20 yards (24-R.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3628,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,34,run,(12:55) 34-K.Mitchell up the middle to SEA 32 for 2 yards (32-D.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3650,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,32,pass,(12:13) 10-J.Herbert sacked at SEA 43 for -11 yards (3-N.Emmanwori).,1,0,1,0,0,,00-0036355,,,,,0,2026
+3670,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,no_play,"(11:26) (Shotgun) PENALTY on LAC, Delay of Game, 5 yards, enforced at SEA 43 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3694,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,48,pass,"(11:26) 10-J.Herbert pass short right to 8-O.Hampton to SEA 45 for 3 yards (21-D.Witherspoon). PENALTY on SEA-58-D.Hall, Roughing the Passer, 15 yards, enforced at SEA 45.",1,0,0,0,0,-3,00-0036355,00-0040666,O.Hampton,,,0,2026
+3730,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,30,run,(11:08) 10-J.Herbert scrambles right end to SEA 24 for 6 yards (32-D.Thomas).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+3752,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,24,run,(10:28) 34-K.Mitchell right guard to SEA 23 for 1 yard (29-J.Jobe).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3774,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,run,(9:49) 8-O.Hampton right guard to SEA 17 for 6 yards (29-J.Jobe; 13-E.Jones).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3796,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,17,run,(9:12) 8-O.Hampton right end pushed ob at SEA 6 for 11 yards (20-J.Love).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3823,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,6,run,(8:38) (Shotgun) 8-O.Hampton left end pushed ob at SEA 5 for 1 yard (24-R.Thomas).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3850,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,5,run,(8:06) (Shotgun) 10-J.Herbert left guard to SEA 2 for 3 yards (58-D.Hall; 7-U.Nwosu). LAC-70-R.Slater was injured during the play. SEA-99-L.Williams was injured during the play.,0,1,0,0,0,,,,,00-0036355,J.Herbert,0,2026
+3885,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,2,run,"(7:52) 8-O.Hampton left guard for 2 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0040666,O.Hampton,1,2026
+3908,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,15,extra_point,"11-C.Dicker extra point is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+3923,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to landing zone to end zone, Touchback to the SEA 20. PENALTY on LAC-53-D.Phillips, Illegal Formation, 5 yards, enforced at LAC 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3959,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,30,kickoff,"11-C.Dicker kicks 63 yards from LAC 30 to SEA 7. 22-R.Shaheed to SEA 34 for 27 yards (43-T.Dye; 33-D.Leonard). FUMBLES (43-T.Dye), and recovers at SEA 34.",0,0,0,0,0,,,,,,,0,2026
+3982,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,66,run,(7:42) 23-E.Wilson left end to SEA 35 for 1 yard (53-D.Phillips).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4004,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,run,(7:05) 23-E.Wilson left end to 50 for 15 yards (0-D.Henley).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4026,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,50,run,(6:21) (Shotgun) 23-E.Wilson left guard to LAC 49 for 1 yard (93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4053,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,49,run,(5:38) (Shotgun) 36-G.Holani right guard to LAC 41 for 8 yards (53-D.Phillips; 2-E.Molden).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+4075,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,41,run,"(4:55) (Shotgun) 36-G.Holani right guard to LAC 43 for -2 yards (2-E.Molden, 45-T.Tuipulotu).",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+4097,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,43,no_play,"(4:09) (Shotgun) PENALTY on SEA, Delay of Game, 5 yards, enforced at LAC 43 - No Play.",0,0,0,0,0,,,,,,,0,2026
+4121,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,48,punt,"(4:09) 4-M.Dickson punts 41 yards to LAC 7, Center-41-C.Stoll, downed by SEA-1-J.Neal.",0,0,0,0,0,,,,,,,0,2026
+4148,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,93,run,(4:01) (Shotgun) 34-K.Mitchell left end pushed ob at LAC 13 for 6 yards (28-N.Pritchett).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+4175,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,87,pass,(3:57) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell to LAC 10 for -3 yards (32-D.Thomas).,1,0,0,0,0,-3,00-0036355,00-0038454,K.Mitchell,,,0,2026
+4200,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,90,pass,"(3:33) (No Huddle, Shotgun) 10-J.Herbert pass incomplete short right to 86-O.Gadsden [90-J.Reed].",1,0,0,0,0,2,00-0036355,00-0040189,O.Gadsden,,,0,2026
+4223,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,90,pass,(3:28) (Shotgun) 10-J.Herbert pass deep right to 1-Q.Johnston to SEA 46 for 44 yards (24-R.Thomas).,1,0,0,0,0,44,00-0036355,00-0038544,Q.Johnston,,,0,2026
+4248,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,"(2:54) (No Huddle, Shotgun) 10-J.Herbert pass incomplete short right to 9-T.Harris.",1,0,0,0,0,7,00-0036355,00-0040727,T.Harris,,,0,2026
+4271,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,(2:50) (Shotgun) 10-J.Herbert pass short left to 12-D.Davis to SEA 40 for 6 yards (7-U.Nwosu).,1,0,0,0,0,6,00-0036355,00-0038573,D.Davis,,,0,2026
+4313,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,40,pass,"(2:23) (No Huddle, Shotgun) 10-J.Herbert pass deep left to 9-T.Harris ran ob at SEA 19 for 21 yards (24-R.Thomas) [3-N.Emmanwori].",1,0,0,0,0,19,00-0036355,00-0040727,T.Harris,,,0,2026
+4343,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,19,field_goal,"(2:17) 11-C.Dicker 36 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+4363,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to end zone, Touchback to the SEA 35.",0,0,0,0,0,,,,,,,0,2026
+4380,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,run,(2:14) 23-E.Wilson up the middle to SEA 35 for no gain (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4402,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by LAC at 02:10.,0,0,0,0,0,,,,,,,0,2026
+4409,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,"(2:10) 14-S.Darnold sacked at SEA 32 for -3 yards (sack split by 92-J.Eboigbe and 45-T.Tuipulotu). PENALTY on LAC-92-J.Eboigbe, Unnecessary Roughness, 15 yards, enforced at SEA 32.",1,0,1,0,0,,00-0034869,,,,,0,2026
+4440,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,53,pass,(2:02) 14-S.Darnold pass incomplete short left to 88-A.Barner (20-C.Hart).,1,0,0,0,0,10,00-0034869,00-0039793,A.Barner,,,0,2026
+4463,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,53,run,(1:56) 23-E.Wilson up the middle to SEA 49 for 2 yards (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4504,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by LAC at 01:53.,0,0,0,0,0,,,,,,,0,2026
+4492,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,51,pass,(1:53) (Shotgun) 14-S.Darnold sacked at SEA 40 for -9 yards (43-T.Dye).,1,0,1,0,0,,00-0034869,,,,,0,2026
+4531,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #3 by LAC at 01:49.,0,0,0,0,0,,,,,,,0,2026
+4519,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,60,punt,"(1:49) 4-M.Dickson punts 49 yards to LAC 11, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+4546,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,89,run,(1:42) (Shotgun) 28-K.Vidal up the middle to LAC 20 for 9 yards (13-E.Jones; 20-J.Love).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+4568,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,80,pass,"(1:22) (No Huddle, Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to LAC 29 for 9 yards (13-E.Jones).",1,0,0,0,0,9,00-0036355,00-0040189,O.Gadsden,,,0,2026
+4593,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,71,pass,"(1:03) (No Huddle, Shotgun) 10-J.Herbert sacked at LAC 20 for -9 yards (7-U.Nwosu). FUMBLES (7-U.Nwosu) [7-U.Nwosu], RECOVERED by SEA-58-D.Hall at LAC 20. PENALTY on LAC-69-C.Strange, Unnecessary Roughness, 10 yards, enforced at LAC 20.",1,0,1,0,0,,00-0036355,,,,,0,2026
+4634,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,10,qb_kneel,(:54) 14-S.Darnold kneels to LAC 11 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
+4656,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,11,qb_kneel,(:32) 14-S.Darnold kneels to LAC 12 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
+4678,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,,,END GAME,,,,0,,,,,,,,,2026

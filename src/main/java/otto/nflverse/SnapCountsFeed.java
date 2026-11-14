@@ -14,7 +14,8 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "game_id", "pfr_player_id", "week", "game_type", "position", "offense_pct");
+            "game_id", "pfr_player_id", "week", "game_type", "position", "team", "offense_snaps",
+            "offense_pct");
 
     @Override
     public FeedId id() {
@@ -60,12 +61,18 @@ final class SnapCountsFeed implements FeedSpec<SnapCounts.SnapLine, SnapCounts> 
                 double share = Double.parseDouble(row.text("offense_pct"));
                 if (share >= 0.0 && share <= 1.0) {
                     lines.add(new SnapCounts.SnapLine(pfrId, row.text("position"),
-                            row.integer("week"), share, row.text("game_id")));
+                            NflTeams.normalize(row.text("team")), row.integer("week"),
+                            row.integer("offense_snaps"), share, row.text("game_id")));
                 }
             } catch (NumberFormatException ignored) {
             }
         });
         return lines;
+    }
+
+    @Override
+    public int contentVersion() {
+        return 2;
     }
 
     @Override

@@ -51,6 +51,18 @@ public class NflverseStore {
         return read(Feeds.FTN_CHARTING);
     }
 
+    public Optional<PlayByPlay> playByPlay() {
+        return read(Feeds.PLAY_BY_PLAY);
+    }
+
+    public Optional<ExpectedPoints> expectedPoints() {
+        return read(Feeds.EXPECTED_POINTS);
+    }
+
+    public Optional<Players> players() {
+        return read(Feeds.PLAYERS);
+    }
+
     public Optional<PlayerIdMap> playerIds() {
         return store.read(PLAYER_IDS, PlayerIdMap.class);
     }
