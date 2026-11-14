@@ -58,6 +58,13 @@ class FingerprintPinTest {
                 new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT));
     }
 
+    @Test
+    void rushingAdvancedStatsContent() {
+        pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
+                new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
+                        "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
+    }
+
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,
             R row) {
         assertThat(spec.contentVersion())

@@ -51,6 +51,10 @@ public class NflverseStore {
         return read(Feeds.FTN_CHARTING);
     }
 
+    public Optional<RushingAdvancedStats> rushingAdvancedStats() {
+        return read(Feeds.RUSHING_ADVANCED_STATS);
+    }
+
     public Optional<PlayerIdMap> playerIds() {
         return store.read(PLAYER_IDS, PlayerIdMap.class);
     }
