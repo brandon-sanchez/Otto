@@ -51,6 +51,10 @@ public class NflverseStore {
         return read(Feeds.FTN_CHARTING);
     }
 
+    public Optional<RushingAdvancedStats> rushingAdvancedStats() {
+        return read(Feeds.RUSHING_ADVANCED_STATS);
+    }
+
     /** The stored leaderboard of one kind, or empty before its first download. */
     public Optional<NextGenStats> nextGenStats(NextGenStats.Kind kind) {
         return read(switch (kind) {

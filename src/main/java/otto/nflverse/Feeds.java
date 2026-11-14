@@ -19,13 +19,14 @@ final class Feeds {
     static final WeeklyRostersFeed WEEKLY_ROSTERS = new WeeklyRostersFeed();
     static final DepthChartsFeed DEPTH_CHARTS = new DepthChartsFeed();
     static final FtnChartingFeed FTN_CHARTING = new FtnChartingFeed();
+    static final RushingAdvancedStatsFeed RUSHING_ADVANCED_STATS = new RushingAdvancedStatsFeed();
     static final NextGenStatsFeed NGS_PASSING = new NextGenStatsFeed(NextGenStats.Kind.PASSING);
     static final NextGenStatsFeed NGS_RECEIVING = new NextGenStatsFeed(NextGenStats.Kind.RECEIVING);
     static final NextGenStatsFeed NGS_RUSHING = new NextGenStatsFeed(NextGenStats.Kind.RUSHING);
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
             SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
-            NGS_PASSING, NGS_RECEIVING, NGS_RUSHING);
+            RUSHING_ADVANCED_STATS, NGS_PASSING, NGS_RECEIVING, NGS_RUSHING);
 
     private Feeds() {
     }

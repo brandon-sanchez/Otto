@@ -324,6 +324,8 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                 Map.entry(FeedId.DEPTH_CHARTS, new WeekStatus.Unknown(
                         "8 of 8 teams' 2026 week 3 charts have been replaced by newer ones")),
                 Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())),
+                Map.entry(FeedId.RUSHING_ADVANCED_STATS, new WeekStatus.Complete(
+                        Instant.parse("2026-09-17T08:02:11Z"), List.of())),
                 Map.entry(FeedId.NGS_PASSING, new WeekStatus.Complete(NGS_PASSING_RELEASE, List.of())),
                 Map.entry(FeedId.NGS_RECEIVING, new WeekStatus.Incomplete(
                         List.of(new Unit.Week("2026", 3)), List.of())),

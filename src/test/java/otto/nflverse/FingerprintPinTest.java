@@ -59,6 +59,13 @@ class FingerprintPinTest {
     }
 
     @Test
+    void rushingAdvancedStatsContent() {
+        pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
+                new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
+                        "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
+    }
+
+    @Test
     void nextGenStatsContent() {
         NextGenStats.Line line = new NextGenStats.Line("2026", 1, "00-0036264", "Jordan Love",
                 "QB", "GB", Map.of("avg_time_to_throw", 2.62, "aggressiveness", 12.1));
