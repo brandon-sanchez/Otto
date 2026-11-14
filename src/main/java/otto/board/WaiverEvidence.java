@@ -95,6 +95,11 @@ public class WaiverEvidence {
     /**
      * Screens the league's free agents for the claim deadline given.
      *
+     * <p>The latest week's gaps join the board's missing data. While a
+     * required feed lacks the week, a free agent only popularity lanes
+     * name is left out of the pool, since none of his football backs
+     * him.
+     *
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
      *
@@ -103,7 +108,7 @@ public class WaiverEvidence {
      *         known to be a free agent
      */
     public SourceResult<Screen> screen(LeagueWeek league, ZonedDateTime deadline,
-            Instant now) {
+            Instant now, LatestWeekData.Report latestWeek) {
         Optional<PlayerDirectory> players = directory.read();
         if (players.isEmpty()) {
             return new SourceResult.Unavailable<>("waivers",
@@ -130,27 +135,34 @@ public class WaiverEvidence {
         List<EvidenceLane.Read> reads = lanes.stream().map(lane -> lane.read(inputs)).toList();
         Map<String, List<String>> reasons = new LinkedHashMap<>();
         Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
+        Set<String> backedByFootball = new LinkedHashSet<>();
         for (int index = 0; index < reads.size(); index++) {
             Map<String, String> picks = reads.get(index).shortlist(freeAgents);
             picksByLane.put(lanes.get(index).getClass().getSimpleName(), picks);
             picks.forEach((playerId, reason) ->
                     reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
+            if (!lanes.get(index).popularity()) {
+                backedByFootball.addAll(picks.keySet());
+            }
         }
+        Set<String> popularityAlone = latestWeek.complete() ? Set.of()
+                : reasons.keySet().stream()
+                        .filter(playerId -> !backedByFootball.contains(playerId))
+                        .collect(Collectors.toSet());
         Map<String, DirectoryPlayer> byId = freeAgents.stream()
                 .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player));
         Map<String, DirectoryPlayer> candidates = new LinkedHashMap<>();
-        reasons.keySet().forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
+        reasons.keySet().stream()
+                .filter(playerId -> !popularityAlone.contains(playerId))
+                .forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
 
         List<Candidate> screened = freeAgents.stream()
-                .map(player -> reasons.containsKey(player.playerId())
-                        ? new Candidate(player.playerId(), player.fullName(), true,
-                                String.join("; ", reasons.get(player.playerId())))
-                        : new Candidate(player.playerId(), player.fullName(), false,
-                                "no lane named him among the free agents worth a look"))
+                .map(player -> screened(player, reasons.get(player.playerId()),
+                        popularityAlone.contains(player.playerId())))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
-        List<String> gaps = new ArrayList<>();
+        List<String> gaps = new ArrayList<>(latestWeek.gaps());
         reads.forEach(read -> gaps.addAll(read.gaps()));
         if (rosterNeeds instanceof SourceResult.Unavailable<RosterNeeds> down) {
             gaps.add("the roster needs could not be worked out: " + down.reason());
@@ -173,10 +185,25 @@ public class WaiverEvidence {
                 List.of());
         Map<String, Object> comparisons = new LinkedHashMap<>();
         comparisons.put("lanes", picksByLane);
+        comparisons.put("latestWeek", latestWeek);
         comparisons.put("rosterNeeds", rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok
                 ? ok.value() : null);
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
                 OttoJson.MAPPER.valueToTree(comparisons), user.get()));
+    }
+
+    private static Candidate screened(DirectoryPlayer player, List<String> reasons,
+            boolean popularityAlone) {
+        if (reasons == null) {
+            return new Candidate(player.playerId(), player.fullName(), false,
+                    "no lane named him among the free agents worth a look");
+        }
+        String named = String.join("; ", reasons);
+        return popularityAlone
+                ? new Candidate(player.playerId(), player.fullName(), false,
+                        "only popularity named him while the latest week's data is late: "
+                                + named)
+                : new Candidate(player.playerId(), player.fullName(), true, named);
     }
 
     /**

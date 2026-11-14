@@ -1,5 +1,6 @@
 package otto.board;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -40,6 +41,13 @@ import otto.waivers.WaiverAlertService;
  * sent; {@link WaiverAlertService}'s board stays the one the user
  * receives.
  *
+ * <p>The board waits for the latest completed week's data, as
+ * {@link LatestWeekData} judges it: while that week is short, each Check
+ * records nothing and tries again. From {@link #FALLBACK_BUFFER} before
+ * the claim deadline it builds a fallback board instead, from what has
+ * arrived, which opens by saying what is missing and what the advice
+ * rests on, and leaves out any free agent only popularity names.
+ *
  * <p>The run id is derived from the league and the claim deadline, so
  * every Check in the window finds the round's record and stops before
  * reading anything else, and a retried save converges on one record. A
@@ -49,12 +57,16 @@ import otto.waivers.WaiverAlertService;
 @Component
 public class WaiverBoardDryRun {
 
+    /** How long before the claim deadline a board is built even though data is late. */
+    static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
+
     private static final String RUN_ID_PREFIX = "waiver-board-";
     private static final int RUN_ID_HASH_LENGTH = 32;
 
     private static final Logger log = LoggerFactory.getLogger(WaiverBoardDryRun.class);
 
     private final WaiverEvidence evidence;
+    private final LatestWeekData latestWeek;
     private final AdviceWriter writer;
     private final AdviceCheck check;
     private final DecisionRecords records;
@@ -62,10 +74,12 @@ public class WaiverBoardDryRun {
     private final String userId;
     private final String model;
 
-    public WaiverBoardDryRun(WaiverEvidence evidence, AdviceWriter writer, AdviceCheck check,
+    public WaiverBoardDryRun(WaiverEvidence evidence, LatestWeekData latestWeek,
+            AdviceWriter writer, AdviceCheck check,
             DecisionRecords records, SettingsStore settings, OttoProperties properties,
             @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
         this.evidence = evidence;
+        this.latestWeek = latestWeek;
         this.writer = writer;
         this.check = check;
         this.records = records;
@@ -105,25 +119,34 @@ public class WaiverBoardDryRun {
         if (records.read(userId, leagueId, runId).isPresent()) {
             return Optional.empty();
         }
-        switch (evidence.screen(league, deadline.get(), now)) {
+        LatestWeekData.Report data = latestWeek.assess(league);
+        if (!data.complete()
+                && now.isBefore(deadline.get().minus(FALLBACK_BUFFER).toInstant())) {
+            log.info("The waiver board waits for the latest week's data: {}",
+                    String.join("; ", data.missing()));
+            return Optional.empty();
+        }
+        switch (evidence.screen(league, deadline.get(), now, data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board dry run waits: {}", unavailable.reason());
                 return Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok -> {
-                record(runId, league, ok.value(), now);
+                record(runId, league, ok.value(), data, now);
                 return Optional.of(runId);
             }
         }
     }
 
     private void record(String runId, LeagueWeek league, WaiverEvidence.Screen screen,
-            Instant now) {
+            LatestWeekData.Report data, Instant now) {
         BoardForm form = new BoardForm(check, screen.candidates());
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved ->
-                    new Outcome.DryRun(BoardMessage.render(approved.answer(), screen.candidates()));
+                    new Outcome.DryRun(BoardMessage.render(approved.answer(),
+                            screen.candidates(),
+                            data.complete() ? List.of() : List.of(data.notice())));
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
                     "The board failed its checks twice: " + String.join(" ", rejected.failures()));
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
