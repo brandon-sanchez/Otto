@@ -21,8 +21,7 @@ import java.util.Set;
  * the research cache: one player's stories, capped at a fixed count,
  * and the index of when each player was last read. Big means
  * everything that grows with the league, the roster of players or the
- * season - the
- * Snapshots, the Player Directory, the nflverse feeds,
+ * season - the Snapshots, the Player Directory, the nflverse feeds,
  * defense-versus-position and the Event Log.
  */
 public final class DocumentPlacement {
