@@ -1,5 +1,7 @@
 package otto.infra;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +22,8 @@ import software.amazon.awscdk.services.dynamodb.BillingMode;
 import software.amazon.awscdk.services.dynamodb.PointInTimeRecoverySpecification;
 import software.amazon.awscdk.services.dynamodb.Table;
 import software.amazon.awscdk.services.dynamodb.TableEncryption;
+import software.amazon.awscdk.services.iam.AccountRootPrincipal;
+import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
@@ -41,6 +45,7 @@ import software.amazon.awscdk.services.s3.BlockPublicAccess;
 import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.BucketEncryption;
 import software.amazon.awscdk.services.s3.LifecycleRule;
+import software.amazon.awscdk.services.s3.ObjectLockRetention;
 import software.amazon.awscdk.services.scheduler.CfnSchedule;
 import software.amazon.awscdk.services.sns.Topic;
 import software.amazon.awscdk.services.sns.subscriptions.EmailSubscription;
@@ -98,6 +103,16 @@ public class OttoStack extends Stack {
      */
     private static final String DOCUMENTS_KEY = "documents.json";
 
+    /**
+     * The two key prefixes of the Decision Records bucket. The app
+     * spells these too, in {@code DecisionRecords}; a drift shows up as
+     * a denied write on the first run that saves a record.
+     */
+    private static final String RECORDS_PREFIX = "records/";
+    private static final String ARTICLE_TEXT_PREFIX = "article-text/";
+
+    private static final int DAYS_PER_SEASON = 365;
+
     /** What one month of this is allowed to cost. */
     private static final Number MONTHLY_BUDGET_USD = 20;
 
@@ -110,11 +125,13 @@ public class OttoStack extends Stack {
 
         Bucket documents = documentsBucket();
         Table records = recordsTable();
+        Bucket decisionRecords = decisionRecordsBucket(articleTextDays());
 
         Map<String, String> environment = Map.of(
                 "SPRING_PROFILES_ACTIVE", "aws",
                 "OTTO_BUCKET", documents.getBucketName(),
                 "OTTO_TABLE", records.getTableName(),
+                "OTTO_RECORDS_BUCKET", decisionRecords.getBucketName(),
                 "OTTO_PARAMETER_PATH", parameterPath);
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
@@ -129,6 +146,9 @@ public class OttoStack extends Stack {
 
         readWriteStorage(documents, records, scheduled);
         readWriteStorage(documents, records, webhook);
+        writeDecisionRecords(decisionRecords, scheduled);
+        writeDecisionRecords(decisionRecords, webhook);
+        guardDecisionRecords(decisionRecords, List.of(scheduled, webhook));
         readSecrets(scheduled, parameterPath);
         readSecrets(webhook, parameterPath);
 
@@ -160,6 +180,10 @@ public class OttoStack extends Stack {
         CfnOutput.Builder.create(this, "RecordsTable")
                 .value(records.getTableName())
                 .description("The small records, one item each")
+                .build();
+        CfnOutput.Builder.create(this, "DecisionRecordsBucket")
+                .value(decisionRecords.getBucketName())
+                .description("One immutable Decision Record per recommendation run")
                 .build();
     }
 
@@ -205,6 +229,63 @@ public class OttoStack extends Stack {
                         .noncurrentVersionExpiration(Duration.days(7))
                         .abortIncompleteMultipartUploadAfter(Duration.days(1))
                         .build()))
+                .removalPolicy(RemovalPolicy.RETAIN)
+                .build();
+    }
+
+    /**
+     * How long copied article text is kept, and how long every object
+     * is locked against deletion. A context value, because the period is
+     * the owner's to set; a season counts as 365 days.
+     */
+    private int articleTextDays() {
+        int seasons = Integer.parseInt(context("articleTextSeasons", "3"));
+        if (seasons < 1) {
+            throw new IllegalStateException("articleTextSeasons must be at least 1");
+        }
+        return seasons * DAYS_PER_SEASON;
+    }
+
+    /**
+     * Decision Records, in a bucket of their own. The documents bucket
+     * rewrites one object every minute and expires old versions after a
+     * week; an archive of runs wants the opposite, so it gets its own
+     * bucket rather than a prefix in that one.
+     *
+     * <p>Every object is locked in governance mode for the article-text
+     * period. Compliance mode would stop anyone deleting a record before
+     * then, an account deletion included; governance lets a caller
+     * granted the bypass do it, and nobody else.
+     *
+     * <p>Copied article text expires; the facts under {@code records/}
+     * never do. A current article-text object expires when its lock
+     * ends, and the version that expiry leaves behind goes a day later.
+     * The delete marker then left alone is removed by a rule of its own,
+     * since S3 refuses one rule that both expires by age and removes
+     * expired delete markers.
+     */
+    private Bucket decisionRecordsBucket(int articleTextDays) {
+        return Bucket.Builder.create(this, "DecisionRecords")
+                .encryption(BucketEncryption.S3_MANAGED)
+                .blockPublicAccess(BlockPublicAccess.BLOCK_ALL)
+                .enforceSsl(true)
+                .versioned(true)
+                .objectLockEnabled(true)
+                .objectLockDefaultRetention(
+                        ObjectLockRetention.governance(Duration.days(articleTextDays)))
+                .lifecycleRules(List.of(
+                        LifecycleRule.builder()
+                                .id("expire-article-text")
+                                .prefix(ARTICLE_TEXT_PREFIX)
+                                .expiration(Duration.days(articleTextDays))
+                                .noncurrentVersionExpiration(Duration.days(1))
+                                .abortIncompleteMultipartUploadAfter(Duration.days(1))
+                                .build(),
+                        LifecycleRule.builder()
+                                .id("remove-expired-article-text-markers")
+                                .prefix(ARTICLE_TEXT_PREFIX)
+                                .expiredObjectDeleteMarker(true)
+                                .build()))
                 .removalPolicy(RemovalPolicy.RETAIN)
                 .build();
     }
@@ -265,6 +346,83 @@ public class OttoStack extends Stack {
     private void readWriteStorage(Bucket documents, Table records, Function function) {
         documents.grantReadWrite(function, DOCUMENTS_KEY);
         records.grantReadWriteData(function);
+    }
+
+    /**
+     * Write and read records, and nothing more: no function deletes one
+     * or bypasses the lock. Deleting an account needs
+     * {@code s3:DeleteObjectVersion} and
+     * {@code s3:BypassGovernanceRetention}, and those belong to whatever
+     * entry point deletes accounts, which does not exist yet. It also
+     * needs adding to {@link #guardDecisionRecords}.
+     *
+     * <p>{@code s3:ListBucket} is here only for what S3 answers about a
+     * missing key. Without it S3 says 403 rather than 404, and article
+     * text that has expired would read as an access failure instead of
+     * as gone.
+     */
+    private void writeDecisionRecords(Bucket bucket, Function function) {
+        function.addToRolePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.ALLOW)
+                .actions(List.of("s3:PutObject", "s3:GetObject"))
+                .resources(List.of(
+                        bucket.arnForObjects(RECORDS_PREFIX + "*"),
+                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*")))
+                .build());
+        function.addToRolePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.ALLOW)
+                .actions(List.of("s3:ListBucket"))
+                .resources(List.of(bucket.getBucketArn()))
+                .build());
+    }
+
+    /**
+     * The bucket enforces what a record is, whatever any IAM policy in
+     * the account grants, so a role given {@code s3:*} for some other
+     * job still cannot read, replace or delete one.
+     *
+     * <p>Only the backend and the owner read or list. The owner is the
+     * account root plus any ARN in the {@code recordReaderArns} context
+     * value, for the IAM user or role the owner actually signs in as.
+     *
+     * <p>A record is only ever created: a put that does not carry
+     * {@code If-None-Match} is refused, so nobody writes over a key.
+     *
+     * <p>Only the account root deletes a version or changes its lock.
+     * The entry point that deletes accounts, once it exists, has to be
+     * added here on purpose.
+     */
+    private void guardDecisionRecords(Bucket bucket, List<Function> backend) {
+        String root = new AccountRootPrincipal().getArn();
+        List<String> readers = new ArrayList<>();
+        backend.forEach(function -> readers.add(function.getRole().getRoleArn()));
+        readers.add(root);
+        Arrays.stream(context("recordReaderArns", "").split(","))
+                .map(String::trim)
+                .filter(arn -> !arn.isEmpty())
+                .forEach(readers::add);
+        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.DENY)
+                .principals(List.of(new AnyPrincipal()))
+                .actions(List.of("s3:GetObject*", "s3:ListBucket*"))
+                .resources(List.of(bucket.getBucketArn(), bucket.arnForObjects("*")))
+                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", readers)))
+                .build());
+        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.DENY)
+                .principals(List.of(new AnyPrincipal()))
+                .actions(List.of("s3:PutObject"))
+                .resources(List.of(bucket.arnForObjects("*")))
+                .conditions(Map.of("Null", Map.of("s3:if-none-match", "true")))
+                .build());
+        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.DENY)
+                .principals(List.of(new AnyPrincipal()))
+                .actions(List.of("s3:DeleteObject*", "s3:BypassGovernanceRetention",
+                        "s3:PutObjectRetention", "s3:PutObjectLegalHold"))
+                .resources(List.of(bucket.arnForObjects("*")))
+                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", List.of(root))))
+                .build());
     }
 
     private void readSecrets(Function function, String parameterPath) {

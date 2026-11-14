@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * What the stack promises, read back off the template it produces. The
  * assertions are the ticket's acceptance criteria: the shape of the two
- * functions, the three schedules, the two stores, the alarms, and the
+ * functions, the three schedules, the stores, the alarms, and the
  * services that are deliberately absent.
  */
 class OttoStackTest {
@@ -119,8 +119,8 @@ class OttoStackTest {
 
     @Test
     void oneBucketHoldsTheBigDocumentsAndOneTableTheSmallRecords() {
-        template.resourceCountIs("AWS::S3::Bucket", 1);
-        template.hasResourceProperties("AWS::S3::Bucket", Match.objectLike(Map.of(
+        template.resourceCountIs("AWS::S3::Bucket", 2);
+        template.allResourcesProperties("AWS::S3::Bucket", Match.objectLike(Map.of(
                 "PublicAccessBlockConfiguration", Map.of(
                         "BlockPublicAcls", true,
                         "BlockPublicPolicy", true,
@@ -146,7 +146,7 @@ class OttoStackTest {
     @Test
     void theStoresKeepTheirLogicalIdsSoADeployNeverSwapsThemForEmptyOnes() {
         assertThat(template.findResources("AWS::S3::Bucket").keySet())
-                .containsExactly("Documents7E5B2978");
+                .containsExactlyInAnyOrder("Documents7E5B2978", "DecisionRecords207DC032");
         assertThat(template.findResources("AWS::DynamoDB::Table").keySet())
                 .containsExactly("Records091F6ECA");
     }
@@ -196,6 +196,161 @@ class OttoStackTest {
                         "Rules", Match.arrayWith(List.of(Match.objectLike(Map.of(
                                 "NoncurrentVersionExpiration",
                                 Map.of("NoncurrentDays", 7))))))))));
+    }
+
+    @Test
+    void decisionRecordsAreLockedInGovernanceModeForThreeSeasons() {
+        template.hasResourceProperties("AWS::S3::Bucket", Match.objectLike(Map.of(
+                "ObjectLockEnabled", true,
+                "VersioningConfiguration", Map.of("Status", "Enabled"),
+                "ObjectLockConfiguration", Map.of(
+                        "ObjectLockEnabled", "Enabled",
+                        "Rule", Map.of("DefaultRetention",
+                                Map.of("Mode", "GOVERNANCE", "Days", 1095))))));
+    }
+
+    @Test
+    void copiedArticleTextExpiresAndTheRecordsDoNot() {
+        assertThat(lifecycleRules(template)).containsExactly(Map.of(
+                "Id", "expire-article-text",
+                "Prefix", "article-text/",
+                "Status", "Enabled",
+                "ExpirationInDays", 1095,
+                "NoncurrentVersionExpiration", Map.of("NoncurrentDays", 1),
+                "AbortIncompleteMultipartUpload", Map.of("DaysAfterInitiation", 1)), Map.of(
+                "Id", "remove-expired-article-text-markers",
+                "Prefix", "article-text/",
+                "Status", "Enabled",
+                "ExpiredObjectDeleteMarker", true));
+    }
+
+    @Test
+    void theArticleTextPeriodIsTheOwnersToSet() {
+        Template twoSeasons = Template.fromStack(new OttoStack(
+                new App(AppProps.builder()
+                        .context(Map.of("alertEmail", "manager@example.com",
+                                "articleTextSeasons", "2"))
+                        .build()),
+                "OttoStack", props()));
+
+        twoSeasons.hasResourceProperties("AWS::S3::Bucket", Match.objectLike(Map.of(
+                "ObjectLockConfiguration", Match.objectLike(Map.of(
+                        "Rule", Map.of("DefaultRetention",
+                                Map.of("Mode", "GOVERNANCE", "Days", 730)))))));
+        assertThat(lifecycleRules(twoSeasons)).first()
+                .satisfies(rule -> assertThat(rule).containsEntry("ExpirationInDays", 730));
+    }
+
+    /**
+     * Only the backend and the owner may read or list records, whatever
+     * an IAM policy elsewhere in the account grants. The deny names
+     * everyone else by the ARNs it lets through.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void everyoneButTheBackendAndTheOwnerIsDeniedARecord() {
+        Template withReader = Template.fromStack(new OttoStack(
+                new App(AppProps.builder()
+                        .context(Map.of("alertEmail", "manager@example.com",
+                                "recordReaderArns",
+                                "arn:aws:iam::111111111111:user/owner, "))
+                        .build()),
+                "OttoStack", props()));
+
+        Map<?, ?> deny = bucketDeny(withReader, "s3:GetObject*");
+        assertThat(deny.get("Principal")).isEqualTo(Map.of("AWS", "*"));
+        assertThat((List<Object>) deny.get("Action"))
+                .containsExactlyInAnyOrder("s3:GetObject*", "s3:ListBucket*");
+        assertThat(deny.get("Resource").toString()).contains("DecisionRecords", "/*");
+        assertThat((List<?>) deny.get("Resource")).hasSize(2);
+        List<?> readers = (List<?>) ((Map<?, ?>) ((Map<?, ?>) deny.get("Condition"))
+                .get("ArnNotLike")).get("aws:PrincipalArn");
+        assertThat(readers).hasSize(4);
+        assertThat(readers.toString())
+                .contains("ScheduledServiceRole", "WebhookServiceRole", ":root",
+                        "arn:aws:iam::111111111111:user/owner");
+    }
+
+    @Test
+    void aRecordCanOnlyBeCreatedNeverWrittenOver() {
+        Map<?, ?> deny = bucketDeny(template, "s3:PutObject");
+
+        assertThat(deny.get("Principal")).isEqualTo(Map.of("AWS", "*"));
+        assertThat(deny.get("Condition"))
+                .isEqualTo(Map.of("Null", Map.of("s3:if-none-match", "true")));
+        assertThat(deny.get("Resource").toString()).contains("DecisionRecords", "/*");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void onlyTheAccountRootDeletesARecordOrChangesItsLock() {
+        Map<?, ?> deny = bucketDeny(template, "s3:DeleteObject*");
+
+        assertThat(deny.get("Principal")).isEqualTo(Map.of("AWS", "*"));
+        assertThat((List<Object>) deny.get("Action")).containsExactlyInAnyOrder(
+                "s3:DeleteObject*", "s3:BypassGovernanceRetention",
+                "s3:PutObjectRetention", "s3:PutObjectLegalHold");
+        Object allowed = ((Map<?, ?>) ((Map<?, ?>) deny.get("Condition"))
+                .get("ArnNotLike")).get("aws:PrincipalArn");
+        assertThat(allowed.toString())
+                .contains(":root")
+                .doesNotContain("ServiceRole");
+    }
+
+    @Test
+    void theFunctionsCanNeitherDeleteARecordNorBypassItsLock() {
+        List<String> granted = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (String.valueOf(statement.get("Resource")).contains("DecisionRecords")) {
+                    granted.add(String.valueOf(statement.get("Action")));
+                }
+            }
+        }
+
+        assertThat(granted)
+                .as("each function writes and reads records, and nothing more")
+                .isNotEmpty()
+                .noneMatch(actions -> actions.contains("Delete"))
+                .noneMatch(actions -> actions.contains("Bypass"))
+                .noneMatch(actions -> actions.contains("*"));
+        template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Environment", Match.objectLike(Map.of(
+                        "Variables", Match.objectLike(Map.of(
+                                "OTTO_RECORDS_BUCKET", Match.anyValue())))))));
+        assertThat(template.findOutputs("DecisionRecordsBucket")).isNotEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> lifecycleRules(Template template) {
+        Map<?, ?> bucket = template.findResources("AWS::S3::Bucket", Match.objectLike(Map.of(
+                "Properties", Match.objectLike(Map.of("ObjectLockEnabled", true)))))
+                .values().iterator().next();
+        Map<?, ?> lifecycle = (Map<?, ?>) ((Map<?, ?>) bucket.get("Properties"))
+                .get("LifecycleConfiguration");
+        return (List<Map<String, Object>>) lifecycle.get("Rules");
+    }
+
+    /** The bucket policy's deny statement that names the action. */
+    private static Map<?, ?> bucketDeny(Template template, String action) {
+        for (Map<String, Object> policy : template.findResources("AWS::S3::BucketPolicy").values()) {
+            Map<?, ?> document = (Map<?, ?>) ((Map<?, ?>) policy.get("Properties"))
+                    .get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                Object actions = statement.get("Action");
+                boolean names = actions instanceof List<?> list
+                        ? list.contains(action)
+                        : action.equals(actions);
+                if ("Deny".equals(statement.get("Effect")) && names) {
+                    return statement;
+                }
+            }
+        }
+        throw new AssertionError("no bucket policy denies " + action);
     }
 
     @Test
