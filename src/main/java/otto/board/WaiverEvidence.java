@@ -47,6 +47,11 @@ import otto.storage.OttoJson;
  * the user's roster, and the model weighs it all. Players on any
  * roster in the league are never screened, so they can never be
  * recommended.
+ *
+ * <p>A {@link WaiverPreference} the user set for the round is handed to
+ * the model as evidence. One that keeps the board to some positions
+ * also narrows the screening to them, so no other player can be
+ * recommended; a focus leaves the pool whole.
  */
 @Component
 public class WaiverEvidence {
@@ -103,12 +108,15 @@ public class WaiverEvidence {
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
      *
+     * @param preference the preference the user set for this claim
+     *        round, or empty when he set none
      * @return unavailable when there is no player directory or no
      *         roster for the user, since without both no player can be
      *         known to be a free agent
      */
     public SourceResult<Screen> screen(LeagueWeek league, ZonedDateTime deadline,
-            Instant now, LatestWeekData.Report latestWeek) {
+            Optional<WaiverPreference> preference, Instant now,
+            LatestWeekData.Report latestWeek) {
         Optional<PlayerDirectory> players = directory.read();
         if (players.isEmpty()) {
             return new SourceResult.Unavailable<>("waivers",
@@ -131,13 +139,21 @@ public class WaiverEvidence {
                 .sorted(Comparator.comparing(DirectoryPlayer::playerId))
                 .toList();
 
+        Optional<WaiverPreference> only = preference
+                .filter(stated -> stated.mode() == WaiverPreference.Mode.ONLY);
+        List<DirectoryPlayer> eligible = only
+                .map(stated -> freeAgents.stream()
+                        .filter(player -> stated.positions().contains(player.position()))
+                        .toList())
+                .orElse(freeAgents);
+
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
         List<EvidenceLane.Read> reads = lanes.stream().map(lane -> lane.read(inputs)).toList();
         Map<String, List<String>> reasons = new LinkedHashMap<>();
         Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
         Set<String> backedByFootball = new LinkedHashSet<>();
         for (int index = 0; index < reads.size(); index++) {
-            Map<String, String> picks = reads.get(index).shortlist(freeAgents);
+            Map<String, String> picks = reads.get(index).shortlist(eligible);
             picksByLane.put(lanes.get(index).getClass().getSimpleName(), picks);
             picks.forEach((playerId, reason) ->
                     reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
@@ -158,7 +174,7 @@ public class WaiverEvidence {
 
         List<Candidate> screened = freeAgents.stream()
                 .map(player -> screened(player, reasons.get(player.playerId()),
-                        popularityAlone.contains(player.playerId())))
+                        popularityAlone.contains(player.playerId()), only))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
@@ -170,6 +186,7 @@ public class WaiverEvidence {
 
         List<EvidenceItem> evidence = new ArrayList<>();
         evidence.add(boardItem(league, deadline, now, gaps));
+        preference.ifPresent(stated -> evidence.add(preferenceItem(stated)));
         if (rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok) {
             evidence.add(needsItem(league, ok.value(), now));
         }
@@ -193,10 +210,10 @@ public class WaiverEvidence {
     }
 
     private static Candidate screened(DirectoryPlayer player, List<String> reasons,
-            boolean popularityAlone) {
+            boolean popularityAlone, Optional<WaiverPreference> only) {
         if (reasons == null) {
             return new Candidate(player.playerId(), player.fullName(), false,
-                    "no lane named him among the free agents worth a look");
+                    leftOut(player, only));
         }
         String named = String.join("; ", reasons);
         return popularityAlone
@@ -248,6 +265,26 @@ public class WaiverEvidence {
         facts.put("missingData", gaps.isEmpty() ? "none" : String.join("; ", gaps));
         return new EvidenceItem("board", "otto:waiver-board", Optional.empty(), now,
                 "the claim round this board is for", facts);
+    }
+
+    private static String leftOut(DirectoryPlayer player, Optional<WaiverPreference> only) {
+        return only.filter(stated -> !stated.positions().contains(player.position()))
+                .map(stated -> "the user asked for " + stated.phrase() + " on this round's board")
+                .orElse("no lane named him among the free agents worth a look");
+    }
+
+    private static EvidenceItem preferenceItem(WaiverPreference preference) {
+        Map<String, String> facts = new LinkedHashMap<>();
+        facts.put("asked", preference.phrase());
+        facts.put("positions", String.join(", ", preference.positions()));
+        facts.put("kind", switch (preference.mode()) {
+            case FOCUS -> "a focus: rank these positions first, and still show a clearly "
+                    + "better pickup elsewhere with why he beats them";
+            case ONLY -> "a filter: only these positions were screened";
+        });
+        return new EvidenceItem("preference", "otto:chat", Optional.empty(),
+                preference.setAt(), "what the user asked for this claim round's board, by chat",
+                facts);
     }
 
     private static EvidenceItem needsItem(LeagueWeek league, RosterNeeds needs,

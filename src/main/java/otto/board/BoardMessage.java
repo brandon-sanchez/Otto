@@ -11,8 +11,10 @@ import otto.directory.DirectoryPlayer;
  * a heading, the opening, at most {@link #SHOWN} ranked entries and a
  * "View all options" line for the rest. A holding board opens with the
  * hold and lists any optional moves under "If you still want to make a
- * move". The text is split between entries into Telegram messages that
- * each stay under Telegram's limit.
+ * move". An entry outside the positions the user asked to focus on
+ * carries its reason under "Outside your focus". The text is split
+ * between entries into Telegram messages that each stay under
+ * Telegram's limit.
  */
 final class BoardMessage {
 
@@ -25,6 +27,7 @@ final class BoardMessage {
     static final String HEADING = "Your waiver options";
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
+    static final String OUTSIDE_FOCUS = "Outside your focus: ";
 
     private static final String BREAK = "\n\n";
 
@@ -76,8 +79,10 @@ final class BoardMessage {
 
     private static String entry(BoardAnswer.Entry entry, Map<String, DirectoryPlayer> candidates) {
         DirectoryPlayer player = candidates.get(entry.playerId());
-        return "%s · %s, %s\n%s".formatted(player.fullName(), player.position(), player.team(),
-                entry.reasoning().strip());
+        String text = "%s · %s, %s\n%s".formatted(player.fullName(), player.position(),
+                player.team(), entry.reasoning().strip());
+        return entry.outsideFocus().isBlank() ? text
+                : text + "\n" + OUTSIDE_FOCUS + entry.outsideFocus().strip();
     }
 
     private static List<String> pack(List<String> blocks) {
