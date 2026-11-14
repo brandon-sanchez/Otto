@@ -16,7 +16,7 @@ import otto.events.EventType;
  * Turns every status transition on the user's rostered players into an
  * Alert candidate - up or down, IR and bench included. A starter whose
  * status got worse carries the bench Recommendation; everything else is
- * informational and rides at Medium so the confidence gate voices the
+ * informational and rides at Medium, so the Alert names the
  * uncertainty instead of stating an action.
  */
 @Component

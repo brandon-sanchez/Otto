@@ -24,8 +24,9 @@ import otto.snapshot.RosterSnapshot;
  * "start A over B" pairs. Starters who cannot play (ruled out, bye) are
  * the legality detector's problem, not an edge - pairing against them
  * would price a certain zero as a small edge. Edges always ride at
- * Medium confidence: projections are estimates, so the Alert voices
- * the numbers and the doubt instead of stating a certainty.
+ * Medium confidence: projections are estimates, so the Alert gives
+ * both projected numbers and what could flip them instead of stating a
+ * certainty.
  */
 @Component
 public class BenchEdgeDetector {

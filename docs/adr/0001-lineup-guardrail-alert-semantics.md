@@ -6,14 +6,61 @@ The spec pins the Alert triggers, the confidence gate, and the Lock
 Ladder. It leaves a few semantic gaps that implementation had to close.
 This ADR records those decisions.
 
-## Point-edge Alerts always ride at Medium confidence
+## Alerts name the specific uncertainty, never a confidence level
 
-A bench-over-starter edge is a comparison of two estimates. The gate
-says High states the action and Medium voices the doubt; an estimate
-difference is doubt by nature, whatever its size. So an edge Alert is
-always Medium and always carries both projected numbers. High stays
-reserved for certainties: a ruled-out starter, a bye starter, an empty
-slot.
+Confidence is internal. Low is never proactive; High marks a
+certainty (a ruled-out starter, a bye starter, an empty slot) and
+Medium an estimate, and when candidates merge into one message the
+more certain one leads. No message shows the label. A message that
+carries doubt says what the doubt is: "provided he's cleared without a
+snap limit", or that two projections are close enough to flip on game
+day. A generic "Medium confidence" tells the user nothing he can act
+on or watch for.
+
+A bench-over-starter edge is a comparison of two estimates, so it is
+always Medium and its message always carries both projected numbers.
+
+## The model writes lineup Alerts, and code checks them
+
+Bench-edge, lineup-legality and final-pregame Alerts are written by the
+model in a recommendation-first voice, from an evidence bundle: each
+player's identity, designation, lineup role and projection, the
+computed problem, and the lineup moves code verified as legal. The
+model chooses the move, or no change where that is legal, and writes
+the message. It may state facts only from the bundle.
+
+Before anything is sent, a check holds the answer to the bundle:
+player ids and names, every number, every comparison, the move against
+the legal moves, any dollar amount against a verified budget, the
+evidence each claim cites, and the voice rules below. A failed answer
+gets one correction attempt carrying its specific failures; if the
+second answer fails too, the advice is withheld. Template advice is
+never substituted silently.
+
+Withheld does not mean silent when silence costs points. A slot that
+scores zero as set, or a starter still uncertain as his game nears, is
+urgent: when the model is down or its advice fails twice, the verified
+facts go out as code-written text, with no recommendation the facts do
+not state. A withheld edge sends nothing. Advice to make no change on
+an edge is not sent either, because nobody asked.
+
+Every run writes one Decision Record. Its run id is a hash of the Alert
+key and what the evidence says, leaving out read times and the minutes
+to kickoff, so a later Check over the same evidence repeats the stored
+outcome without asking the model again. New evidence is a new run.
+
+A starter ruled Out is still one message: when the status transition
+and the legality problem merge, the transition leads and is phrased
+from its Recommendation, which is the player-decision path's job, not
+this one's.
+
+## Messages say when the game starts
+
+Players are introduced by full name. A message says "game starts in
+roughly 25 minutes", rounded to five minutes, rather than that a player
+"locks": the user acts on the clock, not on Sleeper's mechanism. The
+final pregame warning must use that phrase and stays under 280
+characters; other lineup Alerts stay under 600.
 
 ## One problem, one message: candidates merge per player
 

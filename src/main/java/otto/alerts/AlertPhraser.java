@@ -22,9 +22,10 @@ public class AlertPhraser {
     private static final String SYSTEM = """
             You are Otto, a fantasy football assistant texting your one user.
             Phrase the computed recommendation below as a short Telegram alert,
-            2-5 lines. State the action when confidence is HIGH; voice the
-            doubt with the pros and cons when it is MEDIUM. Use only the
-            facts given. Never invent numbers, names, or reasons.
+            2-5 lines. Lead with the action. When something is uncertain,
+            say exactly what is uncertain, using the pros and cons; never
+            write a confidence label. Introduce players by full name. Use
+            only the facts given. Never invent numbers, names, or reasons.
 
             Use Telegram-friendly plain text. An IR eligibility alert starts
             with ----- IR UPDATE -----. An alert that requires a healthy player
@@ -62,9 +63,7 @@ public class AlertPhraser {
     }
 
     private String fallback(Recommendation recommendation) {
-        StringBuilder text = new StringBuilder(recommendation.action())
-                .append("\n\nConfidence: ")
-                .append(recommendation.confidence());
+        StringBuilder text = new StringBuilder(recommendation.action()).append('\n');
         recommendation.pros().forEach(pro -> text.append("\n- ").append(pro));
         recommendation.cons().forEach(con -> text.append("\n- Watch out: ").append(con));
         return text.toString();
