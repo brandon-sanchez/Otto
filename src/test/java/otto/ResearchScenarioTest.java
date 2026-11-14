@@ -18,14 +18,20 @@ import otto.research.ResearchTopic;
 import otto.watchlist.WatchlistStore;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The research cache: news found ahead of time, kept once per player
- * whatever league asks about him.
+ * whatever league asks about him, and refreshed right before an Alert
+ * about that player goes out.
  *
  * <p>The fixture league's user roster holds Josh Jacobs (5850) and Patrick
  * Mahomes (4046), among others; Puka Nacua (9493) is on no roster.
@@ -216,5 +222,42 @@ class ResearchScenarioTest extends WireSeamTest {
 
         assertThat(cache.read(JACOBS).independentSources())
                 .containsExactlyInAnyOrder("rotowire", "fantasy_pros");
+    }
+
+    @Test
+    void anAlertCarriesTheNewsReadRightBeforeItIsSent() {
+        aLeagueOnDisk();
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.noNewsByDefault(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-questionable.json", "players-v2");
+        stubFeed(JACOBS, RULED_OUT);
+
+        checkRunner.runCheck();
+
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/" + JACOBS + "/news")));
+        assertThat(cache.read(JACOBS).items()).hasSize(1);
+        llm.verify(postRequestedFor(urlMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(matchingJsonPath("$.messages[1].content",
+                        containing("Josh Jacobs - Ruled out for Week 2"))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
+    void anAlertStillGoesOutWhenTheNewsFeedIsDown() {
+        aLeagueOnDisk();
+        clock.advance(Duration.ofSeconds(61));
+        sleeper.resetAll();
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-jacobs-questionable.json", "players-v2");
+        sleeper.stubFor(get(urlPathEqualTo("/players/nfl/" + JACOBS + "/news"))
+                .willReturn(aResponse().withStatus(503)));
+
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 }
