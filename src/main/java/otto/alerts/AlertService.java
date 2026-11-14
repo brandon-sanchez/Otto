@@ -84,6 +84,7 @@ public class AlertService {
     private final Clock clock;
     private final PreSendResearch preSendResearch;
     private final LineupAdvice lineupAdvice;
+    private final RoleSlipDetector roleSlipDetector;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             OfficialUpdateDetector officialUpdateDetector,
@@ -92,7 +93,8 @@ public class AlertService {
             AlertPhraser phraser, EventLog eventLog,
             IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, Clock clock,
-            PreSendResearch preSendResearch, LineupAdvice lineupAdvice) {
+            PreSendResearch preSendResearch, LineupAdvice lineupAdvice,
+            RoleSlipDetector roleSlipDetector) {
         this.transitionDetector = transitionDetector;
         this.officialUpdateDetector = officialUpdateDetector;
         this.legalityDetector = legalityDetector;
@@ -108,6 +110,7 @@ public class AlertService {
         this.clock = clock;
         this.preSendResearch = preSendResearch;
         this.lineupAdvice = lineupAdvice;
+        this.roleSlipDetector = roleSlipDetector;
     }
 
     /**
@@ -133,6 +136,7 @@ public class AlertService {
             candidates.addAll(officialUpdateDetector.detect(roster, eventLog.all(), now));
             candidates.addAll(legalityDetector.detect(roster, week));
             candidates.addAll(edgeDetector.detect(roster, week, now));
+            candidates.addAll(roleSlipDetector.detect(roster, now));
         });
 
         List<AlertCandidate> standing = cancelSuperseded(candidates, userRoster);
@@ -316,7 +320,7 @@ public class AlertService {
         }
         GameWeek games = week.games().get();
         return switch (candidate.source()) {
-            case TRANSITION -> games.underway(candidate.team(), now);
+            case TRANSITION, ROLE_SLIP -> games.underway(candidate.team(), now);
             case LEGALITY, EDGE -> games.locked(candidate.team(), now);
             // Who may hold a player at all is not a lineup slot, and no
             // kickoff settles it.
@@ -495,6 +499,14 @@ public class AlertService {
                     .orElse(null);
             return lineupAdvice.forStatusChange("alert:" + primary.key(), primary, legality,
                     research, leagueWeek, userRoster.get(), now)
+                    .map(written -> new Composed(written, written.runId().orElseThrow()));
+        }
+        Optional<AlertCandidate> slip = group.stream()
+                .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
+                .findFirst();
+        if (slip.isPresent()) {
+            return lineupAdvice.forRoleSlip("alert:" + slip.get().key(), slip.get(), research,
+                    leagueWeek, userRoster.orElseThrow(), now)
                     .map(written -> new Composed(written, written.runId().orElseThrow()));
         }
         if (LINEUP_PROBLEMS.contains(primary.source())) {

@@ -150,12 +150,19 @@ final class LineupEvidence {
         return new Draft(bundle, urgentFacts, holdStaysSilent, Map.copyOf(reasons));
     }
 
+    /**
+     * @param urgentFacts the verified text sent when the advice cannot
+     *        be had, empty when nothing is sent then
+     * @param holdStaysSilent true when advice to hold with no lineup
+     *        change is not worth sending unasked
+     */
     Draft decisionDraft(String task, List<LineupMove> moves, boolean noChangeAllowed,
-            List<RosterPlan> plans, List<String> unknowns, String fallbackText) {
+            List<RosterPlan> plans, List<String> unknowns, Optional<String> urgentFacts,
+            boolean holdStaysSilent) {
         EvidenceBundle bundle = new EvidenceBundle(task, evidence, List.copyOf(players.values()),
                 moves, noChangeAllowed, Optional.empty(), MAX_LENGTH, Optional.empty(), plans,
                 unknowns);
-        return new Draft(bundle, Optional.of(fallbackText), false, Map.copyOf(reasons));
+        return new Draft(bundle, urgentFacts, holdStaysSilent, Map.copyOf(reasons));
     }
 
     void addItem(EvidenceItem item) {

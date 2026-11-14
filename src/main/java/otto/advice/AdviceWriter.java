@@ -50,7 +50,7 @@ public class AdviceWriter {
             """;
 
     private static final String PLAYER_DECISION = """
-            Also decide what to do with the player whose status changed: choose
+            Also decide what to do with the player the decision is about: choose
             exactly one of "rosterPlans" by its "id", lead with it, and explain it in
             one natural paragraph that connects his news, the league's format and
             rules, and the roster. Name every player the plan drops or adds. Weigh the

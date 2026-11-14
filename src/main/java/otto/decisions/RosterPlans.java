@@ -37,13 +37,17 @@ import otto.snapshot.RosterSnapshot;
  */
 public final class RosterPlans {
 
-    private static final String HOLD = "hold";
+    /** The id of the plan that keeps the player where he is. */
+    public static final String HOLD = "hold";
+
+    /** The id of the plan that drops the player the decision is about. */
+    public static final String DROP = "drop";
+
     private static final String HOLD_ADD = "hold-add";
     private static final String MOVE_TO_IR = "ir";
     private static final String MOVE_TO_IR_ADD = "ir-add";
     private static final String STAY_ON_IR = "stay-on-ir";
     private static final String ACTIVATE = "activate";
-    private static final String DROP = "drop";
     private static final String TAXI = "taxi";
     private static final String DROP_OTHER = "drop-other-";
     private static final String ACTIVATE_DROP = "activate-drop-";
@@ -81,7 +85,8 @@ public final class RosterPlans {
     }
 
     /**
-     * Builds the plans for a rostered player whose status changed.
+     * Builds the plans for a rostered player whose status changed, or
+     * a healthy one whose role may have slipped.
      *
      * @param playerId the player the decision is about, on the user's
      *        active roster, IR or taxi squad

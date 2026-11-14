@@ -19,6 +19,7 @@ import otto.alerts.AlertPhraser;
 import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
+import otto.alerts.RoleSlipLedger;
 import otto.ask.LeagueWeek;
 import otto.events.Event;
 import otto.events.EventType;
@@ -32,6 +33,10 @@ import otto.sleeper.SourceResult;
  * role tags and a FAAB range each, in the user's chat at 18:00
  * America/Los_Angeles the evening before the league's own claim
  * deadline. On Sleeper's default schedule that is Tuesday evening.
+ *
+ * <p>Role-slip advice held for the board goes out under it, word for
+ * word as it passed its checks, and is forgotten once Telegram accepts
+ * the board.
  */
 @Component
 public class WaiverAlertService {
@@ -41,20 +46,24 @@ public class WaiverAlertService {
 
     private static final LocalTime WAIVER_TIME = LocalTime.of(18, 0);
 
+    private static final String ABOUT_YOUR_ROSTER = "About your roster";
+
     private final WaiverScorer scorer;
     private final AlertPhraser phraser;
     private final MuteStore muteStore;
     private final SettingsStore settings;
     private final AlertDeliveryOutbox outbox;
+    private final RoleSlipLedger roleSlips;
 
     public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
             MuteStore muteStore, SettingsStore settings,
-            AlertDeliveryOutbox outbox) {
+            AlertDeliveryOutbox outbox, RoleSlipLedger roleSlips) {
         this.scorer = scorer;
         this.phraser = phraser;
         this.muteStore = muteStore;
         this.settings = settings;
         this.outbox = outbox;
+        this.roleSlips = roleSlips;
     }
 
     /**
@@ -72,7 +81,7 @@ public class WaiverAlertService {
         if (now.isBefore(due.toInstant())) {
             return Optional.empty();
         }
-        String key = "alert:waiver:" + due.toLocalDate();
+        String key = boardKey(deadline.get());
         if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
@@ -103,6 +112,11 @@ public class WaiverAlertService {
                 .atZone(WAIVER_ZONE);
     }
 
+    /** Returns the Alert key of the waiver board for this claim deadline. */
+    public static String boardKey(ZonedDateTime deadline) {
+        return "alert:waiver:" + eveningBefore(deadline).toLocalDate();
+    }
+
     private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
             WaiverBoard board, Instant now) {
         String claimDay = deadline.getDayOfWeek()
@@ -122,14 +136,32 @@ public class WaiverAlertService {
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
 
-        String basis = phraser.basis(facts, recommendation);
+        List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
+        List<String> heldRuns = held.stream().map(RoleSlipLedger.Held::runId).toList();
+        String basis = phraser.basis(facts, recommendation) + heldRuns;
         String text = outbox.pendingText(List.of(key), basis)
-                .orElseGet(() -> phraser.phrase(facts, recommendation));
+                .orElseGet(() -> withHeldAdvice(phraser.phrase(facts, recommendation), held));
         Map<String, String> recorded = new HashMap<>(facts);
         recorded.put("text", text);
-        return outbox.deliver(text, basis, List.of(
+        if (!heldRuns.isEmpty()) {
+            recorded.put("heldAdviceRuns", String.join(",", heldRuns));
+        }
+        Optional<Event> sent = outbox.deliver(text, basis, List.of(
                         new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded))))
                 .stream().findFirst();
+        if (sent.isPresent() && !heldRuns.isEmpty()) {
+            roleSlips.deliveredInBoard(heldRuns);
+        }
+        return sent;
+    }
+
+    private static String withHeldAdvice(String board, List<RoleSlipLedger.Held> held) {
+        if (held.isEmpty()) {
+            return board;
+        }
+        StringBuilder text = new StringBuilder(board).append("\n\n").append(ABOUT_YOUR_ROSTER);
+        held.forEach(advice -> text.append("\n\n").append(advice.message()));
+        return text.toString();
     }
 
     /** One target, as the outbound message would say it. */
