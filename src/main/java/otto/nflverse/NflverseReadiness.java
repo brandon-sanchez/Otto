@@ -126,6 +126,7 @@ public class NflverseReadiness {
             case Grain.PerTeam<?> _ -> teams.stream()
                     .<Coverage.Unit>map(Coverage.Unit.Team::new)
                     .toList();
+            case Grain.PerWeek<?> _ -> List.<Coverage.Unit>of(new Coverage.Unit.Week(season, week));
         };
         Map<Coverage.Unit, Coverage.UnitRecord> held = coverage.held().stream()
                 .collect(Collectors.toMap(Coverage.UnitRecord::unit, Function.identity()));
