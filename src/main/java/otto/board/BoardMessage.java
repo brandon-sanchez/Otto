@@ -3,6 +3,8 @@ package otto.board;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import otto.directory.DirectoryPlayer;
 
@@ -11,9 +13,12 @@ import otto.directory.DirectoryPlayer;
  * a heading, the opening, at most {@link #SHOWN} ranked entries and a
  * "View all options" line for the rest. A holding board opens with the
  * hold and lists any optional moves under "If you still want to make a
- * move". An entry outside the positions the user asked to focus on
- * carries its reason under "Outside your focus". The text is split
- * between entries into Telegram messages that each stay under
+ * move". Each entry shows the published consensus and Otto's bid when
+ * there are any, and the claims meant to land together are named apart
+ * from the alternatives. When bids are withheld the board says why
+ * under the opening. An entry outside the positions the user asked to
+ * focus on carries its reason under "Outside your focus". The text is
+ * split between entries into Telegram messages that each stay under
  * Telegram's limit.
  */
 final class BoardMessage {
@@ -38,14 +43,19 @@ final class BoardMessage {
      * Returns the board as the Telegram messages it goes out as, in
      * order.
      *
+     * @param leagueBudget the budget each team starts with, which the
+     *        published consensus is converted to; empty when unknown
      * @param notes text written by code rather than the model, such as
      *        which data is missing, placed between the heading and the
      *        model's opening; empty for none
      */
-    static List<String> render(BoardAnswer answer, Map<String, DirectoryPlayer> candidates,
-            List<String> notes) {
+    static List<String> render(BoardAnswer answer, WaiverEvidence.Screen screen,
+            Optional<Integer> leagueBudget, List<String> notes) {
         List<String> blocks = new ArrayList<>();
         List<String> opening = new ArrayList<>(notes);
+        if (screen.bidding().policy() instanceof BidPolicy.Withheld withheld) {
+            opening.add("No dollar bids this round: " + withheld.reason() + ".");
+        }
         opening.add(answer.opening().strip());
         blocks.add(HEADING + BREAK + String.join(BREAK, opening));
         List<BoardAnswer.Entry> entries = answer.entries();
@@ -53,8 +63,9 @@ final class BoardMessage {
             blocks.add(STILL_A_MOVE);
         }
         for (int index = 0; index < Math.min(SHOWN, entries.size()); index++) {
-            blocks.add((index + 1) + ". " + entry(entries.get(index), candidates));
+            blocks.add((index + 1) + ". " + entry(entries.get(index), screen, leagueBudget));
         }
+        together(answer, screen).ifPresent(blocks::add);
         if (entries.size() > SHOWN) {
             int more = entries.size() - SHOWN;
             blocks.add("%s: %d more player%s on the full board.".formatted(VIEW_ALL, more,
@@ -72,17 +83,73 @@ final class BoardMessage {
     static String checkedText(BoardAnswer answer, Map<String, DirectoryPlayer> candidates) {
         StringBuilder text = new StringBuilder(answer.opening().strip());
         for (BoardAnswer.Entry entry : answer.entries()) {
-            text.append(BREAK).append(entry(entry, candidates));
+            text.append(BREAK).append(heading(entry, candidates)).append('\n')
+                    .append(String.join("\n", modelLines(entry)));
         }
         return text.toString();
     }
 
-    private static String entry(BoardAnswer.Entry entry, Map<String, DirectoryPlayer> candidates) {
+    private static String entry(BoardAnswer.Entry entry, WaiverEvidence.Screen screen,
+            Optional<Integer> leagueBudget) {
+        List<String> lines = new ArrayList<>();
+        lines.add(heading(entry, screen.candidates()));
+        Optional.ofNullable(screen.bidding().consensus().get(entry.playerId()))
+                .flatMap(consensus -> consensus.line(leagueBudget))
+                .ifPresent(lines::add);
+        entry.bid().ifPresent(bid -> lines.add("Otto: bid $%d · Suggested range $%d–$%d."
+                .formatted((int) bid.target(), (int) bid.low(), (int) bid.high())));
+        lines.addAll(modelLines(entry));
+        entry.drop().ifPresent(drop -> lines.add("Drop %s to make room.".formatted(
+                screen.user().playerNames().getOrDefault(drop, drop))));
+        return String.join("\n", lines);
+    }
+
+    private static String heading(BoardAnswer.Entry entry,
+            Map<String, DirectoryPlayer> candidates) {
         DirectoryPlayer player = candidates.get(entry.playerId());
-        String text = "%s · %s, %s\n%s".formatted(player.fullName(), player.position(),
-                player.team(), entry.reasoning().strip());
-        return entry.outsideFocus().isBlank() ? text
-                : text + "\n" + OUTSIDE_FOCUS + entry.outsideFocus().strip();
+        return "%s · %s, %s".formatted(player.fullName(), player.position(), player.team());
+    }
+
+    /** Returns what the model wrote for one entry, one paragraph per line. */
+    private static List<String> modelLines(BoardAnswer.Entry entry) {
+        List<String> lines = new ArrayList<>();
+        lines.add(entry.reasoning().strip());
+        if (!entry.outsideFocus().isBlank()) {
+            lines.add(OUTSIDE_FOCUS + entry.outsideFocus().strip());
+        }
+        if (!entry.limit().isBlank()) {
+            lines.add(entry.limit().strip());
+        }
+        return lines;
+    }
+
+    /**
+     * Names the claims meant to land together and, when bids are
+     * verified, what they cost together at the top of their ranges.
+     */
+    private static Optional<String> together(BoardAnswer answer, WaiverEvidence.Screen screen) {
+        List<BoardAnswer.Entry> together = answer.picks().stream()
+                .filter(entry -> answer.together().contains(entry.playerId()))
+                .toList();
+        if (together.isEmpty()) {
+            return Optional.empty();
+        }
+        String names = together.stream()
+                .map(entry -> screen.candidates().get(entry.playerId()).fullName())
+                .collect(Collectors.joining(" and "));
+        StringBuilder text = new StringBuilder("Claim together: " + names);
+        if (screen.bidding().policy() instanceof BidPolicy.Verified verified) {
+            int highs = together.stream()
+                    .mapToInt(entry -> entry.bid().map(bid -> (int) bid.high()).orElse(0))
+                    .sum();
+            text.append(", $%d at the top of every range, within the $%d you have left"
+                    .formatted(highs, verified.remaining()));
+        }
+        text.append('.');
+        if (answer.picks().stream().limit(SHOWN).count() > together.size()) {
+            text.append(" The other picks are alternatives for the same roster spot.");
+        }
+        return Optional.of(text.toString());
     }
 
     private static List<String> pack(List<String> blocks) {

@@ -58,7 +58,8 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
               "hold": false,
               "opening": "%s",
               "picks": [{"playerId": "10001", "reasoning": "Bucky Irving played 71%% of \
-            offensive snaps in his latest game, and his coach named him the starter."}],
+            offensive snaps in his latest game, and his coach named him the starter.", \
+            "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}],
               "optional": [],
               "claims": [
                 {"text": "Bucky Irving played 71%% of offensive snaps", "evidence": ["usage-10001"]}
@@ -190,7 +191,7 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         SleeperStubs.stubTrending(sleeper, "sleeper/trending-add-unbacked.json", "trending-v2");
         String popular = """
                 {"playerId": "20103", "reasoning": "Wide Receiver Three is the most added \
-                player on Sleeper."}""";
+                player on Sleeper.", "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
         OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST,
                 BOARD.replace("\"optional\": []", "\"optional\": [" + popular + "]"), BOARD);
 

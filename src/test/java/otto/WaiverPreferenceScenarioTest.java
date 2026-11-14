@@ -54,16 +54,19 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
 
     private static final String OTTON = """
             {"playerId": "10003", "reasoning": "Cade Otton is the tight end with the most \
-            room to grow on this board.", "outsideFocus": ""}""";
+            room to grow on this board.", "outsideFocus": "", \
+            "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
 
     private static final String IRVING_OVER_THE_FOCUS = """
             {"playerId": "10001", "reasoning": "Bucky Irving played 71% of offensive snaps in \
             his latest game.", "outsideFocus": "His coach named him the starter, and no tight \
-            end on the board has a role that size."}""";
+            end on the board has a role that size.", \
+            "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
 
     private static final String IRVING_UNEXPLAINED = """
             {"playerId": "10001", "reasoning": "Bucky Irving played 71% of offensive snaps in \
-            his latest game.", "outsideFocus": ""}""";
+            his latest game.", "outsideFocus": "", \
+            "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
 
     private static final String OPENING = "A pickup stands out this week.";
 
@@ -168,7 +171,8 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
                         .contains("Bucky Irving", "outside the focus"));
         assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
         assertThat(String.join("\n\n", ((Outcome.DryRun) record.outcome()).messages()))
-                .contains("1. Bucky Irving · RB, TB\nBucky Irving played 71% of offensive snaps "
+                .contains("1. Bucky Irving · RB, TB\nOtto: bid $2 · Suggested range $1–$3.\n"
+                        + "Bucky Irving played 71% of offensive snaps "
                         + "in his latest game.\nOutside your focus: His coach named him the "
                         + "starter, and no tight end on the board has a role that size.")
                 .contains("2. Cade Otton · TE, TB");

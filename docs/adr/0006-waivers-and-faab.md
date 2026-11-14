@@ -22,6 +22,14 @@ beside the scored one, recorded and not sent. The section "The
 evidence model" at the end describes it. Until it is sent, every other
 section still describes the board the user receives.
 
+Amended (2026-11-14, issue #123): the evidence-based board bids with a
+range and a target the model chooses inside bounds code verifies. The
+section "The stream cap holds, and the slot bump lands on top of it" is
+superseded for that board, and the score-to-share FAAB bands it orders
+are never its fallback. The section "Bids are the model's, inside
+bounds code verifies" at the end describes what replaces them. The
+scored board keeps its bands while it is the one sent.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -431,6 +439,10 @@ the chat.
 
 ## The stream cap holds, and the slot bump lands on top of it
 
+Superseded (#123) for the evidence-based board by "Bids are the model's,
+inside bounds code verifies". It still describes the scored board's
+bands.
+
 The FAAB adjustments are ordered, and the order is the argument. A
 breakout moves up one band. A stream is then capped at 10% of what is
 left. The five-point bump for a pickup that fills a slot the user
@@ -741,8 +753,8 @@ most five ranked entries. A "View all options" line points to the
 rest, and their reasoning is checked too. A holding board lists its
 speculative moves under "If you still want to make a move". The text
 splits between entries, so each Telegram message stays under 4,096
-characters. Bids are not part of this board yet, so its message states
-no dollar amount.
+characters. Each entry shows the published consensus when there is
+one and Otto's bid, as described in the next section.
 
 ### One record per claim round
 
@@ -822,3 +834,61 @@ have landed. The comparison is stored once as the baselines' outcome
 record, under `outcomes/`, and is never revised. The pass margins
 between the strategies are set after the dry run, once the week-to-week
 noise is known.
+
+## Bids are the model's, inside bounds code verifies (#123)
+
+The scored board reads a bid off a fixed share of the budget for each
+score band. The evidence-based board does not use those bands, even as
+a fallback. The model chooses each pick's range and target from the
+player's ceiling, how long his value lasts, scarcity, the user's lineup
+gain, the cost of the drop and the competition, and says why the top
+of the range is where to stop. Code decides only what a legal bid is.
+
+### Code verifies the bounds, and an unknown budget states no dollars
+
+FAAB is read from `waiver_type == 2`. In a FAAB league the budget left
+is the league's `waiver_budget` less the user's `waiver_budget_used`,
+and the minimum is `waiver_bid_min`. Sleeper takes whole dollars, so
+bids move in steps of $1. The user may set the most he will bid on one
+player by chat (`max_bid`). Every bid must be whole dollars, with
+`minimum <= low <= target <= high`, and `high` no more than the budget
+left or the user's limit.
+
+When Sleeper does not say whether the league bids FAAB, or its budget
+or minimum cannot be read, bids are withheld: no entry carries a bid,
+the message says why under the opening, and the advice check refuses
+any dollar amount. A league that claims by priority carries no bids
+and says nothing about money. A verified budget of $0 is different
+from an unknown one: with a $0 minimum, a $0 bid is legal and is
+shown.
+
+### The league's own bidding comes first
+
+The model reads the competition in the league before anything
+published: every rival's budget left, and every FAAB claim this
+season, week by week, with the lost claims beside the winning one. A
+lost claim is the only record of what a rival was willing to pay. The
+history lists the 30 most recently settled claimed players.
+
+### A published consensus needs three independent sources
+
+Published suggestions are read from the original reports in the
+research cache. Each credited source counts once, by its newest report,
+so syndicated copies never add weight. A suggestion is comparable only
+when its denominator is known: a share of the budget, or dollars of a
+stated budget. A range counts by its midpoint. The average of the
+comparable suggestions is shown, converted to the league's budget, only
+when at least three exist. One or two are shown as limited evidence.
+Dollars whose budget the source does not state are listed and never
+converted.
+
+### Claims placed together stay affordable together
+
+A pick can name the rostered player it replaces. When the user's
+active roster is full, every pick must name one, and the drop must be
+on the active roster, not on IR or the taxi squad. The model lists the
+picks meant to land together. They must drop different players, fit
+the open spots plus those drops, and stay affordable together at the
+top of every range, so one higher bid cannot break the rest of the
+plan. The message names them apart from the alternatives, which
+compete for the same roster spot.
