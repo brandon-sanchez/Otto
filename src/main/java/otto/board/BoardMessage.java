@@ -16,8 +16,10 @@ import otto.directory.DirectoryPlayer;
  * move". Each entry shows the published consensus and Otto's bid when
  * there are any, and the claims meant to land together are named apart
  * from the alternatives. When bids are withheld the board says why
- * under the opening. The text is split between entries into Telegram
- * messages that each stay under Telegram's limit.
+ * under the opening. An entry outside the positions the user asked to
+ * focus on carries its reason under "Outside your focus". The text is
+ * split between entries into Telegram messages that each stay under
+ * Telegram's limit.
  */
 final class BoardMessage {
 
@@ -30,6 +32,7 @@ final class BoardMessage {
     static final String HEADING = "Your waiver options";
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
+    static final String OUTSIDE_FOCUS = "Outside your focus: ";
 
     private static final String BREAK = "\n\n";
 
@@ -37,19 +40,24 @@ final class BoardMessage {
     }
 
     /**
-     * Returns the board as the Telegram messages it goes out as, in order.
+     * Returns the board as the Telegram messages it goes out as, in
+     * order.
      *
      * @param leagueBudget the budget each team starts with, which the
      *        published consensus is converted to; empty when unknown
+     * @param notes text written by code rather than the model, such as
+     *        which data is missing, placed between the heading and the
+     *        model's opening; empty for none
      */
     static List<String> render(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> leagueBudget) {
+            Optional<Integer> leagueBudget, List<String> notes) {
         List<String> blocks = new ArrayList<>();
-        String opening = HEADING + BREAK + answer.opening().strip();
+        List<String> opening = new ArrayList<>(notes);
         if (screen.bidding().policy() instanceof BidPolicy.Withheld withheld) {
-            opening += BREAK + "No dollar bids this round: " + withheld.reason() + ".";
+            opening.add("No dollar bids this round: " + withheld.reason() + ".");
         }
-        blocks.add(opening);
+        opening.add(answer.opening().strip());
+        blocks.add(HEADING + BREAK + String.join(BREAK, opening));
         List<BoardAnswer.Entry> entries = answer.entries();
         if (answer.hold() && !entries.isEmpty()) {
             blocks.add(STILL_A_MOVE);
@@ -76,10 +84,7 @@ final class BoardMessage {
         StringBuilder text = new StringBuilder(answer.opening().strip());
         for (BoardAnswer.Entry entry : answer.entries()) {
             text.append(BREAK).append(heading(entry, candidates)).append('\n')
-                    .append(entry.reasoning().strip());
-            if (!entry.limit().isBlank()) {
-                text.append('\n').append(entry.limit().strip());
-            }
+                    .append(String.join("\n", modelLines(entry)));
         }
         return text.toString();
     }
@@ -93,10 +98,7 @@ final class BoardMessage {
                 .ifPresent(lines::add);
         entry.bid().ifPresent(bid -> lines.add("Otto: bid $%d · Suggested range $%d–$%d."
                 .formatted((int) bid.target(), (int) bid.low(), (int) bid.high())));
-        lines.add(entry.reasoning().strip());
-        if (!entry.limit().isBlank()) {
-            lines.add(entry.limit().strip());
-        }
+        lines.addAll(modelLines(entry));
         entry.drop().ifPresent(drop -> lines.add("Drop %s to make room.".formatted(
                 screen.user().playerNames().getOrDefault(drop, drop))));
         return String.join("\n", lines);
@@ -106,6 +108,19 @@ final class BoardMessage {
             Map<String, DirectoryPlayer> candidates) {
         DirectoryPlayer player = candidates.get(entry.playerId());
         return "%s · %s, %s".formatted(player.fullName(), player.position(), player.team());
+    }
+
+    /** Returns what the model wrote for one entry, one paragraph per line. */
+    private static List<String> modelLines(BoardAnswer.Entry entry) {
+        List<String> lines = new ArrayList<>();
+        lines.add(entry.reasoning().strip());
+        if (!entry.outsideFocus().isBlank()) {
+            lines.add(OUTSIDE_FOCUS + entry.outsideFocus().strip());
+        }
+        if (!entry.limit().isBlank()) {
+            lines.add(entry.limit().strip());
+        }
+        return lines;
     }
 
     /**

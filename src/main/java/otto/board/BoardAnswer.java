@@ -40,6 +40,9 @@ public record BoardAnswer(
     /**
      * One player on the board and the model's reasoning for him.
      *
+     * @param outsideFocus why he beats the players at the positions the
+     *        user asked to focus on, for a player outside them; empty
+     *        otherwise
      * @param bid the FAAB bid, empty when the model gave none or gave one
      *        that is not three numbers
      * @param limit why the top of the range is where the user should
@@ -47,8 +50,8 @@ public record BoardAnswer(
      * @param drop the id of the rostered player the claim replaces,
      *        empty when an open roster spot takes him
      */
-    public record Entry(String playerId, String reasoning, Optional<Bid> bid, String limit,
-            Optional<String> drop) {
+    public record Entry(String playerId, String reasoning, String outsideFocus,
+            Optional<Bid> bid, String limit, Optional<String> drop) {
     }
 
     /**

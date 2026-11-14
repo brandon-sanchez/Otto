@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +26,9 @@ import otto.storage.OttoJson;
  * board's text goes through every {@link AdviceCheck} rule, and the
  * board itself must recommend only screened free agents, each once,
  * with no score, no "Cons:" list and nothing longer than an entry may
- * be, and its bids and drops must pass {@link BidCheck}.
+ * be. When the user asked to focus the round on some positions, every
+ * entry outside them must say why it beats them, and no other entry may.
+ * Its bids and drops must pass {@link BidCheck}.
  */
 final class BoardForm implements AdviceForm<BoardAnswer> {
 
@@ -80,11 +83,19 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             their ranges. Every pick not in "together" is an alternative for the same
             roster spot.
 
+            When the evidence has a "preference" item, the user asked for this claim
+            round's board in his own words, quoted there. For a focus, rank the best
+            players at the focused positions first, but still rank a player at another
+            position when he is clearly the better pickup, and give each such player an
+            "outsideFocus" of one or two sentences on why he beats the options at the
+            focused positions. Leave "outsideFocus" empty for every other entry.
+
             Answer with only this JSON object:
             {
               "hold": false,
               "opening": "the board's first paragraph",
               "picks": [{"playerId": "<candidate playerId>", "reasoning": "<why>",
+                         "outsideFocus": "",
                          "bid": {"low": 7, "target": 9, "high": 12},
                          "limit": "<why the high is where to stop>",
                          "drop": "<rostered playerId, or null for an open spot>"}],
@@ -102,12 +113,19 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
 
     private final AdviceCheck check;
     private final Map<String, DirectoryPlayer> candidates;
+    private final Set<String> focus;
     private final BidCheck bids;
 
-    /** @param candidates the screened pool, the only players the board may recommend */
-    BoardForm(AdviceCheck check, Map<String, DirectoryPlayer> candidates, BidCheck bids) {
+    /**
+     * @param candidates the screened pool, the only players the board may recommend
+     * @param focus the positions the user asked this round to focus on;
+     *        empty when he asked for no focus
+     */
+    BoardForm(AdviceCheck check, Map<String, DirectoryPlayer> candidates, Set<String> focus,
+            BidCheck bids) {
         this.check = check;
         this.candidates = Map.copyOf(candidates);
+        this.focus = Set.copyOf(focus);
         this.bids = bids;
     }
 
@@ -168,6 +186,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
                 failures.add("%s appears on the board more than once."
                         .formatted(candidates.get(entry.playerId()).fullName()));
             }
+            failures.addAll(checkFocus(entry));
             if (entry.reasoning().isBlank()) {
                 failures.add("Every entry needs its reasoning.");
             } else if (entry.reasoning().length() > WaiverEvidence.PART_MAX_LENGTH) {
@@ -177,6 +196,34 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             }
         }
         return failures;
+    }
+
+    private List<String> checkFocus(BoardAnswer.Entry entry) {
+        DirectoryPlayer player = candidates.get(entry.playerId());
+        if (player == null) {
+            return List.of();
+        }
+        boolean explained = !entry.outsideFocus().isBlank();
+        if (focus.isEmpty()) {
+            return explained ? List.of("There is no focus this round: leave \"outsideFocus\" "
+                    + "empty for %s.".formatted(player.fullName())) : List.of();
+        }
+        boolean outside = !focus.contains(player.position());
+        if (outside && !explained) {
+            return List.of("%s is outside the focus on %s: say in \"outsideFocus\" why he "
+                    .formatted(player.fullName(), String.join(" and ", new TreeSet<>(focus)))
+                    + "beats the options there, or leave him off.");
+        }
+        if (!outside && explained) {
+            return List.of("%s plays a focused position: leave his \"outsideFocus\" empty."
+                    .formatted(player.fullName()));
+        }
+        if (entry.outsideFocus().length() > WaiverEvidence.PART_MAX_LENGTH) {
+            return List.of("The \"outsideFocus\" for %s is %d characters; the limit is %d."
+                    .formatted(player.fullName(), entry.outsideFocus().length(),
+                            WaiverEvidence.PART_MAX_LENGTH));
+        }
+        return List.of();
     }
 
     private static List<BoardAnswer.Entry> concat(List<BoardAnswer.Entry> first,
@@ -219,7 +266,8 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         List<BoardAnswer.Entry> entries = new ArrayList<>();
         array.forEach(entry -> entries.add(new BoardAnswer.Entry(
                 entry.path("playerId").asText(""), entry.path("reasoning").asText(""),
-                bid(entry.path("bid")), entry.path("limit").asText(""),
+                entry.path("outsideFocus").asText(""), bid(entry.path("bid")),
+                entry.path("limit").asText(""),
                 Optional.of(entry.path("drop"))
                         .filter(drop -> drop.isTextual() && !drop.asText().isBlank())
                         .map(JsonNode::asText))));

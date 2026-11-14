@@ -126,7 +126,7 @@ class FaabBidScenarioTest extends WireSeamTest {
     private void tuesdayEvening(Runnable leagueVariant, String... answers) {
         SleeperStubs.waiverWeek(sleeper);
         leagueVariant.run();
-        NflverseStubs.waiverWeekWithThePlayerRegister(nflverse);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
         checkRunner.runCheck();
