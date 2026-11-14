@@ -178,14 +178,12 @@ class OttoStackTest {
                 .hasSize(2);
     }
 
-    /**
-     * The retired alarm forwarder's log group stays until its last
-     * entries expire. Dropping it sooner deletes them with it.
-     */
     @Test
-    void theRetiredForwarderLogGroupIsKeptUntilItsEntriesExpire() {
+    void onlyTheTwoApplicationFunctionsKeepALogGroup() {
         assertThat(template.findResources("AWS::Logs::LogGroup").keySet())
-                .contains("AlarmForwarderLogsF0CE99FC");
+                .as("the scheduled function's and the webhook's, and no retired forwarder's")
+                .hasSize(2)
+                .noneMatch(id -> id.startsWith("AlarmForwarderLogs"));
     }
 
     @Test
@@ -207,7 +205,11 @@ class OttoStackTest {
                 "Properties", Match.objectLike(Map.of("Protocol", "lambda"))))))
                 .as("no function subscribes to the alarm topic")
                 .isEmpty();
-        assertThat(template.findResources("AWS::Lambda::Function", Match.objectLike(Map.of(
+        assertThat(template.findResources("AWS::Lambda::Permission", Match.objectLike(Map.of(
+                "Properties", Match.objectLike(Map.of("Principal", "sns.amazonaws.com"))))))
+                .as("SNS may invoke no function")
+                .isEmpty();
+        assertThat(template.findResources("AWS::Lambda::Function",Match.objectLike(Map.of(
                 "Properties", Match.objectLike(
                         Map.of("Handler", "otto.aws.AlarmForwarderHandler"))))))
                 .isEmpty();
