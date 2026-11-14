@@ -235,9 +235,19 @@ public class SleeperAdapter {
     public record LeagueUser(String userId, String displayName) {
     }
 
-    /** One item from a player's news feed, as Sleeper publishes it. */
+    /**
+     * One item from a player's news feed, as Sleeper publishes it.
+     *
+     * @param source the outlet Sleeper credits, such as {@code rotowire}
+     * @param sourceKey that outlet's own id for the story, Sleeper's
+     *        {@code source_key}; the research cache reads the same id with
+     *        different words as a rewrite of one story. Null when Sleeper
+     *        gives none.
+     * @param published null when Sleeper gives no publication time
+     * @param url null when the item links nowhere
+     */
     public record NewsItem(String headline, String detail, String analysis, String source,
-            Instant published, String url) {
+            String sourceKey, Instant published, String url) {
     }
 
     /**
@@ -474,6 +484,7 @@ public class SleeperAdapter {
                         metadata.path("description").asText(null),
                         metadata.path("analysis").asText(null),
                         item.path("source").asText(null),
+                        item.path("source_key").asText(null),
                         published != null && published.isIntegralNumber()
                                 ? Instant.ofEpochMilli(published.asLong())
                                 : null,

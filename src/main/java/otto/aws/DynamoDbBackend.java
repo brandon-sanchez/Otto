@@ -13,7 +13,8 @@ import otto.storage.DocumentBackend;
 
 /**
  * The small records: Settings, the Watchlist, Mutes, the conversation,
- * the last Check, the Alert id sequence and Alert delivery records.
+ * the last Check, the Alert id sequence, Alert delivery records and
+ * the research cache.
  * Reads are
  * strongly consistent, because the webhook writes what the next Check
  * reads a moment later and an eventually consistent read could answer

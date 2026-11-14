@@ -11,18 +11,20 @@ import otto.check.CheckResult;
 import otto.check.CheckRunner;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
+import otto.research.ResearchDiscovery;
 import otto.storage.JsonStore;
 
 /**
- * The scheduled entry point. Three EventBridge schedules reach it and
+ * The scheduled entry point. Four EventBridge schedules reach it and
  * name the job they want: the 1-minute Check, the hourly nflverse
- * timestamp check, and the nightly defense-versus-position build. The
- * Lock Ladder, the weekly waiver Alert and the 20-minute Done
- * follow-up need no schedule of their own - they ride the 1-minute
- * loop and the Event Log.
+ * timestamp check, the nightly defense-versus-position build, and the
+ * research discovery run every few minutes. The Lock Ladder, the
+ * weekly waiver Alert and the 20-minute Done follow-up need no
+ * schedule of their own - they ride the 1-minute loop and the Event
+ * Log.
  *
- * <p>One function serves all three, so one warm context serves all
- * three. Every run flushes the storage batch, whether or not it
+ * <p>One function serves all four, so one warm context serves all
+ * four. Every run flushes the storage batch, whether or not it
  * finished, so a run that half succeeded still keeps what it learned.
  */
 public class ScheduledHandler implements RequestHandler<Map<String, Object>, String> {
@@ -61,6 +63,7 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
             case CHECK -> check();
             case NFLVERSE_FEEDS -> nflverseFeeds();
             case DEFENSE_VERSUS_POSITION -> defenseVersusPosition();
+            case RESEARCH -> research();
         };
     }
 
@@ -81,5 +84,9 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
     private String defenseVersusPosition() {
         OttoRuntime.bean(DefenseVersusPositionBuilder.class).build();
         return "defense-versus-position built";
+    }
+
+    private String research() {
+        return "research: " + OttoRuntime.bean(ResearchDiscovery.class).discover();
     }
 }

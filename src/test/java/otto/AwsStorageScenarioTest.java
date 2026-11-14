@@ -120,6 +120,17 @@ class AwsStorageScenarioTest {
     }
 
     @Test
+    void theResearchCacheIsKeptInDynamoDb() {
+        store.write("research-player-5850", Map.of("playerId", "5850"));
+        store.write("research-index", Map.of("lastRead", Map.of()));
+        store.flush();
+
+        assertThat(dynamo.holds("research-player-5850")).isTrue();
+        assertThat(dynamo.holds("research-index")).isTrue();
+        assertThat(s3.writes()).isZero();
+    }
+
+    @Test
     void theOtherEntryPointsWriteIsKeptWhenThisOneLands() {
         store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
         store.flush();

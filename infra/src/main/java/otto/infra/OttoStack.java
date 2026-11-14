@@ -50,7 +50,7 @@ import software.constructs.Construct;
  * The whole assistant, in one stack.
  *
  * <p>Two entry points carry the app: a scheduled function that runs
- * the Check and the two nflverse jobs, and a webhook function behind a
+ * the Check and the other scheduled jobs, and a webhook function behind a
  * Lambda function URL that Telegram posts to. Both are the same
  * deployable with a different handler, and both run on a published
  * version through an alias, because SnapStart restores versions and
@@ -294,7 +294,7 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * The three schedules the spec names. Everything else the assistant
+     * The four schedules. Everything else the assistant
      * does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
      * 20-minute Done follow-up - derives from the 1-minute loop and the
      * Event Log, and has no schedule here to drift out of step with it.
@@ -315,6 +315,10 @@ public class OttoStack extends Stack {
         // After the last game of any night and before the user's morning.
         schedule("DefenseVersusPositionSchedule", target, invoker, "cron(30 3 * * ? *)",
                 timeZone, "defense-versus-position", 5);
+        // A lost research run is caught up by the next one ten minutes
+        // later, least recently read players first, so it does not retry.
+        schedule("ResearchSchedule", target, invoker, "rate(10 minutes)", null,
+                "research", 0);
     }
 
     private void schedule(String id, Alias target, Role invoker, String expression,
