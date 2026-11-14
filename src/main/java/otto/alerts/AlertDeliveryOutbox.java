@@ -44,10 +44,23 @@ public class AlertDeliveryOutbox {
     private record KeyPointer(long alertId) {
     }
 
+    /**
+     * One Alert's delivery state.
+     *
+     * @param text every part joined, which a retry's text is compared with
+     * @param parts the Telegram messages the Alert goes out as, in order,
+     *        with the buttons under the last; null in a stored delivery
+     *        written without parts, which goes out as its text alone
+     * @param partsSent how many leading parts Telegram has accepted, so a
+     *        retry never sends a part twice
+     * @param viewAllOptions whether a View all options button joins the
+     *        Done, Ignore and Mute buttons
+     */
     private record Delivery(long alertId, Status status, String text, String basis,
-            List<Event> events) {
+            List<Event> events, List<String> parts, int partsSent, boolean viewAllOptions) {
         private Delivery {
             events = List.copyOf(events);
+            parts = parts == null ? List.of(text) : List.copyOf(parts);
         }
 
         boolean covers(String key) {
@@ -55,7 +68,13 @@ public class AlertDeliveryOutbox {
         }
 
         Delivery with(Status next) {
-            return new Delivery(alertId, next, text, basis, events);
+            return new Delivery(alertId, next, text, basis, events, parts, partsSent,
+                    viewAllOptions);
+        }
+
+        Delivery sentThrough(int sent) {
+            return new Delivery(alertId, status, text, basis, events, parts, sent,
+                    viewAllOptions);
         }
     }
 
@@ -103,7 +122,26 @@ public class AlertDeliveryOutbox {
      * @return the events appended to the Event Log, empty when Telegram
      *         did not accept the message
      */
-    public synchronized List<Event> deliver(String text, String basis, List<Event> templates) {
+    public List<Event> deliver(String text, String basis, List<Event> templates) {
+        return deliver(List.of(text), false, basis, templates);
+    }
+
+    /**
+     * Sends one Alert as several Telegram messages, in order, with the
+     * buttons under the last, and records it as
+     * {@link #deliver(String, String, List)} does. A retry resumes after
+     * the last part Telegram accepted, as long as those parts are
+     * unchanged; a part that changed sends the Alert again from the top.
+     *
+     * <p>Side effects: a store write after each part Telegram accepts.
+     *
+     * @param parts the messages, each inside Telegram's length limit
+     * @param viewAllOptions whether the buttons include View all options,
+     *        whose tap arrives as "all:" and the Alert id
+     */
+    public synchronized List<Event> deliver(List<String> parts, boolean viewAllOptions,
+            String basis, List<Event> templates) {
+        String text = String.join("\n\n", parts);
         List<Delivery> waiting = pending(templates.stream().map(Event::key).toList());
         long alertId = waiting.isEmpty() ? ids.next() : waiting.getFirst().alertId();
         waiting.stream().skip(1).forEach(superseded -> cancel(superseded,
@@ -111,7 +149,9 @@ public class AlertDeliveryOutbox {
         List<Event> events = templates.stream()
                 .map(event -> withAlertId(event, alertId))
                 .toList();
-        Delivery delivery = new Delivery(alertId, Status.PENDING, text, basis, events);
+        int partsSent = waiting.isEmpty() ? 0 : unchangedPartsSent(waiting.getFirst(), parts);
+        Delivery delivery = new Delivery(alertId, Status.PENDING, text, basis, events, parts,
+                partsSent, viewAllOptions);
         if (!waiting.isEmpty()) {
             Delivery earlier = waiting.getFirst();
             log.info("Re-checked delayed Alert {}: {}", alertId,
@@ -172,11 +212,27 @@ public class AlertDeliveryOutbox {
         }
     }
 
+    private static int unchangedPartsSent(Delivery earlier, List<String> parts) {
+        int sent = earlier.partsSent();
+        return sent < parts.size()
+                && earlier.parts().subList(0, sent).equals(parts.subList(0, sent)) ? sent : 0;
+    }
+
     private List<Event> attempt(Delivery delivery) {
-        if (!telegram.sendAlert(delivery.text(), delivery.alertId())) {
+        Delivery progress = delivery;
+        int last = delivery.parts().size() - 1;
+        while (progress.partsSent() < last) {
+            if (!telegram.sendMessage(progress.parts().get(progress.partsSent()))) {
+                return List.of();
+            }
+            progress = progress.sentThrough(progress.partsSent() + 1);
+            store.write(ID_PREFIX + progress.alertId(), progress);
+        }
+        if (!telegram.sendAlert(progress.parts().get(last), progress.alertId(),
+                progress.viewAllOptions())) {
             return List.of();
         }
-        Delivery sent = delivery.with(Status.SENT);
+        Delivery sent = progress.sentThrough(last + 1).with(Status.SENT);
         store.write(ID_PREFIX + delivery.alertId(), sent);
         return sent.events().stream().filter(eventLog::append).toList();
     }
