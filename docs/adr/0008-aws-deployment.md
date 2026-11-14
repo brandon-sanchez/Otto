@@ -15,7 +15,7 @@ deciding happens.
 ## Two entry points, one deployable
 
 The whole app deploys as one zip and is invoked through two handlers: a
-scheduled function that runs the Check and the two nflverse jobs, and a
+scheduled function that runs the Check and the other scheduled jobs, and a
 webhook function that Telegram posts to. One artifact means one build,
 one set of dependencies, and one place a behavior can live.
 
@@ -45,12 +45,12 @@ configure. The URL's auth type is NONE because Telegram signs nothing
 AWS can check; the guard is the secret token Telegram echoes, which
 `TelegramWebhook` already checks in constant time.
 
-## Three schedules, and no schedule for anything derived
+## Four schedules, and no schedule for anything derived
 
-EventBridge Scheduler holds exactly what the spec names: the 1-minute
-Check, the hourly nflverse timestamp check, and the nightly
-defense-versus-position build. Each names its job in the payload, and
-`ScheduledJob` refuses a name this build does not have rather than
+EventBridge Scheduler holds four jobs: the 1-minute Check, the hourly
+nflverse timestamp check, the nightly defense-versus-position build,
+and research discovery every 10 minutes. Each names its job in the
+payload, and `ScheduledJob` refuses a name this build does not have rather than
 falling back to a Check - a schedule naming a job that is gone is a
 deployment mistake, and running the wrong job would hide it.
 
@@ -63,7 +63,10 @@ The scheduled function is limited to one run at a time. Two overlapping
 runs would read the same stored documents and each write what the other
 had not seen. The Check does not retry - the next tick is one minute
 away and is the retry. The nflverse jobs do retry, because their next
-tick is an hour or a day away.
+tick is an hour or a day away. Research discovery does not retry
+either: it reads at most 40 news feeds a run, least recently read
+first, so a lost run is caught up by the next one and no run holds the
+Check up for more than a few seconds.
 
 ## Storage splits by how a document grows
 
@@ -72,7 +75,9 @@ table for small records, with a minute of writes batched into one
 object. `DocumentPlacement` is the rule: small means a document whose size is
 settled by its shape and stays well inside DynamoDB's 400 KB item limit
 however long the season runs - Settings, the Watchlist, Mutes, the
-conversation and three markers. Big means everything else: the
+conversation, three markers, Alert delivery records, and the research
+cache (one record per player, capped at 40 stories, plus the index of
+when each player's feed was last read). Big means everything else: the
 Snapshots, the Player Directory, the nflverse feeds,
 defense-versus-position and the Event Log.
 
