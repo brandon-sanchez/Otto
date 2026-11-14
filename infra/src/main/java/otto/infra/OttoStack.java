@@ -159,9 +159,6 @@ public class OttoStack extends Stack {
                 .authType(FunctionUrlAuthType.NONE)
                 .build());
 
-        // The retired alarm forwarder's logs, kept until their entries
-        // expire. A later change removes them.
-        logGroup("AlarmForwarderLogs");
         Topic alarms = alarmTopic(alertEmail);
         errorAlarm(alarms, Map.of(
                 "Scheduled", scheduledLogs,
