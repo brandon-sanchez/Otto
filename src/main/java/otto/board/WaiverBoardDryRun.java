@@ -2,10 +2,14 @@ package otto.board;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,6 +49,10 @@ import otto.waivers.WaiverAlertService;
  * reading anything else, and a retried save converges on one record. A
  * round whose screening cannot start, for want of a directory or the
  * user's roster, records nothing and is tried again on the next Check.
+ *
+ * <p>The board follows the {@link WaiverPreference} set for its own
+ * claim round and no other, and the Decision Record keeps it beside the
+ * Settings as the run's preferences.
  */
 @Component
 public class WaiverBoardDryRun {
@@ -59,17 +67,20 @@ public class WaiverBoardDryRun {
     private final AdviceCheck check;
     private final DecisionRecords records;
     private final SettingsStore settings;
+    private final WaiverPreferences preferences;
     private final String userId;
     private final String model;
 
     public WaiverBoardDryRun(WaiverEvidence evidence, AdviceWriter writer, AdviceCheck check,
-            DecisionRecords records, SettingsStore settings, OttoProperties properties,
+            DecisionRecords records, SettingsStore settings, WaiverPreferences preferences,
+            OttoProperties properties,
             @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
         this.evidence = evidence;
         this.writer = writer;
         this.check = check;
         this.records = records;
         this.settings = settings;
+        this.preferences = preferences;
         this.userId = properties.userId();
         this.model = model;
     }
@@ -105,21 +116,25 @@ public class WaiverBoardDryRun {
         if (records.read(userId, leagueId, runId).isPresent()) {
             return Optional.empty();
         }
-        switch (evidence.screen(league, deadline.get(), now)) {
+        Optional<WaiverPreference> preference = preferences.forRound(leagueId, deadline.get());
+        switch (evidence.screen(league, deadline.get(), preference, now)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board dry run waits: {}", unavailable.reason());
                 return Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok -> {
-                record(runId, league, ok.value(), now);
+                record(runId, league, ok.value(), preference, now);
                 return Optional.of(runId);
             }
         }
     }
 
     private void record(String runId, LeagueWeek league, WaiverEvidence.Screen screen,
-            Instant now) {
-        BoardForm form = new BoardForm(check, screen.candidates());
+            Optional<WaiverPreference> preference, Instant now) {
+        BoardForm form = new BoardForm(check, screen.candidates(), preference
+                .filter(stated -> stated.mode() == WaiverPreference.Mode.FOCUS)
+                .map(stated -> Set.copyOf(stated.positions()))
+                .orElse(Set.of()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved ->
@@ -135,9 +150,16 @@ public class WaiverBoardDryRun {
                 new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
                         league.league().waiverBudget().map(budget ->
                                 Math.max(0, budget - screen.user().waiverBudgetUsed()))),
-                OttoJson.MAPPER.valueToTree(settings.current()), screen.screened(),
+                preferences(preference), screen.screened(),
                 screen.comparisons(), evidenceOf(screen.bundle()),
                 versions(screen.bundle(), form), result.exchanges(), outcome));
+    }
+
+    private JsonNode preferences(Optional<WaiverPreference> preference) {
+        Map<String, Object> active = new LinkedHashMap<>();
+        active.put("settings", settings.current());
+        active.put("waiverPreference", preference.orElse(null));
+        return OttoJson.MAPPER.valueToTree(active);
     }
 
     private static String runId(String leagueId, ZonedDateTime deadline) {
