@@ -30,9 +30,12 @@ import otto.records.RunKind;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +45,8 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
     private static final String LEAGUE_ID = "1389748403805650944";
 
     private static final Instant INSIDE_FINAL_WINDOW = Instant.parse("2026-09-20T23:55:00Z");
+
+    private static final Instant MORNING_REPORT = Instant.parse("2026-09-20T18:00:00Z");
 
     private static final String EDGE_MESSAGE = "Start Josh Jacobs over James Cook at RB. "
             + "Josh Jacobs projects 16.5 points in your scoring and James Cook projects 13.0, "
@@ -243,7 +248,32 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        SleeperStubs.noNewsByDefault(sleeper);
+        sleeper.stubFor(get(urlPathEqualTo("/players/nfl/4034/news"))
+                .willReturn(okJson("""
+                        [{"metadata": {"title": "Christian McCaffrey - Expected to play",
+                          "description": "Kyle Shanahan expects McCaffrey to play Sunday.",
+                          "analysis": null},
+                          "source": "rotowire", "sport": "nfl", "source_key": "901",
+                          "published": %d}]
+                        """.formatted(MORNING_REPORT.toEpochMilli()))));
         checkRunner.runCheck();
+    }
+
+    @Test
+    void theNewsReadRightBeforeSendingJoinsTheEvidence() {
+        String message = "Start Josh Jacobs over Christian McCaffrey at RB: Christian "
+                + "McCaffrey is still Questionable and his game starts in roughly 25 minutes.";
+        runQuestionableStarterIntoTheFinalWindow(finalAnswer(message));
+
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("legalMoves"))
+                .withRequestBody(containing("Christian McCaffrey - Expected to play")));
+        DecisionRecord record = records().getLast();
+        assertThat(record.evidence()).anySatisfy(evidence -> {
+            assertThat(evidence.id()).isEqualTo("news-4034");
+            assertThat(evidence.publishedAt()).contains(MORNING_REPORT);
+        });
     }
 
     private static String finalAnswer(String message) {

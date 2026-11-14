@@ -31,6 +31,31 @@ final class LineupEvidence {
 
     record Draft(EvidenceBundle bundle, Optional<String> urgentFacts, boolean holdStaysSilent,
             Map<String, String> candidateReasons) {
+
+        /**
+         * Adds the newest injury, availability or roster report the
+         * pre-send read found, when it found one. The read time and any
+         * read failure stay out: they change on every Check and are not
+         * facts about the player.
+         */
+        Draft withNews(String playerId, Map<String, String> research, Instant readAt) {
+            String report = research.get("latestReport");
+            if (playerId == null || report == null) {
+                return this;
+            }
+            Map<String, String> facts = new LinkedHashMap<>();
+            facts.put("latestReport", report);
+            facts.put("latestReportSource", research.getOrDefault("latestReportSource", "unknown"));
+            facts.put("reportSources", research.getOrDefault("reportSources", "unknown"));
+            List<EvidenceItem> evidence = new ArrayList<>(bundle.evidence());
+            evidence.add(new EvidenceItem("news-" + playerId, "sleeper:news",
+                    Optional.ofNullable(research.get("latestReportPublished")).map(Instant::parse),
+                    readAt, "latest injury, availability or roster report", facts));
+            return new Draft(new EvidenceBundle(bundle.task(), evidence, bundle.players(),
+                    bundle.legalMoves(), bundle.noChangeAllowed(), bundle.kickoffPhrase(),
+                    bundle.maxLength(), bundle.budget()), urgentFacts, holdStaysSilent,
+                    candidateReasons);
+        }
     }
 
     private final RosterSnapshot roster;

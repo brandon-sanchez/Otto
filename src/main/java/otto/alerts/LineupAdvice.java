@@ -82,12 +82,16 @@ public class LineupAdvice {
     /**
      * The text for an edge or legality candidate.
      *
+     * @param research the facts {@link otto.research.PreSendResearch}
+     *        read for the candidate's player right before sending; its
+     *        newest report joins the evidence
      * @param kickoff the game start of the candidate's player when this
      *        is the final pregame warning, or null otherwise
      * @return empty when the advice is withheld
      */
     public Optional<Written> forProblem(String alertKey, AlertCandidate candidate,
-            LeagueWeek leagueWeek, RosterSnapshot roster, Instant now, Instant kickoff) {
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now, Instant kickoff) {
         Instant readAt = leagueWeek.snapshot().at();
         LineupEvidence.Draft draft = switch (candidate.source()) {
             case EDGE -> LineupEvidence.edge(candidate, roster, leagueWeek.week(), readAt, now,
@@ -97,19 +101,23 @@ public class LineupAdvice {
             default -> throw new IllegalArgumentException(
                     "No lineup advice for a " + candidate.source() + " candidate");
         };
-        return write(alertKey, draft, leagueWeek, roster, now);
+        return write(alertKey, draft.withNews(candidate.playerId(), research, now), leagueWeek,
+                roster, now);
     }
 
     /**
      * The final pregame warning for a starter whose only problem is an
      * uncertain designation.
      *
+     * @param research the facts read for the starter right before sending
      * @return empty when the advice is withheld
      */
     public Optional<Written> forImpairedStarter(String alertKey, String playerId,
-            LeagueWeek leagueWeek, RosterSnapshot roster, Instant now, Instant kickoff) {
-        return write(alertKey, LineupEvidence.impaired(playerId, roster, leagueWeek.week(),
-                leagueWeek.snapshot().at(), now, kickoff), leagueWeek, roster, now);
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now, Instant kickoff) {
+        LineupEvidence.Draft draft = LineupEvidence.impaired(playerId, roster, leagueWeek.week(),
+                leagueWeek.snapshot().at(), now, kickoff);
+        return write(alertKey, draft.withNews(playerId, research, now), leagueWeek, roster, now);
     }
 
     private Optional<Written> write(String alertKey, LineupEvidence.Draft draft,

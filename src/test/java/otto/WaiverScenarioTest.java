@@ -1030,6 +1030,31 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aBenchTightEndStillOnInjuredReserveIsNoAnswerAtTightEnd() {
+        SleeperStubs.waiverWeek(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-waivers-goedert-ir.json", "players-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
+                "sleeper/rosters-waivers-goedert-on-ir.json", "rosters-v1");
+        NflverseStubs.waiverWeek(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        defenseBuilder.build();
+        llm.resetAll();
+
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"TE\",\"needsOnly\":true}", "Cade Otton fills tight end.");
+
+        ask("do I need a tight end off waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Cade Otton"))
+                .withRequestBody(containing("you have no bench TE above replacement")));
+    }
+
+    @Test
     void anUnknownPositionIsRefusedByNameRatherThanAnswered() {
         aWaiverWeekOnDisk();
         OutboundStubs.telegramOk(telegram);

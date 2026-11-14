@@ -26,6 +26,9 @@ public class AlertPhraser {
             say exactly what is uncertain, using the pros and cons; never
             write a confidence label. Introduce players by full name. Use
             only the facts given. Never invent numbers, names, or reasons.
+            When the event includes latestReport, it is the newest injury,
+            availability or roster report, read just now: mention it and
+            credit latestReportSource.
 
             Use Telegram-friendly plain text. An IR eligibility alert starts
             with ----- IR UPDATE -----. An alert that requires a healthy player
