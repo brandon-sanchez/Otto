@@ -148,6 +148,11 @@ public final class PlayerUsage {
         return priorSeasonFinal;
     }
 
+    /** Returns the gsis id of every player any source lists. */
+    public Set<String> playerIds() {
+        return gamesByPlayer.keySet();
+    }
+
     /** Returns one player's games, oldest first; empty when no source lists him. */
     public List<Game> games(String gsisId) {
         return gamesByPlayer.getOrDefault(gsisId, List.of());
