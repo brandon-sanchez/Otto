@@ -12,7 +12,7 @@ import java.util.Map;
  * Everything from nflverse passes through here so that a join on team
  * never silently misses a franchise.
  */
-final class NflTeams {
+public final class NflTeams {
 
     private static final Map<String, String> AS_SLEEPER_WRITES_THEM = Map.of(
             "LA", "LAR",
@@ -29,7 +29,8 @@ final class NflTeams {
     private NflTeams() {
     }
 
-    static String normalize(String team) {
+    /** Returns the team code as Sleeper writes it, trimmed and upper-cased; null stays null. */
+    public static String normalize(String team) {
         if (team == null) {
             return null;
         }
