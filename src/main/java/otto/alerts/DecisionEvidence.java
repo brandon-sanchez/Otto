@@ -22,6 +22,7 @@ import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
+import otto.decisions.TaxiSquad;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerHealth;
 import otto.lineup.Slot;
@@ -82,8 +83,10 @@ final class DecisionEvidence {
         Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
         replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
 
+        Optional<DirectoryPlayer> listed = listed(playerId, directory);
+        Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
         RosterPlans.Plans plans = RosterPlans.forStatusChange(leagueWeek.league(), roster, week,
-                now, playerId, to, reported, replacement.map(DirectoryPlayer::playerId),
+                now, playerId, to, reported, replacement.map(DirectoryPlayer::playerId), years,
                 id -> names.getOrDefault(id, id));
         plans.legal().stream()
                 .flatMap(plan -> plan.drop().stream())
@@ -100,6 +103,7 @@ final class DecisionEvidence {
         profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
+        builder.addItem(experience(playerId, listed, leagueWeek));
         unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
                 leagueWeek.snapshot().at(), now));
 
@@ -148,8 +152,10 @@ final class DecisionEvidence {
         Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
         replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
         PlayerHealth health = roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE);
+        Optional<DirectoryPlayer> listed = listed(playerId, directory);
+        Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
         RosterPlans.Plans plans = RosterPlans.forStatusChange(leagueWeek.league(), roster, week,
-                now, playerId, health, true, replacement.map(DirectoryPlayer::playerId),
+                now, playerId, health, true, replacement.map(DirectoryPlayer::playerId), years,
                 id -> names.getOrDefault(id, id));
 
         int slotIndex = roster.starters().indexOf(playerId);
@@ -175,6 +181,7 @@ final class DecisionEvidence {
         profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
+        builder.addItem(experience(playerId, listed, leagueWeek));
 
         String task = "Advise what to do with %s, whose role may have slipped: choose one of "
                 .formatted(name) + "rosterPlans"
@@ -328,6 +335,9 @@ final class DecisionEvidence {
                         allowed -> allowed.isEmpty() ? "IR designation only"
                                 : "IR designation, " + allowed)));
         facts.put("taxiSlots", rules.taxi().slots().map(String::valueOf).orElse(UNKNOWN));
+        if (TaxiSquad.inLeague(rules)) {
+            putTaxiFacts(facts, rules, roster);
+        }
         facts.put("activeRosterSpots", String.valueOf(leagueWeek.league().activeRosterSpots()));
         facts.put("activePlayers", String.valueOf(roster.activePlayerCount()));
         leagueWeek.week().weekNumber().ifPresent(number ->
@@ -337,6 +347,42 @@ final class DecisionEvidence {
             facts.put("playoffsStartWeek", String.valueOf(last + 1));
         });
         return facts;
+    }
+
+    private static Optional<DirectoryPlayer> listed(String playerId,
+            Collection<DirectoryPlayer> directory) {
+        return directory.stream()
+                .filter(player -> player.playerId().equals(playerId))
+                .findFirst();
+    }
+
+    private static EvidenceItem experience(String playerId, Optional<DirectoryPlayer> listed,
+            LeagueWeek leagueWeek) {
+        Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
+        Map<String, String> facts = new LinkedHashMap<>();
+        facts.put("yearsInLeague", years.map(String::valueOf).orElse(UNKNOWN));
+        facts.put("rookie", listed.flatMap(DirectoryPlayer::rookie)
+                .map(rookie -> rookie ? "yes" : "no").orElse(UNKNOWN));
+        LeagueRules rules = leagueWeek.league().rules();
+        if (TaxiSquad.inLeague(rules)) {
+            facts.put("taxiEligibility", TaxiSquad.experienceBlock(rules.taxi(), years)
+                    .orElse("eligible"));
+        }
+        return new EvidenceItem("experience-" + playerId, "sleeper:players", Optional.empty(),
+                leagueWeek.snapshot().at(), "his NFL seasons played and whether they let him "
+                        + "on the taxi squad", facts);
+    }
+
+    private static void putTaxiFacts(Map<String, String> facts, LeagueRules rules,
+            RosterSnapshot roster) {
+        LeagueRules.Taxi taxi = rules.taxi();
+        facts.put("taxiSlotsInUse", String.valueOf(roster.taxi().size()));
+        facts.put("taxiAllowsNonRookies", taxi.allowsVeterans()
+                .map(allows -> allows ? "yes" : "no").orElse(UNKNOWN));
+        facts.put("taxiYearsLimit", taxi.maxYears()
+                .map(limit -> limit == 0 ? "no limit" : String.valueOf(limit)).orElse(UNKNOWN));
+        facts.put("taxiDeadline", taxi.deadline().flatMap(TaxiSquad::deadlineWording)
+                .orElse(UNKNOWN));
     }
 
     private static Map<String, String> profileFacts(Players.Player player, Instant now) {
