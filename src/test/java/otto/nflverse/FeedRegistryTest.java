@@ -28,15 +28,18 @@ class FeedRegistryTest {
         Map<FeedId, String> names = Feeds.ALL.stream()
                 .collect(Collectors.toMap(FeedSpec::id, FeedSpec::documentName));
 
-        assertThat(names).containsExactlyInAnyOrderEntriesOf(Map.of(
-                FeedId.SCHEDULE, "nflverse-schedule",
-                FeedId.WEEKLY_STATS, "nflverse-weekly-stats",
-                FeedId.SNAP_COUNTS, "nflverse-snap-counts",
-                FeedId.WEEKLY_ROSTERS, "nflverse-weekly-rosters",
-                FeedId.DEPTH_CHARTS, "nflverse-depth-charts",
-                FeedId.FTN_CHARTING, "nflverse-ftn-charting",
-                FeedId.PLAY_BY_PLAY, "nflverse-play-by-play",
-                FeedId.EXPECTED_POINTS, "ffopportunity-expected-points",
-                FeedId.PLAYERS, "nflverse-players"));
+        assertThat(names).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(
+                Map.entry(FeedId.SCHEDULE, "nflverse-schedule"),
+                Map.entry(FeedId.WEEKLY_STATS, "nflverse-weekly-stats"),
+                Map.entry(FeedId.SNAP_COUNTS, "nflverse-snap-counts"),
+                Map.entry(FeedId.WEEKLY_ROSTERS, "nflverse-weekly-rosters"),
+                Map.entry(FeedId.DEPTH_CHARTS, "nflverse-depth-charts"),
+                Map.entry(FeedId.FTN_CHARTING, "nflverse-ftn-charting"),
+                Map.entry(FeedId.PFR_DEFENSE, "nflverse-pfr-defense"),
+                Map.entry(FeedId.PFR_PASSING, "nflverse-pfr-passing"),
+                Map.entry(FeedId.RUSHING_ADVANCED_STATS, "nflverse-advstats-rush"),
+                Map.entry(FeedId.PLAY_BY_PLAY, "nflverse-play-by-play"),
+                Map.entry(FeedId.EXPECTED_POINTS, "ffopportunity-expected-points"),
+                Map.entry(FeedId.PLAYERS, "nflverse-players")));
     }
 }
