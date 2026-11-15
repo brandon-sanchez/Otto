@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 
@@ -303,15 +304,22 @@ public class AlertService {
                             EventType.ALERT_SENT, now,
                             alertFacts(candidate, research, written.get())))
                     .toList();
-            sent.addAll(outbox.deliver(written.get().text(), written.get().basis(), templates));
+            sent.addAll(outbox.deliver(written.get().basis(), compose(written.get()), templates));
         }
         return sent;
     }
 
+    private Supplier<String> compose(AlertText written) {
+        return switch (written) {
+            case AlertText.Advised advised -> advised::text;
+            case AlertText.Phrased phrased ->
+                    () -> phraser.phrase(phrased.facts(), phrased.recommendation());
+        };
+    }
+
     private Map<String, String> alertFacts(AlertCandidate candidate,
             Map<String, String> research, AlertText written) {
-        Map<String, String> facts =
-                new HashMap<>(alertFacts(candidate, research, written.text()));
+        Map<String, String> facts = new HashMap<>(alertFacts(candidate, research));
         if (written instanceof AlertText.Advised advised) {
             facts.put("runId", advised.runId());
         }
@@ -373,18 +381,17 @@ public class AlertService {
             Map<String, String> research) {
         Map<String, String> facts = new HashMap<>(primary.facts());
         facts.putAll(research);
-        String basis = phraser.basis(facts, primary.recommendation()) + keys;
-        String text = outbox.pendingText(keys, basis)
-                .orElseGet(() -> phraser.phrase(facts, primary.recommendation()));
-        return new AlertText.Phrased(text, basis);
+        return new AlertText.Phrased(phraser.basis(facts, primary.recommendation()).plus(keys),
+                facts, primary.recommendation());
     }
 
     /**
-     * The facts an Alert's Event Log entry keeps: the candidate's own,
-     * the research read right before sending, and what was sent.
+     * The facts an Alert's Event Log entry keeps: the candidate's own
+     * and the research read right before sending. The outbox adds the
+     * sent text.
      */
     static Map<String, String> alertFacts(AlertCandidate candidate,
-            Map<String, String> research, String text) {
+            Map<String, String> research) {
         Recommendation recommendation = candidate.recommendation();
         Map<String, String> facts = new HashMap<>(candidate.facts());
         facts.putAll(research);
@@ -394,7 +401,6 @@ public class AlertService {
         facts.put("confidence", recommendation.confidence().name());
         facts.put("pros", String.join("; ", recommendation.pros()));
         facts.put("cons", String.join("; ", recommendation.cons()));
-        facts.put("text", text);
         return Map.copyOf(facts);
     }
 }

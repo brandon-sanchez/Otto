@@ -158,11 +158,9 @@ class LockLadder {
                     String.valueOf(Duration.between(now, lock.get()).toMinutes()));
             facts.putAll(research);
 
-            String text = written.get().text();
             facts.put("playerId", playerId);
             facts.put("runId", written.get().runId());
-            facts.put("text", text);
-            sent.addAll(outbox.deliver(text, written.get().basis(), List.of(
+            sent.addAll(outbox.deliver(written.get().basis(), written.get()::text, List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -227,13 +225,12 @@ class LockLadder {
                     "player", player,
                     "health", health.name(),
                     "irReminder", "true");
-            String basis = phraser.basis(facts, recommendation);
-            String text = outbox.pendingText(List.of(key), basis)
-                    .orElseGet(() -> phraser.phrase(facts, recommendation));
-            sent.addAll(outbox.deliver(text, basis, List.of(new Event(
-                    key, EventType.ALERT_SENT, now, AlertService.alertFacts(
-                            new AlertCandidate(AlertCandidate.Source.TRANSITION, key, playerId,
-                                    team, recommendation, facts), Map.of(), text)))));
+            sent.addAll(outbox.deliver(phraser.basis(facts, recommendation),
+                    () -> phraser.phrase(facts, recommendation), List.of(new Event(
+                            key, EventType.ALERT_SENT, now, AlertService.alertFacts(
+                                    new AlertCandidate(AlertCandidate.Source.TRANSITION, key,
+                                            playerId, team, recommendation, facts),
+                                    Map.of())))));
         }
         return sent;
     }

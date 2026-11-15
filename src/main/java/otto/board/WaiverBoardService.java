@@ -18,6 +18,7 @@ import otto.advice.AdviceWriter;
 import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
+import otto.delivery.DeliveryBasis;
 import otto.events.Event;
 import otto.model.ModelChain;
 import otto.records.DecisionRecord;
@@ -280,7 +281,7 @@ public class WaiverBoardService {
         facts.put("runId", round.boardRunId());
         facts.put("leagueId", round.leagueId());
         facts.put("claimDeadline", round.deadline().toString());
-        return delivery.deliver(round, round.boardRunId(),
+        return delivery.deliver(round, DeliveryBasis.of(round.boardRunId()),
                 held -> BoardMessage.withHeldAdvice(board.messages(), held),
                 board.viewAllOptions(), facts);
     }
