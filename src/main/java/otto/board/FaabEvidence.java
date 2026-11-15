@@ -94,7 +94,7 @@ class FaabEvidence {
                     "published FAAB suggestions, one per independent source, converted to "
                             + "this league's budget; a cross-check behind the league's own "
                             + "bidding",
-                    published.facts(league.league().waiverBudget())));
+                    published.facts(LeagueBudget.of(league))));
         }
         return new Bidding(policy, consensus, leagueEvidence, perCandidate, gaps);
     }

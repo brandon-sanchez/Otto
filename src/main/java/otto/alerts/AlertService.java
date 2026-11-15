@@ -354,13 +354,18 @@ public class AlertService {
             List<AlertCandidate> group, Map<String, String> research, LeagueWeek leagueWeek,
             Optional<RosterSnapshot> userRoster, Instant now) {
         return switch (route(primary, group, userRoster)) {
-            case STATUS_CHANGE -> lineupAdvice.forStatusChange("alert:" + primary.key(), primary,
-                    group.stream()
-                            .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY)
-                            .findFirst()
-                            .orElse(null),
-                    research, leagueWeek, userRoster.orElseThrow(), now)
-                    .map(AlertText.class::cast);
+            case STATUS_CHANGE -> {
+                String key = "alert:" + primary.key();
+                RosterSnapshot roster = userRoster.orElseThrow();
+                yield group.stream()
+                        .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY)
+                        .findFirst()
+                        .map(legality -> lineupAdvice.forStatusChange(key, primary, legality,
+                                research, leagueWeek, roster, now))
+                        .orElseGet(() -> lineupAdvice.forStatusChange(key, primary, research,
+                                leagueWeek, roster, now))
+                        .map(AlertText.class::cast);
+            }
             case ROLE_SLIP -> {
                 AlertCandidate slip = group.stream()
                         .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)

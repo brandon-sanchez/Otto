@@ -116,18 +116,16 @@ public final class RosterPlans {
     public static Plans forStatusChange(SleeperAdapter.League league, RosterSnapshot roster,
             WeekFacts week, Instant now, DecisionSubject subject, Function<String, String> names) {
         String playerId = subject.playerId();
-        PlayerHealth health = subject.health();
-        Optional<String> replacement = subject.replacement();
         RosterPlans plans = new RosterPlans(league, roster, week, now, names);
         if (roster.reserve().contains(playerId)) {
-            plans.onReserve(playerId, health, replacement);
+            plans.onReserve(subject);
         } else if (roster.taxi().contains(playerId)) {
             plans.onTaxi(playerId);
         } else {
-            plans.onActiveRoster(playerId, health, replacement);
-            plans.toTaxi(playerId, subject.yearsInLeague(), replacement);
+            plans.onActiveRoster(subject);
+            plans.toTaxi(subject);
         }
-        plans.drop(playerId, health, subject.recoveryReported(), replacement);
+        plans.drop(subject);
         if (plans.legal.isEmpty()) {
             plans.add(new RosterPlan(HOLD, "Leave %s where he is: no roster move is open to him "
                     .formatted(names.apply(playerId)) + "right now.", Optional.empty(),
@@ -136,8 +134,9 @@ public final class RosterPlans {
         return new Plans(plans.legal, plans.ruledOut);
     }
 
-    private void onActiveRoster(String playerId, PlayerHealth health,
-            Optional<String> replacement) {
+    private void onActiveRoster(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        Optional<String> replacement = subject.replacement();
         String name = names.apply(playerId);
         add(new RosterPlan(HOLD, "Keep %s where he is.".formatted(name),
                 Optional.empty(), Optional.empty()));
@@ -159,7 +158,7 @@ public final class RosterPlans {
                 add(new RosterPlan(DROP_OTHER + other, summary, Optional.of(other), replacement));
             }
         }
-        Optional<String> irBlocked = irBlockReason(playerId, health);
+        Optional<String> irBlocked = irBlockReason(playerId, subject.health());
         if (irBlocked.isPresent()) {
             ruledOut.put(MOVE_TO_IR, irBlocked.get());
         } else {
@@ -171,8 +170,9 @@ public final class RosterPlans {
         }
     }
 
-    private void toTaxi(String playerId, Optional<Integer> yearsInLeague,
-            Optional<String> replacement) {
+    private void toTaxi(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        Optional<String> replacement = subject.replacement();
         LeagueRules rules = league.rules();
         if (rules.taxi().slots().isEmpty()
                 && rules.format().equals(Optional.of(LeagueRules.LeagueFormat.DYNASTY))) {
@@ -182,7 +182,7 @@ public final class RosterPlans {
         if (!TaxiSquad.inLeague(rules)) {
             return;
         }
-        Optional<String> blocked = taxiBlockReason(playerId, yearsInLeague);
+        Optional<String> blocked = taxiBlockReason(subject);
         if (blocked.isPresent()) {
             ruledOut.put(TAXI, blocked.get());
             return;
@@ -195,7 +195,9 @@ public final class RosterPlans {
                 Optional.empty(), replacement)));
     }
 
-    private Optional<String> taxiBlockReason(String playerId, Optional<Integer> yearsInLeague) {
+    private Optional<String> taxiBlockReason(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        Optional<Integer> yearsInLeague = subject.yearsInLeague();
         LeagueRules.Taxi taxi = league.rules().taxi();
         int slots = taxi.slots().orElseThrow();
         if (roster.taxi().size() >= slots) {
@@ -235,7 +237,10 @@ public final class RosterPlans {
         }
     }
 
-    private void onReserve(String playerId, PlayerHealth health, Optional<String> replacement) {
+    private void onReserve(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        PlayerHealth health = subject.health();
+        Optional<String> replacement = subject.replacement();
         String name = names.apply(playerId);
         Optional<Boolean> allowed = irAllows(health);
         if (allowed.orElse(false)) {
@@ -267,9 +272,11 @@ public final class RosterPlans {
         }
     }
 
-    private void drop(String playerId, PlayerHealth health, boolean recoveryReported,
-            Optional<String> replacement) {
-        if (health.isWorseThan(PlayerHealth.PROBABLE) && !recoveryReported) {
+    private void drop(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        PlayerHealth health = subject.health();
+        Optional<String> replacement = subject.replacement();
+        if (health.isWorseThan(PlayerHealth.PROBABLE) && !subject.recoveryReported()) {
             ruledOut.put(DROP, "no current report explains his status or how long he will be "
                     + "out, and an unknown recovery is not a reason to cut him");
             return;
