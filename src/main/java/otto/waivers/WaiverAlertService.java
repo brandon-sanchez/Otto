@@ -1,8 +1,6 @@
 package otto.waivers;
 
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -22,11 +20,11 @@ import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
 import otto.alerts.RoleSlipLedger;
 import otto.ask.LeagueWeek;
+import otto.claims.BoardSchedule;
 import otto.events.Event;
 import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 
 /**
@@ -43,11 +41,6 @@ import otto.sleeper.SourceResult;
  */
 @Component
 public class WaiverAlertService {
-
-    /** The user's zone. Pinned here, not read from the clock: the Check runs in UTC. */
-    private static final ZoneId WAIVER_ZONE = ZoneId.of("America/Los_Angeles");
-
-    private static final LocalTime WAIVER_TIME = LocalTime.of(18, 0);
 
     private static final String ABOUT_YOUR_ROSTER = "About your roster";
 
@@ -86,11 +79,11 @@ public class WaiverAlertService {
         if (deadline.isEmpty()) {
             return Optional.empty();
         }
-        ZonedDateTime due = eveningBefore(deadline.get());
+        ZonedDateTime due = BoardSchedule.due(deadline.get());
         if (now.isBefore(due.toInstant())) {
             return Optional.empty();
         }
-        String key = boardKey(deadline.get());
+        String key = BoardSchedule.alertKey(deadline.get());
         if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
@@ -128,21 +121,6 @@ public class WaiverAlertService {
         return board;
     }
 
-    /**
-     * Returns when a waiver board for this claim deadline is due: 18:00
-     * America/Los_Angeles on the calendar day before it, read in the
-     * zone Sleeper runs claims in.
-     */
-    public static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
-        return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
-                .atTime(WAIVER_TIME)
-                .atZone(WAIVER_ZONE);
-    }
-
-    /** Returns the Alert key of the waiver board for this claim deadline. */
-    public static String boardKey(ZonedDateTime deadline) {
-        return "alert:waiver:" + eveningBefore(deadline).toLocalDate();
-    }
 
     private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
             WaiverBoard board, Instant now) {

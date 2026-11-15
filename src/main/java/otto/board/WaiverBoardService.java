@@ -1,6 +1,5 @@
 package otto.board;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
@@ -25,6 +24,7 @@ import otto.alerts.AlertDeliveryOutbox;
 import otto.alerts.MuteStore;
 import otto.alerts.RoleSlipLedger;
 import otto.ask.LeagueWeek;
+import otto.claims.BoardSchedule;
 import otto.events.Event;
 import otto.events.EventType;
 import otto.records.DecisionRecord;
@@ -40,7 +40,6 @@ import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.sleeper.SourceResult;
 import otto.storage.OttoJson;
-import otto.waivers.WaiverAlertService;
 
 /**
  * The evidence-based waiver board: once per claim round, from the
@@ -59,7 +58,7 @@ import otto.waivers.WaiverAlertService;
  *
  * <p>The board waits for the latest completed week's data, as
  * {@link LatestWeekData} judges it: while that week is short, each Check
- * records nothing and tries again. From {@link #FALLBACK_BUFFER} before
+ * records nothing and tries again. From {@link BoardSchedule#FALLBACK_BUFFER} before
  * the claim deadline it builds a fallback board instead, from what has
  * arrived, which opens by saying what is missing and what the advice
  * rests on, and leaves out any free agent only popularity names.
@@ -83,9 +82,6 @@ import otto.waivers.WaiverAlertService;
  */
 @Component
 public class WaiverBoardService {
-
-    /** How long before the claim deadline a board is built even though data is late. */
-    static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
 
     /** What the user reads in a round whose board failed its checks twice. */
     static final String FAILED_CHECKS_NOTICE = "No waiver board this round: I could not get "
@@ -171,7 +167,7 @@ public class WaiverBoardService {
     private Optional<Event> run(LeagueWeek league, Instant now) {
         Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now);
         if (deadline.isEmpty()
-                || now.isBefore(WaiverAlertService.eveningBefore(deadline.get()).toInstant())
+                || now.isBefore(BoardSchedule.due(deadline.get()).toInstant())
                 || !settings.enabled(Trigger.WAIVER)) {
             return Optional.empty();
         }
@@ -193,7 +189,7 @@ public class WaiverBoardService {
     private Optional<Outcome> build(String runId, LeagueWeek league,
             ZonedDateTime deadline, boolean reachesUser, Instant now) {
         LatestWeekData.Report data = latestWeek.assess(league);
-        boolean inBuffer = !now.isBefore(deadline.minus(FALLBACK_BUFFER).toInstant());
+        boolean inBuffer = !now.isBefore(BoardSchedule.latest(deadline));
         if (!data.complete() && !inBuffer) {
             log.info("The waiver board waits for the latest week's data: {}",
                     String.join("; ", data.missing()));
@@ -288,7 +284,7 @@ public class WaiverBoardService {
      */
     private Optional<Event> deliver(String runId, String leagueId, Outcome outcome,
             ZonedDateTime deadline, Instant now) {
-        String key = WaiverAlertService.boardKey(deadline);
+        String key = BoardSchedule.alertKey(deadline);
         if (outbox.alreadySent(key)) {
             return Optional.empty();
         }

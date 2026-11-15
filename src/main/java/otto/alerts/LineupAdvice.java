@@ -25,6 +25,7 @@ import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.LineupMove;
 import otto.ask.LeagueWeek;
+import otto.claims.BoardSchedule;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
@@ -49,7 +50,6 @@ import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
-import otto.waivers.WaiverAlertService;
 
 /**
  * Writes the text of bench-edge, lineup-legality, final-pregame,
@@ -294,13 +294,13 @@ public class LineupAdvice {
         Optional<ZonedDateTime> deadline = leagueWeek.league().rules().nextClaimDeadline(now);
         if (deadline.isEmpty() || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())
-                || outbox.alreadySent(WaiverAlertService.boardKey(deadline.get()))) {
+                || outbox.alreadySent(BoardSchedule.alertKey(deadline.get()))) {
             return true;
         }
         if (answer.move().isEmpty()) {
             return false;
         }
-        Instant boardDue = WaiverAlertService.eveningBefore(deadline.get()).toInstant();
+        Instant boardDue = BoardSchedule.due(deadline.get()).toInstant();
         LineupMove move = answer.move().get();
         Optional<Instant> firstKickoff = leagueWeek.week().games().flatMap(games -> Stream
                 .of(move.start(), move.bench())

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.claims.BoardSchedule;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
@@ -47,7 +48,6 @@ import otto.settings.SettingsStore;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
-import otto.waivers.WaiverAlertService;
 
 /**
  * Compares the waiver board with its baselines every claim round, so
@@ -177,7 +177,7 @@ public class BoardComparison {
      * board against.
      */
     private static boolean baselinesDue(ZonedDateTime deadline, Instant now) {
-        return !now.isBefore(WaiverAlertService.eveningBefore(deadline).toInstant());
+        return !now.isBefore(BoardSchedule.due(deadline).toInstant());
     }
 
     /**
