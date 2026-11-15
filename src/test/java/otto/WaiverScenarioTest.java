@@ -222,7 +222,8 @@ class WaiverScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("Bucky Irving")));
+                .withRequestBody(containing("Bucky Irving"))
+                .withRequestBody(notContaining(OutboundStubs.WAIVER_BOARD_REQUEST)));
     }
 
     @Test

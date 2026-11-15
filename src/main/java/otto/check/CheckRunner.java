@@ -16,6 +16,8 @@ import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
+import otto.board.WaiverBoardService;
+import otto.claims.ClaimRound;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -37,8 +39,8 @@ import otto.watchlist.WatchlistWatcher;
  *
  * <p>The Check's model runs share one budget (see
  * {@link ModelChain#withinCheck}). Once it cannot fit another run, the
- * Alerts still waiting are left for the next Check, and the steps that
- * call no model still run.
+ * Alerts and the waiver board still waiting are left for the next
+ * Check, and the steps that call no model still run.
  */
 @Component
 public class CheckRunner {
@@ -56,6 +58,7 @@ public class CheckRunner {
     private final EventLog eventLog;
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
+    private final WaiverBoardService waiverBoard;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -69,6 +72,7 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
+            WaiverBoardService waiverBoard,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, ModelChain models,
             Clock clock, OttoProperties properties) {
@@ -83,6 +87,7 @@ public class CheckRunner {
         this.eventLog = eventLog;
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
+        this.waiverBoard = waiverBoard;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -95,8 +100,8 @@ public class CheckRunner {
      * Runs one Check.
      *
      * <p>Side effects: Sleeper reads, model calls within the Check's
-     * budget, Telegram messages, and the Snapshot, Event Log and
-     * last-check writes.
+     * budget, Telegram messages, and the Snapshot, Event Log, Decision
+     * Record and last-check writes.
      */
     public CheckResult runCheck() {
         return models.withinCheck(this::check);
@@ -127,12 +132,14 @@ public class CheckRunner {
             WeekFacts week = weekFactsBuilder.build(stage.league());
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
+            Optional<ClaimRound> round = ClaimRound.next(stage.league(), now);
             try {
                 alerts.addAll(alertService.process(leagueWeek));
                 waiverAlertService
                         .considerWaiverAlert(
                                 leagueWeek, now)
                         .ifPresent(alerts::add);
+                round.ifPresent(open -> waiverBoard.considerBoard(leagueWeek, open));
             } catch (ModelChain.OutOfCheckTime e) {
                 log.info("The Check has no model time left; the next Check sends the rest");
             }
