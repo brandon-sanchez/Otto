@@ -338,6 +338,8 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         new WeekStatus.Complete(PFR_PASSING_RELEASE, List.of())),
                 Map.entry(FeedId.RUSHING_ADVANCED_STATS, new WeekStatus.Complete(
                         Instant.parse("2026-09-17T08:02:11Z"), List.of())),
+                Map.entry(FeedId.PBP_PARTICIPATION, new WeekStatus.Unknown(
+                        "PBP_PARTICIPATION holds the 2025 season, not 2026")),
                 Map.entry(FeedId.NGS_PASSING, new WeekStatus.Complete(NGS_PASSING_RELEASE, List.of())),
                 Map.entry(FeedId.NGS_RECEIVING, new WeekStatus.Incomplete(
                         List.of(new Unit.Week("2026", 3)), List.of())),

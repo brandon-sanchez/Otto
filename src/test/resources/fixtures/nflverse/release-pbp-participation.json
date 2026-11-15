@@ -1,0 +1,28 @@
+{
+  "tag_name": "pbp_participation",
+  "name": "pbp_participation",
+  "published_at": "2023-12-19T05:49:59Z",
+  "assets": [
+    {
+      "name": "pbp_participation_2024.csv",
+      "content_type": "text/csv; charset=utf-8",
+      "size": 49688308,
+      "updated_at": "2025-09-04T10:24:49Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_2024.csv"
+    },
+    {
+      "name": "pbp_participation_2025.csv",
+      "content_type": "text/csv; charset=utf-8",
+      "size": 49094943,
+      "updated_at": "2026-02-10T18:54:08Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_2025.csv"
+    },
+    {
+      "name": "pbp_participation_2025.parquet",
+      "content_type": "application/octet-stream",
+      "size": 4741443,
+      "updated_at": "2026-02-10T18:54:07Z",
+      "browser_download_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_2025.parquet"
+    }
+  ]
+}

@@ -36,6 +36,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
     public static final String ADVSTATS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pfr_advstats";
+    public static final String PARTICIPATION_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/pbp_participation";
     public static final String NGS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/nextgen_stats";
     public static final String PBP_RELEASE_PATH =
@@ -67,6 +69,8 @@ public final class NflverseStubs {
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2026.csv";
     public static final String PFR_PASSING_2025_PATH =
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2025.csv";
+    public static final String PARTICIPATION_2025_PATH =
+            DOWNLOAD + "pbp_participation/pbp_participation_2025.csv";
     public static final String NGS_PASSING_PATH = DOWNLOAD + "nextgen_stats/ngs_passing.csv.gz";
     public static final String NGS_RECEIVING_PATH = DOWNLOAD + "nextgen_stats/ngs_receiving.csv.gz";
     public static final String NGS_RUSHING_PATH = DOWNLOAD + "nextgen_stats/ngs_rushing.csv.gz";
@@ -89,6 +93,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
         nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
@@ -114,6 +119,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
         nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
@@ -342,6 +348,17 @@ public final class NflverseStubs {
     }
 
     /**
+     * Last season's participation file as published on 2026-02-10, the
+     * newest season file nflverse has. Trimmed to the first plays of
+     * three 2025 regular-season games, Kansas City's weeks 1 and 3 among
+     * them, and of one playoff game the feed must drop.
+     */
+    private static void participation(WireMockServer nflverse) {
+        stubJson(nflverse, PARTICIPATION_RELEASE_PATH, "nflverse/release-pbp-participation.json");
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025.csv");
+    }
+
+    /**
      * The play-by-play the pressure rates divide by: the healthy rows plus
      * one pass play per dropback in every game of the PFR passing file
      * but Pittsburgh at Cleveland in week 4, which it leaves out.
@@ -352,6 +369,11 @@ public final class NflverseStubs {
     public static void pressureSeason(WireMockServer nflverse) {
         stubCsv(nflverse, PBP_2026_PATH, "nflverse/play-by-play-pressure.csv");
         stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-rankings.csv");
+    }
+
+    /** The participation file renamed the column that says man or zone. */
+    public static void participationDrifted(WireMockServer nflverse) {
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025-drifted.csv");
     }
 
     /**
