@@ -1,17 +1,12 @@
 package otto.advice;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -52,8 +47,6 @@ public record EvidenceBundle(
         List<RosterPlan> rosterPlans,
         List<String> unknowns) {
 
-    private static final Pattern NON_DOLLAR_NUMBER = Pattern.compile("(?<![\\w.$])\\d+(?:\\.\\d+)?(?!\\w)");
-
     public EvidenceBundle {
         evidence = List.copyOf(evidence);
         players = List.copyOf(players);
@@ -78,16 +71,28 @@ public record EvidenceBundle(
     }
 
     /**
-     * A hash of what the evidence says, leaving out when it was read and
-     * how long is left before kickoff. Two runs over the same facts share
-     * it, so advice is never retried against unchanged evidence.
+     * The evidence fact that says how far the current season has come
+     * beside a last-season fact, such as "beside 3 completed weeks of
+     * 2026". It changes as games finish while the fact it labels does not,
+     * so {@link #identity()} leaves it out.
+     */
+    public static final String SEASON_PROGRESS_FACT = "seasonProgress";
+
+    /**
+     * A hash of what the evidence says, leaving out when it was read, how
+     * long is left before kickoff and how far the season has come beside
+     * a last-season fact. Two runs over the same facts share it, so advice
+     * is never retried against unchanged evidence.
      */
     public String identity() {
         Map<String, Object> facts = new LinkedHashMap<>();
         facts.put("task", task);
         facts.put("evidence", evidence.stream()
-                .map(item -> List.of(item.id(), item.source(), item.scoringBasis(),
-                        new TreeMap<>(item.facts())))
+                .map(item -> {
+                    Map<String, String> said = new TreeMap<>(item.facts());
+                    said.remove(SEASON_PROGRESS_FACT);
+                    return List.of(item.id(), item.source(), item.scoringBasis(), said);
+                })
                 .toList());
         facts.put("players", players);
         facts.put("legalMoves", legalMoves);
@@ -126,28 +131,10 @@ public record EvidenceBundle(
         return Versions.ofThisBuild(identity(), form.promptVersion(), result.model());
     }
 
-    Set<BigDecimal> numbers() {
-        return numbersOf(Stream.concat(
-                evidence.stream().flatMap(item -> item.facts().values().stream()),
-                kickoffPhrase.stream()));
-    }
-
-    static Set<BigDecimal> numbersOf(Stream<String> texts) {
-        return texts.flatMap(text -> numbersIn(text).stream())
-                .map(EvidenceBundle::normalized)
-                .collect(Collectors.toSet());
-    }
-
-    static List<String> numbersIn(String text) {
-        Matcher matcher = NON_DOLLAR_NUMBER.matcher(text);
-        List<String> numbers = new ArrayList<>();
-        while (matcher.find()) {
-            numbers.add(matcher.group());
-        }
-        return numbers;
-    }
-
-    static BigDecimal normalized(String number) {
-        return new BigDecimal(number).stripTrailingZeros();
+    /** Returns every number and rank the evidence and the kickoff phrase state. */
+    Set<Quantity> quantities() {
+        Set<Quantity> quantities = new HashSet<>(Quantity.of(evidence.stream()));
+        quantities.addAll(Quantity.amountsOf(kickoffPhrase.stream()));
+        return quantities;
     }
 }

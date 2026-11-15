@@ -216,7 +216,7 @@ public final class Ordinal {
      * A rank and what it counts. Only places of the same kind support
      * each other, so a rank from the bottom never backs a rank from the top.
      */
-    record Place(Kind kind, int rank) {
+    record Place(Kind kind, int rank) implements Quantity {
     }
 
     /**
