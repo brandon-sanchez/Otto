@@ -16,8 +16,10 @@ import otto.directory.DirectoryPlayer;
  * move". Each entry shows the published consensus and Otto's bid when
  * there are any, and the claims meant to land together are named apart
  * from the alternatives. When bids are withheld the board says why
- * under the opening. An entry only trending adds support on a fallback
- * board carries {@link #TRENDING_LABEL} under its heading. The text is
+ * under the opening. An entry outside the positions the user asked to
+ * focus on carries its reason under "Outside your focus", and one only
+ * trending adds support on a fallback board carries {@link #TRENDING_LABEL}
+ * under its heading. The text is
  * split between entries into Telegram messages that each stay under
  * Telegram's limit.
  */
@@ -32,6 +34,7 @@ final class BoardMessage {
     static final String HEADING = "Your waiver options";
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
+    static final String OUTSIDE_FOCUS = "Outside your focus: ";
 
     /** The line under a trending-only entry's heading, from {@link WaiverEvidence#TRENDING_ONLY}. */
     static final String TRENDING_LABEL =
@@ -121,6 +124,9 @@ final class BoardMessage {
     private static List<String> modelLines(BoardAnswer.Entry entry) {
         List<String> lines = new ArrayList<>();
         lines.add(entry.reasoning().strip());
+        if (!entry.outsideFocus().isBlank()) {
+            lines.add(OUTSIDE_FOCUS + entry.outsideFocus().strip());
+        }
         if (!entry.limit().isBlank()) {
             lines.add(entry.limit().strip());
         }

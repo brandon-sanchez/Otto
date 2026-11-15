@@ -47,6 +47,11 @@ import otto.storage.OttoJson;
  * the user's roster, and the model weighs it all. Players on any
  * roster in the league are never screened, so they can never be
  * recommended.
+ *
+ * <p>A {@link WaiverPreference} the user set for the round is handed to
+ * the model as evidence. One that keeps the board to some positions
+ * also narrows the screening to them, so no other player can be
+ * recommended; a focus leaves the pool whole.
  */
 @Component
 public class WaiverEvidence {
@@ -123,12 +128,14 @@ public class WaiverEvidence {
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
      *
+     * @param preference what the user asked of this claim round's board
      * @return unavailable when there is no player directory or no
      *         roster for the user, since without both no player can be
      *         known to be a free agent
      */
     public SourceResult<Screen> screen(LeagueWeek league, ZonedDateTime deadline,
-            Instant now, LatestWeekData.Report latestWeek) {
+            RoundPreference preference, Instant now,
+            LatestWeekData.Report latestWeek) {
         Optional<PlayerDirectory> players = directory.read();
         if (players.isEmpty()) {
             return new SourceResult.Unavailable<>("waivers",
@@ -143,17 +150,21 @@ public class WaiverEvidence {
         }
         List<DirectoryPlayer> freeAgents = freeAgents(players.get(), league);
 
+        List<DirectoryPlayer> eligible = freeAgents.stream()
+                .filter(preference::screens)
+                .toList();
+
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
         List<LaneRead> reads = lanes.stream()
                 .map(lane -> new LaneRead(lane, lane.read(inputs)))
                 .toList();
-        Pool pool = pool(freeAgents, reads, latestWeek);
+        Pool pool = pool(freeAgents, eligible, reads, latestWeek);
         Map<String, List<String>> reasons = pool.reasons();
         Set<String> trendingOnly = pool.trendingOnly();
         Map<String, DirectoryPlayer> candidates = pool.candidates();
         List<Candidate> screened = freeAgents.stream()
                 .map(player -> screened(player, reasons.get(player.playerId()),
-                        trendingOnly.contains(player.playerId())))
+                        trendingOnly.contains(player.playerId()), preference))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
@@ -168,6 +179,7 @@ public class WaiverEvidence {
 
         List<EvidenceItem> evidence = new ArrayList<>();
         evidence.add(boardItem(league, deadline, now, gaps));
+        preference.stated().ifPresent(stated -> evidence.add(preferenceItem(stated)));
         if (rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok) {
             evidence.add(needsItem(league, ok.value(), now));
         }
@@ -213,13 +225,13 @@ public class WaiverEvidence {
             Set<String> trendingOnly) {
     }
 
-    private static Pool pool(List<DirectoryPlayer> freeAgents, List<LaneRead> reads,
-            LatestWeekData.Report latestWeek) {
+    private static Pool pool(List<DirectoryPlayer> freeAgents, List<DirectoryPlayer> eligible,
+            List<LaneRead> reads, LatestWeekData.Report latestWeek) {
         Map<String, List<String>> reasons = new LinkedHashMap<>();
         Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
         Set<String> backedByFootball = new LinkedHashSet<>();
         for (LaneRead read : reads) {
-            Map<String, String> picks = read.read().shortlist(freeAgents);
+            Map<String, String> picks = read.read().shortlist(eligible);
             picksByLane.put(read.lane().name(), picks);
             picks.forEach((playerId, reason) ->
                     reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
@@ -239,10 +251,11 @@ public class WaiverEvidence {
     }
 
     private static Candidate screened(DirectoryPlayer player, List<String> reasons,
-            boolean trendingOnly) {
+            boolean trendingOnly, RoundPreference preference) {
         if (reasons == null) {
             return new Candidate(player.playerId(), player.fullName(), false,
-                    "no lane named him among the free agents worth a look");
+                    preference.leftOutBy(player)
+                            .orElse("no lane named him among the free agents worth a look"));
         }
         String named = String.join("; ", reasons);
         return new Candidate(player.playerId(), player.fullName(), true,
@@ -309,6 +322,20 @@ public class WaiverEvidence {
         facts.put("missingData", gaps.isEmpty() ? "none" : String.join("; ", gaps));
         return new EvidenceItem("board", "otto:waiver-board", Optional.empty(), now,
                 "the claim round this board is for", facts);
+    }
+
+    private static EvidenceItem preferenceItem(WaiverPreference preference) {
+        Map<String, String> facts = new LinkedHashMap<>();
+        facts.put("asked", preference.phrase());
+        facts.put("positions", String.join(", ", preference.positions()));
+        facts.put("kind", switch (preference.mode()) {
+            case FOCUS -> "a focus: rank these positions first, and still show a clearly "
+                    + "better pickup elsewhere with why he beats them";
+            case ONLY -> "a filter: only these positions were screened";
+        });
+        return new EvidenceItem("preference", "otto:chat", Optional.empty(),
+                preference.setAt(), "what the user asked for this claim round's board, by chat",
+                facts);
     }
 
     private static EvidenceItem needsItem(LeagueWeek league, RosterNeeds needs,

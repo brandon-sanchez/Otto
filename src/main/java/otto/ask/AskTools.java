@@ -9,6 +9,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
+import otto.board.WaiverPreferences;
 import otto.check.WeekFacts;
 import otto.settings.SettingsService;
 import otto.settings.SettingsStore;
@@ -26,9 +27,8 @@ import otto.watchlist.WatchlistService;
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
  *
- * This is all twelve of the tools the spec names, plus the Settings
- * tool the chat needs to change them. Keep them coarse:
- * one tool per question a user would ask, not one per field.
+ * Keep them coarse: one tool per question a user would ask, not one
+ * per field.
  */
 @Component
 public class AskTools {
@@ -42,12 +42,13 @@ public class AskTools {
     private final WatchlistService watchlist;
     private final SettingsService settings;
     private final SettingsStore settingsStore;
+    private final WaiverPreferences waiverPreferences;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
-            Clock clock) {
+            WaiverPreferences waiverPreferences, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -57,6 +58,7 @@ public class AskTools {
         this.watchlist = watchlist;
         this.settings = settings;
         this.settingsStore = settingsStore;
+        this.waiverPreferences = waiverPreferences;
         this.clock = clock;
     }
 
@@ -200,6 +202,39 @@ public class AskTools {
         return switch (waivers.rank(leagueWeek, clock.instant(), query)) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> unavailable(unavailable);
             case SourceResult.Ok<WaiverBoard> board -> ToolAnswer.of(board.value());
+        };
+    }
+
+    @Tool(name = "manage_waiver_preferences", description = """
+            The user's preference for his next waiver board, the one Otto
+            builds before the league's next claim deadline. A preference
+            covers that one claim round and ends when its claims close.
+            Call this to set one when he asks to steer the board or the
+            waiver round, such as "focus on TE this week" or "only TEs on
+            my board", to show what is in force, or to clear it. A one-off
+            "only show me TEs" about the answer he is reading is not a
+            preference: answer it with rank_waiver_targets and its
+            position. Only this tool knows what is in force: never treat a
+            preference mentioned earlier in the conversation as active,
+            and never set one he did not ask for in his latest message.""")
+    public ToolAnswer<WaiverPreferences.View> manageWaiverPreferences(
+            @ToolParam(description = "set, show or clear")
+            String action,
+            @ToolParam(required = false, description = """
+                    The positions to set: any of QB, RB, WR and TE. Needed
+                    to set; leave it out to show or clear.""")
+            List<String> positions,
+            @ToolParam(required = false, description = """
+                    True when he wants the board to show only those
+                    positions. Leave it out for a focus, which ranks them
+                    first and still shows a clearly better pickup
+                    elsewhere.""")
+            Boolean only) {
+        return switch (loader.league()) {
+            case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
+                unavailable(unavailable);
+            case SourceResult.Ok<SleeperAdapter.League> ok -> waiverPreferences.apply(ok.value(),
+                    action, positions, Boolean.TRUE.equals(only), clock.instant());
         };
     }
 
