@@ -72,31 +72,28 @@ public class AdviceWriter {
 
             """;
 
-    private static final String LINEUP_SHAPE = """
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": {"start": "<playerId>", "bench": "<playerId or null>", "slot": "<slot>"},
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}]
-            }
-            Use null for "move" to recommend no change.
-            """;
+    /** The fields every advice answer carries, one per line, for both shapes below. */
+    private static final String ANSWER_FIELDS = String.join(",\n",
+            "  \"message\": \"the text the user receives\"",
+            "  \"move\": {\"start\": \"<playerId>\", \"bench\": \"<playerId or null>\", "
+                    + "\"slot\": \"<slot>\"}",
+            "  \"players\": [\"<playerId of every player the message names>\"]",
+            "  \"claims\": [{\"text\": \"<one factual statement>\", "
+                    + "\"evidence\": [\"<evidence id>\"]}]",
+            "  \"comparisons\": [{\"higher\": \"<playerId>\", \"lower\": \"<playerId>\", "
+                    + "\"basis\": \"projection\"}]");
 
-    private static final String DECISION_SHAPE = """
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": {"start": "<playerId>", "bench": "<playerId or null>", "slot": "<slot>"},
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": [{"higher": "<playerId>", "lower": "<playerId>", "basis": "projection"}],
-              "plan": "<id of the chosen roster plan>",
-              "conditions": ["<id of each unknown the advice is conditional on>"]
-            }
-            Use null for "move" to recommend no lineup change.
-            """;
+    private static final String LINEUP_SHAPE = "Answer with only this JSON object:\n{\n"
+            + ANSWER_FIELDS + "\n}\nUse null for \"move\" to recommend no change.\n";
+
+    private static final String DECISION_SHAPE = "Answer with only this JSON object:\n{\n"
+            + ANSWER_FIELDS + ",\n"
+            + "  \"plan\": \"<id of the chosen roster plan>\",\n"
+            + "  \"conditions\": [\"<id of each unknown the advice is conditional on>\"]\n"
+            + "}\nUse null for \"move\" to recommend no lineup change.\n";
+
+    /** One answer, then one correction carrying its failures. */
+    private static final int ATTEMPTS = 2;
 
     private static final Logger log = LoggerFactory.getLogger(AdviceWriter.class);
 
@@ -104,6 +101,7 @@ public class AdviceWriter {
     private final AdviceForm<AdviceAnswer> lineup;
     private final AdviceForm<AdviceAnswer> playerDecision;
 
+    /** Asks the model through {@code builder}'s client and checks answers with {@code check}. */
     public AdviceWriter(ChatClient.Builder builder, AdviceCheck check) {
         this.chat = builder.build();
         this.lineup = answerForm(GROUNDING + VOICE + LINEUP_SHAPE, check);
@@ -134,7 +132,7 @@ public class AdviceWriter {
         conversation.add(new UserMessage(json(bundle)));
         List<ModelExchange> exchanges = new ArrayList<>();
         List<String> failures = List.of();
-        for (int attempt = 1; attempt <= 2; attempt++) {
+        for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
             JsonNode request = request(form, conversation);
             String reply;
             try {
