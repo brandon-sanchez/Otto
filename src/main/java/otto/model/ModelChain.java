@@ -222,8 +222,8 @@ public class ModelChain {
     }
 
     /**
-     * Runs one Check: every run of the chain {@code check} makes shares
-     * the Check's budget.
+     * Runs {@code check} as one Check: every model run it makes shares
+     * {@link ModelProperties.Budgets#check()}.
      */
     public <T> T withinCheck(Supplier<T> check) {
         return ScopedValue.where(CHECK_ENDS, System.nanoTime() + budgets.check().toNanos())

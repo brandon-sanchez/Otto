@@ -142,7 +142,7 @@ public class WaiverBoardService {
 
     /**
      * Builds, records and sends this claim round's board when it is due
-     * and not yet sent. A failure is logged, and the next Check tries
+     * and not yet sent. Any other failure is logged, and the next Check tries
      * again, so the board can never stop the rest of the Check.
      *
      * <p>Side effects: the screening's reads, up to two model calls, one

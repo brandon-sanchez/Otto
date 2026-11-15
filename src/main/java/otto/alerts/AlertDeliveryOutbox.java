@@ -36,7 +36,7 @@ import otto.telegram.TelegramClient;
  * <p>Two Checks can overlap when the scheduled function has no reserved
  * concurrency, each in its own container with its own outbox. A
  * delivery therefore first takes a lease on each of its keys in the
- * shared store, which takes it in one conditional write, and only the
+ * shared store, which grants each lease to one holder at a time, and only the
  * outbox holding every lease sends. The other leaves the Alert alone:
  * the next Check finds it sent, or still pending and re-checks it.
  */

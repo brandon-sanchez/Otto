@@ -59,7 +59,7 @@ final class ReportWindows {
 
     /**
      * True when a feed last read at {@code polled} is due again at
-     * {@code now}, given its {@link #interval}.
+     * {@code now}: from {@link #SLACK} before its {@link #interval} runs out.
      */
     static boolean due(Instant polled, Duration interval, Instant now) {
         return !now.isBefore(polled.plus(interval).minus(SLACK));

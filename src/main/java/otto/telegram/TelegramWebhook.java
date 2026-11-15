@@ -159,9 +159,9 @@ public class TelegramWebhook {
 
     /**
      * Sends the board's full list and says how it went. A failure to
-     * read or record it is answered like a failed send: an unanswered
-     * tap is offered again by Telegram, and its retry would fail the
-     * same way.
+     * read or record it is answered like a failed send: Telegram sends
+     * again an update whose webhook call fails, and that retry would
+     * fail the same way.
      */
     private String viewAllOptions(long alertId) {
         try {

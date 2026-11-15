@@ -77,7 +77,7 @@ public class WaiverBoardOptions {
      *
      * <p>Side effects: one Decision Record read and one document read.
      *
-     * @return empty when {@link #allOptions} is
+     * @return empty when {@link #allOptions} is empty
      */
     public Optional<List<String>> unsentOptions(long alertId) {
         int resumeAt = store.read(PROGRESS_PREFIX + alertId, Progress.class)
