@@ -94,7 +94,8 @@ public class LatestWeekData {
             String opening = week.isEmpty() ? "The latest week's numbers cannot be confirmed"
                     : "Week %d's numbers are not all in".formatted(week.getAsInt());
             return ("%s: %s. This board is based on %s, this week's projections and the "
-                    + "latest news, and it leaves out any pickup only popularity supports.")
+                    + "latest news. Any pickup only trending adds support is marked: he is "
+                    + WaiverEvidence.TRENDING_ONLY + ".")
                     .formatted(opening, String.join("; ", missing), basis);
         }
     }

@@ -795,10 +795,14 @@ claim deadline, the board is built from what has arrived. That
 fallback board opens with a note that code writes, not the model. The
 note names each missing game or team and says what the advice rests on
 instead. The same gaps go to the model as missing data. A free agent
-whom only the trending lane names is left out of a fallback pool. The
-lanes that would back him with football are short a week, so
-popularity alone cannot carry him. The Decision Record lists him with
-that reason.
+whom only the trending lane names stays in a fallback pool, labelled
+"trending, but this week's usage numbers aren't in yet". The lanes
+that would back him with football are short a week, so leaving him
+out would hide a pickup the user may already be hearing about. The
+label goes into his evidence, his Decision Record reason and a line
+under his board entry, and the board's note says such pickups are
+marked. The model is told never to present that popularity as usage,
+role or production.
 
 The fallback is built once, like any other board, so a round whose
 first Check falls inside the buffer still gets it before the deadline.
