@@ -14,12 +14,12 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import otto.alerts.AlertDeliveryOutbox;
 import otto.alerts.AlertPhraser;
 import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
 import otto.ask.LeagueWeek;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.events.Event;
 import otto.events.EventType;
 import otto.settings.SettingsStore;
@@ -117,11 +117,9 @@ public class WaiverAlertService {
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
 
-        String text = phraser.phrase(facts, recommendation);
-        Map<String, String> recorded = new HashMap<>(facts);
-        recorded.put("text", text);
-        return outbox.deliver(text, List.of(
-                        new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded))))
+        return outbox.deliver(phraser.basis(facts, recommendation),
+                        () -> phraser.phrase(facts, recommendation),
+                        List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts))))
                 .stream().findFirst();
     }
 

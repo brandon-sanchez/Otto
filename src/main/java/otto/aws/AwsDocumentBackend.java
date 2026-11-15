@@ -1,8 +1,10 @@
 package otto.aws;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import otto.storage.DocumentBackend;
+import otto.storage.Lease;
 
 /**
  * The deployed assistant's storage: each document goes to its own S3
@@ -41,6 +43,16 @@ public class AwsDocumentBackend implements DocumentBackend {
     @Override
     public void store(String name, byte[] json) {
         backendFor(name).store(name, json);
+    }
+
+    @Override
+    public boolean lease(String name, Lease lease, Instant now) {
+        return backendFor(name).lease(name, lease, now);
+    }
+
+    @Override
+    public void release(String name, String holder) {
+        backendFor(name).release(name, holder);
     }
 
     /**

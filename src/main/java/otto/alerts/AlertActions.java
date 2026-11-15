@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import otto.delivery.AlertDeliveryOutbox;
 import otto.events.DiffKind;
 import otto.events.Event;
 import otto.events.EventLog;
