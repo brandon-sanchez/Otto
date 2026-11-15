@@ -213,10 +213,9 @@ public class ModelChain {
                     .filter(next -> breakers.refusal(next.name()).isEmpty())
                     .count();
             long until = deadline - later * budget.reserve().toNanos();
-            Optional<String> refusal = breakers.refusal(provider.name())
-                    .or(() -> until > System.nanoTime()
-                            ? Optional.empty()
-                            : Optional.of("Not called: no time was left for it."));
+            Optional<String> refusal = until > System.nanoTime()
+                    ? breakers.admit(provider.name())
+                    : Optional.of("Not called: no time was left for it.");
             if (refusal.isPresent()) {
                 skipped.add(new Skip(provider.name(), provider.model(), refusal.get(), false));
                 call.passedOver(provider, refusal.get());
