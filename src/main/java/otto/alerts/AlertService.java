@@ -68,6 +68,7 @@ public class AlertService {
             EnumSet.of(AlertCandidate.Source.LEGALITY, AlertCandidate.Source.EDGE);
 
     private final StatusTransitionDetector transitionDetector;
+    private final OfficialUpdateDetector officialUpdateDetector;
     private final LineupLegalityDetector legalityDetector;
     private final BenchEdgeDetector edgeDetector;
     private final LeagueActivityDetector activityDetector;
@@ -83,6 +84,7 @@ public class AlertService {
     private final LockLadder lockLadder;
 
     public AlertService(StatusTransitionDetector transitionDetector,
+            OfficialUpdateDetector officialUpdateDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
             LeagueActivityDetector activityDetector, WatchlistDetector watchlistDetector,
             AlertPhraser phraser, EventLog eventLog,
@@ -91,6 +93,7 @@ public class AlertService {
             PreSendResearch preSendResearch, LineupAdvice lineupAdvice,
             LockLadder lockLadder) {
         this.transitionDetector = transitionDetector;
+        this.officialUpdateDetector = officialUpdateDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
         this.activityDetector = activityDetector;
@@ -126,6 +129,7 @@ public class AlertService {
         candidates.addAll(activityDetector.detect(diffEvents, week));
         candidates.addAll(watchlistDetector.detect(diffEvents));
         userRoster.ifPresent(roster -> {
+            candidates.addAll(officialUpdateDetector.detect(roster, eventLog.all(), now));
             candidates.addAll(legalityDetector.detect(roster, week));
             candidates.addAll(edgeDetector.detect(roster, week, now));
         });

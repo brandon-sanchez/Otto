@@ -18,8 +18,10 @@ import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.ask.LeagueWeek;
+import otto.decisions.PlayerAvailability;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
+import otto.directory.PlayerHealth;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
@@ -29,7 +31,9 @@ import otto.records.RosterContext;
 import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.RunOutcomes;
+import otto.research.OfficialUpdate;
 import otto.research.PreSendResearch;
+import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
@@ -57,17 +61,20 @@ public class LineupAdvice {
     private final SettingsStore settings;
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
+    private final ResearchCache researchCache;
     private final PreSendResearch preSendResearch;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
-            PreSendResearch preSendResearch, OttoProperties properties) {
+            ResearchCache researchCache, PreSendResearch preSendResearch,
+            OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
         this.settings = settings;
         this.directory = directory;
         this.nflverse = nflverse;
+        this.researchCache = researchCache;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
     }
@@ -127,10 +134,15 @@ public class LineupAdvice {
      * to do with him, chosen from the roster plans legal in this league,
      * and how to fill his slot when he is a starter who now scores zero.
      *
-     * @param transition the status-transition candidate
+     * @param transition the status-transition candidate, or the
+     *        {@link OfficialUpdateDetector} candidate for a team
+     *        announcement Sleeper has not caught up with
      * @param research the facts read for him right before sending; his
      *        latest report joins the evidence, and without one his
-     *        recovery is an unknown the advice must be conditional on
+     *        recovery is an unknown the advice must be conditional on.
+     *        His team's latest announcement is read from the research
+     *        cache that read refreshed, and is kept apart from his
+     *        Sleeper designation, which alone decides the legal plans.
      * @return the checked advice, or the verified status change when the
      *         advice cannot be had; empty when he has left the roster
      */
@@ -141,8 +153,8 @@ public class LineupAdvice {
             return Optional.empty();
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, research,
-                leagueWeek, roster, directoryPlayers(), this::profile, now), research,
-                leagueWeek, roster, now);
+                availability(transition, roster, now), leagueWeek, roster, directoryPlayers(),
+                this::profile, now), research, leagueWeek, roster, now);
     }
 
     /**
@@ -160,8 +172,8 @@ public class LineupAdvice {
             return Optional.empty();
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, legality,
-                research, leagueWeek, roster, directoryPlayers(), this::profile, now), research,
-                leagueWeek, roster, now);
+                research, availability(transition, roster, now), leagueWeek, roster,
+                directoryPlayers(), this::profile, now), research, leagueWeek, roster, now);
     }
 
     private Optional<AlertText.Advised> decide(String alertKey, AlertCandidate transition,
@@ -175,6 +187,16 @@ public class LineupAdvice {
         return directory.read()
                 .map(stored -> stored.players().values())
                 .orElse(List.of());
+    }
+
+    private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,
+            Instant now) {
+        String playerId = transition.playerId();
+        return new PlayerAvailability(PlayerHealth.valueOf(transition.facts().get("to")),
+                Optional.ofNullable(transition.facts().get(OfficialUpdateDetector.DESIGNATED_SINCE))
+                        .map(Instant::parse),
+                OfficialUpdate.latest(researchCache.read(playerId), roster.playerTeams().get(playerId),
+                        now));
     }
 
     /** Returns the nflverse profile of a player, by Sleeper id. */
