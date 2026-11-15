@@ -93,7 +93,6 @@ public class OttoStack extends Stack {
 
     private static final RetentionDays LOG_RETENTION = RetentionDays.TWO_WEEKS;
 
-    /** Where the alarms read their counts from. */
     private static final String METRIC_NAMESPACE = "Otto";
 
     /**
@@ -130,7 +129,9 @@ public class OttoStack extends Stack {
 
     private static final int DAYS_PER_SEASON = 365;
 
-    /** What one month of this is allowed to cost. */
+    /** The values {@code otto.sent-waiver-board} accepts; mirrors the app's SentWaiverBoard. */
+    private static final List<String> SENT_WAIVER_BOARDS = List.of("EVIDENCE", "SCORED");
+
     private static final Number MONTHLY_BUDGET_USD = 20;
 
     public OttoStack(Construct scope, String id, StackProps props) {
@@ -149,7 +150,8 @@ public class OttoStack extends Stack {
                 "OTTO_BUCKET", documents.getBucketName(),
                 "OTTO_TABLE", records.getTableName(),
                 "OTTO_RECORDS_BUCKET", decisionRecords.getBucketName(),
-                "OTTO_PARAMETER_PATH", parameterPath);
+                "OTTO_PARAMETER_PATH", parameterPath,
+                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard());
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
         Function scheduled = appFunction("Scheduled", "otto.aws.ScheduledHandler",
@@ -269,6 +271,21 @@ public class OttoStack extends Stack {
             throw new IllegalStateException("articleTextSeasons must be at least 1");
         }
         return seasons * DAYS_PER_SEASON;
+    }
+
+    /**
+     * Which waiver board reaches the user, from the
+     * {@code sentWaiverBoard} context value: {@code EVIDENCE} or the
+     * {@code SCORED} rollback. It lives in the stack, so the deploy that
+     * follows every merge keeps a rollback rather than resetting it.
+     */
+    private String sentWaiverBoard() {
+        String board = context("sentWaiverBoard", "EVIDENCE").strip();
+        if (!SENT_WAIVER_BOARDS.contains(board)) {
+            throw new IllegalStateException("sentWaiverBoard must be one of "
+                    + String.join(", ", SENT_WAIVER_BOARDS) + ", not \"" + board + "\"");
+        }
+        return board;
     }
 
     /**
