@@ -9,20 +9,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Component;
 
-import otto.alerts.AlertDeliveryOutbox;
 import otto.alerts.AlertPhraser;
 import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
-import otto.alerts.RoleSlipLedger;
 import otto.ask.LeagueWeek;
-import otto.claims.BoardSchedule;
+import otto.claims.BoardDelivery;
+import otto.claims.ClaimRound;
 import otto.events.Event;
-import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.sleeper.SourceResult;
@@ -35,56 +32,48 @@ import otto.sleeper.SourceResult;
  * The Check runs it only while {@code otto.sent-waiver-board} is
  * SCORED, the rollback from the evidence-based board.
  *
- * <p>Role-slip advice held for the board goes out under it, word for
- * word as it passed its checks, and is forgotten once Telegram accepts
- * the board.
+ * <p>Role-slip advice held for the board goes out under it, through
+ * {@link BoardDelivery}.
  */
 @Component
 public class WaiverAlertService {
-
-    private static final String ABOUT_YOUR_ROSTER = "About your roster";
 
     private final WaiverScorer scorer;
     private final AlertPhraser phraser;
     private final MuteStore muteStore;
     private final SettingsStore settings;
-    private final AlertDeliveryOutbox outbox;
-    private final RoleSlipLedger roleSlips;
-
-    /** The latest Check's scored board, so the Alert and the baselines rank it once. */
-    private final AtomicReference<Ranked> lastRanked = new AtomicReference<>();
-
-    private record Ranked(LeagueWeek league, Instant now, SourceResult<WaiverBoard> board) {
-    }
+    private final BoardDelivery delivery;
 
     public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
-            MuteStore muteStore, SettingsStore settings,
-            AlertDeliveryOutbox outbox, RoleSlipLedger roleSlips) {
+            MuteStore muteStore, SettingsStore settings, BoardDelivery delivery) {
         this.scorer = scorer;
         this.phraser = phraser;
         this.muteStore = muteStore;
         this.settings = settings;
-        this.outbox = outbox;
-        this.roleSlips = roleSlips;
+        this.delivery = delivery;
     }
 
     /**
-     * Sends this week's waiver Alert if it is due and has not gone out
+     * Returns this Check's scored board, ranked on its first read. The
+     * Check makes one and hands it to the waiver Alert and the waiver
+     * baselines, so they rank once between them.
+     */
+    public ScoredBoard scoredBoard(LeagueWeek league, Instant now) {
+        return new ScoredBoard(scorer, league, now);
+    }
+
+    /**
+     * Sends this round's waiver Alert if it is due and has not gone out
      * yet.
+     *
+     * <p>Side effects: the scored board's reads, the phrasing model
+     * call, and {@link BoardDelivery}'s writes and sends.
      *
      * @return the Event recorded for a sent Alert, empty otherwise
      */
-    public Optional<Event> considerWaiverAlert(LeagueWeek league, Instant now) {
-        Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now);
-        if (deadline.isEmpty()) {
-            return Optional.empty();
-        }
-        ZonedDateTime due = BoardSchedule.due(deadline.get());
-        if (now.isBefore(due.toInstant())) {
-            return Optional.empty();
-        }
-        String key = BoardSchedule.alertKey(deadline.get());
-        if (outbox.alreadySent(key)
+    public Optional<Event> considerWaiverAlert(ClaimRound round, ScoredBoard scored) {
+        if (!round.open()
+                || delivery.alreadySent(round)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
             return Optional.empty();
@@ -94,39 +83,18 @@ public class WaiverAlertService {
         // could not build one - or built an empty one - tries again on
         // the next minute inside the window. A board that never
         // computed is not a board that was sent.
-        return switch (scoredBoard(league, now)) {
+        return switch (scored.get()) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
-                    : send(key, due, deadline.get(), ok.value(), now);
+                    : send(round, ok.value());
         };
     }
 
-    /**
-     * Returns the scored board's top {@value WaiverQuery#ALERT_COUNT}
-     * free agents for this Check. Ranking reads live news, so one Check
-     * ranks once: the Alert and the waiver baselines share the result
-     * for the same {@link LeagueWeek}, which each Check builds afresh.
-     *
-     * <p>Side effects: the scorer's reads, on the first call of a Check.
-     */
-    public SourceResult<WaiverBoard> scoredBoard(LeagueWeek league, Instant now) {
-        Ranked last = lastRanked.get();
-        if (last != null && last.league() == league && last.now().equals(now)) {
-            return last.board();
-        }
-        SourceResult<WaiverBoard> board = scorer.rank(league, now,
-                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT));
-        lastRanked.set(new Ranked(league, now, board));
-        return board;
-    }
-
-
-    private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
-            WaiverBoard board, Instant now) {
-        String claimDay = deadline.getDayOfWeek()
+    private Optional<Event> send(ClaimRound round, WaiverBoard board) {
+        String claimDay = round.deadline().getDayOfWeek()
                 .getDisplayName(TextStyle.FULL, Locale.US);
-        Map<String, String> facts = facts(board, due, deadline);
+        Map<String, String> facts = facts(board, round.due(), round.deadline());
         Recommendation recommendation = new Recommendation(
                 null,
                 "your waiver board",
@@ -140,34 +108,10 @@ public class WaiverAlertService {
                 Confidence.MEDIUM,
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
-
-        List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
-        List<String> heldRuns = held.stream().map(RoleSlipLedger.Held::runId).toList();
-        String basis = phraser.basis(facts, recommendation) + heldRuns;
-        String text = outbox.pendingText(List.of(key), basis)
-                .orElseGet(() -> withHeldAdvice(phraser.phrase(facts, recommendation), held));
-        Map<String, String> recorded = new HashMap<>(facts);
-        recorded.put("text", text);
-        if (!heldRuns.isEmpty()) {
-            recorded.put("heldAdviceRuns", String.join(",", heldRuns));
-        }
-        Optional<Event> sent = outbox.deliver(text, basis, List.of(
-                        new Event(key, EventType.ALERT_SENT, now, Map.copyOf(recorded))))
-                .stream().findFirst();
-        if (sent.isPresent() && !heldRuns.isEmpty()) {
-            roleSlips.deliveredInBoard(heldRuns);
-        }
-        return sent;
+        return delivery.deliverPhrased(round, phraser.basis(facts, recommendation),
+                () -> phraser.phrase(facts, recommendation), facts);
     }
 
-    private static String withHeldAdvice(String board, List<RoleSlipLedger.Held> held) {
-        if (held.isEmpty()) {
-            return board;
-        }
-        StringBuilder text = new StringBuilder(board).append("\n\n").append(ABOUT_YOUR_ROSTER);
-        held.forEach(advice -> text.append("\n\n").append(advice.message()));
-        return text.toString();
-    }
 
     /** One target, as the outbound message would say it. */
     private static String headline(WaiverCandidate candidate) {

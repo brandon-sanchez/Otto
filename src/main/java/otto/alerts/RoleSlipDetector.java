@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import otto.claims.RoleSlipLedger;
 import otto.decisions.UsageDrop;
 import otto.directory.PlayerHealth;
 import otto.nflverse.NflverseStore;

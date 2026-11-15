@@ -1,7 +1,6 @@
 package otto.alerts;
 
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -23,7 +22,9 @@ import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.LineupMove;
 import otto.ask.LeagueWeek;
-import otto.claims.BoardSchedule;
+import otto.claims.BoardDelivery;
+import otto.claims.ClaimRound;
+import otto.claims.RoleSlipLedger;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
@@ -75,14 +76,14 @@ public class LineupAdvice {
     private final ResearchCache researchCache;
     private final RoleSlipLedger ledger;
     private final MuteStore muteStore;
-    private final AlertDeliveryOutbox outbox;
+    private final BoardDelivery boards;
     private final PreSendResearch preSendResearch;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
-            AlertDeliveryOutbox outbox, PreSendResearch preSendResearch,
+            BoardDelivery boards, PreSendResearch preSendResearch,
             OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
@@ -92,7 +93,7 @@ public class LineupAdvice {
         this.researchCache = researchCache;
         this.ledger = ledger;
         this.muteStore = muteStore;
-        this.outbox = outbox;
+        this.boards = boards;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
     }
@@ -280,20 +281,20 @@ public class LineupAdvice {
      * deadline, or the advice changes a lineup whose first kickoff is
      * not known or comes before the latest the board can go out. A
      * board waiting for late data goes out as late as
-     * {@link BoardSchedule#latest}, not at the evening it is due.
+     * {@link ClaimRound#latest}, not at the evening it is due.
      */
     private boolean waitingCostsAMove(AdviceAnswer answer, LeagueWeek leagueWeek,
             RosterSnapshot roster, Instant now) {
-        Optional<ZonedDateTime> deadline = leagueWeek.league().rules().nextClaimDeadline(now);
-        if (deadline.isEmpty() || !settings.enabled(Trigger.WAIVER)
+        Optional<ClaimRound> round = ClaimRound.next(leagueWeek.league(), now);
+        if (round.isEmpty() || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())
-                || outbox.alreadySent(BoardSchedule.alertKey(deadline.get()))) {
+                || boards.alreadySent(round.get())) {
             return true;
         }
         if (answer.move().isEmpty()) {
             return false;
         }
-        Instant latestBoard = BoardSchedule.latest(deadline.get());
+        Instant latestBoard = round.get().latest();
         LineupMove move = answer.move().get();
         Optional<Instant> firstKickoff = leagueWeek.week().games().flatMap(games -> Stream
                 .of(move.start(), move.bench())

@@ -19,6 +19,7 @@ import otto.ask.LeagueWeek;
 import otto.board.BoardComparison;
 import otto.board.SentWaiverBoard;
 import otto.board.WaiverBoardService;
+import otto.claims.ClaimRound;
 import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
@@ -31,6 +32,7 @@ import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotBuilder;
 import otto.snapshot.SnapshotDiffer;
 import otto.snapshot.SnapshotStore;
+import otto.waivers.ScoredBoard;
 import otto.waivers.WaiverAlertService;
 import otto.watchlist.WatchlistWatcher;
 
@@ -135,17 +137,22 @@ public class CheckRunner {
             WeekFacts week = weekFactsBuilder.build(stage.league());
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
+            Optional<ClaimRound> round = ClaimRound.next(stage.league(), now);
+            ScoredBoard scored = waiverAlertService.scoredBoard(leagueWeek, now);
             try {
                 alerts.addAll(alertService.process(leagueWeek));
-                if (waiverBoard.sent() == SentWaiverBoard.SCORED) {
-                    waiverAlertService.considerWaiverAlert(leagueWeek, now)
-                            .ifPresent(alerts::add);
+                if (round.isPresent()) {
+                    if (waiverBoard.sent() == SentWaiverBoard.SCORED) {
+                        waiverAlertService.considerWaiverAlert(round.get(), scored)
+                                .ifPresent(alerts::add);
+                    }
+                    waiverBoard.considerBoard(leagueWeek, round.get()).ifPresent(alerts::add);
                 }
-                waiverBoard.considerBoard(leagueWeek, now).ifPresent(alerts::add);
             } catch (ModelChain.OutOfCheckTime e) {
                 log.info("The Check has no model time left; the next Check sends the rest");
             }
-            boardComparison.considerComparison(leagueWeek, now);
+            round.ifPresent(open -> boardComparison.considerBaselines(leagueWeek, open, scored));
+            boardComparison.considerJudging(stage.league().leagueId(), now);
             verificationService.verify(inSeason.get(), week, now);
         }
 
