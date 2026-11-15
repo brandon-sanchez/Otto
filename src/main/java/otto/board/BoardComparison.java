@@ -164,7 +164,7 @@ public class BoardComparison {
         String runId = RunIds.stable(RUN_ID_PREFIX, leagueId,
                 deadline.get().toInstant().toString());
         if (records.read(userId, leagueId, runId).isEmpty()) {
-            records.save(baselinesRecord(runId, league, week.get(), deadline.get(),
+            records.saveFirst(baselinesRecord(runId, league, week.get(), deadline.get(),
                     players.get(), user.get(), now));
         }
         listUntilJudged(new Pending(leagueId, runId,

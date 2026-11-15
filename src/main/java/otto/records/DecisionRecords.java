@@ -58,12 +58,15 @@ import otto.storage.OttoJson;
  * years. Unrelated chat needs no such pass: {@link DecisionRecord} has
  * no field that could hold it.
  *
- * <p>A record is immutable once written. A run that retries its save
- * under the same run id writes the same bytes and converges; a
- * different record under a run id already used is refused, never
- * written over. A retry under a new run id stores a second record, so
- * a caller that may be retried across invocations derives its run id
- * from a stable identity of the run.
+ * <p>A record is immutable once written. {@link #save} of the same
+ * record again writes the same bytes and converges; a different record
+ * under a run id already used is refused, never written over. A run
+ * rebuilt by a later Check differs from its first attempt in its
+ * timestamps even over the same evidence, so a caller that rebuilds
+ * runs stores them with {@link #saveFirst}, which keeps whichever
+ * attempt landed first. A retry under a new run id stores a second
+ * record, so a caller that may be retried across invocations derives
+ * its run id from a stable identity of the run.
  */
 @Component
 public class DecisionRecords {
@@ -126,18 +129,59 @@ public class DecisionRecords {
      *         different record
      */
     public void save(DecisionRecord record) {
-        Map<String, String> articleText = new LinkedHashMap<>();
-        record.evidence().forEach(evidence -> evidence.sourceText()
-                .ifPresent(text -> articleText.put(evidence.id(), text)));
-        DecisionRecord facts = record.withEvidence(record.evidence().stream()
-                .map(evidence -> evidence.withSourceText(Optional.empty()))
-                .toList());
-
+        Map<String, String> articleText = articleText(record);
         if (!articleText.isEmpty()) {
             writeOnce(key(ARTICLE_TEXT, record.userId(), record.leagueId(), record.runId()),
                     articleText);
         }
-        writeOnce(key(RECORDS, record.userId(), record.leagueId(), record.runId()), facts);
+        writeOnce(key(RECORDS, record.userId(), record.leagueId(), record.runId()),
+                withoutArticleText(record));
+    }
+
+    private static Map<String, String> articleText(DecisionRecord record) {
+        Map<String, String> articleText = new LinkedHashMap<>();
+        record.evidence().forEach(evidence -> evidence.sourceText()
+                .ifPresent(text -> articleText.put(evidence.id(), text)));
+        return articleText;
+    }
+
+    private static DecisionRecord withoutArticleText(DecisionRecord record) {
+        return record.withEvidence(record.evidence().stream()
+                .map(evidence -> evidence.withSourceText(Optional.empty()))
+                .toList());
+    }
+
+    /**
+     * Stores a record unless its run id already holds one, and returns
+     * the record the run id holds. An earlier attempt whose save landed
+     * but reported failure is kept, never written over, so its run
+     * converges on that attempt instead of being refused on every
+     * retry. Article text an earlier attempt left behind is kept the
+     * same way.
+     *
+     * <p>Side effects: up to two conditional writes and one read.
+     *
+     * @return {@code record} when this call stored it, otherwise the
+     *         record stored earlier under its run id
+     */
+    public DecisionRecord saveFirst(DecisionRecord record) {
+        Optional<DecisionRecord> earlier = read(record.userId(), record.leagueId(),
+                record.runId());
+        if (earlier.isPresent()) {
+            return earlier.get();
+        }
+        Map<String, String> articleText = articleText(record);
+        if (!articleText.isEmpty()) {
+            objects.putIfAbsent(key(ARTICLE_TEXT, record.userId(), record.leagueId(),
+                    record.runId()), json(redacted(OttoJson.MAPPER.valueToTree(articleText))));
+        }
+        if (objects.putIfAbsent(key(RECORDS, record.userId(), record.leagueId(), record.runId()),
+                json(redacted(OttoJson.MAPPER.valueToTree(withoutArticleText(record)))))) {
+            return record;
+        }
+        return read(record.userId(), record.leagueId(), record.runId())
+                .orElseThrow(() -> new IllegalStateException("Decision Record " + record.runId()
+                        + " was refused as present but cannot be read"));
     }
 
     /**
