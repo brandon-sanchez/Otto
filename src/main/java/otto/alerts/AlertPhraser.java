@@ -63,9 +63,9 @@ public class AlertPhraser {
             log.warn("Cannot write Alert facts, using deterministic fallback", e);
             return fallback(recommendation);
         }
-        return switch (chain.call(provider -> {
-            String content = provider.chat().prompt().system(SYSTEM).user(facts).call()
-                    .content();
+        return switch (chain.call(ModelChain.CallSite.PHRASING, turn -> {
+            String content = turn.timed(() -> turn.provider().chat().prompt().system(SYSTEM)
+                    .user(facts).call().content());
             if (content == null || content.isBlank()) {
                 throw new ModelChain.UnusableReply("The model answered with nothing.");
             }

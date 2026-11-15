@@ -180,12 +180,12 @@ public class AskService {
      */
     private Outcome run(String question, Instant now) {
         List<Message> messages = prompt(question, now);
-        return switch (chain.call(provider -> {
-            String content = provider.chat().prompt()
+        return switch (chain.call(ModelChain.CallSite.ASK, turn -> {
+            String content = turn.timed(() -> turn.provider().chat().prompt()
                     .messages(messages)
                     .tools(tools)
                     .call()
-                    .content();
+                    .content());
             if (content == null || content.isBlank()) {
                 throw new ModelChain.UnusableReply("The model answered with no content.");
             }

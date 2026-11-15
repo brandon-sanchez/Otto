@@ -7,15 +7,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * How the {@link ModelChain} is built: the order it asks providers in,
- * its circuit breaker, and the two fallback providers. OpenAI is set up
- * under {@code spring.ai.openai}, where Spring AI reads it.
+ * its circuit breaker, its time budget at each call site, and the two
+ * fallback providers. OpenAI is set up under {@code spring.ai.openai},
+ * where Spring AI reads it.
  *
  * @param order provider names, first asked first: {@code openai},
  *        {@code anthropic} and {@code gemini}
  */
 @ConfigurationProperties(prefix = "otto.models")
-public record ModelProperties(List<String> order, Breaker breaker, Provider anthropic,
-        Provider gemini) {
+public record ModelProperties(List<String> order, Breaker breaker, Budgets budgets,
+        Provider anthropic, Provider gemini) {
 
     public ModelProperties {
         order = List.copyOf(order);
@@ -32,11 +33,42 @@ public record ModelProperties(List<String> order, Breaker breaker, Provider anth
     }
 
     /**
+     * The time one run of the chain may take, from its first call to its
+     * last answer.
+     *
+     * @param deadline the whole run's limit
+     * @param reserve the time held back for each later provider that may
+     *        still be asked, so a provider that hangs leaves them a share
+     */
+    public record Budget(Duration deadline, Duration reserve) {
+
+        public Budget {
+            if (reserve.compareTo(deadline) >= 0) {
+                throw new IllegalArgumentException("A reserve of " + reserve
+                        + " leaves no time inside a deadline of " + deadline);
+            }
+        }
+    }
+
+    /**
+     * The budget at each call site.
+     *
+     * @param ask a chat reply, which must fit the webhook function's
+     *        60-second timeout with time left to send it
+     * @param advice checked advice: Alerts, player decisions and the
+     *        waiver board, which run on the scheduled function
+     * @param phrasing the wording of a Recommendation as an Alert
+     */
+    public record Budgets(Budget ask, Budget advice, Budget phrasing) {
+    }
+
+    /**
      * One fallback provider.
      *
      * @param apiKey blank leaves the provider out of the chain
      * @param baseUrl the API root, without a version path
-     * @param timeout the longest one HTTP request may take
+     * @param timeout the longest one HTTP request may take; the chain's
+     *        deadline can stop a call sooner
      * @param maxRetries retries of a rate-limited, failed or timed-out
      *        request before the chain moves on
      */

@@ -64,6 +64,8 @@ class ModelFallbackScenarioTest extends WireSeamTest {
 
     private static final String WRONG_NUMBER = edgeAnswer(EDGE_MESSAGE.replace("16.5", "18.0"));
 
+    private static final Duration ASK_DEADLINE = Duration.ofSeconds(4);
+
     private static final WireMockServer claude = newStubServer();
     private static final WireMockServer gemini = newStubServer();
 
@@ -95,6 +97,8 @@ class ModelFallbackScenarioTest extends WireSeamTest {
         registry.add("otto.models.gemini.api-key", () -> "test-gemini-key");
         registry.add("otto.models.gemini.max-retries", () -> "0");
         registry.add("spring.ai.openai.max-retries", () -> "0");
+        registry.add("otto.models.budgets.ask.deadline", () -> ASK_DEADLINE.toString());
+        registry.add("otto.models.budgets.ask.reserve", () -> "PT1S");
     }
 
     @BeforeEach
@@ -344,6 +348,24 @@ class ModelFallbackScenarioTest extends WireSeamTest {
         claude.verify(1, postRequestedFor(urlEqualTo(ANTHROPIC_MESSAGES))
                 .withRequestBody(containing("Is my lineup ok?"))
                 .withRequestBody(containing("\"tools\"")));
+    }
+
+    @Test
+    void claudeAnswersInsideTheAskDeadlineWhenOpenAiHangs() {
+        llm.stubFor(post(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .willReturn(json(OutboundStubs.contentBody("Too late."))
+                        .withFixedDelay(30_000)));
+        claudeAnswers("Your lineup looks set.");
+        OutboundStubs.telegramOk(telegram);
+
+        long started = System.nanoTime();
+        ask("Is my lineup ok?");
+        Duration took = Duration.ofNanos(System.nanoTime() - started);
+
+        assertThat(took).isLessThan(ASK_DEADLINE.plusSeconds(1));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo("Your lineup looks set."))));
+        claude.verify(1, postRequestedFor(urlEqualTo(ANTHROPIC_MESSAGES)));
     }
 
     @Test

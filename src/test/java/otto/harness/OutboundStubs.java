@@ -210,7 +210,8 @@ public final class OutboundStubs {
                 .withBody(body);
     }
 
-    private static String contentBody(String phrase) {
+    /** A chat-completions response body whose only message is the phrase. */
+    public static String contentBody(String phrase) {
         return """
                 {
                   "id": "chatcmpl-fixture",

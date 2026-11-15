@@ -135,14 +135,16 @@ public class AdviceWriter {
      * it fails. A provider that cannot be reached, or whose reply cannot
      * be read, is skipped, and the next provider in the chain gets the
      * same bundle and instructions. The correction stays with the
-     * provider that wrote the failed answer.
+     * provider that wrote the failed answer. The last provider the chain
+     * can ask gets a correction for an unreadable reply too, since no
+     * one is left to skip to.
      */
     public <T> AdviceResult<T> write(EvidenceBundle bundle, AdviceForm<T> form) {
         List<ModelExchange> exchanges = new ArrayList<>();
-        ModelChain.Result<AdviceResult<T>> result = chain.call(new ModelChain.ProviderCall<>() {
+        ModelChain.ProviderCall<AdviceResult<T>> turns = new ModelChain.ProviderCall<>() {
             @Override
-            public AdviceResult<T> call(ChatProvider provider) throws ModelChain.UnusableReply {
-                return converse(provider, bundle, form, exchanges);
+            public AdviceResult<T> call(ModelChain.Turn turn) throws ModelChain.UnusableReply {
+                return converse(turn, bundle, form, exchanges);
             }
 
             @Override
@@ -151,8 +153,8 @@ public class AdviceWriter {
                         NullNode.getInstance(), List.of(reason), provider.name(),
                         provider.model()));
             }
-        });
-        return switch (result) {
+        };
+        return switch (chain.call(ModelChain.CallSite.ADVICE, turns)) {
             case ModelChain.Result.Answered<AdviceResult<T>> answered -> answered.value();
             case ModelChain.Result.Exhausted<AdviceResult<T>> exhausted ->
                     new AdviceResult.Unavailable<>(exhausted.reason(), exchanges);
@@ -162,20 +164,18 @@ public class AdviceWriter {
     /**
      * One provider's turn: the first answer and, when it fails its
      * checks, the one correction.
-     *
-     * @throws ModelChain.UnusableReply when a reply is empty or cannot be
-     *         read as the form's answer
      */
-    private <T> AdviceResult<T> converse(ChatProvider provider, EvidenceBundle bundle,
+    private <T> AdviceResult<T> converse(ModelChain.Turn turn, EvidenceBundle bundle,
             AdviceForm<T> form, List<ModelExchange> exchanges) throws ModelChain.UnusableReply {
+        ChatProvider provider = turn.provider();
         List<Message> conversation = opening(bundle);
         List<String> failures = List.of();
         for (int attempt = 1; attempt <= 2; attempt++) {
             JsonNode request = request(form, conversation);
             String reply;
             try {
-                reply = provider.chat().prompt().system(form.instructions())
-                        .messages(conversation).call().content();
+                reply = turn.timed(() -> provider.chat().prompt().system(form.instructions())
+                        .messages(conversation).call().content());
             } catch (RuntimeException e) {
                 exchanges.add(exchange(provider, attempt, request, NullNode.getInstance(),
                         List.of(ModelChain.unreachable(e))));
@@ -194,7 +194,7 @@ public class AdviceWriter {
                 return new AdviceResult.Approved<>(verdict.answer().orElseThrow(), exchanges);
             }
             failures = verdict.failures();
-            if (verdict.answer().isEmpty()) {
+            if (verdict.answer().isEmpty() && turn.laterProviderRemains()) {
                 throw new ModelChain.UnusableReply(String.join(" ", failures));
             }
             log.info("Advice attempt {} from {} failed its checks: {}", attempt,

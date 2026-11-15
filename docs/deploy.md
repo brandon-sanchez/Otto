@@ -53,8 +53,8 @@ done
 The functions read the secrets once, at startup, and SnapStart keeps
 what they read in its snapshot. A key added or changed later takes
 effect on the next function version, which the next deploy of a code
-change publishes. The
-models, timeouts, retries and circuit breaker are under `otto.models` in
+change publishes. The models, timeouts, retries, circuit breaker and
+time budgets are under `otto.models` in
 `src/main/resources/application.yml`.
 
 ## 2. Deploy

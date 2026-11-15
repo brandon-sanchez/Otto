@@ -72,7 +72,7 @@ class ModelProviders {
                 .map(configured::get)
                 .toList();
         log.info("Model chain: {}", chain.stream().map(ChatProvider::name).toList());
-        return new ModelChain(chain, breakers);
+        return new ModelChain(chain, breakers, properties.budgets());
     }
 
     /**
