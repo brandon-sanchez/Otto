@@ -81,6 +81,26 @@ class FingerprintPinTest {
                         LocalDate.parse("2003-03-16"), new Players.Draft(2025, 1, 22, "SF")));
     }
 
+    @Test
+    void pfrDefenseContent() {
+        pin(Feeds.PFR_DEFENSE, 1, -8736477101758348270L,
+                new PfrDefense.GamePressures("2026_01_SF_LA", 1, "SF", "LAR", 8));
+    }
+
+    @Test
+    void pfrPassingContent() {
+        pin(Feeds.PFR_PASSING, 2, -4226278003542835917L,
+                new PfrPassing.PasserLine("2026_01_SF_LA", 1, "SF", "LAR", "PurdBr00",
+                        "Brock Purdy", 3));
+    }
+
+    @Test
+    void rushingAdvancedStatsContent() {
+        pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
+                new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
+                        "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
+    }
+
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,
             R row) {
         assertThat(spec.contentVersion())

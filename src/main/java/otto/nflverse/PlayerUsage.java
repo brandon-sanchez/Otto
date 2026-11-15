@@ -127,7 +127,8 @@ public final class PlayerUsage {
                         .collect(Collectors.toMap(Players.Player::gsisId, Function.identity(),
                                 (first, second) -> first)))
                 .orElse(Map.of());
-        Builder builder = new Builder(stats.get(), profiles);
+        Builder builder = new Builder(stats.get(), profiles,
+                store.players().map(Players::byPfrId).orElse(Map.of()));
         store.snapCounts().filter(feed -> feed.season().equals(season)).ifPresent(builder::snaps);
         store.playByPlay().filter(feed -> feed.season().equals(season)).ifPresent(pbp -> builder
                 .opportunities(pbp, store.ftnCharting().filter(ftn -> ftn.season().equals(season))));
@@ -171,14 +172,13 @@ public final class PlayerUsage {
         private final Map<Key, Pending> games = new HashMap<>();
         private final Set<TeamWeek> statsHeld;
         private final Map<TeamWeek, Totals> teamTotals = new HashMap<>();
-        private final Map<String, String> gsisByPfr = new HashMap<>();
+        private final Map<String, Players.Player> byPfr;
         private final Map<String, Players.Player> profiles;
 
-        Builder(WeeklyStats stats, Map<String, Players.Player> profiles) {
+        Builder(WeeklyStats stats, Map<String, Players.Player> profiles,
+                Map<String, Players.Player> byPfr) {
             this.profiles = profiles;
-            profiles.values().stream()
-                    .filter(player -> player.pfrId() != null)
-                    .forEach(player -> gsisByPfr.putIfAbsent(player.pfrId(), player.gsisId()));
+            this.byPfr = byPfr;
             this.statsHeld = heldTeamWeeks(stats.coverage());
             for (WeeklyStats.StatLine line : stats.rows()) {
                 WeeklyStats.Usage usage = line.usage();
@@ -197,10 +197,11 @@ public final class PlayerUsage {
 
         void snaps(SnapCounts snaps) {
             for (SnapCounts.SnapLine line : snaps.rows()) {
-                String gsisId = gsisByPfr.get(line.pfrId());
-                if (gsisId == null) {
+                Players.Player player = byPfr.get(line.pfrId());
+                if (player == null) {
                     continue;
                 }
+                String gsisId = player.gsisId();
                 Pending game = pending(gsisId, line.week(), line.team());
                 if (game.position == null) {
                     game.position = line.position();

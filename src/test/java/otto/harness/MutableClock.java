@@ -11,6 +11,10 @@ import java.time.ZoneId;
  */
 public final class MutableClock extends Clock {
 
+    /**
+     * Volatile because model calls and HTTP callbacks read the clock on
+     * threads other than the test's.
+     */
     private volatile Instant instant;
     private final ZoneId zone;
 

@@ -27,42 +27,67 @@ public class NflverseStore {
         store.write(spec.documentName(), document);
     }
 
+    /** Returns the stored season schedule, or empty before its first download. */
     public Optional<Schedule> schedule() {
         return read(Feeds.SCHEDULE);
     }
 
+    /** Returns the stored weekly player stats, or empty before their first download. */
     public Optional<WeeklyStats> weeklyStats() {
         return read(Feeds.WEEKLY_STATS);
     }
 
+    /** Returns the newest stored depth chart per team, or empty before its first download. */
     public Optional<DepthCharts> depthCharts() {
         return read(Feeds.DEPTH_CHARTS);
     }
 
+    /** Returns the stored weekly rosters, or empty before their first download. */
     public Optional<WeeklyRosters> weeklyRosters() {
         return read(Feeds.WEEKLY_ROSTERS);
     }
 
+    /** Returns the stored snap counts, or empty before their first download. */
     public Optional<SnapCounts> snapCounts() {
         return read(Feeds.SNAP_COUNTS);
     }
 
+    /** Returns FTN's stored charting of this season, or empty before its first download. */
     public Optional<FtnCharting> ftnCharting() {
         return read(Feeds.FTN_CHARTING);
     }
 
+    /** Returns the stored PFR advanced defense file, or empty before its first download. */
+    public Optional<PfrDefense> pfrDefense() {
+        return read(Feeds.PFR_DEFENSE);
+    }
+
+    /** Returns the stored PFR advanced passing file, or empty before its first download. */
+    public Optional<PfrPassing> pfrPassing() {
+        return read(Feeds.PFR_PASSING);
+    }
+
+    /** Returns the stored PFR advanced rushing file, or empty before its first download. */
+    public Optional<RushingAdvancedStats> rushingAdvancedStats() {
+        return read(Feeds.RUSHING_ADVANCED_STATS);
+    }
+
+    /** Returns the stored play-by-play, or empty before its first download. */
     public Optional<PlayByPlay> playByPlay() {
         return read(Feeds.PLAY_BY_PLAY);
     }
 
+    /** Returns the stored expected fantasy points, or empty before their first download. */
     public Optional<ExpectedPoints> expectedPoints() {
         return read(Feeds.EXPECTED_POINTS);
     }
 
+    /** Returns the stored nflverse player register, or empty before its first download. */
     public Optional<Players> players() {
         return read(Feeds.PLAYERS);
     }
 
+    /** Returns the stored Player-ID Map, or empty before it is first built. */
     public Optional<PlayerIdMap> playerIds() {
         return store.read(PLAYER_IDS, PlayerIdMap.class);
     }
@@ -71,6 +96,7 @@ public class NflverseStore {
         store.write(PLAYER_IDS, idMap);
     }
 
+    /** Returns the stored defense-versus-position table, or empty before it is first built. */
     public Optional<DefenseVersusPosition> defenseVersusPosition() {
         return store.read(DEFENSE_VERSUS_POSITION, DefenseVersusPosition.class);
     }
