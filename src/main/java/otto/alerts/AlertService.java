@@ -84,6 +84,7 @@ public class AlertService {
     private final Clock clock;
     private final PreSendResearch preSendResearch;
     private final LineupAdvice lineupAdvice;
+    private final RoleSlipAdvice roleSlipAdvice;
     private final RoleSlipDetector roleSlipDetector;
 
     public AlertService(StatusTransitionDetector transitionDetector,
@@ -94,7 +95,7 @@ public class AlertService {
             IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, Clock clock,
             PreSendResearch preSendResearch, LineupAdvice lineupAdvice,
-            RoleSlipDetector roleSlipDetector) {
+            RoleSlipAdvice roleSlipAdvice, RoleSlipDetector roleSlipDetector) {
         this.transitionDetector = transitionDetector;
         this.officialUpdateDetector = officialUpdateDetector;
         this.legalityDetector = legalityDetector;
@@ -110,6 +111,7 @@ public class AlertService {
         this.clock = clock;
         this.preSendResearch = preSendResearch;
         this.lineupAdvice = lineupAdvice;
+        this.roleSlipAdvice = roleSlipAdvice;
         this.roleSlipDetector = roleSlipDetector;
     }
 
@@ -345,7 +347,7 @@ public class AlertService {
             List<AlertCandidate> unalerted = group.stream()
                     .filter(candidate -> !outbox.alreadySent("alert:" + candidate.key()))
                     .filter(candidate -> candidate.source() != AlertCandidate.Source.ROLE_SLIP
-                            || lineupAdvice.slipOpen(candidate))
+                            || roleSlipAdvice.slipOpen(candidate))
                     .toList();
             if (unalerted.isEmpty()) {
                 continue;
@@ -357,19 +359,18 @@ public class AlertService {
             Map<String, String> research = primary.playerId() == null
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
-            Optional<Composed> composed =
+            Optional<AlertText> written =
                     alertText(keys, primary, unalerted, research, leagueWeek, userRoster, now);
-            if (composed.isEmpty()) {
+            if (written.isEmpty()) {
                 outbox.cancel(keys, "its advice was withheld");
                 continue;
             }
-            LineupAdvice.Written written = composed.get().written();
             List<Event> templates = unalerted.stream()
                     .map(candidate -> new Event("alert:" + candidate.key(),
                             EventType.ALERT_SENT, now,
-                            alertFacts(candidate, research, written)))
+                            alertFacts(candidate, research, written.get())))
                     .toList();
-            sent.addAll(outbox.deliver(written.text(), composed.get().basis(), templates));
+            sent.addAll(outbox.deliver(written.get().text(), written.get().basis(), templates));
         }
         return sent;
     }
@@ -432,7 +433,7 @@ public class AlertService {
             Optional<AlertCandidate> primary = problems.stream().min(BY_CONFIDENCE);
             Instant kickoff = lock.get();
             Map<String, String> research = preSendResearch.factsFor(playerId);
-            Optional<LineupAdvice.Written> written = primary.isPresent()
+            Optional<AlertText.Advised> written = primary.isPresent()
                     ? lineupAdvice.forProblem(key, primary.get(), research, leagueWeek, roster,
                             now, kickoff)
                     : lineupAdvice.forImpairedStarter(key, playerId, research, leagueWeek, roster,
@@ -456,9 +457,9 @@ public class AlertService {
 
             String text = written.get().text();
             facts.put("playerId", playerId);
-            written.get().runId().ifPresent(runId -> facts.put("runId", runId));
+            facts.put("runId", written.get().runId());
             facts.put("text", text);
-            sent.addAll(outbox.deliver(text, written.get().runId().orElseThrow(), List.of(
+            sent.addAll(outbox.deliver(text, written.get().basis(), List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -483,47 +484,74 @@ public class AlertService {
     }
 
     private Map<String, String> alertFacts(AlertCandidate candidate,
-            Map<String, String> research, LineupAdvice.Written written) {
+            Map<String, String> research, AlertText written) {
         Map<String, String> facts =
                 new HashMap<>(alertFacts(candidate, research, written.text()));
-        written.runId().ifPresent(runId -> facts.put("runId", runId));
+        if (written instanceof AlertText.Advised advised) {
+            facts.put("runId", advised.runId());
+        }
         return Map.copyOf(facts);
     }
 
-    private record Composed(LineupAdvice.Written written, String basis) {
+    /** Who writes a merged Alert's text, chosen by what the group holds. */
+    private enum Route {
+        /** A status change on a rostered player: the model advises a roster plan. */
+        STATUS_CHANGE,
+        /** A role slip, open in the ledger: the model advises, the ledger routes it. */
+        ROLE_SLIP,
+        /** A lineup edge or legality problem: the model advises a lineup move. */
+        LINEUP_PROBLEM,
+        /** Anything else: the phrasing model words the Recommendation. */
+        PHRASED
     }
 
-    private Optional<Composed> alertText(List<String> keys, AlertCandidate primary,
+    private static Route route(AlertCandidate primary, List<AlertCandidate> group,
+            Optional<RosterSnapshot> userRoster) {
+        if (primary.source() == AlertCandidate.Source.TRANSITION && userRoster.isPresent()) {
+            return Route.STATUS_CHANGE;
+        }
+        if (group.stream().anyMatch(
+                candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)) {
+            return Route.ROLE_SLIP;
+        }
+        return LINEUP_PROBLEMS.contains(primary.source()) ? Route.LINEUP_PROBLEM : Route.PHRASED;
+    }
+
+    private Optional<AlertText> alertText(List<String> keys, AlertCandidate primary,
             List<AlertCandidate> group, Map<String, String> research, LeagueWeek leagueWeek,
             Optional<RosterSnapshot> userRoster, Instant now) {
-        if (primary.source() == AlertCandidate.Source.TRANSITION && userRoster.isPresent()) {
-            AlertCandidate legality = group.stream()
-                    .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY)
-                    .findFirst()
-                    .orElse(null);
-            return lineupAdvice.forStatusChange("alert:" + primary.key(), primary, legality,
-                    research, leagueWeek, userRoster.get(), now)
-                    .map(written -> new Composed(written, written.runId().orElseThrow()));
-        }
-        Optional<AlertCandidate> slip = group.stream()
-                .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
-                .findFirst();
-        if (slip.isPresent()) {
-            return lineupAdvice.forRoleSlip("alert:" + slip.get().key(), slip.get(), research,
-                    leagueWeek, userRoster.orElseThrow(), now)
-                    .map(written -> new Composed(written, written.runId().orElseThrow()));
-        }
-        if (LINEUP_PROBLEMS.contains(primary.source())) {
-            return lineupAdvice.forProblem("alert:" + primary.key(), primary, research,
-                    leagueWeek, userRoster.orElseThrow(), now, null)
-                    .map(written -> new Composed(written, written.runId().orElseThrow()));
-        }
+        return switch (route(primary, group, userRoster)) {
+            case STATUS_CHANGE -> lineupAdvice.forStatusChange("alert:" + primary.key(), primary,
+                    group.stream()
+                            .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY)
+                            .findFirst()
+                            .orElse(null),
+                    research, leagueWeek, userRoster.orElseThrow(), now)
+                    .map(AlertText.class::cast);
+            case ROLE_SLIP -> {
+                AlertCandidate slip = group.stream()
+                        .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
+                        .findFirst()
+                        .orElseThrow();
+                yield roleSlipAdvice.forRoleSlip("alert:" + slip.key(), slip, research,
+                        leagueWeek, userRoster.orElseThrow(), now)
+                        .map(AlertText.class::cast);
+            }
+            case LINEUP_PROBLEM -> lineupAdvice.forProblem("alert:" + primary.key(), primary,
+                    research, leagueWeek, userRoster.orElseThrow(), now, null)
+                    .map(AlertText.class::cast);
+            case PHRASED -> Optional.of(phrased(keys, primary, research));
+        };
+    }
+
+    private AlertText phrased(List<String> keys, AlertCandidate primary,
+            Map<String, String> research) {
         Map<String, String> facts = new HashMap<>(primary.facts());
         facts.putAll(research);
         String basis = phraser.basis(facts, primary.recommendation()) + keys;
         String text = outbox.pendingText(keys, basis)
                 .orElseGet(() -> phraser.phrase(facts, primary.recommendation()));
-        return Optional.of(new Composed(new LineupAdvice.Written(text, Optional.empty()), basis));
+        return new AlertText.Phrased(text, basis);
     }
 
     private Map<String, String> alertFacts(AlertCandidate candidate, String text) {

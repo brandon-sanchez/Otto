@@ -2,14 +2,11 @@ package otto.alerts;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
@@ -20,13 +17,8 @@ import otto.advice.AdviceForm;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
-import otto.advice.LineupMove;
 import otto.ask.LeagueWeek;
-import otto.claims.BoardDelivery;
-import otto.claims.ClaimRound;
-import otto.claims.RoleSlipLedger;
 import otto.decisions.PlayerAvailability;
-import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
@@ -43,13 +35,13 @@ import otto.research.OfficialUpdate;
 import otto.research.PreSendResearch;
 import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
-import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
 
 /**
  * Writes the text of bench-edge, lineup-legality, final-pregame,
- * status-change and role-slip Alerts. The model writes each one from an evidence
+ * status-change and role-slip Alerts ({@link RoleSlipAdvice} decides
+ * when role-slip advice goes out). The model writes each one from an evidence
  * bundle and {@link AdviceWriter} checks it. When the model is down or
  * its advice fails twice, an urgent Alert (a slot that scores zero, or
  * a starter still uncertain as his game nears) and a status change go
@@ -71,16 +63,12 @@ public class LineupAdvice {
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
     private final ResearchCache researchCache;
-    private final RoleSlipLedger ledger;
-    private final MuteStore muteStore;
-    private final BoardDelivery boards;
     private final PreSendResearch preSendResearch;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
-            ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
-            BoardDelivery boards, PreSendResearch preSendResearch,
+            ResearchCache researchCache, PreSendResearch preSendResearch,
             OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
@@ -88,20 +76,8 @@ public class LineupAdvice {
         this.directory = directory;
         this.nflverse = nflverse;
         this.researchCache = researchCache;
-        this.ledger = ledger;
-        this.muteStore = muteStore;
-        this.boards = boards;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
-    }
-
-    /**
-     * The checked text of one Alert.
-     *
-     * @param runId the Decision Record that explains it, empty for an
-     *        Alert phrased from its Recommendation, which makes no run
-     */
-    public record Written(String text, Optional<String> runId) {
     }
 
     /**
@@ -116,7 +92,7 @@ public class LineupAdvice {
      *        is the final pregame warning, or null otherwise
      * @return empty when the advice is withheld
      */
-    public Optional<Written> forProblem(String alertKey, AlertCandidate candidate,
+    public Optional<AlertText.Advised> forProblem(String alertKey, AlertCandidate candidate,
             Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
             Instant now, Instant kickoff) {
         Instant readAt = leagueWeek.snapshot().at();
@@ -155,7 +131,7 @@ public class LineupAdvice {
      * @return the checked advice, or the verified status change when the
      *         advice cannot be had; empty when he has left the roster
      */
-    public Optional<Written> forStatusChange(String alertKey, AlertCandidate transition,
+    public Optional<AlertText.Advised> forStatusChange(String alertKey, AlertCandidate transition,
             AlertCandidate legality, Map<String, String> research, LeagueWeek leagueWeek,
             RosterSnapshot roster, Instant now) {
         if (!roster.players().contains(transition.playerId())) {
@@ -171,137 +147,6 @@ public class LineupAdvice {
                 draft.withNews(transition.playerId(), research, now), leagueWeek, roster, now);
     }
 
-    /**
-     * The advice for a healthy player whose role may have slipped: what
-     * to do with him, chosen from the roster plans legal in this league,
-     * and whether to bench him this week, in one message.
-     *
-     * <p>Advice goes out alone only when waiting for the next waiver
-     * board could cost the user a move: no board will come before this
-     * round's claim deadline, or a lineup change is due before the
-     * board. Otherwise it is held for that board. A hold with no lineup
-     * change goes out only when a mistaken drop is plausible, and advice
-     * whose action and reasons match the last advice about him is not
-     * sent again. Every outcome but a sent Alert settles the slip, so
-     * the same evidence is never evaluated twice.
-     *
-     * <p>Side effects: may call the model, saves a Decision Record for a
-     * new run, and writes the role-slip ledger.
-     *
-     * @param research the facts read for him right before sending
-     * @return the checked advice to send now; empty when it is held for
-     *         the board, withheld, or no decision is open
-     */
-    public Optional<Written> forRoleSlip(String alertKey, AlertCandidate slip,
-            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
-            Instant now) {
-        if (ledger.settled(slip.key()) || !roster.players().contains(slip.playerId())) {
-            return Optional.empty();
-        }
-        Collection<DirectoryPlayer> players = directory.read()
-                .map(stored -> stored.players().values())
-                .orElse(List.of());
-        Optional<LineupEvidence.Draft> draft = DecisionEvidence.roleSlip(slip, leagueWeek, roster,
-                players, this::profile, now);
-        if (draft.isEmpty()) {
-            ledger.settle(slip.key());
-            return Optional.empty();
-        }
-        LineupEvidence.Draft decision = draft.get().withNews(slip.playerId(), research, now);
-        Run run = run(alertKey, RunKind.PLAYER_DECISION, decision, leagueWeek, roster, now,
-                answer -> roleSlipOutcome(answer, signature(answer, slip), decision, slip,
-                        leagueWeek, roster, now));
-        if (run.outcome() instanceof Outcome.HeldForBoard held) {
-            ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message(),
-                    held.signature()));
-        }
-        if (!(run.outcome() instanceof Outcome.Sent)) {
-            ledger.settle(slip.key());
-        }
-        return sent(run);
-    }
-
-    /**
-     * True while a role slip has a decision open: no advice about it
-     * has been withheld, held for the board, or found moot.
-     */
-    boolean slipOpen(AlertCandidate slip) {
-        return !ledger.settled(slip.key());
-    }
-
-    /**
-     * The outcome of checked advice about a role slip. Sent advice
-     * becomes the last advice about him at once, since the outbox
-     * carries it to delivery; held advice becomes it only once a board
-     * carries it, so a board that never goes out cannot silence the
-     * advice later.
-     */
-    private Outcome roleSlipOutcome(AdviceAnswer answer, String signature,
-            LineupEvidence.Draft draft, AlertCandidate slip, LeagueWeek leagueWeek,
-            RosterSnapshot roster, Instant now) {
-        boolean hold = answer.plan().map(RosterPlans.HOLD::equals).orElse(true);
-        if (hold && answer.move().isEmpty() && draft.holdStaysSilent()) {
-            return new Outcome.Withheld("The model advised keeping him as he is, and no "
-                    + "mistaken drop is plausible, so the hold is not sent unasked.");
-        }
-        if (ledger.lastAdvice(slip.playerId()).filter(signature::equals).isPresent()) {
-            return new Outcome.Withheld("The action and its reasons match the last advice "
-                    + "about him, which is not sent again.");
-        }
-        if (!waitingCostsAMove(answer, leagueWeek, roster, now)) {
-            return new Outcome.HeldForBoard(answer.message(), signature);
-        }
-        ledger.advised(slip.playerId(), signature);
-        return new Outcome.Sent(answer.message());
-    }
-
-    /**
-     * What makes advice about a role slip the same advice: the roster
-     * plan, the lineup change, and which kinds of evidence pointed to
-     * the slip. A further week of the same usage drop is the same reason;
-     * news of the slip, where there was only usage before, is a new one.
-     */
-    private static String signature(AdviceAnswer answer, AlertCandidate slip) {
-        String move = answer.move()
-                .map(chosen -> chosen.start() + ">" + chosen.bench())
-                .orElse("none");
-        String reasons = (slip.facts().containsKey("roleNews") ? "news" : "")
-                + (slip.facts().keySet().stream()
-                        .anyMatch(key -> key.startsWith(RoleSlipDetector.USAGE_PREFIX))
-                        ? "+usage" : "");
-        return answer.plan().orElse(RosterPlans.HOLD) + "|" + move + "|" + reasons;
-    }
-
-    /**
-     * True when holding the advice for the next waiver board could cost
-     * the user a move: no board is coming before the next claim
-     * deadline, or the advice changes a lineup whose first kickoff is
-     * not known or comes before the latest the board can go out. A
-     * board waiting for late data goes out as late as
-     * {@link ClaimRound#latest}, not at the evening it is due.
-     */
-    private boolean waitingCostsAMove(AdviceAnswer answer, LeagueWeek leagueWeek,
-            RosterSnapshot roster, Instant now) {
-        Optional<ClaimRound> round = ClaimRound.next(leagueWeek.league(), now);
-        if (round.isEmpty() || !settings.enabled(Trigger.WAIVER)
-                || muteStore.muted(Trigger.WAIVER.muteTarget())
-                || boards.alreadySent(round.get())) {
-            return true;
-        }
-        if (answer.move().isEmpty()) {
-            return false;
-        }
-        Instant latestBoard = round.get().latest();
-        LineupMove move = answer.move().get();
-        Optional<Instant> firstKickoff = leagueWeek.week().games().flatMap(games -> Stream
-                .of(move.start(), move.bench())
-                .filter(Objects::nonNull)
-                .map(id -> games.lockFor(roster.playerTeams().get(id)))
-                .flatMap(Optional::stream)
-                .min(Comparator.naturalOrder()));
-        return firstKickoff.map(kickoff -> kickoff.isBefore(latestBoard)).orElse(true);
-    }
-
     private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,
             Instant now) {
         String playerId = transition.playerId();
@@ -312,7 +157,8 @@ public class LineupAdvice {
                         now));
     }
 
-    private Optional<Players.Player> profile(String sleeperId) {
+    /** Returns the nflverse profile of a player, by Sleeper id. */
+    Optional<Players.Player> profile(String sleeperId) {
         Optional<String> gsisId = nflverse.playerIds().flatMap(ids -> ids.gsisFor(sleeperId));
         return gsisId.flatMap(id -> nflverse.players().flatMap(feed -> feed.rows().stream()
                 .filter(player -> id.equals(player.gsisId()))
@@ -326,7 +172,7 @@ public class LineupAdvice {
      * @param research the facts read for the starter right before sending
      * @return empty when the advice is withheld
      */
-    public Optional<Written> forImpairedStarter(String alertKey, String playerId,
+    public Optional<AlertText.Advised> forImpairedStarter(String alertKey, String playerId,
             Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
             Instant now, Instant kickoff) {
         LineupEvidence.Draft draft = LineupEvidence.impaired(playerId, roster, leagueWeek.week(),
@@ -335,10 +181,11 @@ public class LineupAdvice {
                 roster, now);
     }
 
-    private record Run(String runId, Outcome outcome) {
+    /** The run an Alert's advice came from, and how it ended. */
+    record Run(String runId, Outcome outcome) {
     }
 
-    private Optional<Written> write(String alertKey, RunKind kind, LineupEvidence.Draft draft,
+    private Optional<AlertText.Advised> write(String alertKey, RunKind kind, LineupEvidence.Draft draft,
             LeagueWeek leagueWeek, RosterSnapshot roster, Instant now) {
         return sent(run(alertKey, kind, draft, leagueWeek, roster, now,
                 answer -> answer.move().isEmpty() && draft.holdStaysSilent()
@@ -353,7 +200,7 @@ public class LineupAdvice {
      *
      * @param approve the outcome of advice that passed its checks
      */
-    private Run run(String alertKey, RunKind kind, LineupEvidence.Draft draft,
+    Run run(String alertKey, RunKind kind, LineupEvidence.Draft draft,
             LeagueWeek leagueWeek, RosterSnapshot roster, Instant now,
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
@@ -393,9 +240,10 @@ public class LineupAdvice {
         };
     }
 
-    private static Optional<Written> sent(Run run) {
+    /** Returns the advice to send now when the run ended with a sent message. */
+    static Optional<AlertText.Advised> sent(Run run) {
         return run.outcome() instanceof Outcome.Sent sent
-                ? Optional.of(new Written(sent.message(), Optional.of(run.runId())))
+                ? Optional.of(new AlertText.Advised(run.runId(), sent.message()))
                 : Optional.empty();
     }
 
