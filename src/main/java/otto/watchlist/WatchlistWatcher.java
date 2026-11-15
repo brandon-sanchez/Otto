@@ -40,8 +40,6 @@ public class WatchlistWatcher {
      * most-added list over the last day and is now inside it. That needs
      * no invented multiplier, and it fires once per entry.
      */
-    private static final int TRENDING_LIMIT = 25;
-    private static final int TRENDING_LOOKBACK_HOURS = 24;
 
     /**
      * How far a projection must move to be worth a message: one point
@@ -140,7 +138,8 @@ public class WatchlistWatcher {
     private Optional<Set<String>> readTrending(List<WatchlistStore.Entry> watched, Observed last,
             Instant at, List<Event> events) {
         SourceResult<List<SleeperAdapter.TrendingPlayer>> result =
-                sleeper.trendingAdds(TRENDING_LOOKBACK_HOURS, TRENDING_LIMIT);
+                sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                        SleeperAdapter.TRENDING_LIMIT);
         selfReport.reportIfUnavailable(result);
         if (!(result instanceof SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> ok)) {
             return Optional.empty();
@@ -163,8 +162,8 @@ public class WatchlistWatcher {
                             "player", entry.player(),
                             "team", entry.team() == null ? "" : entry.team(),
                             "adds", String.valueOf(count),
-                            "lookbackHours", String.valueOf(TRENDING_LOOKBACK_HOURS),
-                            "trendingLimit", String.valueOf(TRENDING_LIMIT))));
+                            "lookbackHours", String.valueOf(SleeperAdapter.TRENDING_LOOKBACK_HOURS),
+                            "trendingLimit", String.valueOf(SleeperAdapter.TRENDING_LIMIT))));
         }
         return Optional.of(new LinkedHashSet<>(adds.keySet()));
     }

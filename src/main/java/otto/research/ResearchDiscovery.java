@@ -42,8 +42,6 @@ public class ResearchDiscovery {
      * at the same lookback and limit, so the three share one Sleeper cache
      * entry.
      */
-    private static final int TRENDING_LOOKBACK_HOURS = 24;
-    private static final int TRENDING_LIMIT = 25;
 
     private static final String INDEX = "research-index";
 
@@ -128,7 +126,8 @@ public class ResearchDiscovery {
         players.addAll(watchlist.playerIds());
         // A trending list that cannot be read costs this run its trending
         // players and nothing else; the next run asks again.
-        if (sleeper.trendingAdds(TRENDING_LOOKBACK_HOURS, TRENDING_LIMIT)
+        if (sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                SleeperAdapter.TRENDING_LIMIT)
                 instanceof SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> trending) {
             trending.value().stream()
                     .map(SleeperAdapter.TrendingPlayer::playerId)

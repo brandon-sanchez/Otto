@@ -112,7 +112,8 @@ class BaselineBoards {
             }
         }
 
-        switch (sleeper.trendingAdds(TrendingLane.LOOKBACK_HOURS, TrendingLane.LIMIT)) {
+        switch (sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                SleeperAdapter.TRENDING_LIMIT)) {
             case SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> ok ->
                     picks.put(BoardStrategy.TOP_TRENDING, ok.value().stream()
                             .map(SleeperAdapter.TrendingPlayer::playerId)
