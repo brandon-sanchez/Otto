@@ -294,6 +294,19 @@ class TeamReportsScenarioTest extends WireSeamTest {
         teamSites.verify(2, getRequestedFor(urlPathEqualTo("/chiefs.com" + FEED)));
     }
 
+    @Test
+    void aLateRunInAReportWindowDoesNotMakeTheNextOnTimeRunSkipTheFeed() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamReports.poll();
+        clock.advance(Duration.ofSeconds(390));
+        teamReports.poll();
+        clock.advance(Duration.ofSeconds(210));
+        teamReports.poll();
+
+        teamSites.verify(3, getRequestedFor(urlPathEqualTo("/chiefs.com" + FEED)));
+    }
+
     private static void site(String host, String path, String fixture) {
         String body = Fixtures.read(fixture);
         teamSites.stubFor(get(urlPathEqualTo("/" + host + path))

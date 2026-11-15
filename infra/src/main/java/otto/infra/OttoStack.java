@@ -520,6 +520,8 @@ public class OttoStack extends Stack {
         // later, least recently read players first, so it does not retry.
         schedule("ResearchSchedule", target, invoker, "rate(10 minutes)", null,
                 "research", 0);
+        // ReportWindows.SCHEDULE_PERIOD in the app mirrors this rate, and
+        // a test on each side pins it.
         schedule("TeamReportsSchedule", target, invoker, "rate(5 minutes)", null,
                 "team-reports", 0);
     }

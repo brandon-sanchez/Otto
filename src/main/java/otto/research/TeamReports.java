@@ -114,7 +114,7 @@ public class TeamReports {
                     TeamRun.FeedState held = feeds.getOrDefault(entry.getKey(),
                             TeamRun.FeedState.NEW);
                     Duration interval = ReportWindows.interval(entry.getKey(), now, games);
-                    if (held.polled() == null || !now.isBefore(held.polled().plus(interval))) {
+                    if (held.polled() == null || ReportWindows.due(held.polled(), interval, now)) {
                         feeds.put(entry.getKey(), new TeamRun(sites, cache, entry.getKey(),
                                 entry.getValue(), players.get(), now, tally).run(held));
                     }

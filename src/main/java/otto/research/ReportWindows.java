@@ -15,11 +15,24 @@ import otto.nflverse.Schedule;
  * statuses on weekday afternoons around the league's 4:00 p.m. Eastern
  * deadline, late changes and roster moves through Saturday afternoon,
  * and inactives 90 minutes before kickoff. Inside those windows a feed
- * is read every few minutes; outside them, once an hour.
+ * is read on every run; outside them, once an hour.
  */
 final class ReportWindows {
 
-    static final Duration DURING = Duration.ofMinutes(4);
+    /**
+     * How often the scheduled job runs. Mirrors the TeamReportsSchedule
+     * rate in {@code OttoStack}; both sides are pinned by tests.
+     */
+    static final Duration SCHEDULE_PERIOD = Duration.ofMinutes(5);
+
+    /**
+     * How much earlier than its interval a feed is due. A run can start
+     * late, and the feeds it reads then would otherwise wait out the next
+     * on-time run, doubling the gap between reads.
+     */
+    private static final Duration SLACK = SCHEDULE_PERIOD.dividedBy(2);
+
+    static final Duration DURING = SCHEDULE_PERIOD;
 
     static final Duration OTHERWISE = Duration.ofHours(1);
 
@@ -42,6 +55,14 @@ final class ReportWindows {
      */
     static Duration interval(String team, Instant now, List<Schedule.Game> games) {
         return reportAfternoon(now) || beforeKickoff(team, now, games) ? DURING : OTHERWISE;
+    }
+
+    /**
+     * True when a feed last read at {@code polled} is due again at
+     * {@code now}, given its {@link #interval}.
+     */
+    static boolean due(Instant polled, Duration interval, Instant now) {
+        return !now.isBefore(polled.plus(interval).minus(SLACK));
     }
 
     private static boolean reportAfternoon(Instant now) {
