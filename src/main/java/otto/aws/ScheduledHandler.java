@@ -12,19 +12,21 @@ import otto.check.CheckRunner;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
 import otto.research.ResearchDiscovery;
+import otto.research.TeamReports;
 import otto.storage.JsonStore;
 
 /**
- * The scheduled entry point. Four EventBridge schedules reach it and
+ * The scheduled entry point. Each EventBridge schedule reaches it and
  * name the job they want: the 1-minute Check, the hourly nflverse
- * timestamp check, the nightly defense-versus-position build, and the
- * research discovery run every few minutes. The Lock Ladder, the
+ * timestamp check, the nightly defense-versus-position build, the
+ * research discovery run every few minutes, and the 5-minute read of
+ * the team sites' injury news. The Lock Ladder, the
  * weekly waiver Alert and the 20-minute Done follow-up need no
  * schedule of their own - they ride the 1-minute loop and the Event
  * Log.
  *
- * <p>One function serves all four, so one warm context serves all
- * four. Every run flushes the storage batch, whether or not it
+ * <p>One function serves every schedule, so one warm context serves
+ * them all. Every run flushes the storage batch, whether or not it
  * finished, so a run that half succeeded still keeps what it learned.
  */
 public class ScheduledHandler implements RequestHandler<Map<String, Object>, String> {
@@ -64,6 +66,7 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
             case NFLVERSE_FEEDS -> nflverseFeeds();
             case DEFENSE_VERSUS_POSITION -> defenseVersusPosition();
             case RESEARCH -> research();
+            case TEAM_REPORTS -> teamReports();
         };
     }
 
@@ -88,5 +91,9 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
 
     private String research() {
         return "research: " + OttoRuntime.bean(ResearchDiscovery.class).discover();
+    }
+
+    private String teamReports() {
+        return "team reports: " + OttoRuntime.bean(TeamReports.class).poll();
     }
 }

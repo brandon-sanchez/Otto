@@ -102,8 +102,8 @@ class OttoStackTest {
     }
 
     @Test
-    void thereAreFourSchedules() {
-        template.resourceCountIs("AWS::Scheduler::Schedule", 4);
+    void thereAreFiveSchedules() {
+        template.resourceCountIs("AWS::Scheduler::Schedule", 5);
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(1 minute)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"check\"}"))));
@@ -118,6 +118,9 @@ class OttoStackTest {
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(10 minutes)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"research\"}"))));
+        template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
+                "ScheduleExpression", "rate(5 minutes)",
+                "Target", Match.objectLike(Map.of("Input", "{\"job\":\"team-reports\"}"))));
     }
 
     @Test
