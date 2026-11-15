@@ -317,7 +317,11 @@ public class BoardComparison {
         if (answer.isEmpty()) {
             return Optional.empty();
         }
-        Map<String, String> screened = board.get().candidates().stream()
+        // Only the pool the board could pick from was addable; the rest
+        // were screened out. Its checks already demand a legal drop on a
+        // full roster, so a checked pick also had room on the roster.
+        Map<String, String> pool = board.get().candidates().stream()
+                .filter(Candidate::included)
                 .collect(Collectors.toMap(Candidate::playerId, Candidate::name,
                         (first, second) -> first));
         Map<String, DirectoryPlayer> players = directory.read()
@@ -331,8 +335,8 @@ public class BoardComparison {
                             .map(DirectoryPlayer::position)
                             .orElse("");
                     return new ComparisonRound.Pick(entry.playerId(),
-                            screened.getOrDefault(entry.playerId(), entry.playerId()), position,
-                            screened.containsKey(entry.playerId()),
+                            pool.getOrDefault(entry.playerId(), entry.playerId()), position,
+                            pool.containsKey(entry.playerId()),
                             slots.stream().anyMatch(slot -> slot.accepts(position)));
                 })
                 .toList());
