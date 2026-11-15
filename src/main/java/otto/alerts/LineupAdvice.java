@@ -1,6 +1,7 @@
 package otto.alerts;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,10 @@ import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.ask.LeagueWeek;
+import otto.directory.DirectoryPlayer;
+import otto.directory.PlayerDirectoryStore;
+import otto.nflverse.NflverseStore;
+import otto.nflverse.Players;
 import otto.records.Candidate;
 import otto.records.DecisionRecord;
 import otto.records.Outcome;
@@ -30,12 +35,12 @@ import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
 
 /**
- * Writes the text of bench-edge, lineup-legality and final-pregame
- * Alerts. The model writes each one from an evidence bundle and
- * {@link AdviceWriter} checks it. When the model is down or its advice
- * fails twice, an urgent Alert (a slot that scores zero, or a starter
- * still uncertain as his game nears) goes out as code-written verified
- * facts; any other Alert is withheld.
+ * Writes the text of bench-edge, lineup-legality, final-pregame and
+ * status-change Alerts. The model writes each one from an evidence
+ * bundle and {@link AdviceWriter} checks it. When the model is down or
+ * its advice fails twice, an urgent Alert (a slot that scores zero, or
+ * a starter still uncertain as his game nears) and a status change go
+ * out as code-written verified facts; any other Alert is withheld.
  *
  * <p>Every run writes one Decision Record. Its run id is derived from
  * the Alert key and what the evidence says, so a later Check over the
@@ -50,14 +55,19 @@ public class LineupAdvice {
     private final AdviceWriter writer;
     private final RunOutcomes runs;
     private final SettingsStore settings;
+    private final PlayerDirectoryStore directory;
+    private final NflverseStore nflverse;
     private final PreSendResearch preSendResearch;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
+            PlayerDirectoryStore directory, NflverseStore nflverse,
             PreSendResearch preSendResearch, OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
         this.settings = settings;
+        this.directory = directory;
+        this.nflverse = nflverse;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
     }
@@ -109,7 +119,70 @@ public class LineupAdvice {
             String startInstead = candidate.facts().get(BenchEdgeDetector.BENCH_ID);
             withNews = withNews.withNews(startInstead, preSendResearch.factsFor(startInstead), now);
         }
-        return write(alertKey, withNews, leagueWeek, roster, now);
+        return write(alertKey, RunKind.ALERT, withNews, leagueWeek, roster, now);
+    }
+
+    /**
+     * The advice for a status change on one of the user's players: what
+     * to do with him, chosen from the roster plans legal in this league,
+     * and how to fill his slot when he is a starter who now scores zero.
+     *
+     * @param transition the status-transition candidate
+     * @param research the facts read for him right before sending; his
+     *        latest report joins the evidence, and without one his
+     *        recovery is an unknown the advice must be conditional on
+     * @return the checked advice, or the verified status change when the
+     *         advice cannot be had; empty when he has left the roster
+     */
+    public Optional<AlertText.Advised> forStatusChange(String alertKey, AlertCandidate transition,
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now) {
+        if (!roster.players().contains(transition.playerId())) {
+            return Optional.empty();
+        }
+        return decide(alertKey, transition, DecisionEvidence.draft(transition, research,
+                leagueWeek, roster, directoryPlayers(), this::profile, now), research,
+                leagueWeek, roster, now);
+    }
+
+    /**
+     * The advice for a status change on one of the user's players whose
+     * slot is also a lineup problem in this Check, as
+     * {@link #forStatusChange(String, AlertCandidate, Map, LeagueWeek, RosterSnapshot, Instant)}
+     * gives, with the slot fixed in the same advice.
+     *
+     * @param legality the lineup-legality candidate for the same player
+     */
+    public Optional<AlertText.Advised> forStatusChange(String alertKey, AlertCandidate transition,
+            AlertCandidate legality, Map<String, String> research, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Instant now) {
+        if (!roster.players().contains(transition.playerId())) {
+            return Optional.empty();
+        }
+        return decide(alertKey, transition, DecisionEvidence.draft(transition, legality,
+                research, leagueWeek, roster, directoryPlayers(), this::profile, now), research,
+                leagueWeek, roster, now);
+    }
+
+    private Optional<AlertText.Advised> decide(String alertKey, AlertCandidate transition,
+            LineupEvidence.Draft draft, Map<String, String> research, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Instant now) {
+        return write(alertKey, RunKind.PLAYER_DECISION,
+                draft.withNews(transition.playerId(), research, now), leagueWeek, roster, now);
+    }
+
+    private Collection<DirectoryPlayer> directoryPlayers() {
+        return directory.read()
+                .map(stored -> stored.players().values())
+                .orElse(List.of());
+    }
+
+    /** Returns the nflverse profile of a player, by Sleeper id. */
+    private Optional<Players.Player> profile(String sleeperId) {
+        Optional<String> gsisId = nflverse.playerIds().flatMap(ids -> ids.gsisFor(sleeperId));
+        return gsisId.flatMap(id -> nflverse.players().flatMap(feed -> feed.rows().stream()
+                .filter(player -> id.equals(player.gsisId()))
+                .findFirst()));
     }
 
     /**
@@ -124,16 +197,17 @@ public class LineupAdvice {
             Instant now, Instant kickoff) {
         LineupEvidence.Draft draft = LineupEvidence.impaired(playerId, roster, leagueWeek.week(),
                 leagueWeek.snapshot().at(), now, kickoff);
-        return write(alertKey, draft.withNews(playerId, research, now), leagueWeek, roster, now);
+        return write(alertKey, RunKind.ALERT, draft.withNews(playerId, research, now), leagueWeek,
+                roster, now);
     }
 
     /** The run an Alert's advice came from, and how it ended. */
     private record Run(String runId, Outcome outcome) {
     }
 
-    private Optional<AlertText.Advised> write(String alertKey, LineupEvidence.Draft draft,
+    private Optional<AlertText.Advised> write(String alertKey, RunKind kind, LineupEvidence.Draft draft,
             LeagueWeek leagueWeek, RosterSnapshot roster, Instant now) {
-        return sent(run(alertKey, draft, leagueWeek, roster, now,
+        return sent(run(alertKey, kind, draft, leagueWeek, roster, now,
                 answer -> answer.move().isEmpty() && draft.holdStaysSilent()
                         ? new Outcome.Withheld(
                                 "The model advised no change, which is not sent unasked.")
@@ -146,15 +220,17 @@ public class LineupAdvice {
      *
      * @param approve the outcome of advice that passed its checks
      */
-    private Run run(String alertKey, LineupEvidence.Draft draft,
+    private Run run(String alertKey, RunKind kind, LineupEvidence.Draft draft,
             LeagueWeek leagueWeek, RosterSnapshot roster, Instant now,
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
         String runId = runId(alertKey, draft.bundle());
         Outcome outcome = runs.earlierOrMade(userId, leagueId, runId, () -> {
-            AdviceForm<AdviceAnswer> form = writer.lineup();
+            AdviceForm<AdviceAnswer> form = kind == RunKind.PLAYER_DECISION
+                    ? writer.playerDecision()
+                    : writer.lineup();
             AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
-            return Optional.of(DecisionRecord.forRun(runId, RunKind.ALERT, now, userId, leagueId,
+            return Optional.of(DecisionRecord.forRun(runId, kind, now, userId, leagueId,
                             OttoJson.MAPPER.valueToTree(leagueWeek.league()))
                     .roster(new RosterContext(OttoJson.MAPPER.valueToTree(roster),
                             Optional.empty()))
@@ -210,6 +286,9 @@ public class LineupAdvice {
         comparisons.put("projectedPoints", projections);
         comparisons.put("legalMoves", bundle.legalMoves());
         comparisons.put("noChangeAllowed", bundle.noChangeAllowed());
+        if (!bundle.rosterPlans().isEmpty()) {
+            comparisons.put("rosterPlans", bundle.rosterPlans());
+        }
         return OttoJson.MAPPER.valueToTree(comparisons);
     }
 }

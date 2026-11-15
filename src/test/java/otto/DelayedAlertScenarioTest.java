@@ -2,6 +2,7 @@ package otto;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -9,6 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.events.EventLog;
+import otto.events.EventType;
+import otto.harness.AdviceStubs;
+import otto.harness.Fixtures;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -38,16 +43,19 @@ class DelayedAlertScenarioTest extends WireSeamTest {
 
     private static final String MCCAFFREY = "4034";
 
-    private static final String FIRST_PHRASE =
-            "McCaffrey is Out for Sunday. Bench him and start a healthy RB.";
+    private static final String FIRST_PHRASE = AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE;
 
-    private static final String UPDATED_PHRASE =
-            "McCaffrey is Out and headed to IR. Bench him and start a healthy RB.";
+    private static final String UPDATED_PHRASE = "Move Christian McCaffrey to IR and start "
+            + "Josh Jacobs at RB. The 49ers placed Christian McCaffrey on injured reserve.";
 
-    private static final String RECOVERY_PHRASE = "McCaffrey is back to Active.";
+    private static final String RECOVERY_PHRASE =
+            "Christian McCaffrey is back to Active, so keep him where he is.";
 
     @Autowired
     private CheckRunner checkRunner;
+
+    @Autowired
+    private EventLog eventLog;
 
     @Autowired
     private JsonStore store;
@@ -55,7 +63,8 @@ class DelayedAlertScenarioTest extends WireSeamTest {
     private void declineWhileTelegramIsDown() {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.noNewsByDefault(sleeper);
-        OutboundStubs.llmPhrases(llm, FIRST_PHRASE);
+        OutboundStubs.llmPhrases(llm, "Baseline.");
+        AdviceStubs.llmDecidesOn(llm, "Out", AdviceStubs.MCCAFFREY_OUT_HOLD);
         telegram.stubFor(WireMock.post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .willReturn(aResponse().withStatus(500)));
         checkRunner.runCheck();
@@ -76,6 +85,14 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         SleeperStubs.noNewsByDefault(sleeper);
+    }
+
+    /** The fixture rosters after the user dropped Christian McCaffrey and started Josh Jacobs. */
+    private static String mccaffreyDroppedForJacobs() {
+        String mccaffrey = "\"" + MCCAFFREY + "\",";
+        return Fixtures.read("sleeper/rosters.json")
+                .replaceFirst(mccaffrey, "")
+                .replaceFirst(mccaffrey, "\"5850\",");
     }
 
     private static String newsFeed(String title, String description, Instant published) {
@@ -120,7 +137,9 @@ class DelayedAlertScenarioTest extends WireSeamTest {
                                 "The 49ers placed Christian McCaffrey on injured reserve.",
                                 clock.instant().minus(Duration.ofMinutes(1))))));
         llm.resetAll();
-        OutboundStubs.llmPhrases(llm, UPDATED_PHRASE);
+        OutboundStubs.llmAdvisesOn(llm, "Placed on injured reserve", AdviceStubs.decision(
+                UPDATED_PHRASE, "ir", AdviceStubs.JACOBS_FOR_MCCAFFREY,
+                List.of("4034", "5850"), List.of()));
 
         checkRunner.runCheck();
 
@@ -135,12 +154,35 @@ class DelayedAlertScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aDelayedAlertIsCancelledUnsentWhenThePlayerLeftTheRosterWhileItWaited() {
+        declineWhileTelegramIsDown();
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.ROSTERS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withHeader("ETag", "\"rosters-v2\"")
+                .withBody(mccaffreyDroppedForJacobs())));
+        llm.resetRequests();
+
+        checkRunner.runCheck();
+        clock.advance(Duration.ofSeconds(61));
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.ROSTERS_PATH, "rosters-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
+        assertThat(eventLog.all()).noneMatch(event -> event.type() == EventType.ALERT_SENT);
+        assertThat(firstDeliveryStatus()).isEqualTo("CANCELLED");
+    }
+
+    @Test
     void aDelayedAlertIsCancelledWhenThePlayerRecoveredWhileItWaited() {
         declineWhileTelegramIsDown();
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl.json", "players-v3");
         llm.resetAll();
-        OutboundStubs.llmPhrases(llm, RECOVERY_PHRASE);
+        AdviceStubs.llmDecidesOn(llm, "Active", AdviceStubs.decision(RECOVERY_PHRASE, "hold",
+                "null", List.of("4034"), List.of()));
 
         checkRunner.runCheck();
         clock.advance(Duration.ofSeconds(61));

@@ -30,7 +30,7 @@ public class PreSendResearch {
      * player. Long enough to span a week's practice reports, and shorter
      * than the gap between two games.
      */
-    static final Duration REPORT_WINDOW = Duration.ofDays(3);
+    public static final Duration REPORT_WINDOW = Duration.ofDays(3);
 
     /**
      * The facts {@link #factsFor} returns about the read itself rather

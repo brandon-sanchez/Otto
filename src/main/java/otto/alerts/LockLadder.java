@@ -225,8 +225,10 @@ class LockLadder {
         return eventLog.all().stream()
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> playerId.equals(event.facts().get("playerId")))
-                .map(event -> event.facts().getOrDefault("action", ""))
-                .anyMatch(action -> action.startsWith("IR update:")
-                        || action.startsWith("IR action needed:"));
+                .filter(event -> "true".equals(event.facts().get("reserve")))
+                .filter(event -> PlayerHealth.IR.name().equals(event.facts().get("from")))
+                .map(event -> event.facts().get("to"))
+                .anyMatch(to -> to != null
+                        && PlayerHealth.valueOf(to).ordinal() <= PlayerHealth.QUESTIONABLE.ordinal());
     }
 }
