@@ -32,6 +32,31 @@ Choose the webhook secret yourself - any string of `A-Z a-z 0-9 _ -`.
 Telegram echoes it on every call, and the assistant refuses a call
 without it.
 
+### Fallback model keys
+
+When OpenAI fails, Otto asks Anthropic Claude and then Google Gemini
+before it falls back to text that code writes. Each key is optional. A
+provider without a key is left out, and the others still work. Get the
+Anthropic key from the Claude Console and the Gemini key from Google AI
+Studio, then store them the same way:
+
+```sh
+for pair in \
+  "otto.models.anthropic.api-key:$ANTHROPIC_API_KEY" \
+  "otto.models.gemini.api-key:$GEMINI_API_KEY"
+do
+  aws ssm put-parameter --region us-east-1 --type SecureString --overwrite \
+    --name "/otto/prod/${pair%%:*}" --value "${pair#*:}"
+done
+```
+
+The functions read the secrets once, at startup, and SnapStart keeps
+what they read in its snapshot. A key added or changed later takes
+effect on the next function version, which the next deploy of a code
+change publishes. The
+models, timeouts, retries and circuit breaker are under `otto.models` in
+`src/main/resources/application.yml`.
+
 ## 2. Deploy
 
 ```sh
