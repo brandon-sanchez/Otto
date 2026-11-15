@@ -61,8 +61,8 @@ class NewsLane implements EvidenceLane {
         return new Read() {
             @Override
             public Map<String, String> shortlist(List<DirectoryPlayer> freeAgents) {
-                Set<String> trending = sleeper.trendingAdds(TrendingLane.LOOKBACK_HOURS,
-                        TrendingLane.LIMIT) instanceof SourceResult.Ok<
+                Set<String> trending = sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                        SleeperAdapter.TRENDING_LIMIT) instanceof SourceResult.Ok<
                                 List<SleeperAdapter.TrendingPlayer>> ok
                         ? ok.value().stream().map(SleeperAdapter.TrendingPlayer::playerId)
                                 .collect(Collectors.toSet())

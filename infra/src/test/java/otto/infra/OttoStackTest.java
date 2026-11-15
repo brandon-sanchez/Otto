@@ -1,5 +1,8 @@
 package otto.infra;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * What the stack promises, read back off the template it produces. The
- * assertions are the ticket's acceptance criteria: the shape of the two
- * functions, the four schedules, the stores, the alarms, and the
- * services that are deliberately absent.
+ * What the stack promises, read back off the template it produces: the
+ * shape of the two functions, the four schedules, the stores, the
+ * alarms, and the services that are deliberately absent.
  */
 class OttoStackTest {
 
@@ -240,6 +242,62 @@ class OttoStackTest {
                                 Map.of("Mode", "GOVERNANCE", "Days", 730)))))));
         assertThat(lifecycleRules(twoSeasons)).first()
                 .satisfies(rule -> assertThat(rule).containsEntry("ExpirationInDays", 730));
+    }
+
+    @Test
+    void anArticleTextPeriodThatIsNotANumberFailsTheSynthByName() {
+        assertThatThrownBy(() -> stackWith("articleTextSeasons", "three"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("articleTextSeasons")
+                .hasMessageContaining("three");
+    }
+
+    @Test
+    void theEvidenceBoardIsSentUnlessTheStackRollsItBack() {
+        template.allResourcesProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Environment", Match.objectLike(Map.of(
+                        "Variables", Match.objectLike(Map.of(
+                                "OTTO_SENT_WAIVER_BOARD", "EVIDENCE")))))));
+
+        stackWith("sentWaiverBoard", "SCORED").allResourcesProperties("AWS::Lambda::Function",
+                Match.objectLike(Map.of("Environment", Match.objectLike(Map.of(
+                        "Variables", Match.objectLike(Map.of(
+                                "OTTO_SENT_WAIVER_BOARD", "SCORED")))))));
+        assertThatThrownBy(() -> stackWith("sentWaiverBoard", "OLD"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("EVIDENCE, SCORED");
+    }
+
+    /**
+     * The bucket grants name the prefixes DecisionRecords writes under;
+     * a drift would show up only as a denied write in production.
+     */
+    @Test
+    void theRecordPrefixesAreTheOnesTheAppWritesUnder() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "records",
+                "DecisionRecords.java"));
+
+        List.of("records", "article-text", "outcomes").forEach(prefix ->
+                assertThat(app).contains("\"" + prefix + "\""));
+        assertThat(template.toJSON().toString()).contains("/records/*", "/article-text/*",
+                "/outcomes/*");
+    }
+
+    @Test
+    void theFeedObjectsAreGrantedUnderThePrefixTheAppWritesThem() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
+                "S3DocumentObjects.java"));
+
+        assertThat(app).contains("PREFIX = \"nflverse/\"");
+        assertThat(template.toJSON().toString()).contains("/nflverse/*");
+    }
+
+    private static Template stackWith(String key, String value) {
+        return Template.fromStack(new OttoStack(
+                new App(AppProps.builder()
+                        .context(Map.of("alertEmail", "manager@example.com", key, value))
+                        .build()),
+                "OttoStack", props()));
     }
 
     /**

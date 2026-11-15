@@ -26,9 +26,6 @@ import otto.sleeper.SourceResult;
 @Order(5)
 class TrendingLane implements EvidenceLane {
 
-    static final int LOOKBACK_HOURS = 24;
-    static final int LIMIT = 25;
-
     /** How many trending free agents join the pool. */
     private static final int POOL_ENTRIES = 5;
 
@@ -46,7 +43,8 @@ class TrendingLane implements EvidenceLane {
     @Override
     public Read read(Inputs inputs) {
         SourceResult<List<SleeperAdapter.TrendingPlayer>> trending =
-                sleeper.trendingAdds(LOOKBACK_HOURS, LIMIT);
+                sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                        SleeperAdapter.TRENDING_LIMIT);
         Map<String, Integer> adds = new LinkedHashMap<>();
         if (trending instanceof SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> ok) {
             ok.value().forEach(player -> adds.putIfAbsent(player.playerId(), player.adds()));
@@ -72,12 +70,13 @@ class TrendingLane implements EvidenceLane {
                 }
                 Integer count = adds.get(player.playerId());
                 String value = count == null
-                        ? "not among the %d players most added on Sleeper".formatted(LIMIT)
+                        ? "not among the %d players most added on Sleeper"
+                                .formatted(SleeperAdapter.TRENDING_LIMIT)
                         : String.valueOf(count);
                 return List.of(new EvidenceItem("trending-" + player.playerId(),
                         "sleeper:trending-add", Optional.empty(), inputs.now(),
                         "attention: how many Sleeper leagues added him in the last %d hours"
-                                .formatted(LOOKBACK_HOURS),
+                                .formatted(SleeperAdapter.TRENDING_LOOKBACK_HOURS),
                         Map.of("addsLastDay", value)));
             }
 

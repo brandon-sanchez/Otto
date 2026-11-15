@@ -3,6 +3,7 @@ package otto.harness;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,8 +70,12 @@ public class FakeS3 implements S3Client {
     /** How many writes the caller has landed. */
     private int writes;
 
+    /** How many reads the caller has asked for, by key. */
+    private final Map<String, Integer> reads = new HashMap<>();
+
     @Override
     public ResponseBytes<GetObjectResponse> getObjectAsBytes(GetObjectRequest request) {
+        reads.merge(request.key(), 1, Integer::sum);
         Version current = current(request.key());
         if (current == null) {
             throw NoSuchKeyException.builder().statusCode(404).message("no such key").build();
@@ -248,6 +253,11 @@ public class FakeS3 implements S3Client {
 
     public int bodiesServed() {
         return bodiesServed;
+    }
+
+    /** How many reads of the key the caller asked for, answered or not. */
+    public int readsOf(String key) {
+        return reads.getOrDefault(key, 0);
     }
 
     public int writes() {

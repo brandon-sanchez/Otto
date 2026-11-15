@@ -264,6 +264,25 @@ class RoleSlipScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aSettledSlipNeverStopsALaterBenchEdgeOnTheSamePlayer() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        checkWithAdvice(KEEP);
+        assertThat(onlyRoleSlipRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+
+        clock.advance(Duration.ofMinutes(2));
+        AdviceStubs.llmRecommends(llm, AdviceStubs.JACOBS_OVER_COOK);
+        checkWithProjections("sleeper/projections-edge.json", KEEP);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo(AdviceStubs.message(AdviceStubs.JACOBS_OVER_COOK)))));
+        assertThat(alertsSent()).extracting(Event::key)
+                .contains("alert:edge:2026-w2:5850-over-8138")
+                .doesNotContain("alert:role-slip:8138:usage-w3");
+    }
+
+    @Test
     void theSameEvidenceIsNeverEvaluatedTwice() {
         usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
         checkWithAdvice(KEEP);
@@ -297,6 +316,23 @@ class RoleSlipScenarioTest extends WireSeamTest {
         assertThat(records.getLast().outcome()).isEqualTo(new Outcome.Withheld(
                 "The action and its reasons match the last advice about him, which is not "
                         + "sent again."));
+    }
+
+    @Test
+    void heldAdviceThatNoBoardCarriedIsNotCountedAsSent() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        cooksRoleIsReported("\"rotowire\"", "James Cook lost his starting job to Ray Davis");
+        checkWithAdvice(BENCH_AND_KEEP);
+        assertThat(roleSlips.heldForBoard()).hasSize(1);
+
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        clock.advance(Duration.ofMinutes(2));
+        cooksRoleIsReported("\"espn\"", "9200", "James Cook headed for a committee",
+                clock.instant());
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(BENCH_AND_KEEP_MESSAGE))));
     }
 
     @Test

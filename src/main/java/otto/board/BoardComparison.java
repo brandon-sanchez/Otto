@@ -19,11 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import otto.OttoApplication;
 import otto.OttoProperties;
-import otto.advice.Sha256;
 import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.claims.BoardSchedule;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
@@ -42,14 +41,13 @@ import otto.records.DecisionRecords;
 import otto.records.ModelExchange;
 import otto.records.Outcome;
 import otto.records.RosterContext;
+import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
-import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
-import otto.waivers.WaiverAlertService;
 
 /**
  * Compares the waiver board with its baselines every claim round, so
@@ -74,7 +72,6 @@ import otto.waivers.WaiverAlertService;
 public class BoardComparison {
 
     private static final String RUN_ID_PREFIX = "waiver-baselines-";
-    private static final int RUN_ID_HASH_LENGTH = 32;
     private static final String PENDING = "waiver-comparisons";
     private static final String PROMPT_VERSION = "none";
 
@@ -163,10 +160,10 @@ public class BoardComparison {
             return;
         }
         String leagueId = league.league().leagueId();
-        String runId = RUN_ID_PREFIX + Sha256.hex(leagueId + "\n" + deadline.get().toInstant())
-                .substring(0, RUN_ID_HASH_LENGTH);
+        String runId = RunIds.stable(RUN_ID_PREFIX, leagueId,
+                deadline.get().toInstant().toString());
         if (records.read(userId, leagueId, runId).isEmpty()) {
-            records.save(baselinesRecord(runId, league, week.get(), deadline.get(),
+            records.saveFirst(baselinesRecord(runId, league, week.get(), deadline.get(),
                     players.get(), user.get(), now));
         }
         listUntilJudged(new Pending(leagueId, runId,
@@ -174,13 +171,13 @@ public class BoardComparison {
     }
 
     /**
-     * True from the evening the board is due until the claim deadline,
-     * while the waiver trigger is on: switching waivers off stops the
-     * scored board being built at all, its live news reads included.
+     * True from the evening the board is due until the claim deadline.
+     * The baselines are built even while the waiver trigger is off or
+     * muted, never sent, so every week has something to judge the
+     * board against.
      */
-    private boolean baselinesDue(ZonedDateTime deadline, Instant now) {
-        return !now.isBefore(WaiverAlertService.eveningBefore(deadline).toInstant())
-                && settings.enabled(Trigger.WAIVER);
+    private static boolean baselinesDue(ZonedDateTime deadline, Instant now) {
+        return !now.isBefore(BoardSchedule.due(deadline).toInstant());
     }
 
     /**
@@ -214,8 +211,6 @@ public class BoardComparison {
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
                 lineupPool, built.picks(), built.unavailable());
-        String code = Objects.requireNonNullElse(
-                OttoApplication.class.getPackage().getImplementationVersion(), "dev");
         return new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
                 RunKind.WAIVER_BASELINES, now, userId, league.league().leagueId(),
                 OttoJson.MAPPER.valueToTree(league.league()),
@@ -224,7 +219,7 @@ public class BoardComparison {
                                 Math.max(0, budget - user.waiverBudgetUsed()))),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(built),
                 OttoJson.MAPPER.valueToTree(round), List.of(),
-                new Versions(league.snapshot().at().toString(), code, PROMPT_VERSION,
+                Versions.ofThisBuild(league.snapshot().at().toString(), PROMPT_VERSION,
                         PROMPT_VERSION),
                 List.of(), new Outcome.Silent("baselines are kept only to judge the waiver "
                         + "board against; they are never sent"));
@@ -321,7 +316,11 @@ public class BoardComparison {
         if (answer.isEmpty()) {
             return Optional.empty();
         }
-        Map<String, String> screened = board.get().candidates().stream()
+        // Only the pool the board could pick from was addable; the rest
+        // were screened out. Its checks already demand a legal drop on a
+        // full roster, so a checked pick also had room on the roster.
+        Map<String, String> pool = board.get().candidates().stream()
+                .filter(Candidate::included)
                 .collect(Collectors.toMap(Candidate::playerId, Candidate::name,
                         (first, second) -> first));
         Map<String, DirectoryPlayer> players = directory.read()
@@ -335,8 +334,8 @@ public class BoardComparison {
                             .map(DirectoryPlayer::position)
                             .orElse("");
                     return new ComparisonRound.Pick(entry.playerId(),
-                            screened.getOrDefault(entry.playerId(), entry.playerId()), position,
-                            screened.containsKey(entry.playerId()),
+                            pool.getOrDefault(entry.playerId(), entry.playerId()), position,
+                            pool.containsKey(entry.playerId()),
                             slots.stream().anyMatch(slot -> slot.accepts(position)));
                 })
                 .toList());

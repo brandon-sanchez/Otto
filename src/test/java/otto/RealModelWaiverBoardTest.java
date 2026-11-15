@@ -71,21 +71,21 @@ class RealModelWaiverBoardTest extends WireSeamTest {
     void aRedraftBoardClaimsTheNamedStarter() {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-in-season.json");
 
-        assertClaimsIrving(boardKeptUnsentAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
     void aDynastyBoardClaimsTheNamedStarter() {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-dynasty.json");
 
-        assertClaimsIrving(boardKeptUnsentAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
     void aKeeperBoardClaimsTheNamedStarter() {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-keeper.json");
 
-        assertClaimsIrving(boardKeptUnsentAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     private static String claimingOnWednesday(String league) {
@@ -112,7 +112,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         checkRunner.runCheck();
     }
 
-    private JsonNode boardKeptUnsentAfterPassingItsChecks() {
+    private JsonNode boardSentAfterPassingItsChecks() {
         List<DecisionRecord> records = StoredRecords.of(decisionRecords,
                 properties.storageDir(), USER_ID, LEAGUE_ID, RunKind.WAIVER_BOARD);
         assertThat(records).hasSize(1);
@@ -122,7 +122,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
                 .as("check failures on the model's board %s", last.response())
                 .isEmpty();
         assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
-        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options"))));
         return last.response();
     }

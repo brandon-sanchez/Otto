@@ -340,8 +340,12 @@ public class AlertService {
 
         List<Event> sent = new ArrayList<>();
         for (List<AlertCandidate> group : groups.values()) {
+            // A slip already settled has no advice left to send, so it
+            // must not claim the message of a later candidate on its player.
             List<AlertCandidate> unalerted = group.stream()
                     .filter(candidate -> !outbox.alreadySent("alert:" + candidate.key()))
+                    .filter(candidate -> candidate.source() != AlertCandidate.Source.ROLE_SLIP
+                            || lineupAdvice.slipOpen(candidate))
                     .toList();
             if (unalerted.isEmpty()) {
                 continue;

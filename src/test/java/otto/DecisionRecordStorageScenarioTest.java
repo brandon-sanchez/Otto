@@ -194,6 +194,41 @@ class DecisionRecordStorageScenarioTest {
     }
 
     @Test
+    void aRunRebuiltAfterAnAmbiguousSaveKeepsTheRecordItsEarlierAttemptStored() {
+        DecisionRecord first = record("owner", "league-1", "waiver-board-3f9a1c2e");
+        records.save(first);
+        DecisionRecord rebuilt = rebuiltLater(first);
+
+        DecisionRecord kept = records.saveFirst(rebuilt);
+
+        assertThat(kept).isEqualTo(first);
+        assertThat(records.read("owner", "league-1", "waiver-board-3f9a1c2e")).contains(first);
+    }
+
+    @Test
+    void aRunWhoseArticleTextLandedButWhoseRecordDidNotIsStoredWhole() {
+        DecisionRecord first = record("owner", "league-1", "waiver-board-3f9a1c2e");
+        s3.writeBehindTheCaller(
+                "article-text/user=owner/league=league-1/run=waiver-board-3f9a1c2e.json",
+                "{\"injury-report\":\"Achane was limited practice Thursday.\"}".getBytes());
+
+        DecisionRecord kept = records.saveFirst(rebuiltLater(first));
+
+        assertThat(records.read("owner", "league-1", "waiver-board-3f9a1c2e"))
+                .hasValueSatisfying(stored -> assertThat(stored.startedAt())
+                        .isEqualTo(kept.startedAt()).isAfter(STARTED));
+    }
+
+    /** The same run built again a minute later, as the next Check builds it. */
+    private static DecisionRecord rebuiltLater(DecisionRecord first) {
+        return new DecisionRecord(first.schemaVersion(), first.runId(), first.kind(),
+                first.startedAt().plusSeconds(60), first.userId(), first.leagueId(),
+                first.league(), first.roster(), first.preferences(), first.candidates(),
+                first.comparisons(), first.evidence(), first.versions(), first.exchanges(),
+                first.outcome());
+    }
+
+    @Test
     void anOutcomeRecordIsStoredBesideItsRunAndNeverRewritten() {
         records.saveOutcome("owner", "league-1", "20261010T153000Z-3f9a1c2e",
                 Map.of("leadGain", 21.5));

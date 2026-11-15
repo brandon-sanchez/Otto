@@ -1,8 +1,6 @@
 package otto.waivers;
 
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -11,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Component;
 
@@ -21,11 +20,11 @@ import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
 import otto.alerts.RoleSlipLedger;
 import otto.ask.LeagueWeek;
+import otto.claims.BoardSchedule;
 import otto.events.Event;
 import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 
 /**
@@ -43,11 +42,6 @@ import otto.sleeper.SourceResult;
 @Component
 public class WaiverAlertService {
 
-    /** The user's zone. Pinned here, not read from the clock: the Check runs in UTC. */
-    private static final ZoneId WAIVER_ZONE = ZoneId.of("America/Los_Angeles");
-
-    private static final LocalTime WAIVER_TIME = LocalTime.of(18, 0);
-
     private static final String ABOUT_YOUR_ROSTER = "About your roster";
 
     private final WaiverScorer scorer;
@@ -56,6 +50,12 @@ public class WaiverAlertService {
     private final SettingsStore settings;
     private final AlertDeliveryOutbox outbox;
     private final RoleSlipLedger roleSlips;
+
+    /** The latest Check's scored board, so the Alert and the baselines rank it once. */
+    private final AtomicReference<Ranked> lastRanked = new AtomicReference<>();
+
+    private record Ranked(LeagueWeek league, Instant now, SourceResult<WaiverBoard> board) {
+    }
 
     public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
             MuteStore muteStore, SettingsStore settings,
@@ -79,11 +79,11 @@ public class WaiverAlertService {
         if (deadline.isEmpty()) {
             return Optional.empty();
         }
-        ZonedDateTime due = eveningBefore(deadline.get());
+        ZonedDateTime due = BoardSchedule.due(deadline.get());
         if (now.isBefore(due.toInstant())) {
             return Optional.empty();
         }
-        String key = boardKey(deadline.get());
+        String key = BoardSchedule.alertKey(deadline.get());
         if (outbox.alreadySent(key)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
@@ -94,8 +94,7 @@ public class WaiverAlertService {
         // could not build one - or built an empty one - tries again on
         // the next minute inside the window. A board that never
         // computed is not a board that was sent.
-        return switch (scorer.rank(league, now,
-                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT))) {
+        return switch (scoredBoard(league, now)) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
@@ -104,20 +103,24 @@ public class WaiverAlertService {
     }
 
     /**
-     * Returns when a waiver board for this claim deadline is due: 18:00
-     * America/Los_Angeles on the calendar day before it, read in the
-     * zone Sleeper runs claims in.
+     * Returns the scored board's top {@value WaiverQuery#ALERT_COUNT}
+     * free agents for this Check. Ranking reads live news, so one Check
+     * ranks once: the Alert and the waiver baselines share the result
+     * for the same {@link LeagueWeek}, which each Check builds afresh.
+     *
+     * <p>Side effects: the scorer's reads, on the first call of a Check.
      */
-    public static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
-        return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
-                .atTime(WAIVER_TIME)
-                .atZone(WAIVER_ZONE);
+    public SourceResult<WaiverBoard> scoredBoard(LeagueWeek league, Instant now) {
+        Ranked last = lastRanked.get();
+        if (last != null && last.league() == league && last.now().equals(now)) {
+            return last.board();
+        }
+        SourceResult<WaiverBoard> board = scorer.rank(league, now,
+                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT));
+        lastRanked.set(new Ranked(league, now, board));
+        return board;
     }
 
-    /** Returns the Alert key of the waiver board for this claim deadline. */
-    public static String boardKey(ZonedDateTime deadline) {
-        return "alert:waiver:" + eveningBefore(deadline).toLocalDate();
-    }
 
     private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
             WaiverBoard board, Instant now) {

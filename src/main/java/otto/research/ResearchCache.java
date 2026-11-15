@@ -52,6 +52,7 @@ public class ResearchCache {
     private final JsonStore store;
     private final Clock clock;
 
+    /** Reads news from {@code sleeper} and keeps it in {@code store}, timed by {@code clock}. */
     public ResearchCache(SleeperAdapter sleeper, JsonStore store, Clock clock) {
         this.sleeper = sleeper;
         this.store = store;

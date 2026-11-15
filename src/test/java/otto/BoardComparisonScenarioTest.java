@@ -28,6 +28,8 @@ import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
+import otto.settings.SettingsStore;
+import otto.settings.Trigger;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
@@ -96,6 +98,9 @@ class BoardComparisonScenarioTest extends WireSeamTest {
     @Autowired
     private OttoProperties properties;
 
+    @Autowired
+    private SettingsStore settings;
+
     private void tuesdayEveningWithTheModelAnswering(String... answers) {
         SleeperStubs.waiverWeek(sleeper);
         NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
@@ -150,6 +155,18 @@ class BoardComparisonScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
                         containing("Your waiver options"))));
+    }
+
+    @Test
+    void theBaselinesAreRecordedEvenWhileTheWaiverTriggerIsOff() {
+        settings.change(current -> current.withTrigger(Trigger.WAIVER, false));
+
+        tuesdayEveningWithTheModelAnswering(BOARD);
+
+        assertThat(onlyBaselines().comparisons().path("picks").path("SCORED_BOARD"))
+                .isNotEmpty();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("Five waiver targets")));
     }
 
     @Test

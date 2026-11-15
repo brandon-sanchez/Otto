@@ -22,9 +22,11 @@ import otto.records.Outcome;
 import otto.records.RunKind;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -87,5 +89,44 @@ class WaiverBoardRollbackScenarioTest extends WireSeamTest {
         assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
         assertThat(((Outcome.DryRun) record.outcome()).messages()).singleElement()
                 .satisfies(message -> assertThat(message).startsWith("Your waiver options"));
+    }
+
+    @Test
+    void oneCheckRanksTheScoredBoardOnceForTheAlertAndTheBaselines() {
+        aWaiverWeekOnDisk(BOARD);
+        sleeper.resetRequests();
+
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/10001/news")));
+    }
+
+    @Test
+    void aWithheldDryRunRecordsNoNoticeThatAFlipBackCouldSend() {
+        String rostered = BOARD.replace("10001", "8138");
+        aWaiverWeekOnDisk(rostered);
+
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+
+        DecisionRecord record = StoredRecords.of(decisionRecords, properties.storageDir(),
+                USER_ID, LEAGUE_ID, RunKind.WAIVER_BOARD).getFirst();
+        assertThat(record.outcome()).isInstanceOfSatisfying(Outcome.Withheld.class,
+                withheld -> assertThat(withheld.notice()).isNull());
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("No waiver board this round")));
+    }
+
+    private void aWaiverWeekOnDisk(String board) {
+        SleeperStubs.waiverWeek(sleeper);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        telegram.resetRequests();
+        OutboundStubs.llmPhrases(llm, "Five waiver targets for Wednesday.");
+        OutboundStubs.llmAdvisesInOrderOn(llm, OutboundStubs.WAIVER_BOARD_REQUEST, board);
     }
 }

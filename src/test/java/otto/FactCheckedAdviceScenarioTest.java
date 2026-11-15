@@ -30,6 +30,7 @@ import otto.records.RunKind;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
@@ -121,10 +122,23 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         assertThat(alert.facts()).containsEntry("runId", record.runId());
     }
 
+    @Test
+    void bothPlayersInASwapHaveTheirNewsReadRightBeforeSending() {
+        SleeperStubs.noNewsByDefault(sleeper);
+        checkWithAnEdge(EDGE_ANSWER);
+
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/5850/news")));
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/8138/news")));
+    }
+
     static Stream<Arguments> badFirstAnswers() {
         return Stream.of(
                 Arguments.of("a wrong number", edgeAnswer(EDGE_MESSAGE.replace("16.5", "18.0"),
                         "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"), "18.0"),
+                Arguments.of("a real number pinned on the wrong player", edgeAnswer(
+                        EDGE_MESSAGE + " James Cook projects 16.5 points if he starts.",
+                        "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"),
+                        "16.5 is not in the evidence about James Cook"),
                 Arguments.of("a player outside the evidence", edgeAnswer(
                         EDGE_MESSAGE + " Saquon Barkley is the better pickup.",
                         "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"),
