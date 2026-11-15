@@ -504,7 +504,9 @@ The two switches differ in what they cost. A Mute silences the message
 and the board is still computed, which is what a Mute means everywhere
 else in this system. A trigger switched off stops the board being
 built at all - there is no Recommendation to keep, and building one
-would spend live news requests on an answer nobody will read.
+would spend live news requests on an answer nobody will read. The
+weekly comparison's baselines are the one exception: they are built
+whatever the two switches say, so every week gets a comparison.
 
 ## A board that missed its evening is never sent late (revised, #111)
 
@@ -826,8 +828,11 @@ Record that is never sent:
 - **Top trending adds**: Sleeper's five most-added players as published,
   rostered ones included.
 
-When the waiver trigger is off, no baseline is built, because the
-scored board is not built either.
+The baselines are built even while the waiver trigger is off or
+`class:waiver` is muted, and are never sent, so every week gets a
+comparison. They include the scored board's top five, so the scored
+board is still ranked, and spends its live news requests, in a week
+where it is not sent.
 
 Each strategy is judged on net lineup gain: the points the user's best
 lineup would have scored that week with the pickup on the roster and
@@ -920,10 +925,15 @@ built and recorded as a dry run. No week of records is lost in either
 direction. `docs/deploy.md` gives the steps.
 
 The evidence-based board answers to the same two switches as the scored
-board. With the waiver trigger off or `class:waiver` muted, it is not
-built at all, so it spends no model call. It goes out under the same
-Alert key as the scored board, so Done, Ignore and Mute act on it as
-they did on the scored board, and the Mute tap silences `class:waiver`.
+board. With the waiver trigger off, it is not built at all, so it spends
+no model call. While `class:waiver` is muted, it is built and recorded
+as a dry run, as it is while `SCORED` is sent, so the muted week can
+still be judged against its baselines. Each round is decided once: a
+round recorded as a dry run stays one, and unmuting or flipping the
+switch before the deadline never sends its board or its withheld
+notice. It goes out under the same Alert key as the scored board, so
+Done, Ignore and Mute act on it as they did on the scored board, and
+the Mute tap silences `class:waiver`.
 
 ### A board that cannot be checked is withheld, and the user is told
 
