@@ -215,6 +215,14 @@ public class LineupAdvice {
         return sent(run);
     }
 
+    /**
+     * True while a role slip still has a decision open: it is not yet
+     * settled by advice withheld, held for the board, or found moot.
+     */
+    boolean slipOpen(AlertCandidate slip) {
+        return !ledger.settled(slip.key());
+    }
+
     private Outcome roleSlipOutcome(AdviceAnswer answer, LineupEvidence.Draft draft,
             AlertCandidate slip, LeagueWeek leagueWeek, RosterSnapshot roster, Instant now) {
         boolean hold = answer.plan().map(RosterPlans.HOLD::equals).orElse(true);

@@ -264,6 +264,25 @@ class RoleSlipScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aSettledSlipNeverStopsALaterBenchEdgeOnTheSamePlayer() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        checkWithAdvice(KEEP);
+        assertThat(onlyRoleSlipRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+
+        clock.advance(Duration.ofMinutes(2));
+        AdviceStubs.llmRecommends(llm, AdviceStubs.JACOBS_OVER_COOK);
+        checkWithProjections("sleeper/projections-edge.json", KEEP);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo(AdviceStubs.message(AdviceStubs.JACOBS_OVER_COOK)))));
+        assertThat(alertsSent()).extracting(Event::key)
+                .contains("alert:edge:2026-w2:5850-over-8138")
+                .doesNotContain("alert:role-slip:8138:usage-w3");
+    }
+
+    @Test
     void theSameEvidenceIsNeverEvaluatedTwice() {
         usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
         checkWithAdvice(KEEP);
