@@ -147,15 +147,12 @@ class LockLadder {
             }
 
             String player = roster.playerNames().getOrDefault(playerId, playerId);
-            Recommendation recommendation = primary
-                    .map(AlertCandidate::recommendation)
-                    .orElseGet(() -> impairedWarning(playerId, player, health));
             Map<String, String> facts = new HashMap<>(primary
                     .map(AlertCandidate::facts)
                     .orElseGet(() -> Map.of("player", player)));
             facts.put("finalWarning", "true");
             facts.put("minutesToLock",
-                    String.valueOf(Duration.between(now, lock.get()).toMinutes()));
+                    String.valueOf(Duration.between(now, kickoff).toMinutes()));
             facts.putAll(research);
 
             facts.put("playerId", playerId);
@@ -171,17 +168,6 @@ class LockLadder {
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> playerId.equals(event.facts().get("playerId")))
                 .anyMatch(event -> !event.at().isBefore(windowStart));
-    }
-
-    private Recommendation impairedWarning(String playerId, String player, PlayerHealth health) {
-        return new Recommendation(
-                playerId,
-                player,
-                "Last call before lock: %s is still %s in your lineup"
-                        .formatted(player, health),
-                Confidence.MEDIUM,
-                List.of("Replacing him now avoids a possible zero"),
-                List.of("%s may still play and outscore the bench".formatted(player)));
     }
 
     /**

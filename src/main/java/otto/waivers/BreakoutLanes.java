@@ -102,16 +102,12 @@ public final class BreakoutLanes {
         Set<String> reasons = new LinkedHashSet<>();
         boolean breakout = false;
         boolean snapsSaid = false;
-        for (Lane lane : lanes) {
-            Optional<LaneRead> read = lane.read();
-            if (read.isEmpty()) {
-                continue;
-            }
-            read.get().crossed().ifPresent(reasons::add);
-            read.get().rising().ifPresent(reasons::add);
-            if (read.get().crossed().isPresent()) {
+        for (LaneRead read : lanes.stream().flatMap(lane -> lane.read().stream()).toList()) {
+            read.crossed().ifPresent(reasons::add);
+            read.rising().ifPresent(reasons::add);
+            if (read.crossed().isPresent()) {
                 breakout = true;
-                snapsSaid |= read.get().kind() == RoleShares.Kind.SNAP;
+                snapsSaid |= read.kind() == RoleShares.Kind.SNAP;
             }
         }
         if (breakout && !snapsSaid) {
