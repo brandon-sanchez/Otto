@@ -5,7 +5,9 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
@@ -72,6 +74,9 @@ public class S3BundleBackend implements DocumentBackend {
      */
     private final Map<String, JsonNode> base = new LinkedHashMap<>();
 
+    /** Documents that moved out of the bundle, to drop from it at the flush. */
+    private final Set<String> forgotten = new LinkedHashSet<>();
+
     private ObjectNode bundle;
     private String etag;
 
@@ -85,6 +90,9 @@ public class S3BundleBackend implements DocumentBackend {
 
     @Override
     public synchronized Optional<byte[]> load(String name) {
+        if (forgotten.contains(name)) {
+            return Optional.empty();
+        }
         JsonNode written = pending.get(name);
         if (written != null) {
             return Optional.of(bytes(written));
@@ -105,10 +113,21 @@ public class S3BundleBackend implements DocumentBackend {
      * point may have written between the two, and a conditional read
      * costs nothing when it has not.
      */
+    /**
+     * Drops a document that is stored elsewhere now from the bundle at
+     * the next flush, and reads it as absent until then.
+     */
+    synchronized void forget(String name) {
+        forgotten.add(name);
+        pending.remove(name);
+        base.remove(name);
+    }
+
     @Override
     public synchronized void flush() {
         try {
-            if (!pending.isEmpty()) {
+            if (!pending.isEmpty()
+                    || forgotten.stream().anyMatch(name -> loaded().has(name))) {
                 writePending();
             }
         } finally {
@@ -117,6 +136,7 @@ public class S3BundleBackend implements DocumentBackend {
             // run that has since read newer ones.
             pending.clear();
             base.clear();
+            forgotten.clear();
             stale = true;
         }
     }
@@ -125,6 +145,7 @@ public class S3BundleBackend implements DocumentBackend {
         for (int attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
             ObjectNode merged = loaded().deepCopy();
             pending.forEach(merged::set);
+            merged.remove(forgotten);
             try {
                 put(merged);
                 return;
