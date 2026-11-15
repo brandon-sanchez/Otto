@@ -31,6 +31,9 @@ import otto.snapshot.RosterSnapshot;
 @Component
 public class BenchEdgeDetector {
 
+    /** The fact holding the Sleeper id of the bench player the swap would start. */
+    static final String BENCH_ID = "benchId";
+
     private final LineupOptimizer optimizer;
     private final SettingsStore settings;
 
@@ -101,7 +104,7 @@ public class BenchEdgeDetector {
 
         Map<String, String> facts = new HashMap<>();
         facts.put("bench", inName);
-        facts.put("benchId", in);
+        facts.put(BENCH_ID, in);
         facts.put("benchProjection", inPoints);
         facts.put("starter", outName);
         facts.put("starterId", out);

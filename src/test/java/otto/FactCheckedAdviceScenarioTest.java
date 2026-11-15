@@ -30,6 +30,7 @@ import otto.records.RunKind;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
@@ -119,6 +120,15 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .findFirst().orElseThrow();
         assertThat(alert.facts()).containsEntry("runId", record.runId());
+    }
+
+    @Test
+    void bothPlayersInASwapHaveTheirNewsReadRightBeforeSending() {
+        SleeperStubs.noNewsByDefault(sleeper);
+        checkWithAnEdge(EDGE_ANSWER);
+
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/5850/news")));
+        sleeper.verify(1, getRequestedFor(urlPathEqualTo("/players/nfl/8138/news")));
     }
 
     static Stream<Arguments> badFirstAnswers() {

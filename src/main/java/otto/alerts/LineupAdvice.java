@@ -43,6 +43,7 @@ import otto.records.RunKind;
 import otto.records.RunOutcomes;
 import otto.records.Versions;
 import otto.research.OfficialUpdate;
+import otto.research.PreSendResearch;
 import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
@@ -77,13 +78,15 @@ public class LineupAdvice {
     private final RoleSlipLedger ledger;
     private final MuteStore muteStore;
     private final AlertDeliveryOutbox outbox;
+    private final PreSendResearch preSendResearch;
     private final String userId;
     private final String model;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
-            AlertDeliveryOutbox outbox, OttoProperties properties,
+            AlertDeliveryOutbox outbox, PreSendResearch preSendResearch,
+            OttoProperties properties,
             @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
         this.writer = writer;
         this.runs = runs;
@@ -94,6 +97,7 @@ public class LineupAdvice {
         this.ledger = ledger;
         this.muteStore = muteStore;
         this.outbox = outbox;
+        this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
         this.model = model;
     }
@@ -110,9 +114,11 @@ public class LineupAdvice {
     /**
      * The text for an edge or legality candidate.
      *
-     * @param research the facts {@link otto.research.PreSendResearch}
-     *        read for the candidate's player right before sending; its
-     *        newest report joins the evidence
+     * @param research the facts {@link PreSendResearch} read for the
+     *        candidate's player right before sending; its newest report
+     *        joins the evidence. For a bench edge, the bench player the
+     *        swap would start has his news read here too, so neither
+     *        side of the swap rests on cached news.
      * @param kickoff the game start of the candidate's player when this
      *        is the final pregame warning, or null otherwise
      * @return empty when the advice is withheld
@@ -129,8 +135,12 @@ public class LineupAdvice {
             default -> throw new IllegalArgumentException(
                     "No lineup advice for a " + candidate.source() + " candidate");
         };
-        return write(alertKey, RunKind.ALERT, draft.withNews(candidate.playerId(), research, now),
-                leagueWeek, roster, now);
+        LineupEvidence.Draft withNews = draft.withNews(candidate.playerId(), research, now);
+        if (candidate.source() == AlertCandidate.Source.EDGE) {
+            String startInstead = candidate.facts().get(BenchEdgeDetector.BENCH_ID);
+            withNews = withNews.withNews(startInstead, preSendResearch.factsFor(startInstead), now);
+        }
+        return write(alertKey, RunKind.ALERT, withNews, leagueWeek, roster, now);
     }
 
     /**

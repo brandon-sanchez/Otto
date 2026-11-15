@@ -16,8 +16,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * The last read before an Alert goes out. Injury, availability and
- * roster news is read again for the player the Alert is about, so the
- * message carries what is true now rather than what the cache held.
+ * roster news is read again for the player the Alert is about, and for
+ * the bench player a swap would start, so the message carries what is
+ * true now rather than what the cache held.
  * Rosters, budgets and league rules need no read here: the Check that
  * sends the Alert read them moments earlier.
  */
