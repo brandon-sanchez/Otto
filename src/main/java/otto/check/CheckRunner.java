@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
@@ -18,6 +20,7 @@ import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.model.ModelChain;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.LeagueStatus;
@@ -31,9 +34,16 @@ import otto.watchlist.WatchlistWatcher;
 /**
  * One Check: the deterministic pipeline entry point. Scheduled in
  * production; invoked directly by wire-seam tests.
+ *
+ * <p>The Check's model runs share one budget (see
+ * {@link ModelChain#withinCheck}). Once it cannot fit another run, the
+ * Alerts still waiting are left for the next Check, and the steps that
+ * call no model still run.
  */
 @Component
 public class CheckRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(CheckRunner.class);
 
     private final PlayerDirectoryService directoryService;
     private final PlayerDirectoryStore directoryStore;
@@ -49,6 +59,7 @@ public class CheckRunner {
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
+    private final ModelChain models;
     private final Clock clock;
     private final Duration preDraftCheckInterval;
 
@@ -59,8 +70,8 @@ public class CheckRunner {
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
             VerificationService verificationService,
-            WatchlistWatcher watchlistWatcher, SelfReportService selfReport, Clock clock,
-            OttoProperties properties) {
+            WatchlistWatcher watchlistWatcher, SelfReportService selfReport, ModelChain models,
+            Clock clock, OttoProperties properties) {
         this.directoryService = directoryService;
         this.directoryStore = directoryStore;
         this.sleeper = sleeper;
@@ -75,11 +86,23 @@ public class CheckRunner {
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
+        this.models = models;
         this.clock = clock;
         this.preDraftCheckInterval = properties.preDraftCheckInterval();
     }
 
+    /**
+     * Runs one Check.
+     *
+     * <p>Side effects: Sleeper reads, model calls within the Check's
+     * budget, Telegram messages, and the Snapshot, Event Log and
+     * last-check writes.
+     */
     public CheckResult runCheck() {
+        return models.withinCheck(this::check);
+    }
+
+    private CheckResult check() {
         Instant now = clock.instant();
         Optional<LastCheck> state = stateStore.read();
         SourceResult<SleeperAdapter.League> league = sleeper.league();
@@ -104,11 +127,15 @@ public class CheckRunner {
             WeekFacts week = weekFactsBuilder.build(stage.league());
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
-            alerts.addAll(alertService.process(leagueWeek));
-            waiverAlertService
-                    .considerWaiverAlert(
-                            leagueWeek, now)
-                    .ifPresent(alerts::add);
+            try {
+                alerts.addAll(alertService.process(leagueWeek));
+                waiverAlertService
+                        .considerWaiverAlert(
+                                leagueWeek, now)
+                        .ifPresent(alerts::add);
+            } catch (ModelChain.OutOfCheckTime e) {
+                log.info("The Check has no model time left; the next Check sends the rest");
+            }
             verificationService.verify(inSeason.get(), week, now);
         }
 

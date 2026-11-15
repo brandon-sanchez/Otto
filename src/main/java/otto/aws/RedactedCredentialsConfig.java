@@ -24,7 +24,9 @@ public class RedactedCredentialsConfig {
     private static final List<String> NAMED_CREDENTIALS = List.of(
             "otto.telegram.bot-token",
             "otto.telegram.webhook-secret",
-            "spring.ai.openai.api-key");
+            "spring.ai.openai.api-key",
+            "otto.models.anthropic.api-key",
+            "otto.models.gemini.api-key");
 
     /**
      * Returns every credential in the environment. Every value read from

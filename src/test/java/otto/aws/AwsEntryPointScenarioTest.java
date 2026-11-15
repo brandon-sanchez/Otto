@@ -2,6 +2,7 @@ package otto.aws;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Properties;
@@ -9,8 +10,11 @@ import java.util.Properties;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.convert.DurationStyle;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.env.MockEnvironment;
 
 import otto.storage.ConcurrentDocumentChange;
@@ -24,6 +28,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class AwsEntryPointScenarioTest {
 
+    /** The webhook function's timeout in {@code OttoStack}, which OttoStackTest pins. */
+    private static final Duration WEBHOOK_TIMEOUT = Duration.ofSeconds(60);
+
+    /** What an answered Ask still needs after the model: its Telegram send and record. */
+    private static final Duration SEND_ALLOWANCE = Duration.ofSeconds(15);
+
+    /** The scheduled function's timeout in {@code OttoStack}, which OttoStackTest pins. */
+    private static final Duration SCHEDULED_TIMEOUT = Duration.ofSeconds(300);
+
+    /** What a Check still needs after its last model run: its sends and its stores. */
+    private static final Duration STORE_ALLOWANCE = Duration.ofSeconds(45);
+
     private final WebhookHandler webhook = new WebhookHandler();
 
     @Test
@@ -33,6 +49,26 @@ class AwsEntryPointScenarioTest {
         assertThat(ScheduledJob.of("defense-versus-position"))
                 .isEqualTo(ScheduledJob.DEFENSE_VERSUS_POSITION);
         assertThat(ScheduledJob.of("research")).isEqualTo(ScheduledJob.RESEARCH);
+    }
+
+    @Test
+    void anAskAnswersInsideTheWebhookFunctionsTimeoutWithTimeLeftToSendIt() {
+        Duration askDeadline = DurationStyle.detectAndParse(
+                applicationYaml().getProperty("otto.models.budgets.ask.deadline"));
+
+        assertThat(askDeadline.plus(SEND_ALLOWANCE)).isLessThanOrEqualTo(WEBHOOK_TIMEOUT);
+    }
+
+    @Test
+    void aChecksModelRunsEndInsideTheScheduledFunctionsTimeoutWithTimeLeftToStore() {
+        Properties yaml = applicationYaml();
+        Duration check = DurationStyle.detectAndParse(
+                yaml.getProperty("otto.models.budgets.check"));
+        Duration phrasing = DurationStyle.detectAndParse(
+                yaml.getProperty("otto.models.budgets.phrasing.deadline"));
+
+        assertThat(check.plus(STORE_ALLOWANCE)).isLessThanOrEqualTo(SCHEDULED_TIMEOUT);
+        assertThat(check).as("a Check fits at least one phrasing run").isGreaterThan(phrasing);
     }
 
     @Test
@@ -136,5 +172,11 @@ class AwsEntryPointScenarioTest {
                 .withBody(body)
                 .withIsBase64Encoded(encoded)
                 .build();
+    }
+
+    private static Properties applicationYaml() {
+        YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
+        yaml.setResources(new ClassPathResource("application.yml"));
+        return yaml.getObject();
     }
 }

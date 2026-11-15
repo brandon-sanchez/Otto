@@ -70,6 +70,19 @@
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-model-openai</artifactId>
     </dependency>
+    <!--
+      The fallback models. The modules, not their starters: the starters
+      would each add a second ChatModel bean, and otto.model builds both
+      only when their keys are set.
+    -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-anthropic</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-google-genai</artifactId>
+    </dependency>
 
     <!--
       The AWS side. Each service client drops the Apache and Netty HTTP

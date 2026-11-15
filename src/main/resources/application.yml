@@ -22,6 +22,31 @@ otto:
   # Ceiling means a fresh poll would not be fresher anyway.
   sleeper-cadence: 60s
   edge-threshold: 1.0
+  models:
+    order: [openai, anthropic, gemini]
+    breaker:
+      failures: 3
+      cooldown: 5m
+    budgets:
+      ask:
+        deadline: 45s
+        reserve: 10s
+      phrasing:
+        deadline: 30s
+        reserve: 8s
+      check: 240s
+    anthropic:
+      api-key: "${ANTHROPIC_API_KEY:}"
+      base-url: "https://api.anthropic.com"
+      model: "claude-sonnet-5-5"
+      timeout: 45s
+      max-retries: 1
+    gemini:
+      api-key: "${GEMINI_API_KEY:}"
+      base-url: "https://generativelanguage.googleapis.com"
+      model: "gemini-3.8-flash"
+      timeout: 45s
+      max-retries: 1
   # A dropped player inside these ranks of the weekly projection table is
   # league news. The quarterback line stays at 12: this league starts two
   # of them, so a top-12 quarterback is a starter on most rosters.
@@ -45,6 +70,8 @@ spring:
   ai:
     openai:
       api-key: "${OPENAI_API_KEY:unset}"
+      timeout: 45s
+      max-retries: 1
       chat:
         options:
           model: "gpt-5.6-luna"

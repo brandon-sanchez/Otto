@@ -82,7 +82,9 @@ public class OttoStack extends Stack {
     /**
      * The nightly defense-versus-position build reads a season of
      * nflverse rows, which is the longest thing the assistant does. A
-     * Check is seconds; the timeout is sized for the slowest job.
+     * Check is seconds; the timeout is sized for the slowest job. The
+     * app's Check budget for model calls, in {@code application.yml},
+     * is sized to fit inside it.
      */
     private static final Duration SCHEDULED_TIMEOUT = Duration.seconds(300);
 
@@ -440,6 +442,12 @@ public class OttoStack extends Stack {
                 .build());
     }
 
+    /**
+     * Lets the function read every parameter under the path. The
+     * parameters are SecureStrings, which CloudFormation cannot create,
+     * so docs/deploy.md has the owner create each one by hand, and one
+     * grant over the path covers every key without naming it.
+     */
     private void readSecrets(Function function, String parameterPath) {
         function.addToRolePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.ALLOW)
