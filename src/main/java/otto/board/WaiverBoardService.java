@@ -314,13 +314,22 @@ public class WaiverBoardService {
             facts.put("heldAdviceRuns", String.join(",", heldRuns));
         }
         Optional<Event> delivered = outbox.deliver(parts, board.viewAllOptions(),
-                        runId + heldRuns,
+                        deliveryBasis(runId, heldRuns),
                         List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts))))
                 .stream().findFirst();
         if (delivered.isPresent() && !heldRuns.isEmpty()) {
             roleSlips.deliveredInBoard(heldRuns);
         }
         return delivered;
+    }
+
+    /**
+     * What a board's messages were written from: its own run and the
+     * runs of the held advice it carries, so the same board with
+     * different advice under it counts as a new delivery.
+     */
+    private static String deliveryBasis(String runId, List<String> heldRuns) {
+        return heldRuns.isEmpty() ? runId : runId + "+" + String.join("+", heldRuns);
     }
 
     private JsonNode preferences(Optional<WaiverPreference> preference) {
