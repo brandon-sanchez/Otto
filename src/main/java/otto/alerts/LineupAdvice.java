@@ -287,7 +287,9 @@ public class LineupAdvice {
      * True when holding the advice for the next waiver board could cost
      * the user a move: no board is coming before the next claim
      * deadline, or the advice changes a lineup whose first kickoff is
-     * before the board or not known.
+     * not known or comes before the latest the board can go out. A
+     * board waiting for late data goes out as late as
+     * {@link BoardSchedule#latest}, not at the evening it is due.
      */
     private boolean waitingCostsAMove(AdviceAnswer answer, LeagueWeek leagueWeek,
             RosterSnapshot roster, Instant now) {
@@ -300,7 +302,7 @@ public class LineupAdvice {
         if (answer.move().isEmpty()) {
             return false;
         }
-        Instant boardDue = BoardSchedule.due(deadline.get()).toInstant();
+        Instant latestBoard = BoardSchedule.latest(deadline.get());
         LineupMove move = answer.move().get();
         Optional<Instant> firstKickoff = leagueWeek.week().games().flatMap(games -> Stream
                 .of(move.start(), move.bench())
@@ -308,7 +310,7 @@ public class LineupAdvice {
                 .map(id -> games.lockFor(roster.playerTeams().get(id)))
                 .flatMap(Optional::stream)
                 .min(Comparator.naturalOrder()));
-        return firstKickoff.map(kickoff -> kickoff.isBefore(boardDue)).orElse(true);
+        return firstKickoff.map(kickoff -> kickoff.isBefore(latestBoard)).orElse(true);
     }
 
     private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,
