@@ -14,6 +14,9 @@ otto:
     download-base-url: "https://github.com"
     player-ids-base-url: "https://raw.githubusercontent.com"
     check-interval: 1h
+  team-sites:
+    # Where each team's site lives; {host} is the host in OfficialTeams.
+    url-template: "https://www.{host}"
   directory-check-interval: 60s
   pre-draft-check-interval: 24h
   # How stale a cached Sleeper read may be before a reader that is not

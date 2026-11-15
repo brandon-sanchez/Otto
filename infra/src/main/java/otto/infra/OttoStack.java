@@ -495,7 +495,7 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * The four schedules. Everything else the assistant
+     * The schedules. Everything else the assistant
      * does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
      * 20-minute Done follow-up - derives from the 1-minute loop and the
      * Event Log, and has no schedule here to drift out of step with it.
@@ -520,6 +520,8 @@ public class OttoStack extends Stack {
         // later, least recently read players first, so it does not retry.
         schedule("ResearchSchedule", target, invoker, "rate(10 minutes)", null,
                 "research", 0);
+        schedule("TeamReportsSchedule", target, invoker, "rate(5 minutes)", null,
+                "team-reports", 0);
     }
 
     private void schedule(String id, Alias target, Role invoker, String expression,

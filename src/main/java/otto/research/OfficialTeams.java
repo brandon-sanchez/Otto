@@ -60,6 +60,11 @@ final class OfficialTeams {
     private OfficialTeams() {
     }
 
+    /** Returns every team, keyed by Sleeper's abbreviation. */
+    static Map<String, Team> all() {
+        return BY_ABBREVIATION;
+    }
+
     /**
      * Returns the team when the canonical address is on that team's own
      * site, and empty for any other address, a blank team or an

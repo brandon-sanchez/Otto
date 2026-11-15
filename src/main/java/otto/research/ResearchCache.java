@@ -113,6 +113,18 @@ public class ResearchCache {
         };
     }
 
+    /**
+     * Keeps stories read somewhere other than the player's Sleeper feed,
+     * such as his team's own report, by the same rules as a feed read.
+     *
+     * <p>Side effect: one DynamoDB write when a story is new or changed.
+     *
+     * @return the new or changed original reports, newest first
+     */
+    List<ResearchItem> keep(String playerId, List<SleeperAdapter.NewsItem> stories) {
+        return keep(read(playerId), stories).fresh();
+    }
+
     private Refresh keep(PlayerResearch held, List<SleeperAdapter.NewsItem> feed) {
         Instant now = clock.instant();
         List<ResearchItem> items = new ArrayList<>(held.items());
