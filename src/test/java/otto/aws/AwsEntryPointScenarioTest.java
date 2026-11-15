@@ -32,6 +32,7 @@ class AwsEntryPointScenarioTest {
         assertThat(ScheduledJob.of("nflverse-feeds")).isEqualTo(ScheduledJob.NFLVERSE_FEEDS);
         assertThat(ScheduledJob.of("defense-versus-position"))
                 .isEqualTo(ScheduledJob.DEFENSE_VERSUS_POSITION);
+        assertThat(ScheduledJob.of("research")).isEqualTo(ScheduledJob.RESEARCH);
     }
 
     @Test

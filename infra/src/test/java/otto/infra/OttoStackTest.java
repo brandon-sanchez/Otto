@@ -20,10 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * What the stack promises, read back off the template it produces. The
- * assertions are the ticket's acceptance criteria: the shape of the two
- * functions, the three schedules, the two stores, the alarms, and the
- * services that are deliberately absent.
+ * What the stack promises, read back off the template it produces: the
+ * shape of the two functions, the four schedules, the stores, the
+ * alarms, and the services that are deliberately absent.
  */
 class OttoStackTest {
 
@@ -105,8 +104,8 @@ class OttoStackTest {
     }
 
     @Test
-    void thereAreThreeSchedules() {
-        template.resourceCountIs("AWS::Scheduler::Schedule", 3);
+    void thereAreFourSchedules() {
+        template.resourceCountIs("AWS::Scheduler::Schedule", 4);
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(1 minute)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"check\"}"))));
@@ -118,6 +117,9 @@ class OttoStackTest {
                 "ScheduleExpressionTimezone", "America/Los_Angeles",
                 "Target", Match.objectLike(
                         Map.of("Input", "{\"job\":\"defense-versus-position\"}"))));
+        template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
+                "ScheduleExpression", "rate(10 minutes)",
+                "Target", Match.objectLike(Map.of("Input", "{\"job\":\"research\"}"))));
     }
 
     @Test
