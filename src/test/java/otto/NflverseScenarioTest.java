@@ -4,7 +4,10 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import otto.events.EventLog;
 import otto.events.EventType;
@@ -33,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * are tens of megabytes, so the timestamp is the whole point - the
  * hourly run must cost one small JSON read on an unchanged week.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class NflverseScenarioTest extends WireSeamTest {
 
     @Autowired
@@ -128,6 +132,43 @@ class NflverseScenarioTest extends WireSeamTest {
 
         nflverse.verify(0, getRequestedFor(urlEqualTo(NflverseStubs.STATS_RELEASE_PATH)));
         nflverse.verify(0, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2026_PATH)));
+    }
+
+    @Test
+    void aScheduledRunThatFiresAFewMillisecondsEarlyIsStillDue() {
+        healthyFeeds();
+        feeds.updateIfDue();
+        nflverse.resetRequests();
+
+        clock.advance(Duration.ofHours(1).minusMillis(3));
+        feeds.updateIfDue();
+
+        nflverse.verify(1, getRequestedFor(urlEqualTo(NflverseStubs.STATS_RELEASE_PATH)));
+    }
+
+    @Test
+    void eachRunLogsWhichFeedsChangedAndWhichWeeksBecameComplete(CapturedOutput output) {
+        SleeperStubs.waiverWeek(sleeper);
+        NflverseStubs.waiverWeekMissingAGame(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        clock.set(Instant.parse("2026-09-15T20:00:00Z"));
+        feeds.updateIfDue();
+
+        NflverseStubs.lateSnapCountsArrive(nflverse);
+        clock.advance(Duration.ofHours(1));
+        NflverseFeedService.Result result = feeds.updateIfDue();
+
+        assertThat(result.feed(FeedId.SNAP_COUNTS))
+                .isInstanceOfSatisfying(NflverseFeedService.Update.Downloaded.class,
+                        downloaded -> assertThat(downloaded.weeksCompleted()).containsExactly(1));
+        assertThat(result.feed(FeedId.WEEKLY_STATS))
+                .isInstanceOf(NflverseFeedService.Update.Unchanged.class);
+        assertThat(output.getOut())
+                .contains("INFO")
+                .contains("nflverse run: ")
+                .contains("snap counts downloaded")
+                .contains("week 1 now complete")
+                .contains("weekly stats unchanged");
     }
 
     @Test

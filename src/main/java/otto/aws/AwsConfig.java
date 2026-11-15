@@ -48,9 +48,7 @@ public class AwsConfig {
             OttoProperties properties) {
         OttoProperties.Aws aws = properties.aws();
         S3BundleBackend bundle = new S3BundleBackend(s3, aws.bucket());
-        return new AwsDocumentBackend(
-                new S3DocumentObjects(s3, aws.bucket(), bundle),
-                bundle,
+        return new AwsDocumentBackend(new S3DocumentObjects(s3, aws.bucket(), bundle),
                 new DynamoDbBackend(dynamo, aws.table()));
     }
 

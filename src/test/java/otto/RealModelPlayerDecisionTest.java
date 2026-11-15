@@ -39,6 +39,38 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
     private static final String DROP = "drop";
     private static final String UNKNOWN_RECOVERY = "unknown-recovery";
 
+    private static final String REHEARSAL_REDRAFT_IR = rehearsalAnswer("Move Christian "
+            + "McCaffrey to IR and start Josh Jacobs at RB. Christian McCaffrey is expected to "
+            + "miss about four weeks with a hamstring strain, and IR keeps him without using a "
+            + "roster spot.", "ir", "");
+
+    private static final String REHEARSAL_DYNASTY_IR = rehearsalAnswer("Move Christian "
+            + "McCaffrey to IR for now and start Josh Jacobs at RB. In a dynasty league he still "
+            + "matters for the seasons after this one, and IR costs you nothing to hold him.",
+            "ir", "");
+
+    /**
+     * Josh Jacobs is on IR in this roster, so no lineup move is legal and
+     * the answer names only Christian McCaffrey.
+     */
+    private static final String REHEARSAL_HOLD = """
+            {
+              "message": "Keep Christian McCaffrey where he is for now. Every IR slot is \
+            taken, and he keeps his value for when he is back.",
+              "plan": "hold",
+              "move": null,
+              "players": ["4034"],
+              "claims": [],
+              "comparisons": [],
+              "conditions": []
+            }
+            """;
+
+    private static final String REHEARSAL_CONDITIONAL_HOLD = rehearsalAnswer("Keep Christian "
+            + "McCaffrey for now and start Josh Jacobs at RB. No report says how long Christian "
+            + "McCaffrey will be out yet; if one says he will miss most of the season, cutting "
+            + "him becomes worth a look.", "hold", "\"" + UNKNOWN_RECOVERY + "\"");
+
     @Autowired
     private CheckRunner checkRunner;
 
@@ -51,7 +83,8 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
     @Test
     void aRedraftStarterOutForWeeksGoesToAnOpenIrSlot() {
         baseline("sleeper/league-in-season.json", "sleeper/rosters.json");
-        mccaffreyRuledOut("Christian McCaffrey - Expected to miss about four weeks");
+        mccaffreyRuledOut("Christian McCaffrey - Expected to miss about four weeks",
+                REHEARSAL_REDRAFT_IR);
 
         assertThat(plan(adviceSentAsWritten())).isIn(IR_PLANS);
     }
@@ -59,7 +92,7 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
     @Test
     void aDynastyStarterOutForTenWeeksIsKeptOnIr() {
         baseline("sleeper/league-dynasty.json", "sleeper/rosters.json");
-        mccaffreyRuledOut("Christian McCaffrey - Out about ten weeks");
+        mccaffreyRuledOut("Christian McCaffrey - Out about ten weeks", REHEARSAL_DYNASTY_IR);
 
         assertThat(plan(adviceSentAsWritten())).isIn(IR_PLANS);
     }
@@ -67,7 +100,8 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
     @Test
     void aKeeperStarterWithEveryIrSlotTakenIsHeldRatherThanCut() {
         baseline("sleeper/league-keeper.json", "sleeper/rosters-reserve.json");
-        mccaffreyRuledOut("Christian McCaffrey - Expected to miss about four weeks");
+        mccaffreyRuledOut("Christian McCaffrey - Expected to miss about four weeks",
+                REHEARSAL_HOLD);
 
         assertThat(plan(adviceSentAsWritten())).isNotEqualTo(DROP).doesNotStartWith("ir");
     }
@@ -76,7 +110,7 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
     void aStarterOutWithNoRecoveryReportIsNotCutAndTheAdviceNamesTheGap() {
         baseline("sleeper/league-in-season.json", "sleeper/rosters.json");
         stubMccaffreyOut();
-        RealModel.answersAdvice(llm);
+        RealModel.answersAdvice(llm, REHEARSAL_CONDITIONAL_HOLD);
         checkRunner.runCheck();
 
         JsonNode answer = adviceSentAsWritten();
@@ -97,7 +131,7 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
         checkRunner.runCheck();
     }
 
-    private void mccaffreyRuledOut(String headline) {
+    private void mccaffreyRuledOut(String headline, String rehearsalAnswer) {
         stubMccaffreyOut();
         sleeper.stubFor(get(urlPathEqualTo("/players/nfl/4034/news"))
                 .willReturn(okJson("""
@@ -107,8 +141,22 @@ class RealModelPlayerDecisionTest extends WireSeamTest {
                           "source": "rotowire", "sport": "nfl", "source_key": "4401",
                           "published": %d}]
                         """.formatted(headline, REPORTED.toEpochMilli()))));
-        RealModel.answersAdvice(llm);
+        RealModel.answersAdvice(llm, rehearsalAnswer);
         checkRunner.runCheck();
+    }
+
+    private static String rehearsalAnswer(String message, String plan, String conditions) {
+        return """
+                {
+                  "message": "%s",
+                  "plan": "%s",
+                  "move": {"start": "5850", "bench": "4034", "slot": "RB"},
+                  "players": ["4034", "5850"],
+                  "claims": [],
+                  "comparisons": [],
+                  "conditions": [%s]
+                }
+                """.formatted(message, plan, conditions);
     }
 
     private void stubMccaffreyOut() {

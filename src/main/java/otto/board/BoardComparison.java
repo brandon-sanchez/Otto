@@ -59,8 +59,11 @@ import otto.storage.OttoJson;
  * board among them, as a {@link RunKind#WAIVER_BASELINES} Decision
  * Record that is never sent.
  * After the games it judges every strategy in {@link BoardStrategy} on
- * what its pickups added to the user's lineup, and stores the
- * {@link WeeklyComparison} as the baselines' outcome record.
+ * what its pickups added to the user's lineup, net of the player each
+ * claim drops, and stores the {@link WeeklyComparison} as the
+ * baselines' outcome record. The board's pickups drop the player it
+ * named; a baseline's drop, on a full roster, the active player
+ * projected lowest for the week.
  *
  * <p>A round is judged once the week's stats are complete and the
  * stat-correction window has closed, because an outcome record is
@@ -205,12 +208,23 @@ public class BoardComparison {
                         && !user.taxi().contains(playerId))
                 .forEach(playerId -> lineupPool.put(playerId,
                         Objects.requireNonNullElse(user.playerPositions().get(playerId), "")));
+        Map<String, Double> projected = new LinkedHashMap<>();
+        lineupPool.forEach((playerId, position) -> league.week().projections()
+                .flatMap(table -> table.points(playerId, position))
+                .ifPresent(points -> projected.put(playerId, points)));
+        Optional<String> drop = ComparisonRound.baselineDrop(lineupPool,
+                (int) Math.max(0, league.league().activeRosterSpots()
+                        - user.activePlayerCount()), projected);
+        Map<BoardStrategy, List<ComparisonRound.Pick>> picks = new EnumMap<>(BoardStrategy.class);
+        built.picks().forEach((strategy, proposed) -> picks.put(strategy, proposed.stream()
+                .map(pick -> pick.withDrop(drop))
+                .toList()));
         ComparisonRound round = new ComparisonRound(week.season(), week.number(),
                 deadline.toInstant(),
                 WaiverBoardService.runId(league.league().leagueId(), deadline),
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
-                lineupPool, built.picks(), built.unavailable());
+                lineupPool, picks, built.unavailable());
         return new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
                 RunKind.WAIVER_BASELINES, now, userId, league.league().leagueId(),
                 OttoJson.MAPPER.valueToTree(league.league()),
@@ -336,7 +350,8 @@ public class BoardComparison {
                     return new ComparisonRound.Pick(entry.playerId(),
                             pool.getOrDefault(entry.playerId(), entry.playerId()), position,
                             pool.containsKey(entry.playerId()),
-                            slots.stream().anyMatch(slot -> slot.accepts(position)));
+                            slots.stream().anyMatch(slot -> slot.accepts(position)),
+                            entry.drop());
                 })
                 .toList());
     }

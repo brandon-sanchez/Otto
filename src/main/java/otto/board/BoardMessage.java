@@ -17,7 +17,9 @@ import otto.directory.DirectoryPlayer;
  * there are any, and the claims meant to land together are named apart
  * from the alternatives. When bids are withheld the board says why
  * under the opening. An entry outside the positions the user asked to
- * focus on carries its reason under "Outside your focus". The text is
+ * focus on carries its reason under "Outside your focus", and one only
+ * trending adds support on a fallback board carries {@link #TRENDING_LABEL}
+ * under its heading. The text is
  * split between entries into Telegram messages that each stay under
  * Telegram's limit. The full list behind "View all options" and the
  * advice held for the board under "About your roster" are laid out here
@@ -37,6 +39,11 @@ final class BoardMessage {
     static final String OUTSIDE_FOCUS = "Outside your focus: ";
     static final String ALL_HEADING = "All your waiver options";
     static final String ABOUT_YOUR_ROSTER = "About your roster";
+
+    /** The line under a trending-only entry's heading, from {@link WaiverEvidence#TRENDING_ONLY}. */
+    static final String TRENDING_LABEL =
+            Character.toUpperCase(WaiverEvidence.TRENDING_ONLY.charAt(0))
+                    + WaiverEvidence.TRENDING_ONLY.substring(1) + ".";
 
     private static final String BREAK = "\n\n";
 
@@ -134,6 +141,9 @@ final class BoardMessage {
             Optional<Integer> leagueBudget) {
         List<String> lines = new ArrayList<>();
         lines.add(heading(entry, screen.candidates()));
+        if (screen.trendingOnly().contains(entry.playerId())) {
+            lines.add(TRENDING_LABEL);
+        }
         Optional.ofNullable(screen.bidding().consensus().get(entry.playerId()))
                 .flatMap(consensus -> consensus.line(leagueBudget))
                 .ifPresent(lines::add);

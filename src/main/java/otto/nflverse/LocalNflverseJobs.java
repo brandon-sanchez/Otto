@@ -1,7 +1,5 @@
 package otto.nflverse;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,8 +14,6 @@ import org.springframework.stereotype.Component;
 @Profile("local")
 public class LocalNflverseJobs {
 
-    private static final Logger log = LoggerFactory.getLogger(LocalNflverseJobs.class);
-
     private final NflverseFeedService feeds;
     private final DefenseVersusPositionBuilder defenseBuilder;
 
@@ -29,7 +25,7 @@ public class LocalNflverseJobs {
 
     @Scheduled(fixedDelayString = "PT1H")
     public void hourlyTimestampCheck() {
-        log.info("nflverse feeds: {}", feeds.updateIfDue());
+        feeds.updateIfDue();
     }
 
     @Scheduled(cron = "0 30 3 * * *", zone = "America/Los_Angeles")

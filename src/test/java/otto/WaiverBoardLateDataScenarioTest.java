@@ -69,6 +69,9 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
             }
             """.formatted(OPENING);
 
+    private static final String TRENDING_ONLY =
+            "trending, but this week's usage numbers aren't in yet";
+
     private static final String MISSING_GAME = "the snap counts lack week 1's BUF at MIA game";
 
     @Autowired
@@ -194,14 +197,16 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aPickupOnlyPopularityBacksIsWithheldFromTheFallback() {
+    void aPickupOnlyPopularityBacksIsLabelledAsTrendingOnTheFallback() {
         aWaiverWeekWithTheBuffaloGameMissing();
         SleeperStubs.stubTrending(sleeper, "sleeper/trending-add-unbacked.json", "trending-v2");
         String popular = """
-                {"playerId": "20103", "reasoning": "Wide Receiver Three is the most added \
-                player on Sleeper.", "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
+                {"playerId": "20103", "reasoning": "Wide Receiver Three is one of the most \
+                added players on Sleeper, and his usage this week is not known yet.", \
+                "bid": {"low": 1, "target": 2, "high": 3}, "limit": "He is a depth add."}""";
         OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST,
-                BOARD.replace("\"optional\": []", "\"optional\": [" + popular + "]"), BOARD);
+                BOARD.replace("\"limit\": \"He is a depth add.\"}]",
+                                "\"limit\": \"He is a depth add.\"}, " + popular + "]"));
 
         checkAt(FALLBACK);
 
@@ -209,18 +214,20 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         assertThat(record.candidates())
                 .filteredOn(candidate -> candidate.playerId().equals("20103"))
                 .singleElement()
-                .satisfies(receiver -> assertThat(receiver.included()).isFalse())
+                .satisfies(receiver -> assertThat(receiver.included()).isTrue())
                 .satisfies(receiver -> assertThat(receiver.reason())
-                        .startsWith("only popularity named him")
+                        .startsWith(TRENDING_ONLY)
                         .contains("most added on Sleeper"));
-        assertThat(record.candidates())
-                .filteredOn(candidate -> candidate.playerId().equals("10001"))
-                .singleElement()
-                .satisfies(irving -> assertThat(irving.included()).isTrue());
-        assertThat(record.exchanges().getFirst().checkFailures())
-                .anySatisfy(failure -> assertThat(failure).contains("20103"));
-        assertThat(boardMessages()).singleElement()
-                .satisfies(message -> assertThat(message).doesNotContain("Wide Receiver Three"));
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("candidate-20103"))
+                .withRequestBody(containing(TRENDING_ONLY))
+                .withRequestBody(containing("never present it as usage")));
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .contains("Any pickup only trending adds support is marked")
+                .contains("Wide Receiver Three · WR")
+                .contains("Wide Receiver Three · WR, NE\nTrending, but this week's usage "
+                        + "numbers aren't in yet."));
     }
 
     @Test

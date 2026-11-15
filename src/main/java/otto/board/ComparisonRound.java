@@ -2,9 +2,11 @@ package otto.board;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * What one claim round's comparison needs from decision time. It is
@@ -46,14 +48,49 @@ record ComparisonRound(
     }
 
     /**
+     * Returns the player a baseline's pickup drops: none while the
+     * roster has an open spot, and otherwise the active player with the
+     * lowest projection for the week, an unprojected player lowest of
+     * all, ties broken by player id.
+     *
+     * @param lineupPool the user's active players with their positions,
+     *        by player id
+     * @param openSpots how many active roster spots are free
+     * @param projected each player's projected points for the week, by
+     *        player id; a player missing from it has no projection
+     */
+    static Optional<String> baselineDrop(Map<String, String> lineupPool, int openSpots,
+            Map<String, Double> projected) {
+        if (openSpots > 0) {
+            return Optional.empty();
+        }
+        return lineupPool.keySet().stream()
+                .min(Comparator.comparingDouble((String playerId) ->
+                                projected.getOrDefault(playerId, Double.NEGATIVE_INFINITY))
+                        .thenComparing(Comparator.naturalOrder()));
+    }
+
+    /**
      * One pickup a strategy proposed, as it stood when the round was
      * decided.
      *
      * @param position blank when the player directory did not know him
      * @param addable he was on no roster in the league
      * @param legal one of the league's starting slots takes his position
+     * @param drop the rostered player the claim gives up: the board's
+     *        named drop, or for a baseline the one
+     *        {@link #baselineDrop} picks; empty for an open spot, and
+     *        read as empty from a round stored without it
      */
     record Pick(String playerId, String name, String position, boolean addable,
-            boolean legal) {
+            boolean legal, Optional<String> drop) {
+
+        Pick {
+            drop = drop == null ? Optional.empty() : drop;
+        }
+
+        Pick withDrop(Optional<String> dropped) {
+            return new Pick(playerId, name, position, addable, legal, dropped);
+        }
     }
 }

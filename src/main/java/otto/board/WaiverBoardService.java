@@ -61,7 +61,8 @@ import otto.storage.OttoJson;
  * records nothing and tries again. From {@link BoardSchedule#FALLBACK_BUFFER} before
  * the claim deadline it builds a fallback board instead, from what has
  * arrived, which opens by saying what is missing and what the advice
- * rests on, and leaves out any free agent only popularity names.
+ * rests on, and labels any free agent only popularity names as
+ * {@link WaiverEvidence#TRENDING_ONLY}.
  *
  * <p>A board that fails its checks twice is never replaced by the
  * scored board: the user is told no board is coming this round. When the

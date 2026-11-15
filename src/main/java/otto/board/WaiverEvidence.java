@@ -67,6 +67,12 @@ public class WaiverEvidence {
     /** Room for an entry's heading and the break before it, in characters. */
     private static final int HEADING_ALLOWANCE = 100;
 
+    /**
+     * The label on a fallback candidate whom only popularity lanes name,
+     * in his evidence, his Decision Record reason and his board entry.
+     */
+    static final String TRENDING_ONLY = "trending, but this week's usage numbers aren't in yet";
+
     private static final String TASK = "Rank this week's waiver candidates against the user's "
             + "roster needs and write the waiver board.";
 
@@ -95,14 +101,18 @@ public class WaiverEvidence {
      *        Record
      * @param bidding the bid bounds and each candidate's published
      *        suggestions
+     * @param trendingOnly the candidates only popularity lanes name while
+     *        a required feed lacks the latest week, by player id; each is
+     *        labelled {@link #TRENDING_ONLY}
      */
     public record Screen(EvidenceBundle bundle, Map<String, DirectoryPlayer> candidates,
             List<Candidate> screened, JsonNode comparisons, RosterSnapshot user,
-            FaabEvidence.Bidding bidding) {
+            FaabEvidence.Bidding bidding, Set<String> trendingOnly) {
 
         public Screen {
             candidates = Collections.unmodifiableMap(new LinkedHashMap<>(candidates));
             screened = List.copyOf(screened);
+            trendingOnly = Set.copyOf(trendingOnly);
         }
     }
 
@@ -111,8 +121,9 @@ public class WaiverEvidence {
      *
      * <p>The latest week's gaps join the board's missing data. While a
      * required feed lacks the week, a free agent only popularity lanes
-     * name is left out of the pool, since none of his football backs
-     * him.
+     * name stays in the pool labelled {@link #TRENDING_ONLY}, so the
+     * model and the user can tell attention from usage that has not
+     * arrived.
      *
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
@@ -162,20 +173,18 @@ public class WaiverEvidence {
                 backedByFootball.addAll(picks.keySet());
             }
         }
-        Set<String> popularityAlone = latestWeek.complete() ? Set.of()
+        Set<String> trendingOnly = latestWeek.complete() ? Set.of()
                 : reasons.keySet().stream()
                         .filter(playerId -> !backedByFootball.contains(playerId))
                         .collect(Collectors.toSet());
         Map<String, DirectoryPlayer> byId = freeAgents.stream()
                 .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player));
         Map<String, DirectoryPlayer> candidates = new LinkedHashMap<>();
-        reasons.keySet().stream()
-                .filter(playerId -> !popularityAlone.contains(playerId))
-                .forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
+        reasons.keySet().forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
 
         List<Candidate> screened = freeAgents.stream()
                 .map(player -> screened(player, reasons.get(player.playerId()),
-                        popularityAlone.contains(player.playerId()), only))
+                        trendingOnly.contains(player.playerId()), only))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
@@ -197,7 +206,8 @@ public class WaiverEvidence {
         evidence.add(rosterItem(league, user.get(), now));
         evidence.addAll(bidding.league());
         for (DirectoryPlayer player : candidates.values()) {
-            evidence.add(candidateItem(player, reasons.get(player.playerId()), now));
+            evidence.add(candidateItem(player, reasons.get(player.playerId()),
+                    trendingOnly.contains(player.playerId()), now));
             reads.forEach(read -> evidence.addAll(read.evidence(player)));
             evidence.add(bidding.candidates().get(player.playerId()));
         }
@@ -213,21 +223,18 @@ public class WaiverEvidence {
                 ? ok.value() : null);
         comparisons.put("bidPolicy", bidding.policy().toString());
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
-                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding));
+                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding, trendingOnly));
     }
 
     private static Candidate screened(DirectoryPlayer player, List<String> reasons,
-            boolean popularityAlone, Optional<WaiverPreference> only) {
+            boolean trendingOnly, Optional<WaiverPreference> only) {
         if (reasons == null) {
             return new Candidate(player.playerId(), player.fullName(), false,
                     leftOut(player, only));
         }
         String named = String.join("; ", reasons);
-        return popularityAlone
-                ? new Candidate(player.playerId(), player.fullName(), false,
-                        "only popularity named him while the latest week's data is late: "
-                                + named)
-                : new Candidate(player.playerId(), player.fullName(), true, named);
+        return new Candidate(player.playerId(), player.fullName(), true,
+                trendingOnly ? TRENDING_ONLY + ": " + named : named);
     }
 
     /**
@@ -374,13 +381,17 @@ public class WaiverEvidence {
     }
 
     private static EvidenceItem candidateItem(DirectoryPlayer player, List<String> reasons,
-            Instant now) {
+            boolean trendingOnly, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("fullName", player.fullName());
         facts.put("position", player.position());
         facts.put("nflTeam", player.team());
         facts.put("designation", designation(player.health()));
         facts.put("whyOnTheBoard", String.join("; ", reasons));
+        if (trendingOnly) {
+            facts.put("usageThisWeek", TRENDING_ONLY + ": only trending adds name him, and "
+                    + "they measure attention, never usage");
+        }
         return new EvidenceItem("candidate-" + player.playerId(), "sleeper:players",
                 Optional.empty(), now, "a free agent the user may claim", facts);
     }

@@ -56,7 +56,7 @@ class AwsStorageScenarioTest {
 
     private DocumentBackend backend() {
         S3BundleBackend bundle = new S3BundleBackend(s3, BUCKET);
-        return new AwsDocumentBackend(new S3DocumentObjects(s3, BUCKET, bundle), bundle,
+        return new AwsDocumentBackend(new S3DocumentObjects(s3, BUCKET, bundle),
                 new DynamoDbBackend(dynamo, TABLE));
     }
 
@@ -116,6 +116,22 @@ class AwsStorageScenarioTest {
 
         assertThat(check.read(PLAY_BY_PLAY, Feed.class))
                 .contains(new Feed("2026", List.of("pass", "sack")));
+    }
+
+    @Test
+    void aFeedRewrittenWhileStillInTheBundleLeavesTheBundleInTheFeedsOwnFlush() {
+        s3.writeBehindTheCaller(KEY, """
+                {"snapshot-current":{"week":"2","starters":["Kamara"]},\
+                "nflverse-play-by-play":{"season":"2026","rows":["pass"]}}""".getBytes());
+        S3DocumentObjects feeds = new S3DocumentObjects(s3, BUCKET, new S3BundleBackend(s3, BUCKET));
+
+        feeds.store(PLAY_BY_PLAY, """
+                {"season":"2026","rows":["pass","sack"]}""".getBytes());
+        feeds.flush();
+
+        assertThat(s3.storedAsText(PLAY_BY_PLAY_KEY)).contains("sack");
+        assertThat(s3.storedAsText(KEY)).contains("snapshot-current")
+                .doesNotContain(PLAY_BY_PLAY);
     }
 
     @Test
