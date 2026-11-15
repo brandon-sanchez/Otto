@@ -1,5 +1,6 @@
 package otto.claims;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -12,10 +13,11 @@ import otto.sleeper.SleeperAdapter;
 
 /**
  * The league's next claim round as one Check sees it: the claim
- * deadline, when the round's waiver board is due, the key its Alert is
- * sent under, and the run id its evidence-based board is recorded under.
- * Both waiver boards and the role-slip advice held for a board read the
- * round here, so none of them depends on another.
+ * deadline, when the round's waiver board is due and the latest it goes
+ * out, the key its Alert is sent under, and the run id its
+ * evidence-based board is recorded under. Both waiver boards and the
+ * role-slip advice held for a board read the round here, so none of
+ * them depends on another.
  *
  * @param leagueId the Sleeper league the round belongs to
  * @param deadline when the league's claims run, in the zone Sleeper runs them in
@@ -27,6 +29,12 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
     private static final ZoneId BOARD_ZONE = ZoneId.of("America/Los_Angeles");
 
     private static final LocalTime BOARD_TIME = LocalTime.of(18, 0);
+
+    /**
+     * How long before the claim deadline the evidence-based board goes
+     * out even though the latest week's data is late.
+     */
+    public static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
 
     private static final String BOARD_RUN_PREFIX = "waiver-board-";
 
@@ -53,6 +61,20 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
     /** True from the evening the board is due until the claim deadline. */
     public boolean open() {
         return !now.isBefore(due().toInstant());
+    }
+
+    /**
+     * Returns the latest the round's board goes out: a board waiting for
+     * late data is built at {@link #FALLBACK_BUFFER} before the deadline
+     * at the latest.
+     */
+    public Instant latest() {
+        return deadline.minus(FALLBACK_BUFFER).toInstant();
+    }
+
+    /** True once the Check is inside {@link #FALLBACK_BUFFER} of the claim deadline. */
+    public boolean inFallbackBuffer() {
+        return !now.isBefore(latest());
     }
 
     /** Returns the Alert key the round's waiver board is sent under. */

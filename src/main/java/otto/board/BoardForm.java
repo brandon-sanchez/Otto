@@ -45,7 +45,10 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             role change outweigh a lagging projection. One strong game can justify a
             pickup, but never call it a breakout. A value written as unknown is not
             zero. Last season's numbers are early-season context only. Trending adds
-            are attention, never a reason on their own. Weigh every
+            are attention, never a reason on their own. A candidate whose evidence says
+            "trending, but this week's usage numbers aren't in yet" is on the board only
+            because many users are adding him: never present it as usage, role or
+            production, and say his usage this week is not known yet. Weigh every
             candidate against the roster needs and the user's roster: an empty slot
             first, then weak slots, and a large upgrade anywhere can beat a small patch.
 

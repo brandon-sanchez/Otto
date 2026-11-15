@@ -35,6 +35,11 @@ class TrendingLane implements EvidenceLane {
     }
 
     @Override
+    public boolean popularity() {
+        return true;
+    }
+
+    @Override
     public String name() {
         return "TrendingLane";
     }

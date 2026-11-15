@@ -136,6 +136,15 @@ public final class NflverseStubs {
         stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-waivers-short.csv");
     }
 
+    /**
+     * The board-ready waiver week under a schedule that has not yet
+     * recorded week 1's results, though Sleeper has moved on to week 2.
+     */
+    public static void waiverWeekWithAnUnscoredSchedule(WireMockServer nflverse) {
+        waiverWeekReadyForTheBoard(nflverse);
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games-waivers-unscored.csv");
+    }
+
     /** Republishes the snap counts with week 1's Buffalo at Miami game in them. */
     public static void lateSnapCountsArrive(WireMockServer nflverse) {
         stubJson(nflverse, SNAPS_RELEASE_PATH, "nflverse/release-snap-counts-late.json");

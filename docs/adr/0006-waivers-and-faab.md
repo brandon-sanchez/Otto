@@ -765,7 +765,43 @@ record and stops before reading any evidence. The usage lane parses the
 stored play-by-play and charting, so this rule also keeps that cost to
 one parse per round. When there is no player directory or no roster for
 the user, or the model cannot be reached, nothing is recorded, and the
-next Check tries again.
+next Check tries again. From the fallback buffer described below, the
+round is recorded as withheld instead, with the reason.
+
+### The board waits for the latest week, then falls back
+
+A board built before the latest completed week arrives would present an
+older week's numbers as the latest. So the board checks that week
+first. The week owed is the newer of two weeks: the schedule's latest
+completed week, and the week before Sleeper's current week. When the
+schedule's results lag behind Sleeper, the board still owes the week
+Sleeper has moved past. That week's games then read as unfinished, and
+the board holds. An older complete week never passes for the latest.
+
+The board waits for the weekly stats and the snap counts, because they
+carry every candidate's production and role. The play-by-play, the FTN
+charting and the expected points add optional metrics, which read as
+unknown when absent. Their gaps go into the board's missing data, but
+the board never waits for them.
+
+While a required feed lacks the week, each Check records nothing and
+tries again on the next minute. From three hours before the league's
+claim deadline, the board is built from what has arrived. That
+fallback board opens with a note that code writes, not the model. The
+note names each missing game or team and says what the advice rests on
+instead. The same gaps go to the model as missing data. A free agent
+whom only the trending lane names stays in a fallback pool, labelled
+"trending, but this week's usage numbers aren't in yet". The lanes
+that would back him with football are short a week, so leaving him
+out would hide a pickup the user may already be hearing about. The
+label goes into his evidence, his Decision Record reason and a line
+under his board entry, and the board's note says such pickups are
+marked. The model is told never to present that popularity as usage,
+role or production.
+
+The fallback is built once, like any other board, so a round whose
+first Check falls inside the buffer still gets it before the deadline.
+Data that arrives after the fallback does not rebuild the round.
 
 ## Bids are the model's, inside bounds code verifies (#123)
 
