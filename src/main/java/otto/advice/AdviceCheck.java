@@ -43,6 +43,18 @@ public class AdviceCheck {
     private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
     private static final String PROJECTION = "projection";
 
+    /**
+     * Surnames that are also everyday English words. One of them opening
+     * a sentence reads as the word, as in "Love the matchup", so only its
+     * other uses count as a surname mention.
+     */
+    private static final Set<String> COMMON_WORD_SURNAMES = Set.of(
+            "One", "Two", "Three", "Four", "Five", "Six", "Love", "Hill", "Will", "Hope",
+            "Long", "Little", "Young", "Strong", "Swift", "Rice", "Hunt", "Price", "Mark",
+            "Bell", "Brown", "White", "Green", "Black", "Gray", "Rush", "Ward");
+
+    private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
+
     /** Where one sentence ends; a decimal point is never followed by a space. */
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
@@ -410,9 +422,14 @@ public class AdviceCheck {
 
     private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
             String message) {
-        Matcher surname = word(lastName(player.fullName())).matcher(message);
+        String lastName = lastName(player.fullName());
+        boolean commonWord = COMMON_WORD_SURNAMES.contains(lastName);
+        Matcher surname = word(lastName).matcher(message);
         while (surname.find()) {
             int at = surname.start();
+            if (commonWord && opensASentence(message, at)) {
+                continue;
+            }
             boolean insideAnotherName = bundle.players().stream()
                     .map(BundlePlayer::fullName)
                     .filter(name -> !name.equals(player.fullName()))
@@ -430,6 +447,10 @@ public class AdviceCheck {
             }
         }
         return -1;
+    }
+
+    private static boolean opensASentence(String message, int at) {
+        return BEFORE_SENTENCE_START.matcher(message.substring(0, at)).find();
     }
 
     private static String lastName(String fullName) {
