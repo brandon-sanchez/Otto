@@ -64,13 +64,18 @@ the plan drops or adds.
 
 Legality is verified, never assumed. IR is offered only when the league
 states its IR slot count, a slot is free, the league allows his
-designation there, and his game has not kicked off. Taxi moves are
-never offered, because Sleeper's taxi eligibility depends on facts Otto
-does not read. Dropping him is offered only when a current report
-explains his status. Without one, his recovery is an unknown the
-advice must be conditional on, and an unknown recovery is never a
-reason to cut him. The format is evidence, not a rule: there are no age,
-draft-round or playoff-week cutoffs.
+designation there, and his game has not kicked off. A taxi move is
+offered only in a league with a taxi squad, from the bench, while a
+taxi slot is open, and when his Sleeper `years_exp` and the league's
+`taxi_allow_vets`, `taxi_years` and `taxi_deadline` all allow it, read
+the way Sleeper's own web client checks them. A taxi player may be
+promoted into an open spot or in place of a dropped bench player. A
+setting Sleeper does not state, or a `years_exp` it does not give,
+rules the taxi move out with that reason. Dropping him is offered
+only when a current report explains his status. Without one, his
+recovery is an unknown the advice must be conditional on, and an
+unknown recovery is never a reason to cut him. The format is evidence,
+not a rule: there are no age, draft-round or playoff-week cutoffs.
 
 The status change itself is a verified fact the user asked to hear.
 When the model is down or its advice fails twice, the change goes out

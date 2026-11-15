@@ -30,10 +30,13 @@ import otto.snapshot.RosterSnapshot;
  * a current report explains his absence: an unknown recovery is not
  * evidence that he has lost his value.
  *
- * <p>Taxi moves are never offered. Sleeper's taxi rules turn on a
- * player's years in the league and on whether he has been on the active
- * roster this season, and neither is in the data Otto reads, so a taxi
- * move could not be verified.
+ * <p>Taxi plans appear only in a league with a taxi squad. A player
+ * goes onto taxi only from the bench, because Sleeper takes nobody
+ * onto taxi straight from free agency, and only while a taxi slot is
+ * open and {@link TaxiSquad} verifies his experience and the league's
+ * taxi deadline. A taxi player may be promoted at any time Sleeper
+ * would move him, into an open roster spot or in place of a bench
+ * player dropped to make room.
  */
 public final class RosterPlans {
 
@@ -49,6 +52,9 @@ public final class RosterPlans {
     private static final String STAY_ON_IR = "stay-on-ir";
     private static final String ACTIVATE = "activate";
     private static final String TAXI = "taxi";
+    private static final String TAXI_ADD = "taxi-add";
+    private static final String PROMOTE = "promote";
+    private static final String PROMOTE_DROP = "promote-drop-";
     private static final String DROP_OTHER = "drop-other-";
     private static final String ACTIVATE_DROP = "activate-drop-";
 
@@ -94,9 +100,11 @@ public final class RosterPlans {
      *        status; without one, dropping him is not offered
      * @param replacement the free agent a plan that opens a roster spot
      *        would add, empty when none could be priced
+     * @param yearsInLeague the NFL seasons he has completed, empty when
+     *        unknown; taxi eligibility turns on it
      */
     public record DecisionSubject(String playerId, PlayerHealth health, boolean recoveryReported,
-            Optional<String> replacement) {
+            Optional<String> replacement, Optional<Integer> yearsInLeague) {
     }
 
     /**
@@ -111,10 +119,10 @@ public final class RosterPlans {
         if (roster.reserve().contains(playerId)) {
             plans.onReserve(subject);
         } else if (roster.taxi().contains(playerId)) {
-            plans.add(new RosterPlan(HOLD, "Keep %s on the taxi squad."
-                    .formatted(names.apply(playerId)), Optional.empty(), Optional.empty()));
+            plans.onTaxi(playerId);
         } else {
             plans.onActiveRoster(subject);
+            plans.toTaxi(subject);
         }
         plans.drop(subject);
         if (plans.legal.isEmpty()) {
@@ -159,9 +167,72 @@ public final class RosterPlans {
                     "Move %s to IR and add %s.".formatted(name, names.apply(add)),
                     Optional.empty(), replacement)));
         }
-        if (league.rules().taxi().slots().orElse(0) > 0) {
-            ruledOut.put(TAXI, "Otto cannot verify taxi eligibility: Sleeper's years-in-league "
-                    + "and in-season taxi rules are not in the data it reads");
+    }
+
+    private void toTaxi(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        Optional<String> replacement = subject.replacement();
+        LeagueRules rules = league.rules();
+        if (rules.taxi().slots().isEmpty()
+                && rules.format().equals(Optional.of(LeagueRules.LeagueFormat.DYNASTY))) {
+            ruledOut.put(TAXI, "Sleeper did not say how many taxi slots the league has");
+            return;
+        }
+        if (!TaxiSquad.inLeague(rules)) {
+            return;
+        }
+        Optional<String> blocked = taxiBlockReason(subject);
+        if (blocked.isPresent()) {
+            ruledOut.put(TAXI, blocked.get());
+            return;
+        }
+        String name = names.apply(playerId);
+        add(new RosterPlan(TAXI, "Move %s to the taxi squad.".formatted(name),
+                Optional.empty(), Optional.empty()));
+        replacement.ifPresent(add -> add(new RosterPlan(TAXI_ADD,
+                "Move %s to the taxi squad and add %s.".formatted(name, names.apply(add)),
+                Optional.empty(), replacement)));
+    }
+
+    private Optional<String> taxiBlockReason(DecisionSubject subject) {
+        String playerId = subject.playerId();
+        Optional<Integer> yearsInLeague = subject.yearsInLeague();
+        LeagueRules.Taxi taxi = league.rules().taxi();
+        int slots = taxi.slots().orElseThrow();
+        if (roster.taxi().size() >= slots) {
+            return Optional.of("every taxi slot is taken (%d of %d)"
+                    .formatted(roster.taxi().size(), slots));
+        }
+        if (roster.starters().contains(playerId)) {
+            return Optional.of("he is in your starting lineup, and moving him to the taxi "
+                    + "squad would leave his slot empty");
+        }
+        return TaxiSquad.experienceBlock(taxi, yearsInLeague)
+                .or(() -> TaxiSquad.deadlineBlock(taxi, week, now))
+                .or(() -> locked(playerId) ? Optional.of(kickedOff()) : Optional.empty());
+    }
+
+    private void onTaxi(String playerId) {
+        String name = names.apply(playerId);
+        add(new RosterPlan(HOLD, "Keep %s on the taxi squad.".formatted(name),
+                Optional.empty(), Optional.empty()));
+        if (locked(playerId)) {
+            ruledOut.put(PROMOTE, kickedOff());
+            return;
+        }
+        String noReturn = TaxiSquad.deadlineBlock(league.rules().taxi(), week, now)
+                .map(reason -> " Once promoted he may not go back on the taxi squad: " + reason
+                        + ".")
+                .orElse("");
+        if (openSpots() > 0) {
+            add(new RosterPlan(PROMOTE, "Promote %s from the taxi squad into the open roster "
+                    .formatted(name) + "spot." + noReturn, Optional.empty(), Optional.empty()));
+            return;
+        }
+        for (String other : droppableBench(playerId)) {
+            add(new RosterPlan(PROMOTE_DROP + other, "Promote %s from the taxi squad and drop %s "
+                    .formatted(name, names.apply(other)) + "to make room." + noReturn,
+                    Optional.of(other), Optional.empty()));
         }
     }
 
