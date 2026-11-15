@@ -349,6 +349,19 @@ public final class NflverseStubs {
     }
 
     /**
+     * The play-by-play the pressure rates divide by: the healthy rows plus
+     * one pass play per dropback in every game of the PFR passing file
+     * but Pittsburgh at Cleveland in week 4, which it leaves out.
+     * Each passer's dropbacks match the share PFR published, and Andy
+     * Dalton, never pressured, dropped back 4 times. The player register
+     * joins the ranked quarterbacks' PFR ids to their gsis ids.
+     */
+    public static void pressureSeason(WireMockServer nflverse) {
+        stubCsv(nflverse, PBP_2026_PATH, "nflverse/play-by-play-pressure.csv");
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-rankings.csv");
+    }
+
+    /**
      * FTN re-pulls weeks 1 and 2 in bulk: every one of their plays carries
      * a new date_pulled and nothing else about them changes. The same
      * release adds a fourth charted play to Atlanta at Green Bay in week 3.
@@ -362,6 +375,13 @@ public final class NflverseStubs {
         stubJson(nflverse, ADVSTATS_RELEASE_PATH, "nflverse/release-pfr-advstats.json");
         stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH, "nflverse/advstats-week-rush-2026-weeks.csv");
         stubCsv(nflverse, ADVSTATS_RUSH_2025_PATH, "nflverse/advstats-week-rush-2026-weeks.csv");
+    }
+
+    /** The rushing file republished with McCaffrey's week 2 yards before contact corrected. */
+    public static void rushingAdvancedStatsCorrected(WireMockServer nflverse) {
+        stubJson(nflverse, ADVSTATS_RELEASE_PATH, "nflverse/release-pfr-advstats-refreshed.json");
+        stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH,
+                "nflverse/advstats-week-rush-2026-weeks-corrected.csv");
     }
 
     private static void usageSources(WireMockServer nflverse) {

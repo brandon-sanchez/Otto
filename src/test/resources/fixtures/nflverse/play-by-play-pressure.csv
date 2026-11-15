@@ -1,0 +1,1065 @@
+play_id,game_id,home_team,away_team,season_type,week,posteam,defteam,yardline_100,play_type,desc,pass_attempt,rush_attempt,sack,qb_scramble,two_point_attempt,air_yards,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name,touchdown,season
+1,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,,GAME,,,,0,,,,,,,,,2026
+39,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 34-K.Mitchell to LAC 31 for 28 yards (30-A.Finley; 28-N.Pritchett).,0,0,0,0,0,,,,,,,0,2026
+62,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,pass,(14:53) 10-J.Herbert pass short middle intended for 86-O.Gadsden INTERCEPTED by 32-D.Thomas at LAC 45. 32-D.Thomas to LAC 45 for no gain (86-O.Gadsden).,1,0,0,0,0,14,00-0036355,00-0040189,O.Gadsden,,,0,2026
+89,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,45,pass,(14:46) 14-S.Darnold pass short left intended for 23-E.Wilson INTERCEPTED by 45-T.Tuipulotu at LAC 44. 45-T.Tuipulotu to LAC 48 for 4 yards (23-E.Wilson).,1,0,0,0,0,1,00-0034869,00-0038797,E.Wilson,,,0,2026
+116,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,52,run,(14:38) (Shotgun) 77-T.Burke reported in as eligible. 8-O.Hampton up the middle to SEA 49 for 3 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+140,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,49,pass,(14:03) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell to SEA 41 for 8 yards (3-N.Emmanwori).,1,0,0,0,0,6,00-0036355,00-0038454,K.Mitchell,,,0,2026
+165,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,pass,(13:30) 10-J.Herbert pass incomplete short right to 28-K.Vidal.,1,0,0,0,0,-3,00-0036355,00-0039391,K.Vidal,,,0,2026
+200,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by LAC at 13:26.,0,0,0,0,0,,,,,,,0,2026
+188,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,pass,(13:26) (Shotgun) 77-T.Burke reported in as eligible. 10-J.Herbert pass short left to 9-T.Harris to SEA 28 for 13 yards (3-N.Emmanwori).,1,0,0,0,0,11,00-0036355,00-0040727,T.Harris,,,0,2026
+222,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,28,no_play,"(12:48) 8-O.Hampton right tackle to SEA 23 for 5 yards (3-N.Emmanwori; 58-D.Hall). PENALTY on SEA-7-U.Nwosu, Defensive Offside, 5 yards, enforced at SEA 28 - No Play.",0,0,0,0,0,,,,,,,0,2026
+255,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,pass,(12:32) (Shotgun) 10-J.Herbert pass incomplete short right to 34-K.Mitchell.,1,0,0,0,0,-5,00-0036355,00-0038454,K.Mitchell,,,0,2026
+278,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,run,"(12:30) 28-K.Vidal left guard to SEA 22 for 1 yard (13-E.Jones). Penalty on SEA-29-J.Jobe, Unsportsmanlike Conduct, offsetting. Penalty on LAC-9-T.Harris, Unsportsmanlike Conduct, offsetting.",0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+311,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,22,pass,(12:03) (Shotgun) 10-J.Herbert pass incomplete deep left to 1-Q.Johnston.,1,0,0,0,0,22,00-0036355,00-0038544,Q.Johnston,,,0,2026
+334,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,22,field_goal,"(11:58) 11-C.Dicker 40 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+361,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to end zone, Touchback to the SEA 35.",0,0,0,0,0,,,,,,,0,2026
+378,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,no_play,"(11:54) 74-J.Jones reported in as eligible. 23-E.Wilson left end to SEA 44 for 9 yards (20-C.Hart). PENALTY on SEA-74-J.Jones, Offensive Holding, 10 yards, enforced at SEA 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+413,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,run,(11:34) (Shotgun) 23-E.Wilson left tackle to SEA 40 for 15 yards (20-C.Hart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+435,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,60,run,(11:00) (Shotgun) 23-E.Wilson right guard to SEA 42 for 2 yards (0-D.Henley; 52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+457,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,58,pass,"(10:23) (Shotgun) 14-S.Darnold pass incomplete short left [45-T.Tuipulotu]. PENALTY on SEA-14-S.Darnold, Intentional Grounding, 10 yards, enforced at SEA 42.",1,0,0,0,0,-6,00-0034869,,,,,0,2026
+500,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,punt,"(10:13) 4-M.Dickson punts 45 yards to LAC 23, Center-41-C.Stoll. 12-D.Davis MUFFS catch, touched at LAC 25, RECOVERED by SEA-57-C.O'Toole at LAC 23.",0,0,0,0,0,,,,,,,0,2026
+530,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,23,pass,"(10:03) (Shotgun) 14-S.Darnold pass short right to 23-E.Wilson for 23 yards, TOUCHDOWN.",1,0,0,0,0,-5,00-0034869,00-0038797,E.Wilson,,,1,2026
+556,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+571,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 64 yards from SEA 35 to LAC 1. 12-D.Davis to LAC 31 for 30 yards (94-M.Morris).,0,0,0,0,0,,,,,,,0,2026
+601,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,pass,(9:48) (Shotgun) 10-J.Herbert pass incomplete short right [7-U.Nwosu].,1,0,0,0,0,-4,00-0036355,,,,,0,2026
+624,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,run,(9:44) (Shotgun) 28-K.Vidal up the middle to LAC 30 for -1 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+646,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,70,pass,(9:03) (Shotgun) 10-J.Herbert pass short middle to 86-O.Gadsden to LAC 38 for 8 yards (21-D.Witherspoon).,1,0,0,0,0,8,00-0036355,00-0040189,O.Gadsden,,,0,2026
+671,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,62,punt,"(8:20) 16-J.Scott punts 44 yards to SEA 18, Center-47-J.Harris, fair catch by 22-R.Shaheed.",0,0,0,0,0,,,,,,,0,2026
+691,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,82,no_play,"(8:14) (Shotgun) 23-E.Wilson left end to SEA 20 for 2 yards (92-J.Eboigbe). PENALTY on LAC-93-T.Tart, Defensive Offside, 5 yards, enforced at SEA 18 - No Play.",0,0,0,0,0,,,,,,,0,2026
+731,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,77,pass,(8:05) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba to SEA 32 for 9 yards (26-D.Jackson).,1,0,0,0,0,7,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+756,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,run,"(7:33) 36-G.Holani left end to SEA 41 for 9 yards (23-T.Jefferson). PENALTY on LAC-93-T.Tart, Defensive Holding, 5 yards, enforced at SEA 41.",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+789,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,54,pass,"(7:10) (Shotgun) 14-S.Darnold pass short right to 23-E.Wilson to SEA 49 for 3 yards (90-A.Mesidor) [93-T.Tart]. PENALTY on SEA-38-B.Russell, Unnecessary Roughness, 15 yards, enforced at SEA 49.",1,0,0,0,0,-6,00-0034869,00-0038797,E.Wilson,,,0,2026
+825,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,66,run,(6:35) (Shotgun) 36-G.Holani right end to SEA 33 for -1 yards (23-T.Jefferson).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+847,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,67,run,(5:54) (Shotgun) 36-G.Holani left guard to SEA 37 for 4 yards (23-T.Jefferson; 27-R.Mickens).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+869,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,63,punt,"(5:11) 4-M.Dickson punts 45 yards to LAC 18, Center-41-C.Stoll. 12-D.Davis to LAC 18 for no gain (57-C.O'Toole). PENALTY on SEA-57-C.O'Toole, Lowering the Head to Make Forcible Contact, 15 yards, enforced at LAC 18.",0,0,0,0,0,,,,,,,0,2026
+913,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,67,run,(5:02) 77-T.Burke reported in as eligible. 28-K.Vidal right tackle to LAC 42 for 9 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+937,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,58,run,(4:26) (Shotgun) 8-O.Hampton right guard to SEA 43 for 15 yards (13-E.Jones; 20-J.Love).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+959,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,run,(3:55) (Shotgun) 8-O.Hampton up the middle to SEA 41 for 2 yards (56-D.Fowler).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+981,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,41,run,(3:16) (Shotgun) 1-Q.Johnston left end pushed ob at SEA 45 for -4 yards (0-D.Lawrence).,0,1,0,0,0,,,,,00-0038544,Q.Johnston,0,2026
+1020,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by SEA at 02:44.,0,0,0,0,0,,,,,,,0,2026
+1008,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,45,pass,(2:44) (Shotgun) 10-J.Herbert pass incomplete short middle to 15-L.McConkey.,1,0,0,0,0,8,00-0036355,00-0039915,L.McConkey,,,0,2026
+1043,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,45,punt,"(2:40) 16-J.Scott punts 45 yards to end zone, Center-47-J.Harris, Touchback.",0,0,0,0,0,,,,,,,0,2026
+1061,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,80,run,(2:32) 23-E.Wilson right end to SEA 19 for -1 yards (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1090,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,81,pass,(1:54) (Shotgun) 14-S.Darnold pass short left to 11-J.Smith-Njigba to SEA 25 for 6 yards (27-R.Mickens).,1,0,0,0,0,5,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1115,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,pass,(1:15) (Shotgun) 14-S.Darnold pass incomplete short right to 88-A.Barner.,1,0,0,0,0,3,00-0034869,00-0039793,A.Barner,,,0,2026
+1138,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,75,punt,"(1:12) 4-M.Dickson punts 54 yards to LAC 21, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+1164,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,79,pass,(1:05) 10-J.Herbert pass short middle to 8-O.Hampton to LAC 26 for 5 yards (21-D.Witherspoon; 13-E.Jones).,1,0,0,0,0,5,00-0036355,00-0040666,O.Hampton,,,0,2026
+1196,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,74,run,(:27) 34-K.Mitchell right end pushed ob at LAC 27 for 1 yard (21-D.Witherspoon).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1223,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,,,END QUARTER 1,,,,0,,,,,,,,,2026
+1243,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,73,pass,(15:00) (Shotgun) 10-J.Herbert sacked at LAC 20 for -7 yards (91-B.Murphy).,1,0,1,0,0,,00-0036355,,,,,0,2026
+1263,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,80,punt,"(14:20) 16-J.Scott punts 40 yards to SEA 40, Center-47-J.Harris. 22-R.Shaheed to SEA 41 for 1 yard (33-D.Leonard). PENALTY on SEA-1-J.Neal, Illegal Use of Hands, 10 yards, enforced at SEA 40.",0,0,0,0,0,,,,,,,0,2026
+1300,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,70,run,(14:11) 23-E.Wilson right end to SEA 33 for 3 yards (90-A.Mesidor; 92-J.Eboigbe).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1322,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,67,pass,(13:36) 14-S.Darnold pass deep right to 22-R.Shaheed ran ob at LAC 47 for 20 yards (24-R.Shelley).,1,0,0,0,0,19,00-0034869,00-0037545,R.Shaheed,,,0,2026
+1352,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,47,run,(13:15) (No Huddle) 23-E.Wilson right end to LAC 44 for 3 yards (90-A.Mesidor; 93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1374,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,44,run,"(12:37) (Shotgun) 36-G.Holani right end to LAC 46 for -2 yards (0-D.Henley, 99-J.Caldwell).",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+1396,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,46,pass,(11:57) (Shotgun) 14-S.Darnold pass incomplete deep left to 22-R.Shaheed [0-D.Henley].,1,0,0,0,0,24,00-0034869,00-0037545,R.Shaheed,,,0,2026
+1419,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,46,punt,"(11:51) 4-M.Dickson punts 34 yards to LAC 12, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+1446,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,88,run,(11:44) (Shotgun) 8-O.Hampton left guard to LAC 18 for 6 yards (32-D.Thomas).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+1468,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,run,(11:11) 34-K.Mitchell right end to LAC 18 for no gain (21-D.Witherspoon).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1490,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,pass,(10:32) 10-J.Herbert pass incomplete short left to 86-O.Gadsden (20-J.Love) [32-D.Thomas].,1,0,0,0,0,1,00-0036355,00-0040189,O.Gadsden,,,0,2026
+1513,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,82,punt,"(10:30) 16-J.Scott punts 47 yards to SEA 35, Center-47-J.Harris, fair catch by 22-R.Shaheed.",0,0,0,0,0,,,,,,,0,2026
+1540,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,(10:23) 14-S.Darnold sacked at SEA 27 for -8 yards (52-K.Mack).,1,0,1,0,0,,00-0034869,,,,,0,2026
+1560,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,73,pass,(9:38) 14-S.Darnold pass short middle to 36-G.Holani to SEA 29 for 2 yards (53-D.Phillips).,1,0,0,0,0,2,00-0034869,00-0039299,G.Holani,,,0,2026
+1585,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,71,pass,(8:55) (Shotgun) 14-S.Darnold pass deep right to 11-J.Smith-Njigba to LAC 43 for 28 yards (22-G.Smith) [93-T.Tart].,1,0,0,0,0,21,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1610,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,43,run,(8:16) 23-E.Wilson right tackle to LAC 40 for 3 yards (93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1632,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,40,run,(7:40) 23-E.Wilson right guard to LAC 34 for 6 yards (90-A.Mesidor).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1654,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,34,run,(7:00) 74-J.Jones reported in as eligible. 23-E.Wilson right guard to LAC 28 for 6 yards (20-C.Hart; 2-E.Molden).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1678,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,28,run,"(6:19) 22-R.Shaheed left end for 28 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0037545,R.Shaheed,1,2026
+1701,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is No Good, Wide Right, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+1716,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 43 yards from SEA 35 to LAC 22, short of landing zone. PENALTY on SEA-5-J.Myers, Kickoff Short of Landing Zone, placed at LAC 40.",0,0,0,0,0,,,,,,,0,2026
+1752,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,60,run,(6:12) (Shotgun) 10-J.Herbert scrambles right end to LAC 41 for 1 yard (29-J.Jobe).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+1774,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,59,no_play,"(5:25) (Shotgun) PENALTY on LAC-70-R.Slater, False Start, 5 yards, enforced at LAC 41 - No Play.",0,0,0,0,0,,,,,,,0,2026
+1798,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,run,(5:05) 77-T.Burke reported in as eligible. 34-K.Mitchell left tackle to LAC 39 for 3 yards (13-E.Jones; 3-N.Emmanwori).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+1822,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,61,pass,(4:21) (Shotgun) 10-J.Herbert sacked at LAC 31 for -8 yards (13-E.Jones).,1,0,1,0,0,,00-0036355,,,,,0,2026
+1842,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,punt,"(3:37) 16-J.Scott punts 44 yards to SEA 25, Center-47-J.Harris. 22-R.Shaheed to SEA 37 for 12 yards (32-K.Williamson).",0,0,0,0,0,,,,,,,0,2026
+1877,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,63,run,"(3:26) 23-E.Wilson right tackle to SEA 36 for -1 yards (45-T.Tuipulotu, 92-J.Eboigbe).",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+1899,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,64,pass,(2:46) (Shotgun) 14-S.Darnold pass incomplete short right to 10-C.Kupp (4-T.Still).,1,0,0,0,0,9,00-0034869,00-0033908,C.Kupp,,,0,2026
+1922,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,64,no_play,"(2:39) (Shotgun) PENALTY on SEA-61-J.Sundell, False Start, 5 yards, enforced at SEA 36 - No Play.",0,0,0,0,0,,,,,,,0,2026
+1946,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,69,pass,(2:39) (Shotgun) 14-S.Darnold pass short middle to 11-J.Smith-Njigba to SEA 44 for 13 yards (0-D.Henley). The ball spot was assisted by replay.,1,0,0,0,0,5,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+1971,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,56,punt,"(2:00) 4-M.Dickson punts 30 yards to LAC 26, Center-41-C.Stoll, downed by SEA-30-A.Finley.",0,0,0,0,0,,,,,,,0,2026
+2011,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,74,run,(1:50) (Shotgun) 86-O.Gadsden left end to LAC 28 for 2 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0040189,O.Gadsden,0,2026
+2040,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,72,pass,"(1:29) (No Huddle, Shotgun) 10-J.Herbert pass short right intended for 15-L.McConkey INTERCEPTED by 13-E.Jones at LAC 40. 13-E.Jones to LAC 20 for 20 yards (28-K.Vidal; 10-J.Herbert).",1,0,0,0,0,12,00-0036355,00-0039915,L.McConkey,,,0,2026
+2067,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,20,pass,(1:20) (Shotgun) 14-S.Darnold pass short middle to 88-A.Barner to LAC 8 for 12 yards (2-E.Molden).,1,0,0,0,0,5,00-0034869,00-0039793,A.Barner,,,0,2026
+2092,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,8,run,"(:47) (Shotgun) 23-E.Wilson left guard for 8 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0038797,E.Wilson,1,2026
+2115,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+2130,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,5-J.Myers kicks 65 yards from SEA 35 to LAC 0. 12-D.Davis to LAC 34 for 34 yards (52-P.O'Connell).,0,0,0,0,0,,,,,,,0,2026
+2153,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,66,pass,(:38) (Shotgun) 10-J.Herbert pass short left to 28-K.Vidal to LAC 36 for 2 yards (13-E.Jones).,1,0,0,0,0,-4,00-0036355,00-0039391,K.Vidal,,,0,2026
+2183,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by LAC at 00:31.,0,0,0,0,0,,,,,,,0,2026
+2190,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,pass,(:31) (Shotgun) 10-J.Herbert pass incomplete short right to 13-M.Valdes-Scantling (28-N.Pritchett).,1,0,0,0,0,9,00-0036355,00-0034272,M.Valdes-Scantling,,,0,2026
+2213,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,64,run,(:27) (Shotgun) 10-J.Herbert scrambles up the middle to SEA 38 for 26 yards (24-R.Thomas).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+2247,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #3 by LAC at 00:18.,0,0,0,0,0,,,,,,,0,2026
+2235,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,38,no_play,"(:18) (Shotgun) PENALTY on LAC-75-T.Penning, False Start, 5 yards, enforced at SEA 38 - No Play.",0,0,0,0,0,,,,,,,0,2026
+2278,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by SEA at 00:18.,0,0,0,0,0,,,,,,,0,2026
+2266,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,run,"(:18) (Shotgun) 28-K.Vidal left tackle to SEA 36 for 7 yards (13-E.Jones). PENALTY on SEA-3-N.Emmanwori, Unnecessary Roughness, 15 yards, enforced at SEA 36.",0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+2306,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,21,field_goal,"(:05) 11-C.Dicker 39 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+2326,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,,END QUARTER 2,,,,0,,,,,,,,,2026
+2344,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,11-C.Dicker kicks 64 yards from LAC 35 to SEA 1. 22-R.Shaheed to SEA 32 for 31 yards (43-T.Dye).,0,0,0,0,0,,,,,,,0,2026
+2367,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,68,pass,(14:55) 14-S.Darnold pass short right to 11-J.Smith-Njigba pushed ob at LAC 48 for 20 yards (0-D.Henley).,1,0,0,0,0,15,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+2397,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,48,run,"(14:20) 23-E.Wilson right guard to LAC 44 for 4 yards (93-T.Tart; 53-D.Phillips). PENALTY on LAC-99-J.Caldwell, Defensive Holding, 5 yards, enforced at LAC 44.",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2430,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,39,run,(13:55) 23-E.Wilson up the middle to LAC 36 for 3 yards (45-T.Tuipulotu; 52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2452,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,36,run,(13:11) (Shotgun) 14-S.Darnold scrambles left end ran ob at LAC 28 for 8 yards (45-T.Tuipulotu).,0,1,0,1,0,,,,,00-0034869,S.Darnold,0,2026
+2479,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,28,pass,(12:33) (Shotgun) 14-S.Darnold pass short middle to 10-C.Kupp to LAC 15 for 13 yards (2-E.Molden).,1,0,0,0,0,8,00-0034869,00-0033908,C.Kupp,,,0,2026
+2504,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,run,(11:51) 22-R.Shaheed left end to LAC 10 for 5 yards (20-C.Hart; 90-A.Mesidor).,0,1,0,0,0,,,,,00-0037545,R.Shaheed,0,2026
+2526,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,10,run,(11:10) (Shotgun) 23-E.Wilson up the middle to LAC 6 for 4 yards (90-A.Mesidor; 53-D.Phillips).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+2560,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by SEA at 10:26.,0,0,0,0,0,,,,,,,0,2026
+2548,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,6,pass,"(10:26) 74-J.Jones reported in as eligible. 14-S.Darnold pass short right to 15-T.Horton for 6 yards, TOUCHDOWN.",1,0,0,0,0,4,00-0034869,00-0040648,T.Horton,,,1,2026
+2583,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,15,extra_point,"5-J.Myers extra point is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+2598,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 28-K.Vidal to LAC 41 for 38 yards (81-E.Saubert). PENALTY on LAC-81-P.Herbert, Offensive Holding, 10 yards, enforced at LAC 29.",0,0,0,0,0,,,,,,,0,2026
+2644,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,81,run,"(10:15) 34-K.Mitchell right end to LAC 16 for -3 yards (21-D.Witherspoon). PENALTY on SEA-21-D.Witherspoon, Unnecessary Roughness, 15 yards, enforced at LAC 16.",0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+2682,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,69,run,(9:54) (Shotgun) 10-J.Herbert scrambles right end pushed ob at LAC 32 for 1 yard (0-D.Lawrence).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+2709,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,68,pass,(9:23) (Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to LAC 37 for 5 yards (32-D.Thomas; 13-E.Jones).,1,0,0,0,0,-4,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2739,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,63,pass,"(8:48) (Shotgun) 10-J.Herbert pass short right to 34-K.Mitchell to LAC 39 for 2 yards (3-N.Emmanwori). PENALTY on SEA-3-N.Emmanwori, Face Mask, 15 yards, enforced at LAC 39.",1,0,0,0,0,-1,00-0036355,00-0038454,K.Mitchell,,,0,2026
+2780,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,(8:35) 10-J.Herbert pass deep right to 9-T.Harris pushed ob at SEA 20 for 26 yards (20-J.Love).,1,0,0,0,0,24,00-0036355,00-0040727,T.Harris,,,0,2026
+2810,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,20,no_play,"(7:58) PENALTY on LAC-9-T.Harris, False Start, 5 yards, enforced at SEA 20 - No Play.",0,0,0,0,0,,,,,,,0,2026
+2843,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,25,run,(7:46) (Shotgun) 8-O.Hampton up the middle to SEA 26 for -1 yards (0-D.Lawrence).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+2870,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,26,pass,(7:07) (Shotgun) 10-J.Herbert pass short right to 34-K.Mitchell ran ob at SEA 23 for 3 yards (21-D.Witherspoon).,1,0,0,0,0,-3,00-0036355,00-0038454,K.Mitchell,,,0,2026
+2900,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,pass,(6:34) (Shotgun) 10-J.Herbert pass short left to 86-O.Gadsden to SEA 14 for 9 yards (21-D.Witherspoon).,1,0,0,0,0,6,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2925,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,14,pass,(5:54) (Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to SEA 9 for 5 yards (21-D.Witherspoon) [99-L.Williams].,1,0,0,0,0,5,00-0036355,00-0040189,O.Gadsden,,,0,2026
+2950,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,9,pass,(5:05) (Shotgun) 9-T.Harris pass incomplete short left to 10-J.Herbert (3-N.Emmanwori) [7-U.Nwosu].,1,0,0,0,0,9,00-0040727,00-0036355,J.Herbert,,,0,2026
+2973,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,9,pass,"(4:58) (Shotgun) 10-J.Herbert pass short middle to 28-K.Vidal for 9 yards, TOUCHDOWN. The touchdown was assisted by replay.",1,0,0,0,0,-2,00-0036355,00-0039391,K.Vidal,,,1,2026
+3004,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,15,no_play,"(Kick formation) PENALTY on LAC-77-T.Burke, False Start, 5 yards, enforced at SEA 15 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3039,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,20,extra_point,"11-C.Dicker extra point is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+3054,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,11-C.Dicker kicks 59 yards from LAC 35 to SEA 6. 22-R.Shaheed to SEA 31 for 25 yards (58-M.Wax).,0,0,0,0,0,,,,,,,0,2026
+3084,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,69,run,"(4:48) 23-E.Wilson up the middle to SEA 33 for 2 yards (45-T.Tuipulotu). FUMBLES (45-T.Tuipulotu), and recovers at SEA 35.",0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3106,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,"(4:05) 14-S.Darnold pass short left to 23-E.Wilson to SEA 48 for 13 yards (93-T.Tart). PENALTY on LAC-27-R.Mickens, Low Block, 15 yards, enforced at SEA 48.",1,0,0,0,0,-4,00-0034869,00-0038797,E.Wilson,,,0,2026
+3142,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,37,run,(3:42) 36-G.Holani up the middle to LAC 35 for 2 yards (91-N.Barrett).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+3164,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,pass,(3:05) 14-S.Darnold pass incomplete short left.,1,0,0,0,0,5,00-0034869,,,,,0,2026
+3187,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,pass,(2:58) (Shotgun) 14-S.Darnold pass incomplete deep right to 22-R.Shaheed [27-R.Mickens].,1,0,0,0,0,22,00-0034869,00-0037545,R.Shaheed,,,0,2026
+3227,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,no_play,"(2:53) 5-J.Myers 53 yard field goal is No Good, Wide Right, Center-41-C.Stoll, Holder-4-M.Dickson. PENALTY on LAC-45-T.Tuipulotu, Leverage, 15 yards, enforced at LAC 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3259,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,20,run,(2:49) 23-E.Wilson left tackle to LAC 21 for -1 yards (99-J.Caldwell).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3281,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,21,run,(2:08) 23-E.Wilson up the middle to LAC 17 for 4 yards (91-N.Barrett).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+3308,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,17,pass,(1:26) (Shotgun) 14-S.Darnold pass incomplete short middle to 11-J.Smith-Njigba (4-T.Still).,1,0,0,0,0,13,00-0034869,00-0038543,J.Smith-Njigba,,,0,2026
+3331,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,17,field_goal,"(1:22) 5-J.Myers 35 yard field goal is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",0,0,0,0,0,,,,,,,0,2026
+3358,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,35,kickoff,"5-J.Myers kicks 62 yards from SEA 35 to LAC 3. 28-K.Vidal to LAC 25 for 22 yards (94-M.Morris). PENALTY on LAC-58-M.Wax, Offensive Holding, 10 yards, enforced at LAC 25.",0,0,0,0,0,,,,,,,0,2026
+3392,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,85,pass,(1:13) 10-J.Herbert pass incomplete deep right to 9-T.Harris.,1,0,0,0,0,30,00-0036355,00-0040727,T.Harris,,,0,2026
+3415,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,85,run,(1:06) (Shotgun) 34-K.Mitchell left end pushed ob at LAC 16 for 1 yard (24-R.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3442,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,84,pass,(:31) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell ran ob at LAC 30 for 14 yards (58-D.Hall).,1,0,0,0,0,-1,00-0036355,00-0038454,K.Mitchell,,,0,2026
+3472,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,,,END QUARTER 3,,,,0,,,,,,,,,2026
+3492,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,70,run,(15:00) 10-J.Herbert scrambles left guard to LAC 33 for 3 yards (13-E.Jones).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+3514,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,67,no_play,"(14:18) 10-J.Herbert pass incomplete deep right to 1-Q.Johnston. PENALTY on LAC-77-T.Burke, Offensive Holding, 10 yards, enforced at LAC 33 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3548,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,77,no_play,"(14:11) (Shotgun) 10-J.Herbert sacked at LAC 16 for -7 yards (0-D.Lawrence). PENALTY on SEA-0-D.Lawrence, Roughing the Passer, 15 yards, enforced at LAC 23 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3579,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,62,run,(14:02) 34-K.Mitchell left tackle to LAC 46 for 8 yards (20-J.Love).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3601,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,54,run,(13:28) 34-K.Mitchell right end pushed ob at SEA 34 for 20 yards (24-R.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3628,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,34,run,(12:55) 34-K.Mitchell up the middle to SEA 32 for 2 yards (32-D.Thomas).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3650,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,32,pass,(12:13) 10-J.Herbert sacked at SEA 43 for -11 yards (3-N.Emmanwori).,1,0,1,0,0,,00-0036355,,,,,0,2026
+3670,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,43,no_play,"(11:26) (Shotgun) PENALTY on LAC, Delay of Game, 5 yards, enforced at SEA 43 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3694,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,48,pass,"(11:26) 10-J.Herbert pass short right to 8-O.Hampton to SEA 45 for 3 yards (21-D.Witherspoon). PENALTY on SEA-58-D.Hall, Roughing the Passer, 15 yards, enforced at SEA 45.",1,0,0,0,0,-3,00-0036355,00-0040666,O.Hampton,,,0,2026
+3730,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,30,run,(11:08) 10-J.Herbert scrambles right end to SEA 24 for 6 yards (32-D.Thomas).,0,1,0,1,0,,,,,00-0036355,J.Herbert,0,2026
+3752,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,24,run,(10:28) 34-K.Mitchell right guard to SEA 23 for 1 yard (29-J.Jobe).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+3774,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,23,run,(9:49) 8-O.Hampton right guard to SEA 17 for 6 yards (29-J.Jobe; 13-E.Jones).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3796,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,17,run,(9:12) 8-O.Hampton right end pushed ob at SEA 6 for 11 yards (20-J.Love).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3823,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,6,run,(8:38) (Shotgun) 8-O.Hampton left end pushed ob at SEA 5 for 1 yard (24-R.Thomas).,0,1,0,0,0,,,,,00-0040666,O.Hampton,0,2026
+3850,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,5,run,(8:06) (Shotgun) 10-J.Herbert left guard to SEA 2 for 3 yards (58-D.Hall; 7-U.Nwosu). LAC-70-R.Slater was injured during the play. SEA-99-L.Williams was injured during the play.,0,1,0,0,0,,,,,00-0036355,J.Herbert,0,2026
+3885,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,2,run,"(7:52) 8-O.Hampton left guard for 2 yards, TOUCHDOWN.",0,1,0,0,0,,,,,00-0040666,O.Hampton,1,2026
+3908,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,15,extra_point,"11-C.Dicker extra point is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+3923,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to landing zone to end zone, Touchback to the SEA 20. PENALTY on LAC-53-D.Phillips, Illegal Formation, 5 yards, enforced at LAC 35 - No Play.",0,0,0,0,0,,,,,,,0,2026
+3959,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,30,kickoff,"11-C.Dicker kicks 63 yards from LAC 30 to SEA 7. 22-R.Shaheed to SEA 34 for 27 yards (43-T.Dye; 33-D.Leonard). FUMBLES (43-T.Dye), and recovers at SEA 34.",0,0,0,0,0,,,,,,,0,2026
+3982,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,66,run,(7:42) 23-E.Wilson left end to SEA 35 for 1 yard (53-D.Phillips).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4004,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,run,(7:05) 23-E.Wilson left end to 50 for 15 yards (0-D.Henley).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4026,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,50,run,(6:21) (Shotgun) 23-E.Wilson left guard to LAC 49 for 1 yard (93-T.Tart).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4053,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,49,run,(5:38) (Shotgun) 36-G.Holani right guard to LAC 41 for 8 yards (53-D.Phillips; 2-E.Molden).,0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+4075,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,41,run,"(4:55) (Shotgun) 36-G.Holani right guard to LAC 43 for -2 yards (2-E.Molden, 45-T.Tuipulotu).",0,1,0,0,0,,,,,00-0039299,G.Holani,0,2026
+4097,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,43,no_play,"(4:09) (Shotgun) PENALTY on SEA, Delay of Game, 5 yards, enforced at LAC 43 - No Play.",0,0,0,0,0,,,,,,,0,2026
+4121,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,48,punt,"(4:09) 4-M.Dickson punts 41 yards to LAC 7, Center-41-C.Stoll, downed by SEA-1-J.Neal.",0,0,0,0,0,,,,,,,0,2026
+4148,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,93,run,(4:01) (Shotgun) 34-K.Mitchell left end pushed ob at LAC 13 for 6 yards (28-N.Pritchett).,0,1,0,0,0,,,,,00-0038454,K.Mitchell,0,2026
+4175,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,87,pass,(3:57) (Shotgun) 10-J.Herbert pass short left to 34-K.Mitchell to LAC 10 for -3 yards (32-D.Thomas).,1,0,0,0,0,-3,00-0036355,00-0038454,K.Mitchell,,,0,2026
+4200,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,90,pass,"(3:33) (No Huddle, Shotgun) 10-J.Herbert pass incomplete short right to 86-O.Gadsden [90-J.Reed].",1,0,0,0,0,2,00-0036355,00-0040189,O.Gadsden,,,0,2026
+4223,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,90,pass,(3:28) (Shotgun) 10-J.Herbert pass deep right to 1-Q.Johnston to SEA 46 for 44 yards (24-R.Thomas).,1,0,0,0,0,44,00-0036355,00-0038544,Q.Johnston,,,0,2026
+4248,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,"(2:54) (No Huddle, Shotgun) 10-J.Herbert pass incomplete short right to 9-T.Harris.",1,0,0,0,0,7,00-0036355,00-0040727,T.Harris,,,0,2026
+4271,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,46,pass,(2:50) (Shotgun) 10-J.Herbert pass short left to 12-D.Davis to SEA 40 for 6 yards (7-U.Nwosu).,1,0,0,0,0,6,00-0036355,00-0038573,D.Davis,,,0,2026
+4313,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,40,pass,"(2:23) (No Huddle, Shotgun) 10-J.Herbert pass deep left to 9-T.Harris ran ob at SEA 19 for 21 yards (24-R.Thomas) [3-N.Emmanwori].",1,0,0,0,0,19,00-0036355,00-0040727,T.Harris,,,0,2026
+4343,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,19,field_goal,"(2:17) 11-C.Dicker 36 yard field goal is GOOD, Center-47-J.Harris, Holder-16-J.Scott.",0,0,0,0,0,,,,,,,0,2026
+4363,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,35,kickoff,"11-C.Dicker kicks 65 yards from LAC 35 to end zone, Touchback to the SEA 35.",0,0,0,0,0,,,,,,,0,2026
+4380,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,run,(2:14) 23-E.Wilson up the middle to SEA 35 for no gain (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4402,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #1 by LAC at 02:10.,0,0,0,0,0,,,,,,,0,2026
+4409,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,65,pass,"(2:10) 14-S.Darnold sacked at SEA 32 for -3 yards (sack split by 92-J.Eboigbe and 45-T.Tuipulotu). PENALTY on LAC-92-J.Eboigbe, Unnecessary Roughness, 15 yards, enforced at SEA 32.",1,0,1,0,0,,00-0034869,,,,,0,2026
+4440,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,53,pass,(2:02) 14-S.Darnold pass incomplete short left to 88-A.Barner (20-C.Hart).,1,0,0,0,0,10,00-0034869,00-0039793,A.Barner,,,0,2026
+4463,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,53,run,(1:56) 23-E.Wilson up the middle to SEA 49 for 2 yards (52-K.Mack).,0,1,0,0,0,,,,,00-0038797,E.Wilson,0,2026
+4504,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #2 by LAC at 01:53.,0,0,0,0,0,,,,,,,0,2026
+4492,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,51,pass,(1:53) (Shotgun) 14-S.Darnold sacked at SEA 40 for -9 yards (43-T.Dye).,1,0,1,0,0,,00-0034869,,,,,0,2026
+4531,2026_04_LAC_SEA,SEA,LAC,REG,4,,,,no_play,Timeout #3 by LAC at 01:49.,0,0,0,0,0,,,,,,,0,2026
+4519,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,60,punt,"(1:49) 4-M.Dickson punts 49 yards to LAC 11, Center-41-C.Stoll, fair catch by 12-D.Davis.",0,0,0,0,0,,,,,,,0,2026
+4546,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,89,run,(1:42) (Shotgun) 28-K.Vidal up the middle to LAC 20 for 9 yards (13-E.Jones; 20-J.Love).,0,1,0,0,0,,,,,00-0039391,K.Vidal,0,2026
+4568,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,80,pass,"(1:22) (No Huddle, Shotgun) 10-J.Herbert pass short right to 86-O.Gadsden to LAC 29 for 9 yards (13-E.Jones).",1,0,0,0,0,9,00-0036355,00-0040189,O.Gadsden,,,0,2026
+4593,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,71,pass,"(1:03) (No Huddle, Shotgun) 10-J.Herbert sacked at LAC 20 for -9 yards (7-U.Nwosu). FUMBLES (7-U.Nwosu) [7-U.Nwosu], RECOVERED by SEA-58-D.Hall at LAC 20. PENALTY on LAC-69-C.Strange, Unnecessary Roughness, 10 yards, enforced at LAC 20.",1,0,1,0,0,,00-0036355,,,,,0,2026
+4634,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,10,qb_kneel,(:54) 14-S.Darnold kneels to LAC 11 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
+4656,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,11,qb_kneel,(:32) 14-S.Darnold kneels to LAC 12 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
+4678,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,,,END GAME,,,,0,,,,,,,,,2026
+90001,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90002,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90003,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90004,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90005,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90006,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90007,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90008,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90009,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90010,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90011,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90012,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90013,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90014,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90015,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90016,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90017,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90018,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90019,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90020,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90021,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90022,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90023,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90024,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90025,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0026498,,,,,0,2026
+90026,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000001,,,,,0,2026
+90027,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000001,,,,,0,2026
+90028,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000001,,,,,0,2026
+90029,2026_01_SF_LA,LA,SF,REG,1,LA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000001,,,,,0,2026
+90030,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90031,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90032,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90033,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90034,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90035,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90036,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90037,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90038,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90039,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90040,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90041,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90042,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90043,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90044,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90045,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90046,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90047,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90048,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90049,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90050,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90051,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90052,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90053,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90054,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90055,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90056,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90057,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90058,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90059,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90060,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90061,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90062,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90063,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90064,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90065,2026_01_SF_LA,LA,SF,REG,1,SF,LA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90066,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90067,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90068,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90069,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90070,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90071,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90072,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90073,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90074,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90075,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90076,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90077,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90078,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90079,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90080,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90081,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90082,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90083,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90084,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90085,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90086,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90087,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90088,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90089,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90090,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90091,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90092,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90093,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90094,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90095,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90096,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90097,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90098,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90099,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90100,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90101,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90102,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90103,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90104,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90105,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90106,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90107,2026_01_BUF_HOU,HOU,BUF,REG,1,HOU,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000003,,,,,0,2026
+90108,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90109,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90110,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90111,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90112,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90113,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90114,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90115,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90116,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90117,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90118,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90119,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90120,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90121,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90122,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90123,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90124,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90125,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90126,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90127,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90128,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90129,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90130,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90131,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90132,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90133,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90134,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90135,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90136,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90137,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90138,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90139,2026_01_BUF_HOU,HOU,BUF,REG,1,BUF,HOU,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90140,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90141,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90142,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90143,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90144,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90145,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90146,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90147,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90148,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90149,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90150,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90151,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90152,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90153,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90154,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90155,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90156,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90157,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90158,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90159,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90160,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90161,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90162,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90163,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90164,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90165,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90166,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90167,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90168,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90169,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90170,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90171,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90172,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90173,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90174,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90175,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90176,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90177,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90178,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90179,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90180,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90181,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000005,,,,,0,2026
+90182,2026_01_ATL_PIT,PIT,ATL,REG,1,PIT,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0032280,,,,,0,2026
+90183,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90184,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90185,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90186,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90187,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90188,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90189,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90190,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90191,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90192,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90193,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90194,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90195,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90196,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90197,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90198,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90199,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90200,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90201,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90202,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90203,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90204,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90205,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90206,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90207,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90208,2026_01_ATL_PIT,PIT,ATL,REG,1,ATL,PIT,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90209,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90210,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90211,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90212,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90213,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90214,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90215,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90216,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90217,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90218,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90219,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90220,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90221,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90222,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90223,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90224,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90225,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90226,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90227,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90228,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90229,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90230,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90231,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000008,,,,,0,2026
+90232,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90233,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90234,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90235,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90236,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90237,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90238,2026_01_GB_MIN,MIN,GB,REG,1,MIN,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000009,,,,,0,2026
+90239,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90240,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90241,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90242,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90243,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90244,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90245,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90246,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90247,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90248,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90249,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90250,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90251,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90252,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90253,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90254,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90255,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90256,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90257,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90258,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90259,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90260,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90261,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90262,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90263,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90264,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90265,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90266,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90267,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90268,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90269,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90270,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90271,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90272,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90273,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90274,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90275,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90276,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90277,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90278,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90279,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90280,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90281,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90282,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90283,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90284,2026_01_GB_MIN,MIN,GB,REG,1,GB,MIN,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90285,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90286,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90287,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90288,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90289,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90290,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90291,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90292,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90293,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90294,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90295,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90296,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90297,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90298,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90299,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90300,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90301,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90302,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90303,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90304,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90305,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90306,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90307,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90308,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90309,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90310,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90311,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90312,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90313,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90314,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90315,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90316,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90317,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90318,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90319,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90320,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90321,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90322,2026_02_DET_BUF,BUF,DET,REG,2,BUF,DET,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90323,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90324,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90325,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90326,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90327,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90328,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90329,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90330,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90331,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90332,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90333,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90334,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90335,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90336,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90337,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90338,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90339,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90340,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90341,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90342,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90343,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90344,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90345,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90346,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90347,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90348,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90349,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90350,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90351,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90352,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90353,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90354,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90355,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90356,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90357,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90358,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90359,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90360,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90361,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90362,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90363,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90364,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90365,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90366,2026_02_DET_BUF,BUF,DET,REG,2,DET,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000012,,,,,0,2026
+90367,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90368,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90369,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90370,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90371,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90372,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90373,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90374,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90375,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90376,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90377,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90378,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90379,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90380,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90381,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90382,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90383,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90384,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90385,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90386,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0035542,,,,,0,2026
+90387,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90388,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90389,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90390,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90391,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90392,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90393,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90394,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90395,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90396,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90397,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90398,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90399,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90400,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90401,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90402,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90403,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90404,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90405,2026_02_CAR_ATL,ATL,CAR,REG,2,ATL,CAR,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000014,,,,,0,2026
+90406,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90407,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90408,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90409,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90410,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90411,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90412,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90413,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90414,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90415,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90416,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90417,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90418,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90419,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90420,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90421,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90422,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90423,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90424,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90425,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90426,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90427,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90428,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90429,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90430,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90431,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90432,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90433,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90434,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90435,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90436,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90437,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90438,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90439,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90440,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90441,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90442,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90443,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90444,2026_02_CAR_ATL,ATL,CAR,REG,2,CAR,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000015,,,,,0,2026
+90445,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90446,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90447,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90448,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90449,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90450,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90451,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90452,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90453,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90454,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90455,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90456,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90457,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90458,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90459,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90460,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90461,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90462,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90463,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90464,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90465,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90466,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90467,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90468,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90469,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90470,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90471,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90472,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90473,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90474,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90475,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90476,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90477,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90478,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90479,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90480,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90481,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90482,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90483,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90484,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90485,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90486,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90487,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90488,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90489,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90490,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90491,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90492,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90493,2026_02_GB_NYJ,NYJ,GB,REG,2,NYJ,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000016,,,,,0,2026
+90494,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90495,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90496,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90497,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90498,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90499,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90500,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90501,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90502,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90503,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90504,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90505,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90506,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90507,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90508,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90509,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90510,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90511,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90512,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90513,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90514,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90515,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90516,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90517,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90518,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90519,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90520,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90521,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90522,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90523,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90524,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90525,2026_02_GB_NYJ,NYJ,GB,REG,2,GB,NYJ,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90526,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90527,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90528,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90529,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90530,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90531,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90532,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90533,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90534,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90535,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90536,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90537,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90538,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90539,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90540,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90541,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90542,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90543,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90544,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90545,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90546,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90547,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90548,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90549,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90550,2026_02_MIA_SF,SF,MIA,REG,2,SF,MIA,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90551,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90552,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90553,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90554,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90555,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90556,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90557,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90558,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90559,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90560,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90561,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90562,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90563,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90564,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90565,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90566,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90567,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90568,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90569,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90570,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90571,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90572,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90573,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90574,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90575,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90576,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90577,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90578,2026_02_MIA_SF,SF,MIA,REG,2,MIA,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000019,,,,,0,2026
+90579,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90580,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90581,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90582,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90583,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90584,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90585,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90586,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90587,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90588,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90589,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90590,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90591,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90592,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90593,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90594,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90595,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90596,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90597,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90598,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90599,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90600,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90601,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90602,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90603,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90604,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90605,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90606,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90607,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90608,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90609,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90610,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90611,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90612,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90613,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90614,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90615,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90616,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90617,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90618,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90619,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90620,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90621,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90622,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90623,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90624,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90625,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90626,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90627,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90628,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90629,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90630,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90631,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90632,2026_03_ATL_GB,GB,ATL,REG,3,GB,ATL,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036264,,,,,0,2026
+90633,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90634,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90635,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90636,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90637,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90638,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90639,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90640,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90641,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90642,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90643,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90644,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90645,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90646,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90647,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90648,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90649,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90650,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90651,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90652,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90653,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90654,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90655,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90656,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90657,2026_03_ATL_GB,GB,ATL,REG,3,ATL,GB,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000021,,,,,0,2026
+90658,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90659,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90660,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90661,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90662,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90663,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90664,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90665,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90666,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90667,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90668,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90669,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90670,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90671,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90672,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90673,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90674,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90675,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90676,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90677,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90678,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90679,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90680,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90681,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90682,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90683,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90684,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90685,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90686,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90687,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90688,2026_03_LAC_BUF,BUF,LAC,REG,3,BUF,LAC,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0034857,,,,,0,2026
+90689,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90690,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90691,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90692,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90693,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90694,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90695,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90696,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90697,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90698,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90699,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90700,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90701,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90702,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90703,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90704,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90705,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90706,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90707,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90708,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90709,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90710,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90711,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90712,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90713,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90714,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90715,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90716,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90717,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90718,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90719,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90720,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90721,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90722,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90723,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90724,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90725,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90726,2026_03_LAC_BUF,BUF,LAC,REG,3,LAC,BUF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000023,,,,,0,2026
+90727,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90728,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90729,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90730,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90731,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90732,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90733,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90734,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90735,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90736,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90737,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90738,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90739,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90740,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90741,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90742,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90743,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90744,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90745,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90746,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90747,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90748,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90749,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90750,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90751,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90752,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90753,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90754,2026_03_ARI_SF,SF,ARI,REG,3,SF,ARI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-0036389,,,,,0,2026
+90755,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90756,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90757,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90758,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90759,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90760,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90761,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90762,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90763,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90764,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90765,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90766,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90767,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90768,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90769,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90770,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90771,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90772,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90773,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90774,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90775,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90776,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90777,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90778,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90779,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90780,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90781,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90782,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90783,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90784,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90785,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90786,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90787,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90788,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90789,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90790,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90791,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90792,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90793,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90794,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90795,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90796,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90797,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90798,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90799,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90800,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90801,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90802,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90803,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90804,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90805,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90806,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90807,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90808,2026_03_ARI_SF,SF,ARI,REG,3,ARI,SF,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000025,,,,,0,2026
+90809,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90810,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90811,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90812,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90813,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90814,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90815,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90816,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90817,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90818,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90819,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90820,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90821,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90822,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90823,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90824,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90825,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90826,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90827,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90828,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90829,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90830,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90831,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90832,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90833,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90834,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90835,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90836,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90837,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90838,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90839,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90840,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90841,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90842,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90843,2026_03_PHI_CHI,CHI,PHI,REG,3,CHI,PHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000026,,,,,0,2026
+90844,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90845,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90846,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90847,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90848,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90849,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90850,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90851,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90852,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90853,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90854,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90855,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90856,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90857,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90858,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90859,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90860,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90861,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90862,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90863,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90864,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90865,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90866,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90867,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90868,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90869,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90870,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90871,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90872,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90873,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000027,,,,,0,2026
+90874,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000028,,,,,0,2026
+90875,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000028,,,,,0,2026
+90876,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000028,,,,,0,2026
+90877,2026_03_PHI_CHI,CHI,PHI,REG,3,PHI,CHI,50,pass,pressure fixture dropback,1,0,0,0,0,,00-9000028,,,,,0,2026
