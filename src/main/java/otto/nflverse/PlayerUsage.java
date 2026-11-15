@@ -212,6 +212,10 @@ public final class PlayerUsage {
 
         void opportunities(PlayByPlay pbp, Optional<FtnCharting> ftn) {
             Map<TeamWeek, String> gameIds = new HashMap<>();
+            for (PlayByPlay.Dropback play : pbp.dropbacks()) {
+                gameIds.putIfAbsent(new TeamWeek(play.offense(), play.week()), play.gameId());
+                gameIds.putIfAbsent(new TeamWeek(play.defense(), play.week()), play.gameId());
+            }
             for (PlayByPlay.Opportunity play : pbp.rows()) {
                 gameIds.putIfAbsent(new TeamWeek(play.team(), play.week()), play.gameId());
                 gameIds.putIfAbsent(new TeamWeek(play.defense(), play.week()), play.gameId());

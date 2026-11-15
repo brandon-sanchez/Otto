@@ -56,15 +56,22 @@ class FingerprintPinTest {
 
     @Test
     void ftnChartingContent() {
-        pin(Feeds.FTN_CHARTING, 2, -120343720081376180L,
-                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT, "1"));
+        pin(Feeds.FTN_CHARTING, 3, 2831588049196977552L,
+                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT, "1", 1, 5));
     }
 
     @Test
     void playByPlayContent() {
-        pin(Feeds.PLAY_BY_PLAY, 1, -3036200583563890729L,
+        pin(Feeds.PLAY_BY_PLAY, 4, -3036200583563890729L,
                 new PlayByPlay.Opportunity("2026_01_SF_LA", "40", 1, "SF", "LAR",
                         PlayByPlay.Kind.TARGET, "00-0041021", 14, 9));
+    }
+
+    @Test
+    void playByPlayDropbackContent() {
+        pin(Feeds.PLAY_BY_PLAY, 4, 5281079645388531200L,
+                new PlayByPlay.Dropback("2026_01_SF_LA", "40", 1, "SF", "LAR", "00-0036389",
+                        false));
     }
 
     @Test
