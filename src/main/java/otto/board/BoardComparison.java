@@ -346,6 +346,7 @@ public class BoardComparison {
      */
     private static Optional<List<Outcome.BoardPick>> picks(DecisionRecord board) {
         return switch (board.outcome()) {
+            case Outcome.SentBoard sent -> sent.picks().or(() -> checkedPicks(board));
             case Outcome.DryRun dryRun -> dryRun.picks().or(() -> checkedPicks(board));
             default -> Optional.empty();
         };
@@ -369,6 +370,8 @@ public class BoardComparison {
                 .map(DecisionRecord::outcome)
                 .map(outcome -> switch (outcome) {
                     case Outcome.Withheld withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    case Outcome.WithheldWithNotice withheld ->
                             "the evidence-based board was withheld: " + withheld.reason();
                     default -> "the evidence-based board's checked answer could not be read back";
                 })

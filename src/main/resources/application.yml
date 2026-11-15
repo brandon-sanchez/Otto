@@ -25,6 +25,10 @@ otto:
   # Ceiling means a fresh poll would not be fresher anyway.
   sleeper-cadence: 60s
   edge-threshold: 1.0
+  # Which waiver board reaches the chat: EVIDENCE or SCORED. Both are
+  # built every round, so SCORED is the rollback; docs/deploy.md has the
+  # steps.
+  sent-waiver-board: EVIDENCE
   models:
     order: [openai, anthropic, gemini]
     breaker:

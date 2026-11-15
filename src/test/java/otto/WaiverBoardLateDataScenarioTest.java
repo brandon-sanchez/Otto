@@ -28,7 +28,9 @@ import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -161,8 +163,11 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         checkAt(BOARD_DUE);
         checkAt(FALLBACK.minus(Duration.ofMinutes(1)));
         assertThat(boardRecords()).isEmpty();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
 
         checkAt(FALLBACK);
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing(MISSING_GAME))));
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
                 .startsWith("Your waiver options\n\nWeek 1's numbers are not all in: "
@@ -180,8 +185,11 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         aWaiverWeekWithTheBuffaloGameMissing();
 
         checkAt(DEADLINE.minus(Duration.ofMinutes(30)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing(MISSING_GAME))));
         checkAt(DEADLINE.minus(Duration.ofMinutes(5)));
         checkAt(DEADLINE.plus(Duration.ofMinutes(30)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
 
         assertThat(boardMessages()).singleElement()
                 .satisfies(message -> assertThat(message).contains(MISSING_GAME));
@@ -239,8 +247,8 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
 
     private List<String> boardMessages() {
         DecisionRecord record = onlyBoardRecord();
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
-        return ((Outcome.DryRun) record.outcome()).messages();
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
+        return ((Outcome.SentBoard) record.outcome()).messages();
     }
 
     private DecisionRecord onlyBoardRecord() {
