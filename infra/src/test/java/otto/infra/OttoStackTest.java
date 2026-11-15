@@ -310,6 +310,15 @@ class OttoStackTest {
         assertThat(template.toJSON().toString()).contains("/nflverse/*");
     }
 
+    @Test
+    void theTeamReportsStateIsGrantedUnderThePrefixTheAppWritesIt() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
+                "S3DocumentObjects.java"));
+
+        assertThat(app).contains("TEAM_REPORTS_PREFIX = \"team-reports/\"");
+        assertThat(template.toJSON().toString()).contains("/team-reports/*");
+    }
+
     private static Template stackWith(String key, String value) {
         return Template.fromStack(new OttoStack(
                 new App(AppProps.builder()

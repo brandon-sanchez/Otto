@@ -5,9 +5,10 @@ import java.util.Optional;
 import otto.storage.DocumentBackend;
 
 /**
- * The deployed assistant's storage: every nflverse feed is an S3 object
- * of its own, and every other document goes to the S3 bundle or to
- * DynamoDB by what {@link DocumentPlacement} says about its name.
+ * The deployed assistant's storage: every nflverse feed and the
+ * team-reports state is an S3 object of its own, and every other
+ * document goes to the S3 bundle or to DynamoDB by what
+ * {@link DocumentPlacement} says about its name.
  */
 public class AwsDocumentBackend implements DocumentBackend {
 
@@ -16,7 +17,8 @@ public class AwsDocumentBackend implements DocumentBackend {
     private final DocumentBackend small;
 
     /**
-     * @param feeds the nflverse feeds, see {@link S3DocumentObjects#holds};
+     * @param feeds the documents with objects of their own, see
+     *        {@link S3DocumentObjects#holds};
      *        its bundle holds the other big documents
      * @param small the small records
      */
