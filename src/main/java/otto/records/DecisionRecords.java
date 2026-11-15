@@ -1,0 +1,219 @@
+package otto.records;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import org.springframework.stereotype.Component;
+
+import otto.storage.OttoJson;
+
+/**
+ * Every Decision Record Otto keeps, and every rule about how it is kept.
+ *
+ * <p>Records are stored per user and per league, under Hive-style keys
+ * a query engine such as Athena can partition on:
+ * {@code records/user=<userId>/league=<leagueId>/run=<runId>.json}.
+ * Everything one user owns sits under one prefix, so deleting an
+ * account is one prefix per object kind and cannot miss a league.
+ *
+ * <p>Copied article text expires sooner than the facts around it. It is
+ * lifted out of the record and stored beside it under
+ * {@code article-text/}, which the bucket expires on its own clock. A
+ * record whose text has expired still reads with every fact, reference
+ * and timestamp; only {@link Evidence#sourceText()} comes back empty.
+ *
+ * <p>Credentials are never stored. A model request can carry the key
+ * it was sent with, and an error body can quote a bot token, so every
+ * credential the app holds is replaced inside the record's string
+ * values before anything is written. Property names, numbers and the
+ * record's structure are never touched, so a credential short enough
+ * to occur by chance cannot reshape a record that is then kept for
+ * years. Unrelated chat needs no such pass: {@link DecisionRecord} has
+ * no field that could hold it.
+ *
+ * <p>A record is immutable once written. {@link #save} of the same
+ * record again writes the same bytes and converges; a different record
+ * under a run id already used is refused, never written over. A run
+ * rebuilt by a later Check differs from its first attempt in its
+ * timestamps even over the same evidence, so a caller that rebuilds
+ * runs stores them with {@link #saveFirst}, which keeps whichever
+ * attempt landed first. A retry under a new run id stores a second
+ * record, so a caller that may be retried across invocations derives
+ * its run id from a stable identity of the run.
+ */
+@Component
+public class DecisionRecords {
+
+    private static final String RECORDS = "records";
+    private static final String ARTICLE_TEXT = "article-text";
+
+    /** Ids become key segments, so nothing in one may reshape a key. */
+    private static final Pattern KEY_SEGMENT = Pattern.compile("[A-Za-z0-9_-]+");
+
+    private static final TypeReference<DecisionRecord> RECORD_TYPE = new TypeReference<>() {
+    };
+
+    private static final TypeReference<Map<String, String>> ARTICLE_TEXT_TYPE =
+            new TypeReference<>() {
+            };
+
+    private final RecordObjects objects;
+
+    private final RedactedCredentials credentials;
+
+    public DecisionRecords(RecordObjects objects, RedactedCredentials credentials) {
+        this.objects = objects;
+        this.credentials = credentials;
+    }
+
+    private static Map<String, String> articleText(DecisionRecord record) {
+        Map<String, String> articleText = new LinkedHashMap<>();
+        record.evidence().forEach(evidence -> evidence.sourceText()
+                .ifPresent(text -> articleText.put(evidence.id(), text)));
+        return articleText;
+    }
+
+    private static DecisionRecord withoutArticleText(DecisionRecord record) {
+        return record.withEvidence(record.evidence().stream()
+                .map(evidence -> evidence.withSourceText(Optional.empty()))
+                .toList());
+    }
+
+    /**
+     * Stores a record unless its run id already holds one, and returns
+     * the record the run id holds. An earlier attempt whose save landed
+     * but reported failure is kept, never written over, so its run
+     * converges on that attempt instead of being refused on every
+     * retry. Article text an earlier attempt left behind is kept the
+     * same way.
+     *
+     * <p>Side effects: up to two conditional writes and one read.
+     *
+     * @return {@code record} when this call stored it, otherwise the
+     *         record stored earlier under its run id
+     */
+    public DecisionRecord saveFirst(DecisionRecord record) {
+        Optional<DecisionRecord> earlier = read(record.userId(), record.leagueId(),
+                record.runId());
+        if (earlier.isPresent()) {
+            return earlier.get();
+        }
+        Map<String, String> articleText = articleText(record);
+        if (!articleText.isEmpty()) {
+            objects.putIfAbsent(key(ARTICLE_TEXT, record.userId(), record.leagueId(),
+                    record.runId()), json(redacted(OttoJson.MAPPER.valueToTree(articleText))));
+        }
+        if (objects.putIfAbsent(key(RECORDS, record.userId(), record.leagueId(), record.runId()),
+                json(redacted(OttoJson.MAPPER.valueToTree(withoutArticleText(record)))))) {
+            return record;
+        }
+        return read(record.userId(), record.leagueId(), record.runId())
+                .orElseThrow(() -> new IllegalStateException("Decision Record " + record.runId()
+                        + " was refused as present but cannot be read"));
+    }
+
+    /**
+     * One record, with whatever article text has not yet expired, or
+     * empty when no record was stored under this run id.
+     */
+    public Optional<DecisionRecord> read(String userId, String leagueId, String runId) {
+        return objects.get(key(RECORDS, userId, leagueId, runId)).map(bytes -> {
+            DecisionRecord facts = parse(bytes, RECORD_TYPE);
+            Map<String, String> articleText = objects
+                    .get(key(ARTICLE_TEXT, userId, leagueId, runId))
+                    .map(text -> parse(text, ARTICLE_TEXT_TYPE))
+                    .orElse(Map.of());
+            return facts.withEvidence(facts.evidence().stream()
+                    .map(evidence -> evidence.withSourceText(
+                            Optional.ofNullable(articleText.get(evidence.id()))))
+                    .toList());
+        });
+    }
+
+    /**
+     * Deletes every record and article text one user
+     * has, in every league, every stored version included.
+     *
+     * <p>The bucket holds objects under governance-mode retention, so a
+     * deployed caller needs {@code s3:ListBucketVersions},
+     * {@code s3:DeleteObjectVersion} and
+     * {@code s3:BypassGovernanceRetention} on the records bucket, and
+     * the bucket policy must let its role delete. The caller must stop
+     * new runs for the user before deleting, or a save already in
+     * flight can recreate a record.
+     */
+    public void deleteUser(String userId) {
+        objects.deleteAll(userPrefix(RECORDS, userId));
+        objects.deleteAll(userPrefix(ARTICLE_TEXT, userId));
+    }
+
+    private JsonNode redacted(JsonNode node) {
+        if (node.isTextual()) {
+            return TextNode.valueOf(credentials.redact(node.textValue()));
+        }
+        if (node.isObject()) {
+            ObjectNode copy = OttoJson.MAPPER.createObjectNode();
+            node.properties().forEach(property ->
+                    copy.set(property.getKey(), redacted(property.getValue())));
+            return copy;
+        }
+        if (node.isArray()) {
+            ArrayNode copy = OttoJson.MAPPER.createArrayNode();
+            node.forEach(element -> copy.add(redacted(element)));
+            return copy;
+        }
+        return node;
+    }
+
+    private static String key(String root, String userId, String leagueId, String runId) {
+        return userPrefix(root, userId) + "league=" + segment(leagueId)
+                + "/run=" + segment(runId) + ".json";
+    }
+
+    /**
+     * Ends in a slash, so one user's prefix never matches another user
+     * whose id merely starts the same way.
+     */
+    private static String userPrefix(String root, String userId) {
+        return root + "/user=" + segment(userId) + "/";
+    }
+
+    private static String segment(String id) {
+        if (id == null || !KEY_SEGMENT.matcher(id).matches()) {
+            throw new IllegalArgumentException(
+                    "Not usable in a Decision Record key: " + id);
+        }
+        return id;
+    }
+
+    private static byte[] json(Object value) {
+        try {
+            return OttoJson.MAPPER.writeValueAsBytes(value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Cannot write a Decision Record", e);
+        }
+    }
+
+    private static <T> T parse(byte[] json, TypeReference<T> type) {
+        return parse(json, OttoJson.MAPPER.getTypeFactory().constructType(type));
+    }
+
+    private static <T> T parse(byte[] json, JavaType type) {
+        try {
+            return OttoJson.MAPPER.readValue(json, type);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Cannot read a stored Decision Record", e);
+        }
+    }
+}
