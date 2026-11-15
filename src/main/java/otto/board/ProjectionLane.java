@@ -17,6 +17,11 @@ import otto.lineup.ProjectionTable;
 class ProjectionLane implements EvidenceLane {
 
     @Override
+    public String name() {
+        return "ProjectionLane";
+    }
+
+    @Override
     public Read read(Inputs inputs) {
         Optional<ProjectionTable> table = inputs.league().week().projections();
         return new Read() {

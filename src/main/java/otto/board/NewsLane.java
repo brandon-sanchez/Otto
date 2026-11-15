@@ -55,6 +55,11 @@ class NewsLane implements EvidenceLane {
     }
 
     @Override
+    public String name() {
+        return "NewsLane";
+    }
+
+    @Override
     public Read read(Inputs inputs) {
         Map<String, List<ResearchItem>> read = new HashMap<>();
         Instant since = inputs.now().minus(WINDOW);

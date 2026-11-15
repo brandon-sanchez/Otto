@@ -3,6 +3,7 @@ package otto.advice;
 import java.util.List;
 
 import otto.records.ModelExchange;
+import otto.records.Versions;
 
 /**
  * How one attempt to get checked advice from the model ended. Every
@@ -13,7 +14,7 @@ import otto.records.ModelExchange;
 public sealed interface AdviceResult<T> {
 
     /** What {@link #model()} returns when no model answered. */
-    String NO_MODEL = "none";
+    String NO_MODEL = Versions.NONE;
 
     List<ModelExchange> exchanges();
 

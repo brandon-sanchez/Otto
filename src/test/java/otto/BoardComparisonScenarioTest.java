@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,6 +31,7 @@ import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
+import otto.storage.OttoJson;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
@@ -198,6 +200,22 @@ class BoardComparisonScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aBoardRecordThatKeepsNoPicksIsJudgedOnItsLastCheckedAnswer() throws IOException {
+        tuesdayEveningWithTheModelAnswering(BOARD);
+        Path board = recordFile(records(RunKind.WAIVER_BOARD).getFirst().runId());
+        ObjectNode stored = (ObjectNode) OttoJson.MAPPER.readTree(board.toFile());
+        ((ObjectNode) stored.path("outcome")).remove("picks");
+        OttoJson.MAPPER.writeValue(board.toFile(), stored);
+        weekTwoIsPlayed();
+
+        checkAt(FRIDAY_AFTER);
+
+        assertThat(strategy(comparison().orElseThrow(), BoardStrategy.EVIDENCE_BOARD).picks())
+                .extracting(WeeklyComparison.PickResult::playerId)
+                .containsExactly("10001", "10004");
+    }
+
+    @Test
     void onlyPlayersWhoWereAddableAndLegalWhenTheBoardWasBuiltCount() {
         tuesdayEveningWithTheModelAnswering(BOARD);
         weekTwoIsPlayed();
@@ -270,6 +288,11 @@ class BoardComparisonScenarioTest extends WireSeamTest {
         List<DecisionRecord> baselines = records(RunKind.WAIVER_BASELINES);
         assertThat(baselines).hasSize(1);
         return baselines.getFirst();
+    }
+
+    private Path recordFile(String runId) {
+        return Path.of(properties.storageDir(), "decision-records", "records",
+                "user=" + USER_ID, "league=" + LEAGUE_ID, "run=" + runId + ".json");
     }
 
     private List<DecisionRecord> records(RunKind kind) {

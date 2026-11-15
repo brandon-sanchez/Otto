@@ -2,7 +2,6 @@ package otto.board;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -22,7 +21,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
-import otto.claims.BoardSchedule;
+import otto.claims.ClaimRound;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
@@ -41,11 +40,11 @@ import otto.records.DecisionRecords;
 import otto.records.ModelExchange;
 import otto.records.Outcome;
 import otto.records.RosterContext;
-import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
 import otto.snapshot.RosterSnapshot;
+import otto.waivers.ScoredBoard;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 
@@ -74,9 +73,7 @@ import otto.storage.OttoJson;
 @Component
 public class BoardComparison {
 
-    private static final String RUN_ID_PREFIX = "waiver-baselines-";
     private static final String PENDING = "waiver-comparisons";
-    private static final String PROMPT_VERSION = "none";
 
     /**
      * From the claim deadline to the Friday after the week's Monday
@@ -125,34 +122,44 @@ public class BoardComparison {
 
     /**
      * Records this claim round's baselines when they are due and not yet
-     * recorded, and judges every past round of this league that is
-     * ready. Never throws: a failure is logged and the next Check tries
-     * again, so the comparison can never stop a board or the rest of
-     * the Check.
+     * recorded. They are due from the evening the board is due until the
+     * claim deadline, and are built even while the waiver trigger is off
+     * or muted, never sent, so every week has something to judge the
+     * board against. Never throws: a failure is logged and the next
+     * Check tries again, so the comparison can never stop a board or the
+     * rest of the Check.
      *
-     * <p>Side effects: the baselines' reads and one Decision Record
-     * write per round, one outcome record write per judged round, and
-     * writes of the stored list of rounds waiting to be judged.
+     * <p>Side effects: the baselines' reads, among them the scored
+     * board's, one Decision Record write per round, and a write of the
+     * stored list of rounds waiting to be judged.
      */
-    public void considerComparison(LeagueWeek league, Instant now) {
+    public void considerBaselines(LeagueWeek league, ClaimRound round, ScoredBoard scored) {
+        if (!round.open()) {
+            return;
+        }
         try {
-            recordBaselines(league, now);
+            recordBaselines(league, round, scored);
         } catch (RuntimeException e) {
             log.error("Recording the waiver baselines failed; the next Check tries again", e);
         }
+    }
+
+    /**
+     * Judges every past round of this league that is ready. Never
+     * throws, as {@link #considerBaselines} does not.
+     *
+     * <p>Side effects: one outcome record write per judged round, and a
+     * write of the stored list of rounds waiting to be judged.
+     */
+    public void considerJudging(String leagueId, Instant now) {
         try {
-            judgeReadyRounds(league.league().leagueId(), now);
+            judgeReadyRounds(leagueId, now);
         } catch (RuntimeException e) {
             log.error("Judging the waiver boards failed; the next Check tries again", e);
         }
     }
 
-    private void recordBaselines(LeagueWeek league, Instant now) {
-        Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now)
-                .filter(due -> baselinesDue(due, now));
-        if (deadline.isEmpty()) {
-            return;
-        }
+    private void recordBaselines(LeagueWeek league, ClaimRound round, ScoredBoard scored) {
         Optional<SeasonWeek> week = league.week().seasonWeek();
         Optional<PlayerDirectory> players = directory.read();
         Optional<RosterSnapshot> user = league.rosters().stream()
@@ -162,25 +169,13 @@ public class BoardComparison {
             log.info("The waiver baselines wait: no week, player directory or user roster");
             return;
         }
-        String leagueId = league.league().leagueId();
-        String runId = RunIds.stable(RUN_ID_PREFIX, leagueId,
-                deadline.get().toInstant().toString());
-        if (records.read(userId, leagueId, runId).isEmpty()) {
-            records.saveFirst(baselinesRecord(runId, league, week.get(), deadline.get(),
-                    players.get(), user.get(), now));
+        String runId = round.baselinesRunId();
+        if (records.read(userId, round.leagueId(), runId).isEmpty()) {
+            records.saveFirst(baselinesRecord(round, league, week.get(), players.get(),
+                    user.get(), scored));
         }
-        listUntilJudged(new Pending(leagueId, runId,
-                deadline.get().toInstant().plus(UNTIL_CORRECTIONS_CLOSE)));
-    }
-
-    /**
-     * True from the evening the board is due until the claim deadline.
-     * The baselines are built even while the waiver trigger is off or
-     * muted, never sent, so every week has something to judge the
-     * board against.
-     */
-    private static boolean baselinesDue(ZonedDateTime deadline, Instant now) {
-        return !now.isBefore(BoardSchedule.due(deadline).toInstant());
+        listUntilJudged(new Pending(round.leagueId(), runId,
+                round.deadline().toInstant().plus(UNTIL_CORRECTIONS_CLOSE)));
     }
 
     /**
@@ -197,11 +192,10 @@ public class BoardComparison {
         }
     }
 
-    private DecisionRecord baselinesRecord(String runId, LeagueWeek league, SeasonWeek week,
-            ZonedDateTime deadline, PlayerDirectory players, RosterSnapshot user,
-            Instant now) {
+    private DecisionRecord baselinesRecord(ClaimRound round, LeagueWeek league,
+            SeasonWeek week, PlayerDirectory players, RosterSnapshot user, ScoredBoard scored) {
         List<DirectoryPlayer> freeAgents = WaiverEvidence.freeAgents(players, league);
-        BaselineBoards.Built built = baselines.build(league, players, freeAgents, now);
+        BaselineBoards.Built built = baselines.build(league, players, freeAgents, scored);
         Map<String, String> lineupPool = new LinkedHashMap<>();
         user.players().stream()
                 .filter(playerId -> !user.reserve().contains(playerId)
@@ -219,23 +213,22 @@ public class BoardComparison {
         built.picks().forEach((strategy, proposed) -> picks.put(strategy, proposed.stream()
                 .map(pick -> pick.withDrop(drop))
                 .toList()));
-        ComparisonRound round = new ComparisonRound(week.season(), week.number(),
-                deadline.toInstant(),
-                WaiverBoardService.runId(league.league().leagueId(), deadline),
+        ComparisonRound comparison = new ComparisonRound(week.season(), week.number(),
+                round.deadline().toInstant(), round.boardRunId(),
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
                 lineupPool, picks, built.unavailable());
-        return new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
-                RunKind.WAIVER_BASELINES, now, userId, league.league().leagueId(),
-                OttoJson.MAPPER.valueToTree(league.league()),
-                new RosterContext(OttoJson.MAPPER.valueToTree(user),
+        return DecisionRecord.forRun(round.baselinesRunId(), RunKind.WAIVER_BASELINES,
+                        round.now(), userId, round.leagueId(),
+                        OttoJson.MAPPER.valueToTree(league.league()))
+                .roster(new RosterContext(OttoJson.MAPPER.valueToTree(user),
                         league.league().waiverBudget().map(budget ->
-                                Math.max(0, budget - user.waiverBudgetUsed()))),
-                OttoJson.MAPPER.valueToTree(settings.current()), candidates(built),
-                OttoJson.MAPPER.valueToTree(round), List.of(),
-                Versions.ofThisBuild(league.snapshot().at().toString(), PROMPT_VERSION,
-                        PROMPT_VERSION),
-                List.of(), new Outcome.Silent("baselines are kept only to judge the waiver "
+                                Math.max(0, budget - user.waiverBudgetUsed()))))
+                .preferences(OttoJson.MAPPER.valueToTree(settings.current()))
+                .candidates(candidates(built))
+                .comparisons(OttoJson.MAPPER.valueToTree(comparison))
+                .versions(Versions.withoutModel(league.snapshot().at().toString()))
+                .outcome(new Outcome.Silent("baselines are kept only to judge the waiver "
                         + "board against; they are never sent"));
     }
 
@@ -318,16 +311,8 @@ public class BoardComparison {
     private Optional<List<ComparisonRound.Pick>> newBoard(String leagueId,
             ComparisonRound round) {
         Optional<DecisionRecord> board = records.read(userId, leagueId, round.boardRunId());
-        if (board.isEmpty() || board.get().outcome() instanceof Outcome.Withheld) {
-            return Optional.empty();
-        }
-        Optional<BoardAnswer> answer = board.get().exchanges().reversed().stream()
-                .filter(exchange -> exchange.checkFailures().isEmpty())
-                .findFirst()
-                .map(ModelExchange::response)
-                .flatMap(response -> BoardForm.parse(response.isTextual()
-                        ? response.textValue() : response.toString()));
-        if (answer.isEmpty()) {
+        Optional<List<Outcome.BoardPick>> recorded = board.flatMap(BoardComparison::picks);
+        if (recorded.isEmpty()) {
             return Optional.empty();
         }
         // Only the pool the board could pick from was addable; the rest
@@ -341,27 +326,55 @@ public class BoardComparison {
                 .map(PlayerDirectory::players)
                 .orElse(Map.of());
         List<Slot> slots = Slot.startingSlots(round.startingSlots());
-        List<BoardAnswer.Entry> entries = answer.get().hold() ? List.of() : answer.get().picks();
-        return Optional.of(entries.stream()
+        return Optional.of(recorded.get().stream()
                 .map(entry -> {
                     String position = Optional.ofNullable(players.get(entry.playerId()))
                             .map(DirectoryPlayer::position)
                             .orElse("");
-                    return new ComparisonRound.Pick(entry.playerId(),
+                    return ComparisonRound.Pick.of(entry.playerId(),
                             pool.getOrDefault(entry.playerId(), entry.playerId()), position,
-                            pool.containsKey(entry.playerId()),
-                            slots.stream().anyMatch(slot -> slot.accepts(position)),
-                            entry.drop());
+                            pool.containsKey(entry.playerId()), slots)
+                            .withDrop(entry.drop());
                 })
                 .toList());
+    }
+
+    /**
+     * The picks a board record keeps, or, for a record that keeps none,
+     * the picks of its last checked answer read back from its exchanges.
+     * Empty when the round sent no checked board.
+     */
+    private static Optional<List<Outcome.BoardPick>> picks(DecisionRecord board) {
+        return switch (board.outcome()) {
+            case Outcome.SentBoard sent -> sent.picks().or(() -> checkedPicks(board));
+            case Outcome.DryRun dryRun -> dryRun.picks().or(() -> checkedPicks(board));
+            default -> Optional.empty();
+        };
+    }
+
+    private static Optional<List<Outcome.BoardPick>> checkedPicks(DecisionRecord board) {
+        return board.exchanges().reversed().stream()
+                .filter(exchange -> exchange.checkFailures().isEmpty())
+                .findFirst()
+                .map(ModelExchange::response)
+                .flatMap(response -> BoardForm.parse(response.isTextual()
+                        ? response.textValue() : response.toString()))
+                .map(answer -> (answer.hold() ? List.<BoardAnswer.Entry>of() : answer.picks())
+                        .stream()
+                        .map(entry -> new Outcome.BoardPick(entry.playerId(), entry.drop()))
+                        .toList());
     }
 
     private String newBoardMissing(String leagueId, ComparisonRound round) {
         return records.read(userId, leagueId, round.boardRunId())
                 .map(DecisionRecord::outcome)
-                .map(outcome -> outcome instanceof Outcome.Withheld withheld
-                        ? "the evidence-based board was withheld: " + withheld.reason()
-                        : "the evidence-based board's checked answer could not be read back")
+                .map(outcome -> switch (outcome) {
+                    case Outcome.Withheld withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    case Outcome.WithheldWithNotice withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    default -> "the evidence-based board's checked answer could not be read back";
+                })
                 .orElse("the evidence-based board recorded nothing for this round");
     }
 

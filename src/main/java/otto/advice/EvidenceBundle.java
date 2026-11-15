@@ -15,6 +15,8 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import otto.records.Evidence;
+import otto.records.Versions;
 import otto.storage.OttoJson;
 
 /**
@@ -102,6 +104,26 @@ public record EvidenceBundle(
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Cannot fingerprint an evidence bundle", e);
         }
+    }
+
+    /**
+     * Returns the bundle's evidence as a Decision Record keeps it: every
+     * item read, with no copied text.
+     */
+    public List<Evidence> recorded() {
+        return evidence.stream()
+                .map(item -> Evidence.read(item.id(), item.source(), item.publishedAt(),
+                        item.retrievedAt(), item.scoringBasis()))
+                .toList();
+    }
+
+    /**
+     * Returns the versions of a run that asked the model about this
+     * bundle: its {@link #identity} as the data version, the form's
+     * prompt version and the model that answered.
+     */
+    public Versions versions(AdviceForm<?> form, AdviceResult<?> result) {
+        return Versions.ofThisBuild(identity(), form.promptVersion(), result.model());
     }
 
     Set<BigDecimal> numbers() {

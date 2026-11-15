@@ -1,6 +1,5 @@
 package otto.board;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -24,7 +23,7 @@ import otto.needs.RosterNeeds;
 import otto.needs.RosterNeedsService;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
-import otto.waivers.WaiverAlertService;
+import otto.waivers.ScoredBoard;
 import otto.waivers.WaiverBoard;
 import otto.waivers.WaiverQuery;
 
@@ -42,13 +41,11 @@ class BaselineBoards {
 
     private static final List<String> POSITIONS = WaiverQuery.ALL_POSITIONS;
 
-    private final WaiverAlertService scoredBoard;
     private final RosterNeedsService needs;
     private final SleeperAdapter sleeper;
 
-    BaselineBoards(WaiverAlertService scoredBoard, RosterNeedsService needs,
+    BaselineBoards(RosterNeedsService needs,
             SleeperAdapter sleeper, OttoProperties properties) {
-        this.scoredBoard = scoredBoard;
         this.needs = needs;
         this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
     }
@@ -69,7 +66,7 @@ class BaselineBoards {
      * from the cache while it is younger than the cadence interval.
      */
     Built build(LeagueWeek league, PlayerDirectory directory, List<DirectoryPlayer> freeAgents,
-            Instant now) {
+            ScoredBoard scored) {
         Set<String> free = freeAgents.stream().map(DirectoryPlayer::playerId)
                 .collect(Collectors.toSet());
         Function<String, ComparisonRound.Pick> pick = playerId ->
@@ -77,7 +74,7 @@ class BaselineBoards {
         Map<BoardStrategy, List<ComparisonRound.Pick>> picks = new EnumMap<>(BoardStrategy.class);
         Map<BoardStrategy, String> unavailable = new EnumMap<>(BoardStrategy.class);
 
-        switch (scoredBoard.scoredBoard(league, now)) {
+        switch (scored.get()) {
             case SourceResult.Ok<WaiverBoard> ok -> picks.put(BoardStrategy.SCORED_BOARD,
                     ok.value().candidates().stream()
                             .map(candidate -> pick.apply(candidate.playerId()))
@@ -171,8 +168,7 @@ class BaselineBoards {
             Set<String> free, List<Slot> slots) {
         DirectoryPlayer player = directory.players().get(playerId);
         String position = player == null ? "" : player.position();
-        return new ComparisonRound.Pick(playerId, player == null ? playerId : player.fullName(),
-                position, free.contains(playerId),
-                slots.stream().anyMatch(slot -> slot.accepts(position)), Optional.empty());
+        return ComparisonRound.Pick.of(playerId, player == null ? playerId : player.fullName(),
+                position, free.contains(playerId), slots);
     }
 }

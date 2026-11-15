@@ -160,28 +160,13 @@ public class WaiverEvidence {
                 .orElse(freeAgents);
 
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
-        List<EvidenceLane.Read> reads = lanes.stream().map(lane -> lane.read(inputs)).toList();
-        Map<String, List<String>> reasons = new LinkedHashMap<>();
-        Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
-        Set<String> backedByFootball = new LinkedHashSet<>();
-        for (int index = 0; index < reads.size(); index++) {
-            Map<String, String> picks = reads.get(index).shortlist(eligible);
-            picksByLane.put(lanes.get(index).getClass().getSimpleName(), picks);
-            picks.forEach((playerId, reason) ->
-                    reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
-            if (!lanes.get(index).popularity()) {
-                backedByFootball.addAll(picks.keySet());
-            }
-        }
-        Set<String> trendingOnly = latestWeek.complete() ? Set.of()
-                : reasons.keySet().stream()
-                        .filter(playerId -> !backedByFootball.contains(playerId))
-                        .collect(Collectors.toSet());
-        Map<String, DirectoryPlayer> byId = freeAgents.stream()
-                .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player));
-        Map<String, DirectoryPlayer> candidates = new LinkedHashMap<>();
-        reasons.keySet().forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
-
+        List<LaneRead> reads = lanes.stream()
+                .map(lane -> new LaneRead(lane, lane.read(inputs)))
+                .toList();
+        Pool pool = pool(freeAgents, eligible, reads, latestWeek);
+        Map<String, List<String>> reasons = pool.reasons();
+        Set<String> trendingOnly = pool.trendingOnly();
+        Map<String, DirectoryPlayer> candidates = pool.candidates();
         List<Candidate> screened = freeAgents.stream()
                 .map(player -> screened(player, reasons.get(player.playerId()),
                         trendingOnly.contains(player.playerId()), only))
@@ -191,7 +176,7 @@ public class WaiverEvidence {
         FaabEvidence.Bidding bidding = faab.read(league, user.get(), players.get().players(),
                 candidates.values(), now);
         List<String> gaps = new ArrayList<>(latestWeek.gaps());
-        reads.forEach(read -> gaps.addAll(read.gaps()));
+        reads.forEach(read -> gaps.addAll(read.read().gaps()));
         gaps.addAll(bidding.gaps());
         if (rosterNeeds instanceof SourceResult.Unavailable<RosterNeeds> down) {
             gaps.add("the roster needs could not be worked out: " + down.reason());
@@ -208,7 +193,7 @@ public class WaiverEvidence {
         for (DirectoryPlayer player : candidates.values()) {
             evidence.add(candidateItem(player, reasons.get(player.playerId()),
                     trendingOnly.contains(player.playerId()), now));
-            reads.forEach(read -> evidence.addAll(read.evidence(player)));
+            reads.forEach(read -> evidence.addAll(read.read().evidence(player)));
             evidence.add(bidding.candidates().get(player.playerId()));
         }
 
@@ -217,13 +202,57 @@ public class WaiverEvidence {
                 Optional.empty(), wholeBoardLength(candidates.size()), bidding.policy().budget(),
                 List.of(), List.of());
         Map<String, Object> comparisons = new LinkedHashMap<>();
-        comparisons.put("lanes", picksByLane);
+        comparisons.put("lanes", pool.picksByLane());
         comparisons.put("latestWeek", latestWeek);
         comparisons.put("rosterNeeds", rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok
                 ? ok.value() : null);
         comparisons.put("bidPolicy", bidding.policy().toString());
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
                 OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding, trendingOnly));
+    }
+
+    /** One lane and what it read for this board. */
+    private record LaneRead(EvidenceLane lane, EvidenceLane.Read read) {
+    }
+
+    /**
+     * The board's pool: the free agents any lane picks, best reasons in
+     * lane order.
+     *
+     * @param candidates the picked free agents, by player id, in the order first picked
+     * @param reasons each picked player's reasons, one per lane that picked him
+     * @param picksByLane each lane's picks and reasons, by {@link EvidenceLane#name}
+     * @param trendingOnly the picked players only popularity lanes name
+     *        while the latest week is incomplete
+     */
+    private record Pool(Map<String, DirectoryPlayer> candidates,
+            Map<String, List<String>> reasons, Map<String, Map<String, String>> picksByLane,
+            Set<String> trendingOnly) {
+    }
+
+    private static Pool pool(List<DirectoryPlayer> freeAgents, List<DirectoryPlayer> eligible,
+            List<LaneRead> reads, LatestWeekData.Report latestWeek) {
+        Map<String, List<String>> reasons = new LinkedHashMap<>();
+        Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
+        Set<String> backedByFootball = new LinkedHashSet<>();
+        for (LaneRead read : reads) {
+            Map<String, String> picks = read.read().shortlist(eligible);
+            picksByLane.put(read.lane().name(), picks);
+            picks.forEach((playerId, reason) ->
+                    reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
+            if (!read.lane().popularity()) {
+                backedByFootball.addAll(picks.keySet());
+            }
+        }
+        Set<String> trendingOnly = latestWeek.complete() ? Set.of()
+                : reasons.keySet().stream()
+                        .filter(playerId -> !backedByFootball.contains(playerId))
+                        .collect(Collectors.toSet());
+        Map<String, DirectoryPlayer> byId = freeAgents.stream()
+                .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player));
+        Map<String, DirectoryPlayer> candidates = new LinkedHashMap<>();
+        reasons.keySet().forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
+        return new Pool(candidates, reasons, picksByLane, trendingOnly);
     }
 
     private static Candidate screened(DirectoryPlayer player, List<String> reasons,

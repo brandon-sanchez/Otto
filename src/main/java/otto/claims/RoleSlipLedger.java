@@ -1,4 +1,4 @@
-package otto.alerts;
+package otto.claims;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -60,10 +60,10 @@ public class RoleSlipLedger {
      * @param lastAdvice the signature of the last advice sent about each player
      * @param held the advice waiting for the next waiver board, oldest first
      */
-    record Document(Instant usageScannedAt, Map<String, UsageDrop> usageDrops,
+    public record Document(Instant usageScannedAt, Map<String, UsageDrop> usageDrops,
             List<String> settled, Map<String, String> lastAdvice, List<Held> held) {
 
-        Document {
+        public Document {
             usageDrops = usageDrops == null ? Map.of() : Map.copyOf(usageDrops);
             settled = settled == null ? List.of() : List.copyOf(settled);
             lastAdvice = lastAdvice == null ? Map.of() : Map.copyOf(lastAdvice);
@@ -74,21 +74,34 @@ public class RoleSlipLedger {
                 List.of());
     }
 
-    Document read() {
+    /** Returns the stored document, empty before the first write. */
+    public Document read() {
         return store.read(DOCUMENT, Document.class).orElse(Document.EMPTY);
     }
 
-    void scanned(Instant at, Map<String, UsageDrop> drops) {
+    /**
+     * Records the latest usage scan, keeping everything else.
+     *
+     * <p>Side effects: one document write.
+     */
+    public void scanned(Instant at, Map<String, UsageDrop> drops) {
         Document held = read();
         store.write(DOCUMENT, new Document(at, drops, held.settled(), held.lastAdvice(),
                 held.held()));
     }
 
-    boolean settled(String key) {
+    /** True when the slip with this key was decided and not sent alone. */
+    public boolean settled(String key) {
         return read().settled().contains(key);
     }
 
-    void settle(String key) {
+    /**
+     * Marks a slip as decided, so its evidence is never evaluated again;
+     * only the newest {@value #MAX_SETTLED} keys are kept.
+     *
+     * <p>Side effects: one document write.
+     */
+    public void settle(String key) {
         Document held = read();
         Set<String> settled = new LinkedHashSet<>(held.settled());
         settled.add(key);
@@ -98,11 +111,17 @@ public class RoleSlipLedger {
                 held.lastAdvice(), held.held()));
     }
 
-    Optional<String> lastAdvice(String playerId) {
+    /** Returns the signature of the last advice sent about this player. */
+    public Optional<String> lastAdvice(String playerId) {
         return Optional.ofNullable(read().lastAdvice().get(playerId));
     }
 
-    void advised(String playerId, String signature) {
+    /**
+     * Records the signature of advice sent about this player.
+     *
+     * <p>Side effects: one document write.
+     */
+    public void advised(String playerId, String signature) {
         Document held = read();
         Map<String, String> last = new LinkedHashMap<>(held.lastAdvice());
         last.put(playerId, signature);
@@ -110,7 +129,13 @@ public class RoleSlipLedger {
                 held.settled(), last, held.held()));
     }
 
-    void hold(Held advice) {
+    /**
+     * Holds advice for the next waiver board, replacing any advice held
+     * about the same player.
+     *
+     * <p>Side effects: one document write.
+     */
+    public void hold(Held advice) {
         Document document = read();
         List<Held> held = new ArrayList<>(document.held());
         held.removeIf(earlier -> earlier.playerId().equals(advice.playerId()));

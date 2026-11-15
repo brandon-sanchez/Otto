@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.alerts.MuteStore;
-import otto.alerts.RoleSlipLedger;
+import otto.claims.RoleSlipLedger;
 import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;

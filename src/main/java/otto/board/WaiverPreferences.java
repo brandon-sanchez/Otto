@@ -1,7 +1,6 @@
 package otto.board;
 
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +11,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
 
 import otto.ask.ToolAnswer;
+import otto.claims.ClaimRound;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.storage.JsonStore;
@@ -87,14 +87,15 @@ public class WaiverPreferences {
     }
 
     /**
-     * Returns the preference that steers the board for the round closing
-     * at the deadline given, or empty. A preference set for any other
-     * round never applies, so one that has ended cannot come back.
+     * Returns the preference that steers this claim round's board, or
+     * empty. A preference set for any other round never applies, so one
+     * that has ended cannot come back.
      */
-    public Optional<WaiverPreference> forRound(String leagueId, ZonedDateTime deadline) {
+    public Optional<WaiverPreference> forRound(ClaimRound round) {
         return all().stream()
-                .filter(preference -> preference.leagueId().equals(leagueId))
-                .filter(preference -> preference.claimDeadline().equals(deadline.toInstant()))
+                .filter(preference -> preference.leagueId().equals(round.leagueId()))
+                .filter(preference -> preference.claimDeadline()
+                        .equals(round.deadline().toInstant()))
                 .findFirst();
     }
 
@@ -113,13 +114,13 @@ public class WaiverPreferences {
             return ToolAnswer.unavailable("%s is not a position the waiver board ranks; "
                     .formatted(unknown.get()) + "it ranks QB, RB, WR and TE");
         }
-        Optional<ZonedDateTime> deadline = league.rules().nextClaimDeadline(now);
-        if (deadline.isEmpty()) {
+        Optional<ClaimRound> round = ClaimRound.next(league, now);
+        if (round.isEmpty()) {
             return ToolAnswer.unavailable("the league's claim day is unknown, so there is "
                     + "no waiver round to apply a preference to");
         }
         WaiverPreference preference = new WaiverPreference(league.leagueId(),
-                deadline.get().toInstant(),
+                round.get().deadline().toInstant(),
                 POSITIONS.stream().filter(named::contains).toList(),
                 only ? WaiverPreference.Mode.ONLY : WaiverPreference.Mode.FOCUS, now);
         List<WaiverPreference> preferences = openForOtherLeagues(league.leagueId(), now);
