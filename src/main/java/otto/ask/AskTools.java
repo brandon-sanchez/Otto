@@ -9,6 +9,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
+import otto.advice.RankConvention;
 import otto.board.WaiverPreferences;
 import otto.check.WeekFacts;
 import otto.settings.SettingsService;
@@ -26,9 +27,6 @@ import otto.watchlist.WatchlistService;
  * The tools the Lane A agent loop routes questions to. Each one runs
  * deterministic Java and hands back computed facts; the model chooses
  * which to call and writes the words, never the numbers.
- *
- * Keep them coarse: one tool per question a user would ask, not one
- * per field.
  */
 @Component
 public class AskTools {
@@ -42,12 +40,14 @@ public class AskTools {
     private final WatchlistService watchlist;
     private final SettingsService settings;
     private final SettingsStore settingsStore;
+    private final LeagueRankLookup leagueRanks;
     private final WaiverPreferences waiverPreferences;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
+            LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, Clock clock) {
         this.loader = loader;
         this.planner = planner;
@@ -58,6 +58,7 @@ public class AskTools {
         this.watchlist = watchlist;
         this.settings = settings;
         this.settingsStore = settingsStore;
+        this.leagueRanks = leagueRanks;
         this.waiverPreferences = waiverPreferences;
         this.clock = clock;
     }
@@ -247,6 +248,39 @@ public class AskTools {
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player) {
         return players.news(player, clock.instant());
+    }
+
+    @Tool(name = "get_league_rank", description = """
+            Where one player ranks among his position, one defense
+            against a position, or one team's remaining schedule for a
+            position, on one stat this season, with the top and bottom
+            of the table. """ + RankConvention.DIRECTION + " "
+            + RankConvention.TONE + """
+             Quote ranks as written, such as 3rd or 5th from the bottom.
+            Call this for "where does he
+            rank in target share", "best pass rush in the league",
+            "toughest run defense" or "easiest schedule the rest of the
+            way".""")
+    public ToolAnswer<LeagueRankLookup.Answer> getLeagueRank(
+            @ToolParam(description = """
+                    The stat: targets_per_game, target_share,
+                    carries_per_game, carry_share, snap_share,
+                    yards_before_contact_per_carry or pressured_rate for a
+                    player; points_allowed, rushing_yards_allowed,
+                    yards_before_contact_allowed, pressure_rate or
+                    blitz_rate for a defense; remaining_schedule for a
+                    team's rest of season.""")
+            String stat,
+            @ToolParam(description = """
+                    QB, RB, WR or TE: the players' position, or the
+                    position a defense is ranked against.""")
+            String position,
+            @ToolParam(required = false, description = """
+                    The player's full name, or the team for a defense
+                    or schedule stat, such as Lions or DET. Leave it out for the
+                    table alone.""")
+            String who) {
+        return leagueRanks.lookup(stat, position, who);
     }
 
     @Tool(name = "get_standings", description = """
