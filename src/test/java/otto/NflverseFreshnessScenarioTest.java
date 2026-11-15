@@ -50,6 +50,7 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
     private static final Instant FTN_RELEASE = Instant.parse("2026-10-03T11:01:21Z");
     private static final Instant PFR_DEFENSE_RELEASE = Instant.parse("2026-10-01T12:03:04Z");
     private static final Instant PFR_PASSING_RELEASE = Instant.parse("2026-10-01T12:02:53Z");
+    private static final Instant NGS_PASSING_RELEASE = Instant.parse("2026-10-01T15:01:37Z");
     private static final Instant FTN_RE_PULL_RELEASE = Instant.parse("2026-10-05T17:02:14Z");
     private static final Instant FTN_FIRST_PULL = Instant.parse("2026-09-28T17:01:50.896745Z");
     private static final Instant FTN_WEEK_3_PULL = Instant.parse("2026-09-30T17:01:22.925940Z");
@@ -337,6 +338,11 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         new WeekStatus.Complete(PFR_PASSING_RELEASE, List.of())),
                 Map.entry(FeedId.RUSHING_ADVANCED_STATS, new WeekStatus.Complete(
                         Instant.parse("2026-09-17T08:02:11Z"), List.of())),
+                Map.entry(FeedId.NGS_PASSING, new WeekStatus.Complete(NGS_PASSING_RELEASE, List.of())),
+                Map.entry(FeedId.NGS_RECEIVING, new WeekStatus.Incomplete(
+                        List.of(new Unit.Week("2026", 3)), List.of())),
+                Map.entry(FeedId.NGS_RUSHING, new WeekStatus.Incomplete(
+                        List.of(new Unit.Week("2026", 3)), List.of())),
                 Map.entry(FeedId.PLAY_BY_PLAY, new WeekStatus.Incomplete(List.of(
                         new Unit.Game(3, "2026_03_ATL_GB"), new Unit.Game(3, "2026_03_LAC_BUF"),
                         new Unit.Game(3, "2026_03_ARI_SF"), new Unit.Game(3, "2026_03_PHI_CHI")),

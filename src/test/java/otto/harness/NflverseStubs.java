@@ -1,5 +1,11 @@
 package otto.harness;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPOutputStream;
+
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -30,6 +36,8 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
     public static final String ADVSTATS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pfr_advstats";
+    public static final String NGS_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/nextgen_stats";
     public static final String PBP_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pbp";
     public static final String PLAYERS_RELEASE_PATH =
@@ -59,6 +67,9 @@ public final class NflverseStubs {
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2026.csv";
     public static final String PFR_PASSING_2025_PATH =
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2025.csv";
+    public static final String NGS_PASSING_PATH = DOWNLOAD + "nextgen_stats/ngs_passing.csv.gz";
+    public static final String NGS_RECEIVING_PATH = DOWNLOAD + "nextgen_stats/ngs_receiving.csv.gz";
+    public static final String NGS_RUSHING_PATH = DOWNLOAD + "nextgen_stats/ngs_rushing.csv.gz";
     public static final String PBP_2026_PATH = DOWNLOAD + "pbp/play_by_play_2026.csv";
     public static final String PBP_2025_PATH = DOWNLOAD + "pbp/play_by_play_2025.csv";
     public static final String PLAYERS_PATH = DOWNLOAD + "players/players.csv";
@@ -78,6 +89,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
@@ -102,6 +114,7 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
@@ -351,6 +364,13 @@ public final class NflverseStubs {
         stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026-repulled.csv");
     }
 
+    private static void nextGenStats(WireMockServer nflverse) {
+        stubJson(nflverse, NGS_RELEASE_PATH, "nflverse/release-nextgen-stats.json");
+        stubGzippedCsv(nflverse, NGS_PASSING_PATH, "nflverse/ngs-passing.csv");
+        stubGzippedCsv(nflverse, NGS_RECEIVING_PATH, "nflverse/ngs-receiving.csv");
+        stubGzippedCsv(nflverse, NGS_RUSHING_PATH, "nflverse/ngs-rushing.csv");
+    }
+
     private static void rushingAdvancedStats(WireMockServer nflverse) {
         stubJson(nflverse, ADVSTATS_RELEASE_PATH, "nflverse/release-pfr-advstats.json");
         stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH, "nflverse/advstats-week-rush-2026-weeks.csv");
@@ -458,6 +478,23 @@ public final class NflverseStubs {
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
                 .withBody(Fixtures.read(fixture))));
+    }
+
+    /**
+     * Serves a fixture compressed, as GitHub serves a {@code .csv.gz}
+     * asset: gzip bytes in the body and no Content-Encoding header.
+     */
+    public static void stubGzippedCsv(WireMockServer server, String path, String fixture) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bytes)) {
+            gzip.write(Fixtures.read(fixture).getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        server.stubFor(get(urlEqualTo(path)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/octet-stream")
+                .withBody(bytes.toByteArray())));
     }
 
     public static void stubCsv(WireMockServer server, String path, String fixture) {

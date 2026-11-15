@@ -38,6 +38,9 @@ class FeedRegistryTest {
                 Map.entry(FeedId.PFR_DEFENSE, "nflverse-pfr-defense"),
                 Map.entry(FeedId.PFR_PASSING, "nflverse-pfr-passing"),
                 Map.entry(FeedId.RUSHING_ADVANCED_STATS, "nflverse-advstats-rush"),
+                Map.entry(FeedId.NGS_PASSING, "nflverse-ngs-passing"),
+                Map.entry(FeedId.NGS_RECEIVING, "nflverse-ngs-receiving"),
+                Map.entry(FeedId.NGS_RUSHING, "nflverse-ngs-rushing"),
                 Map.entry(FeedId.PLAY_BY_PLAY, "nflverse-play-by-play"),
                 Map.entry(FeedId.EXPECTED_POINTS, "ffopportunity-expected-points"),
                 Map.entry(FeedId.PLAYERS, "nflverse-players")));
