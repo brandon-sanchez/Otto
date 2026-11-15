@@ -1,12 +1,14 @@
 package otto.nflverse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
@@ -95,12 +97,13 @@ public class NflverseClient {
     /**
      * Streams one release asset through the given reader. The body is
      * never held whole: the reader sees rows as they arrive and keeps
-     * only what it needs.
+     * only what it needs. An asset named {@code .gz} is a gzipped file,
+     * served with no Content-Encoding, so it is inflated here.
      */
     <T> SourceResult<T> downloadAsset(String repo, String releaseTag, String asset,
             Function<Stream<Csv.Row>, T> rows) {
         return download(downloads, "/%s/releases/download/%s/%s".formatted(repo, releaseTag, asset),
-                releaseTag + "/" + asset, rows);
+                releaseTag + "/" + asset, asset.endsWith(".gz"), rows);
     }
 
     /**
@@ -122,7 +125,7 @@ public class NflverseClient {
                 if (response.getStatusCode() == HttpStatus.NOT_MODIFIED) {
                     return Downloaded.notModified(etag);
                 }
-                return new Downloaded<>(readRows(response, rows),
+                return new Downloaded<>(readRows(response, false, rows),
                         response.getHeaders().getETag(), false);
             }));
         } catch (Exception e) {
@@ -139,22 +142,23 @@ public class NflverseClient {
     }
 
     private <T> SourceResult<T> download(RestClient http, String path, String source,
-            Function<Stream<Csv.Row>, T> rows) {
+            boolean gzipped, Function<Stream<Csv.Row>, T> rows) {
         try {
             return new SourceResult.Ok<>(http.get().uri(path)
-                    .exchange((request, response) -> readRows(response, rows)));
+                    .exchange((request, response) -> readRows(response, gzipped, rows)));
         } catch (Exception e) {
             return unavailable(source, e);
         }
     }
 
     private static <T> T readRows(RestClient.RequestHeadersSpec.ConvertibleClientHttpResponse response,
-            Function<Stream<Csv.Row>, T> rows) throws IOException {
+            boolean gzipped, Function<Stream<Csv.Row>, T> rows) throws IOException {
         HttpStatusCode status = response.getStatusCode();
         if (!status.is2xxSuccessful()) {
             throw new IllegalStateException("HTTP " + status.value());
         }
-        return rows.apply(Csv.stream(response.getBody()));
+        InputStream body = response.getBody();
+        return rows.apply(Csv.stream(gzipped ? new GZIPInputStream(body) : body));
     }
 
     private static <T> SourceResult<T> unavailable(String source, Exception cause) {

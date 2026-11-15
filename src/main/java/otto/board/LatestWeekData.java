@@ -140,15 +140,20 @@ public class LatestWeekData {
     private static String lacks(String feed, int week, WeekStatus.Incomplete incomplete) {
         List<String> games = new ArrayList<>();
         List<String> teams = new ArrayList<>();
+        boolean wholeWeek = false;
         for (Coverage.Unit unit : incomplete.missing()) {
             switch (unit) {
                 case Coverage.Unit.Game game -> games.add(matchup(game.gameId()));
                 case Coverage.Unit.TeamWeek teamWeek -> teams.add(teamWeek.team());
                 case Coverage.Unit.Team team -> teams.add(team.team());
+                case Coverage.Unit.Week _ -> wholeWeek = true;
                 case Coverage.Unit.File _ -> { }
             }
         }
         List<String> parts = new ArrayList<>();
+        if (wholeWeek) {
+            parts.add("week %d".formatted(week));
+        }
         if (!games.isEmpty()) {
             parts.add("week %d's %s game%s".formatted(week, String.join(", ", games),
                     games.size() == 1 ? "" : "s"));
