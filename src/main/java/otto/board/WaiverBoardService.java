@@ -27,6 +27,7 @@ import otto.ask.LeagueWeek;
 import otto.claims.BoardSchedule;
 import otto.events.Event;
 import otto.events.EventType;
+import otto.model.ModelChain;
 import otto.records.DecisionRecord;
 import otto.records.Evidence;
 import otto.records.EvidenceStatus;
@@ -141,9 +142,8 @@ public class WaiverBoardService {
 
     /**
      * Builds, records and sends this claim round's board when it is due
-     * and not yet sent. Never throws: a failure is logged, and the next
-     * Check tries again, so the board can never stop the rest of the
-     * Check.
+     * and not yet sent. A failure is logged, and the next Check tries
+     * again, so the board can never stop the rest of the Check.
      *
      * <p>Side effects: the screening's reads, up to two model calls, one
      * Decision Record write, the Telegram messages and their outbox and
@@ -152,10 +152,14 @@ public class WaiverBoardService {
      *
      * @return the Event recorded for a board sent by this call, empty
      *         otherwise
+     * @throws ModelChain.OutOfCheckTime when the Check has no time left
+     *         for the board's model run; the next Check makes it
      */
     public Optional<Event> considerBoard(LeagueWeek league, Instant now) {
         try {
             return run(league, now);
+        } catch (ModelChain.OutOfCheckTime e) {
+            throw e;
         } catch (RuntimeException e) {
             log.error("The waiver board failed; the next Check tries again", e);
             return Optional.empty();

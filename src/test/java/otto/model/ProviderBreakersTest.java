@@ -25,10 +25,11 @@ class ProviderBreakersTest {
             new ModelProperties.Budget(Duration.ofSeconds(10), Duration.ofSeconds(1));
     private final ProviderBreakers breakers = new ProviderBreakers(clock, new ModelProperties(
             List.of("down"), new ModelProperties.Breaker(3, COOLDOWN),
-            new ModelProperties.Budgets(budget, budget, budget), null, null));
+            new ModelProperties.Budgets(budget, budget, budget, Duration.ofMinutes(4)), null,
+            null));
     private final ModelChain chain = new ModelChain(
             List.of(new ChatProvider("down", "m", null)), breakers,
-            new ModelProperties.Budgets(budget, budget, budget));
+            new ModelProperties.Budgets(budget, budget, budget, Duration.ofMinutes(4)));
 
     @Test
     void onlyOneTrialCallReachesAProviderWhenItsCooldownEnds() throws Exception {

@@ -63,7 +63,8 @@ class OttoStackTest {
 
     /**
      * The app sizes its model budgets to these timeouts: the Ask
-     * budget in {@code application.yml} to the webhook's, which
+     * budget in {@code application.yml} to the webhook's and the Check
+     * budget to the scheduled function's, which
      * {@code AwsEntryPointScenarioTest} pins on the app side.
      */
     @Test

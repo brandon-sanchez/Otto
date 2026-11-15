@@ -34,6 +34,12 @@ class AwsEntryPointScenarioTest {
     /** What an answered Ask still needs after the model: its Telegram send and record. */
     private static final Duration SEND_ALLOWANCE = Duration.ofSeconds(15);
 
+    /** The scheduled function's timeout in {@code OttoStack}, which OttoStackTest pins. */
+    private static final Duration SCHEDULED_TIMEOUT = Duration.ofSeconds(300);
+
+    /** What a Check still needs after its last model run: its sends and its stores. */
+    private static final Duration STORE_ALLOWANCE = Duration.ofSeconds(45);
+
     private final WebhookHandler webhook = new WebhookHandler();
 
     @Test
@@ -52,6 +58,18 @@ class AwsEntryPointScenarioTest {
                 applicationYaml().getProperty("otto.models.budgets.ask.deadline"));
 
         assertThat(askDeadline.plus(SEND_ALLOWANCE)).isLessThanOrEqualTo(WEBHOOK_TIMEOUT);
+    }
+
+    @Test
+    void aChecksModelRunsEndInsideTheScheduledFunctionsTimeoutWithTimeLeftToStore() {
+        Properties yaml = applicationYaml();
+        Duration check = DurationStyle.detectAndParse(
+                yaml.getProperty("otto.models.budgets.check"));
+        Duration advice = DurationStyle.detectAndParse(
+                yaml.getProperty("otto.models.budgets.advice.deadline"));
+
+        assertThat(check.plus(STORE_ALLOWANCE)).isLessThanOrEqualTo(SCHEDULED_TIMEOUT);
+        assertThat(check).as("a Check fits at least one advice run").isGreaterThan(advice);
     }
 
     @Test
