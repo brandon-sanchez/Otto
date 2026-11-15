@@ -19,9 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import otto.OttoApplication;
 import otto.OttoProperties;
-import otto.advice.Sha256;
 import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
 import otto.directory.DirectoryPlayer;
@@ -42,6 +40,7 @@ import otto.records.DecisionRecords;
 import otto.records.ModelExchange;
 import otto.records.Outcome;
 import otto.records.RosterContext;
+import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
@@ -74,7 +73,6 @@ import otto.waivers.WaiverAlertService;
 public class BoardComparison {
 
     private static final String RUN_ID_PREFIX = "waiver-baselines-";
-    private static final int RUN_ID_HASH_LENGTH = 32;
     private static final String PENDING = "waiver-comparisons";
     private static final String PROMPT_VERSION = "none";
 
@@ -163,8 +161,8 @@ public class BoardComparison {
             return;
         }
         String leagueId = league.league().leagueId();
-        String runId = RUN_ID_PREFIX + Sha256.hex(leagueId + "\n" + deadline.get().toInstant())
-                .substring(0, RUN_ID_HASH_LENGTH);
+        String runId = RunIds.stable(RUN_ID_PREFIX, leagueId,
+                deadline.get().toInstant().toString());
         if (records.read(userId, leagueId, runId).isEmpty()) {
             records.save(baselinesRecord(runId, league, week.get(), deadline.get(),
                     players.get(), user.get(), now));
@@ -214,8 +212,6 @@ public class BoardComparison {
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
                 lineupPool, built.picks(), built.unavailable());
-        String code = Objects.requireNonNullElse(
-                OttoApplication.class.getPackage().getImplementationVersion(), "dev");
         return new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
                 RunKind.WAIVER_BASELINES, now, userId, league.league().leagueId(),
                 OttoJson.MAPPER.valueToTree(league.league()),
@@ -224,7 +220,7 @@ public class BoardComparison {
                                 Math.max(0, budget - user.waiverBudgetUsed()))),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(built),
                 OttoJson.MAPPER.valueToTree(round), List.of(),
-                new Versions(league.snapshot().at().toString(), code, PROMPT_VERSION,
+                Versions.ofThisBuild(league.snapshot().at().toString(), PROMPT_VERSION,
                         PROMPT_VERSION),
                 List.of(), new Outcome.Silent("baselines are kept only to judge the waiver "
                         + "board against; they are never sent"));

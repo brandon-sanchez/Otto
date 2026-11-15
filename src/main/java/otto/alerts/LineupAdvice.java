@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import otto.OttoApplication;
 import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceForm;
@@ -26,7 +25,6 @@ import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.LineupMove;
-import otto.advice.Sha256;
 import otto.ask.LeagueWeek;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
@@ -42,6 +40,7 @@ import otto.records.Evidence;
 import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
+import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.research.OfficialUpdate;
@@ -69,7 +68,6 @@ import otto.waivers.WaiverAlertService;
 public class LineupAdvice {
 
     private static final String RUN_ID_PREFIX = "alert-";
-    private static final int RUN_ID_HASH_LENGTH = 32;
 
     private static final Logger log = LoggerFactory.getLogger(LineupAdvice.class);
 
@@ -399,8 +397,7 @@ public class LineupAdvice {
     }
 
     private static String runId(String alertKey, EvidenceBundle bundle) {
-        return RUN_ID_PREFIX
-                + Sha256.hex(alertKey + "\n" + bundle.identity()).substring(0, RUN_ID_HASH_LENGTH);
+        return RunIds.stable(RUN_ID_PREFIX, alertKey, bundle.identity());
     }
 
     private static List<Candidate> candidates(LineupEvidence.Draft draft) {
@@ -433,8 +430,6 @@ public class LineupAdvice {
     }
 
     private Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form) {
-        String code = Objects.requireNonNullElse(
-                OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, form.promptVersion(), model);
+        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), model);
     }
 }

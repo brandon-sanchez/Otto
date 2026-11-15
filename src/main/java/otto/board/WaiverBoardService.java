@@ -6,7 +6,6 @@ import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -17,13 +16,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import otto.OttoApplication;
 import otto.OttoProperties;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
-import otto.advice.Sha256;
 import otto.alerts.AlertDeliveryOutbox;
 import otto.alerts.MuteStore;
 import otto.alerts.RoleSlipLedger;
@@ -36,6 +33,7 @@ import otto.records.Evidence;
 import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
+import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
@@ -96,7 +94,6 @@ public class WaiverBoardService {
             + "unchecked picks in its place. Place any claims yourself in Sleeper.";
 
     private static final String RUN_ID_PREFIX = "waiver-board-";
-    private static final int RUN_ID_HASH_LENGTH = 32;
 
     private static final Logger log = LoggerFactory.getLogger(WaiverBoardService.class);
 
@@ -256,7 +253,7 @@ public class WaiverBoardService {
                 OttoJson.MAPPER.valueToTree(league.league()),
                 new RosterContext(NullNode.getInstance(), Optional.empty()),
                 preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
-                new Versions("none", codeVersion(), "none", model), List.of(),
+                Versions.ofThisBuild("none", "none", model), List.of(),
                 new Outcome.Withheld("The free agents could not be screened: " + reason, notice));
         records.save(record);
         return record;
@@ -323,8 +320,7 @@ public class WaiverBoardService {
     }
 
     static String runId(String leagueId, ZonedDateTime deadline) {
-        return RUN_ID_PREFIX + Sha256.hex(leagueId + "\n" + deadline.toInstant())
-                .substring(0, RUN_ID_HASH_LENGTH);
+        return RunIds.stable(RUN_ID_PREFIX, leagueId, deadline.toInstant().toString());
     }
 
     private static List<Evidence> evidenceOf(EvidenceBundle bundle) {
@@ -336,11 +332,6 @@ public class WaiverBoardService {
     }
 
     private Versions versions(EvidenceBundle bundle, BoardForm form) {
-        return new Versions(bundle.identity(), codeVersion(), form.promptVersion(), model);
-    }
-
-    private static String codeVersion() {
-        return Objects.requireNonNullElse(
-                OttoApplication.class.getPackage().getImplementationVersion(), "dev");
+        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), model);
     }
 }
