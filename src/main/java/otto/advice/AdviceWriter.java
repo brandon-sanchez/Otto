@@ -12,12 +12,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 
+import otto.model.ChatProvider;
+import otto.model.ModelChain;
 import otto.records.ModelExchange;
 import otto.storage.OttoJson;
 
@@ -29,8 +30,9 @@ import otto.storage.OttoJson;
  * which is handed the specific failures; if that fails too, the advice
  * is rejected, never patched up by code.
  *
- * <p>Each call to a {@code write} method makes one or two model calls
- * with no tools.
+ * <p>Each call to {@code write} makes one or two model calls with no
+ * tools to each provider the {@link ModelChain} tries, and tries the
+ * next provider only when the one before it failed.
  */
 @Component
 public class AdviceWriter {
@@ -100,12 +102,12 @@ public class AdviceWriter {
 
     private static final Logger log = LoggerFactory.getLogger(AdviceWriter.class);
 
-    private final ChatClient chat;
+    private final ModelChain chain;
     private final AdviceForm<AdviceAnswer> lineup;
     private final AdviceForm<AdviceAnswer> playerDecision;
 
-    public AdviceWriter(ChatClient.Builder builder, AdviceCheck check) {
-        this.chat = builder.build();
+    public AdviceWriter(ModelChain chain, AdviceCheck check) {
+        this.chain = chain;
         this.lineup = answerForm(GROUNDING + VOICE + LINEUP_SHAPE, check);
         this.playerDecision = answerForm(GROUNDING + PLAYER_DECISION + VOICE + DECISION_SHAPE,
                 check);
@@ -128,43 +130,91 @@ public class AdviceWriter {
         return playerDecision;
     }
 
-    /** Asks for advice of one form, checks it, and corrects it once when it fails. */
+    /**
+     * Asks for advice of one form, checks it, and corrects it once when
+     * it fails. A provider that cannot be reached, or whose reply cannot
+     * be read, is skipped, and the next provider in the chain gets the
+     * same bundle and instructions. The correction stays with the
+     * provider that wrote the failed answer. The last provider the chain
+     * can ask gets a correction for an unreadable reply too, since no
+     * one is left to skip to.
+     */
     public <T> AdviceResult<T> write(EvidenceBundle bundle, AdviceForm<T> form) {
-        List<Message> conversation = new ArrayList<>();
-        conversation.add(new UserMessage(json(bundle)));
         List<ModelExchange> exchanges = new ArrayList<>();
+        ModelChain.ProviderCall<AdviceResult<T>> turns = new ModelChain.ProviderCall<>() {
+            @Override
+            public AdviceResult<T> call(ModelChain.Turn turn) throws ModelChain.UnusableReply {
+                return converse(turn, bundle, form, exchanges);
+            }
+
+            @Override
+            public void passedOver(ChatProvider provider, String reason) {
+                exchanges.add(new ModelExchange(1, request(form, opening(bundle)),
+                        NullNode.getInstance(), List.of(reason), provider.name(),
+                        provider.model()));
+            }
+        };
+        return switch (chain.call(ModelChain.CallSite.ADVICE, turns)) {
+            case ModelChain.Result.Answered<AdviceResult<T>> answered -> answered.value();
+            case ModelChain.Result.Exhausted<AdviceResult<T>> exhausted ->
+                    new AdviceResult.Unavailable<>(exhausted.reason(), exchanges);
+        };
+    }
+
+    /**
+     * One provider's turn: the first answer and, when it fails its
+     * checks, the one correction.
+     */
+    private <T> AdviceResult<T> converse(ModelChain.Turn turn, EvidenceBundle bundle,
+            AdviceForm<T> form, List<ModelExchange> exchanges) throws ModelChain.UnusableReply {
+        ChatProvider provider = turn.provider();
+        List<Message> conversation = opening(bundle);
         List<String> failures = List.of();
         for (int attempt = 1; attempt <= 2; attempt++) {
             JsonNode request = request(form, conversation);
             String reply;
             try {
-                reply = chat.prompt().system(form.instructions()).messages(conversation).call()
-                        .content();
+                reply = turn.timed(() -> provider.chat().prompt().system(form.instructions())
+                        .messages(conversation).call().content());
             } catch (RuntimeException e) {
-                log.warn("Advice model call failed on attempt {}", attempt, e);
-                String reason = "The model could not be reached: " + e.getClass().getSimpleName();
-                exchanges.add(new ModelExchange(attempt, request, NullNode.getInstance(),
-                        List.of(reason)));
-                return new AdviceResult.Unavailable<>(reason, exchanges);
+                exchanges.add(exchange(provider, attempt, request, NullNode.getInstance(),
+                        List.of(ModelChain.unreachable(e))));
+                throw e;
             }
             if (reply == null || reply.isBlank()) {
                 String reason = "The model answered with nothing.";
-                exchanges.add(new ModelExchange(attempt, request, TextNode.valueOf(""),
+                exchanges.add(exchange(provider, attempt, request, TextNode.valueOf(""),
                         List.of(reason)));
-                return new AdviceResult.Unavailable<>(reason, exchanges);
+                throw new ModelChain.UnusableReply(reason);
             }
             AdviceCheck.Verdict<T> verdict = form.check(bundle, reply);
-            exchanges.add(new ModelExchange(attempt, request, response(reply),
+            exchanges.add(exchange(provider, attempt, request, response(reply),
                     verdict.failures()));
             if (verdict.passed()) {
                 return new AdviceResult.Approved<>(verdict.answer().orElseThrow(), exchanges);
             }
             failures = verdict.failures();
-            log.info("Advice attempt {} failed its checks: {}", attempt, failures);
+            if (verdict.answer().isEmpty() && turn.laterProviderRemains()) {
+                throw new ModelChain.UnusableReply(String.join(" ", failures));
+            }
+            log.info("Advice attempt {} from {} failed its checks: {}", attempt,
+                    provider.name(), failures);
             conversation.add(new AssistantMessage(reply));
             conversation.add(new UserMessage(correction(failures)));
         }
         return new AdviceResult.Rejected<>(failures, exchanges);
+    }
+
+    private static List<Message> opening(EvidenceBundle bundle) {
+        List<Message> conversation = new ArrayList<>();
+        conversation.add(new UserMessage(json(bundle)));
+        return conversation;
+    }
+
+    private static ModelExchange exchange(ChatProvider provider, int attempt, JsonNode request,
+            JsonNode response, List<String> failures) {
+        return new ModelExchange(attempt, request, response, failures, provider.name(),
+                provider.model());
     }
 
     private static AdviceForm<AdviceAnswer> answerForm(String instructions, AdviceCheck check) {

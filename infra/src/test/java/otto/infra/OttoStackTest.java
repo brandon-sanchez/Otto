@@ -433,6 +433,27 @@ class OttoStackTest {
     }
 
     @Test
+    void theFallbackModelKeysAreCoveredByTheSecretsGrant() {
+        List<String> resources = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (String.valueOf(statement.get("Action")).contains("ssm:GetParameter")) {
+                    ((List<?>) statement.get("Resource"))
+                            .forEach(resource -> resources.add(String.valueOf(resource)));
+                }
+            }
+        }
+
+        assertThat(resources)
+                .as("a wildcard under the path, so otto.models.anthropic.api-key and "
+                        + "otto.models.gemini.api-key are readable without naming them")
+                .anySatisfy(resource -> assertThat(resource).contains(":parameter/otto/prod/*"));
+    }
+
+    @Test
     void theSecretsAreReadFromParameterStoreAndNotFromSecretsManager() {
         template.resourceCountIs("AWS::SecretsManager::Secret", 0);
         template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
