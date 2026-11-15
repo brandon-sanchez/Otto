@@ -19,11 +19,13 @@ public final class MatchupSources {
     private final NflverseStore store;
     private final PlayerDirectoryStore directory;
     private final DefensiveStarters starters;
+    private final LastSeasonContext lastSeason;
 
     MatchupSources(JsonStore snapshot) {
         this.store = new NflverseStore(snapshot);
         this.directory = new PlayerDirectoryStore(snapshot);
         this.starters = new DefensiveStarters(store, directory);
+        this.lastSeason = new LastSeasonContext(store);
     }
 
     /** Returns the stored nflverse documents, read through this copy. */
@@ -34,5 +36,10 @@ public final class MatchupSources {
     /** Returns each defense's starters and their designations. */
     public DefensiveStarters starters() {
         return starters;
+    }
+
+    /** Returns last season's coverage and dropback participation. */
+    public LastSeasonContext lastSeason() {
+        return lastSeason;
     }
 }
