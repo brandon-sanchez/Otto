@@ -50,6 +50,13 @@ public class TeamReports {
 
     private static final int REPORT_READS_PER_RUN = 8;
 
+    /**
+     * Runs in a row a team's feed may fail before each further failure
+     * is logged as an error, which the error alarm counts. One failed
+     * read is a blip the next run usually clears and is only a warning.
+     */
+    private static final int FAILED_RUNS_LOGGED_AS_ERROR = 3;
+
     private final TeamSites sites;
     private final ResearchCache cache;
     private final PlayerDirectoryStore directory;
@@ -115,8 +122,13 @@ public class TeamReports {
                             TeamRun.FeedState.NEW);
                     Duration interval = ReportWindows.interval(entry.getKey(), now, games);
                     if (held.polled() == null || ReportWindows.due(held.polled(), interval, now)) {
-                        feeds.put(entry.getKey(), new TeamRun(sites, cache, entry.getKey(),
-                                entry.getValue(), players.get(), now, tally).run(held));
+                        TeamRun.FeedState read = new TeamRun(sites, cache, entry.getKey(),
+                                entry.getValue(), players.get(), now, tally).run(held);
+                        feeds.put(entry.getKey(), read);
+                        if (read.failedRuns() >= FAILED_RUNS_LOGGED_AS_ERROR) {
+                            log.error("team reports: the {} feed failed {} runs in a row",
+                                    entry.getValue().host(), read.failedRuns());
+                        }
                     }
                 });
         store.write(STATE, new State(feeds));

@@ -98,30 +98,58 @@ final class TeamFeed {
     }
 
     /**
-     * Returns the feed's posts in feed order.
+     * The posts read from a feed.
      *
-     * @throws LayoutChanged when the body is not an RSS channel, or a
-     *         post lacks a title, a link or a readable publication time
+     * @param posts the readable posts, in feed order
+     * @param skipped why each unreadable post was left out, in feed order
      */
-    static List<Post> parse(String xml) {
+    record Parsed(List<Post> posts, List<String> skipped) {
+
+        Parsed {
+            posts = List.copyOf(posts);
+            skipped = List.copyOf(skipped);
+        }
+    }
+
+    /**
+     * Returns the feed's posts in feed order. A post that lacks a title,
+     * a link or a readable publication time is left out, so one bad post
+     * does not hide the rest of the feed.
+     *
+     * @throws LayoutChanged when the body is not an RSS channel, or it
+     *         has posts and none of them can be read
+     */
+    static Parsed parse(String xml) {
         Document feed = Jsoup.parse(xml, "", Parser.xmlParser());
         Element channel = feed.selectFirst("rss > channel");
         if (channel == null) {
             throw new LayoutChanged("feed has no RSS channel");
         }
         List<Post> posts = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
         for (Element item : channel.select("> item")) {
-            String title = text(item, "title");
-            String link = text(item, "link");
-            String published = text(item, "pubDate");
-            if (title.isEmpty() || link.isEmpty() || published.isEmpty()) {
-                throw new LayoutChanged("feed post without a title, link or pubDate");
+            try {
+                posts.add(post(item));
+            } catch (LayoutChanged unreadable) {
+                skipped.add(unreadable.getMessage());
             }
-            String guid = text(item, "guid");
-            posts.add(new Post(guid.isEmpty() ? link : guid, title, link, instant(published),
-                    keywords(text(item, "media|keywords"))));
         }
-        return posts;
+        if (posts.isEmpty() && !skipped.isEmpty()) {
+            throw new LayoutChanged("no feed post can be read: " + skipped.getFirst());
+        }
+        return new Parsed(posts, skipped);
+    }
+
+    private static Post post(Element item) {
+        String title = text(item, "title");
+        String link = text(item, "link");
+        String published = text(item, "pubDate");
+        if (title.isEmpty() || link.isEmpty() || published.isEmpty()) {
+            throw new LayoutChanged("feed post without a title, link or pubDate");
+        }
+        String guid = text(item, "guid");
+        return new Post(guid.isEmpty() ? link : guid, title, link, instant(published),
+                keywords(text(item, "media|keywords")));
     }
 
     private static String text(Element item, String tag) {

@@ -60,11 +60,14 @@ final class TeamRun {
      *        unchanged feed from a site that sends no validators
      * @param seen the version keys of posts already handled, oldest first
      * @param pending posts whose report could not be read yet
+     * @param failedRuns runs in a row whose read of the feed failed or
+     *        found it in a shape Otto cannot read; 0 after one that read it
      */
     record FeedState(String etag, String lastModified, String bodyHash, Instant polled,
-            List<String> seen, List<Pending> pending) {
+            List<String> seen, List<Pending> pending, int failedRuns) {
 
-        static final FeedState NEW = new FeedState(null, null, null, null, List.of(), List.of());
+        static final FeedState NEW = new FeedState(null, null, null, null, List.of(), List.of(),
+                0);
 
         FeedState {
             seen = List.copyOf(seen);
@@ -76,7 +79,7 @@ final class TeamRun {
          * read fetches the broken body again and reports it again.
          */
         FeedState reportedAgainNextRun(Instant now) {
-            return new FeedState(null, null, bodyHash, now, seen, pending);
+            return new FeedState(null, null, bodyHash, now, seen, pending, failedRuns + 1);
         }
     }
 
@@ -108,36 +111,40 @@ final class TeamRun {
         TeamSites.Response response = sites.get(team, FEED_PATH,
                 new TeamSites.Validators(held.etag(), held.lastModified()));
         FeedState polled = new FeedState(held.etag(), held.lastModified(), held.bodyHash(),
-                now, held.seen(), held.pending());
+                now, held.seen(), held.pending(), 0);
         return switch (response) {
             case TeamSites.Response.Failed failed -> {
                 problem("feed", failed.reason());
-                yield polled;
+                yield new FeedState(held.etag(), held.lastModified(), held.bodyHash(), now,
+                        held.seen(), held.pending(), held.failedRuns() + 1);
             }
             case TeamSites.Response.NotModified notModified -> {
                 tally.feedsRead++;
                 tally.feedsUnchanged++;
                 yield handle(polled, List.of());
             }
-            case TeamSites.Response.Body body -> read(polled, body);
+            case TeamSites.Response.Body body -> read(held, polled, body);
         };
     }
 
-    private FeedState read(FeedState polled, TeamSites.Response.Body body) {
+    private FeedState read(FeedState held, FeedState polled, TeamSites.Response.Body body) {
         tally.feedsRead++;
         String hash = Fingerprint.of(body.text()).contentHash();
         FeedState answered = new FeedState(body.validators().etag(),
-                body.validators().lastModified(), hash, now, polled.seen(), polled.pending());
+                body.validators().lastModified(), hash, now, polled.seen(), polled.pending(), 0);
         if (hash.equals(polled.bodyHash())) {
             tally.feedsUnchanged++;
             return handle(answered, List.of());
         }
+        TeamFeed.Parsed parsed;
         try {
-            return handle(answered, TeamFeed.parse(body.text()));
+            parsed = TeamFeed.parse(body.text());
         } catch (LayoutChanged changed) {
             problem("feed", changed.getMessage());
-            return polled.reportedAgainNextRun(now);
+            return held.reportedAgainNextRun(now);
         }
+        parsed.skipped().forEach(reason -> problem("feed post", reason));
+        return handle(answered, parsed.posts());
     }
 
     private FeedState handle(FeedState state, List<TeamFeed.Post> posts) {
@@ -168,7 +175,7 @@ final class TeamRun {
         return new FeedState(state.etag(), state.lastModified(), state.bodyHash(),
                 state.polled(), remembered.subList(
                         Math.max(0, remembered.size() - SEEN_PER_TEAM), remembered.size()),
-                stillWaiting);
+                stillWaiting, state.failedRuns());
     }
 
     /**
