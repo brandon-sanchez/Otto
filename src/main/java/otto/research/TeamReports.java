@@ -172,21 +172,19 @@ public class TeamReports {
             Map<String, TeamRun.FeedState> feeds) {
         Function<Map.Entry<String, OfficialTeams.Team>, TeamRun.FeedState> state =
                 entry -> feeds.getOrDefault(entry.getKey(), TeamRun.FeedState.NEW);
-        Comparator<Optional<Instant>> emptyLast = Comparator.comparing(
-                waited -> waited.orElse(Instant.MAX));
-        Comparator<Optional<Instant>> emptyFirst = Comparator.comparing(
-                waited -> waited.orElse(Instant.MIN));
         return Comparator.comparing(
                         (Map.Entry<String, OfficialTeams.Team> entry) -> oldestPending(
-                                state.apply(entry)), emptyLast)
-                .thenComparing(entry -> Optional.ofNullable(state.apply(entry).polled()),
-                        emptyFirst)
+                                state.apply(entry)))
+                .thenComparing(entry -> Optional.ofNullable(state.apply(entry).polled())
+                        .orElse(Instant.MIN))
                 .thenComparing(Map.Entry::getKey);
     }
 
-    private static Optional<Instant> oldestPending(TeamRun.FeedState state) {
+    /** The oldest unread post's time, or {@link Instant#MAX} when none waits. */
+    private static Instant oldestPending(TeamRun.FeedState state) {
         return state.pending().stream()
                 .map(pending -> pending.post().published())
-                .min(Comparator.naturalOrder());
+                .min(Comparator.naturalOrder())
+                .orElse(Instant.MAX);
     }
 }
