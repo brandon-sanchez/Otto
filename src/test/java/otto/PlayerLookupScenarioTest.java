@@ -32,7 +32,7 @@ class PlayerLookupScenarioTest extends WireSeamTest {
                 "7564", "Ja'Marr Chase", "WR", "CIN", PlayerHealth.ACTIVE, Optional.empty());
         directoryStore.write(new PlayerDirectory(
                 "players-v1", Instant.parse("2026-09-15T17:00:00Z"),
-                Map.of(chase.playerId(), chase)));
+                Map.of(chase.playerId(), chase), Map.of()));
 
         assertThat(lookup.find("Ja’Marr Chase"))
                 .isEqualTo(new PlayerLookup.Match.Found(chase));
@@ -49,7 +49,7 @@ class PlayerLookupScenarioTest extends WireSeamTest {
         directoryStore.write(new PlayerDirectory(
                 "players-v1", Instant.parse("2026-09-15T17:00:00Z"),
                 Map.of(quarterback.playerId(), quarterback,
-                        defender.playerId(), defender)));
+                        defender.playerId(), defender), Map.of()));
 
         assertThat(lookup.findFresh("Josh Allen"))
                 .isInstanceOf(PlayerLookup.Match.NotFound.class);
