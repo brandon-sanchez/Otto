@@ -108,14 +108,14 @@ public class OttoStack extends Stack {
 
     /**
      * The prefix each nflverse feed is stored under as an object of its
-     * own. The app spells it too, in {@code S3DocumentObjects}.
+     * own. The app spells it too, in {@code S3FeedObjects}.
      */
     private static final String FEEDS_PREFIX = "nflverse/";
 
     /**
      * The prefix the team-reports feed state is stored under as an
      * object of its own. The app spells it too, in
-     * {@code S3DocumentObjects}.
+     * {@code S3FeedObjects}.
      */
     private static final String TEAM_REPORTS_PREFIX = "team-reports/";
 

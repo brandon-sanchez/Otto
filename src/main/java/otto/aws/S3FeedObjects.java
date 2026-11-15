@@ -18,14 +18,9 @@ import otto.storage.ConcurrentDocumentChange;
 import otto.storage.DocumentBackend;
 
 /**
- * The documents held as S3 objects of their own: the nflverse feeds,
- * each under {@value #PREFIX}, and the team-reports feed state under
- * {@value #TEAM_REPORTS_PREFIX}. Play-by-play and FTN charting run to
- * megabytes a season, so keeping them out of the bundle every Check
- * reads means a feed is fetched only by the code that reads it. The
- * team-reports state is rewritten every few minutes; in the bundle,
- * each rewrite would cost every Check after it a full bundle read in
- * place of a 304.
+ * The documents {@link DocumentPlacement#FEED} places in S3 objects of
+ * their own: the nflverse feeds, each under {@value #PREFIX}, and the
+ * team-reports state under {@value #TEAM_REPORTS_PREFIX}.
  *
  * <p>Each feed's bytes are held in memory with the ETag they were read
  * at, and every read asks S3 again with {@code If-None-Match}. An
@@ -35,18 +30,13 @@ import otto.storage.DocumentBackend;
  * {@link #loadVersioned} reports, which lets the caller skip parsing
  * bytes it has parsed before.
  *
- * <p>A feed found only in the bundle is read from it once, written out
- * as its own object, and dropped from the bundle at the next flush.
- * This backend flushes the bundle itself, after its own writes, so a
- * feed written out is always dropped from the bundle in the same flush.
- *
  * <p>Writes wait for {@link #flush}, like the bundle's. Only the
  * scheduled jobs write these documents, one at a time, so a write over a
  * version this container read, which finds the object changed under
  * it, is refused as a {@link ConcurrentDocumentChange} rather than
  * merged.
  */
-public class S3DocumentObjects implements DocumentBackend {
+public class S3FeedObjects implements DocumentBackend {
 
     /** The key prefix every feed object is stored under. */
     public static final String PREFIX = "nflverse/";
@@ -54,13 +44,13 @@ public class S3DocumentObjects implements DocumentBackend {
     /** The key prefix the team-reports state is stored under. */
     public static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
-    private static final String FEED_NAME_PREFIX = "nflverse-";
+    private static final int NOT_MODIFIED = 304;
 
-    private static final String TEAM_REPORTS = "team-reports";
+    private static final int PRECONDITION_FAILED = 412;
 
     private final S3Client s3;
     private final String bucket;
-    private final S3BundleBackend legacy;
+    private final BundledFeedMigration migration;
 
     /** Each feed as last read or written, with the ETag S3 gave it. */
     private final Map<String, Versioned> held = new HashMap<>();
@@ -69,22 +59,14 @@ public class S3DocumentObjects implements DocumentBackend {
     private final Map<String, byte[]> pending = new LinkedHashMap<>();
 
     /**
-     * @param legacy the bundle a feed is read from, and then dropped
-     *        from, when it has no object of its own; this backend's
-     *        {@link #flush} flushes it
+     * @param bundle the bundle a feed is moved out of when it has no
+     *        object of its own; it drops each feed written here at its
+     *        next flush
      */
-    public S3DocumentObjects(S3Client s3, String bucket, S3BundleBackend legacy) {
+    public S3FeedObjects(S3Client s3, String bucket, S3BundleBackend bundle) {
         this.s3 = s3;
         this.bucket = bucket;
-        this.legacy = legacy;
-    }
-
-    /**
-     * True for the documents this backend stores: every nflverse feed and
-     * the team-reports state.
-     */
-    public static boolean holds(String name) {
-        return name.startsWith(FEED_NAME_PREFIX) || name.equals(TEAM_REPORTS);
+        this.migration = new BundledFeedMigration(s3, bucket, bundle);
     }
 
     @Override
@@ -112,9 +94,9 @@ public class S3DocumentObjects implements DocumentBackend {
             return Optional.of(read);
         } catch (NoSuchKeyException e) {
             held.remove(name);
-            return legacy.load(name).map(bytes -> moveOutOfTheBundle(name, bytes));
+            return migration.moveOut(name).map(moved -> moved(name, moved));
         } catch (AwsServiceException e) {
-            if (e.statusCode() == 304 && last != null) {
+            if (e.statusCode() == NOT_MODIFIED && last != null) {
                 return Optional.of(last);
             }
             throw e;
@@ -127,10 +109,7 @@ public class S3DocumentObjects implements DocumentBackend {
     }
 
     /**
-     * Writes this run's feeds, then flushes the bundle, so the bundle's
-     * write drops every feed just written out. The bundle is flushed
-     * even when a feed's write fails, so the bundle's other documents
-     * are kept.
+     * Writes this run's feeds.
      *
      * @throws ConcurrentDocumentChange when a feed changed in S3 after
      *         this container read it
@@ -141,36 +120,23 @@ public class S3DocumentObjects implements DocumentBackend {
             pending.forEach(this::put);
         } finally {
             pending.clear();
-            legacy.flush();
         }
-    }
-
-    S3BundleBackend bundle() {
-        return legacy;
     }
 
     /**
-     * Writes a feed found only in the bundle out as its own object. A
-     * concurrent run that moved it first wins, and its copy is the same
-     * bytes, so a refused create is not an error here.
+     * Holds a feed moved out of the bundle at the ETag of its new
+     * object, and hands it back unversioned, so the caller parses it.
      */
-    private Versioned moveOutOfTheBundle(String name, byte[] bytes) {
-        try {
-            String etag = s3.putObject(request(name).ifNoneMatch("*").build(),
-                    RequestBody.fromBytes(bytes)).eTag();
-            held.put(name, new Versioned(bytes, etag));
-        } catch (AwsServiceException e) {
-            if (e.statusCode() != 412) {
-                throw e;
-            }
+    private Versioned moved(String name, Versioned moved) {
+        if (moved.version() != null) {
+            held.put(name, moved);
         }
-        legacy.forget(name);
-        return new Versioned(bytes, null);
+        return new Versioned(moved.bytes(), null);
     }
 
     private void put(String name, byte[] bytes) {
         Versioned last = held.get(name);
-        PutObjectRequest.Builder request = request(name);
+        PutObjectRequest.Builder request = request(bucket, name);
         // A feed this container never read is written over as it
         // stands: the feed jobs, the only writers, run one at a time.
         if (last != null && last.version() != null) {
@@ -180,16 +146,17 @@ public class S3DocumentObjects implements DocumentBackend {
             String etag = s3.putObject(request.build(), RequestBody.fromBytes(bytes)).eTag();
             held.put(name, new Versioned(bytes, etag));
         } catch (AwsServiceException e) {
-            if (e.statusCode() == 412) {
+            if (e.statusCode() == PRECONDITION_FAILED) {
                 held.remove(name);
                 throw new ConcurrentDocumentChange(name);
             }
             throw e;
         }
-        legacy.forget(name);
+        // The bundle may still hold a copy this container never read.
+        migration.dropFromBundle(name);
     }
 
-    private PutObjectRequest.Builder request(String name) {
+    static PutObjectRequest.Builder request(String bucket, String name) {
         return PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(key(name))
@@ -197,6 +164,7 @@ public class S3DocumentObjects implements DocumentBackend {
     }
 
     private static String key(String name) {
-        return (name.equals(TEAM_REPORTS) ? TEAM_REPORTS_PREFIX : PREFIX) + name + ".json";
+        return (DocumentPlacement.isTeamReports(name) ? TEAM_REPORTS_PREFIX : PREFIX)
+                + name + ".json";
     }
 }
