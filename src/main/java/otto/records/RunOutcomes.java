@@ -35,7 +35,7 @@ public class RunOutcomes {
     private final DecisionRecords records;
     private final JsonStore store;
 
-    /** Reads and writes records through {@code records}, and keeps unsaved outcomes in {@code store}. */
+    /** Keeps records through {@code records} and unsaved outcomes in {@code store}. */
     public RunOutcomes(DecisionRecords records, JsonStore store) {
         this.records = records;
         this.store = store;

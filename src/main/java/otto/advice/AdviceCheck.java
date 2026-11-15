@@ -43,7 +43,7 @@ public class AdviceCheck {
     private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
     private static final String PROJECTION = "projection";
 
-    /** Where one sentence ends and the next begins; a decimal point is never followed by a space. */
+    /** Where one sentence ends; a decimal point is never followed by a space. */
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
     private final PlayerDirectoryStore directory;
