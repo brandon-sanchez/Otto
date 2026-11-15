@@ -331,11 +331,10 @@ public class BoardComparison {
                     String position = Optional.ofNullable(players.get(entry.playerId()))
                             .map(DirectoryPlayer::position)
                             .orElse("");
-                    return new ComparisonRound.Pick(entry.playerId(),
+                    return ComparisonRound.Pick.of(entry.playerId(),
                             pool.getOrDefault(entry.playerId(), entry.playerId()), position,
-                            pool.containsKey(entry.playerId()),
-                            slots.stream().anyMatch(slot -> slot.accepts(position)),
-                            entry.drop());
+                            pool.containsKey(entry.playerId()), slots)
+                            .withDrop(entry.drop());
                 })
                 .toList());
     }

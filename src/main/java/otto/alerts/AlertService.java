@@ -362,7 +362,7 @@ public class AlertService {
                         .map(AlertText.class::cast);
             }
             case LINEUP_PROBLEM -> lineupAdvice.forProblem("alert:" + primary.key(), primary,
-                    research, leagueWeek, userRoster.orElseThrow(), now, null)
+                    research, leagueWeek, userRoster.orElseThrow(), now)
                     .map(AlertText.class::cast);
             case PHRASED -> Optional.of(phrased(keys, primary, research));
         };

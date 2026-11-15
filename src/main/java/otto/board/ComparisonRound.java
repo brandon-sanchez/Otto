@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import otto.lineup.Slot;
+
 /**
  * What one claim round's comparison needs from decision time. It is
  * kept in the baselines' Decision Record, so the round is judged after
@@ -87,6 +89,20 @@ record ComparisonRound(
 
         Pick {
             drop = drop == null ? Optional.empty() : drop;
+        }
+
+        /**
+         * Returns a pick that drops no one, legal when one of the
+         * league's starting slots takes his position.
+         *
+         * @param addable whether he was a free agent the strategy could
+         *        claim when the round was decided
+         */
+        static Pick of(String playerId, String name, String position, boolean addable,
+                List<Slot> startingSlots) {
+            return new Pick(playerId, name, position, addable,
+                    startingSlots.stream().anyMatch(slot -> slot.accepts(position)),
+                    Optional.empty());
         }
 
         Pick withDrop(Optional<String> dropped) {

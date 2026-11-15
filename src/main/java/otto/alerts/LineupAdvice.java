@@ -88,11 +88,29 @@ public class LineupAdvice {
      *        joins the evidence. For a bench edge, the bench player the
      *        swap would start has his news read here too, so neither
      *        side of the swap rests on cached news.
-     * @param kickoff the game start of the candidate's player when this
-     *        is the final pregame warning, or null otherwise
      * @return empty when the advice is withheld
      */
     public Optional<AlertText.Advised> forProblem(String alertKey, AlertCandidate candidate,
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now) {
+        return problem(alertKey, candidate, research, leagueWeek, roster, now, null);
+    }
+
+    /**
+     * The final pregame warning for an edge or legality candidate still
+     * open as his game nears, read as {@link #forProblem} reads it.
+     *
+     * @param kickoff the game start of the candidate's player
+     * @return empty when the advice is withheld
+     */
+    public Optional<AlertText.Advised> forFinalWarning(String alertKey, AlertCandidate candidate,
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now, Instant kickoff) {
+        return problem(alertKey, candidate, research, leagueWeek, roster, now, kickoff);
+    }
+
+    /** Writes advice for a lineup problem; {@code kickoff} is null unless it is a final warning. */
+    private Optional<AlertText.Advised> problem(String alertKey, AlertCandidate candidate,
             Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
             Instant now, Instant kickoff) {
         Instant readAt = leagueWeek.snapshot().at();

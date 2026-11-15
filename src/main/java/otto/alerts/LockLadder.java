@@ -136,8 +136,8 @@ class LockLadder {
             Instant kickoff = lock.get();
             Map<String, String> research = preSendResearch.factsFor(playerId);
             Optional<AlertText.Advised> written = primary.isPresent()
-                    ? lineupAdvice.forProblem(key, primary.get(), research, leagueWeek, roster,
-                            now, kickoff)
+                    ? lineupAdvice.forFinalWarning(key, primary.get(), research, leagueWeek,
+                            roster, now, kickoff)
                     : lineupAdvice.forImpairedStarter(key, playerId, research, leagueWeek, roster,
                             now, kickoff);
             if (written.isEmpty()) {
