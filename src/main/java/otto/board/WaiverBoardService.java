@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
@@ -18,7 +17,6 @@ import otto.advice.AdviceCheck;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
-import otto.alerts.MuteStore;
 import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
@@ -103,16 +101,14 @@ public class WaiverBoardService {
     private final RunOutcomes runs;
     private final SettingsStore settings;
     private final WaiverPreferences preferences;
-    private final MuteStore muteStore;
     private final BoardDelivery delivery;
-    private final SentWaiverBoard sent;
+    private final BoardRouting routing;
     private final String userId;
 
     public WaiverBoardService(WaiverEvidence evidence, LatestWeekData latestWeek,
             AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            SettingsStore settings, WaiverPreferences preferences, MuteStore muteStore,
-            BoardDelivery delivery, OttoProperties properties,
-            @Value("${otto.sent-waiver-board:EVIDENCE}") SentWaiverBoard sent) {
+            SettingsStore settings, WaiverPreferences preferences, BoardRouting routing,
+            BoardDelivery delivery, OttoProperties properties) {
         this.evidence = evidence;
         this.latestWeek = latestWeek;
         this.writer = writer;
@@ -120,15 +116,9 @@ public class WaiverBoardService {
         this.runs = runs;
         this.settings = settings;
         this.preferences = preferences;
-        this.muteStore = muteStore;
         this.delivery = delivery;
-        this.sent = sent;
+        this.routing = routing;
         this.userId = properties.userId();
-    }
-
-    /** Returns which waiver board reaches the user's chat. */
-    public SentWaiverBoard sent() {
-        return sent;
     }
 
     /**
@@ -161,20 +151,29 @@ public class WaiverBoardService {
         if (!round.open() || !settings.enabled(Trigger.WAIVER)) {
             return Optional.empty();
         }
-        boolean reachesUser = sent == SentWaiverBoard.EVIDENCE
-                && !muteStore.muted(Trigger.WAIVER.muteTarget());
+        boolean reachesUser = routing.evidenceBoardReachesUser();
         Optional<Outcome> recorded = runs.earlier(userId, round.leagueId(), round.boardRunId())
-                .or(() -> build(round, league, reachesUser));
+                .or(() -> build(round, league).map(record -> runs.record(
+                        reachesUser ? record : record.withOutcome(unsent(record.outcome())))));
         return recorded.filter(outcome -> reachesUser)
                 .flatMap(outcome -> deliver(round, outcome));
     }
 
     /**
-     * @param reachesUser whether this round's board goes to the user;
-     *        when false it is recorded as a dry run, and a withheld
-     *        round records no notice to send
+     * Returns the outcome a round that does not reach the user records
+     * instead: a board becomes a dry run, and a withheld round keeps no
+     * notice, so a later flip back has nothing of this round to send.
      */
-    private Optional<Outcome> build(ClaimRound round, LeagueWeek league, boolean reachesUser) {
+    private static Outcome unsent(Outcome outcome) {
+        return switch (outcome) {
+            case Outcome.SentBoard board -> new Outcome.DryRun(board.messages(), board.picks());
+            case Outcome.WithheldWithNotice withheld -> new Outcome.Withheld(withheld.reason());
+            default -> outcome;
+        };
+    }
+
+    /** Returns the round's Decision Record, not yet saved, or empty while it waits. */
+    private Optional<DecisionRecord> build(ClaimRound round, LeagueWeek league) {
         LatestWeekData.Report data = latestWeek.assess(league);
         boolean inBuffer = round.inFallbackBuffer();
         if (!data.complete() && !inBuffer) {
@@ -185,19 +184,19 @@ public class WaiverBoardService {
         Optional<WaiverPreference> preference = preferences.forRound(round);
         return switch (evidence.screen(league, round.deadline(), preference, round.now(), data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
-                    Optional.of(unscreenable(round, league, unavailable.reason(), reachesUser));
+                    Optional.of(unscreenable(round, league, unavailable.reason()));
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board waits: {}", unavailable.reason());
                 yield Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok ->
-                    write(round, league, ok.value(), preference, data, reachesUser);
+                    write(round, league, ok.value(), preference, data);
         };
     }
 
-    private Optional<Outcome> write(ClaimRound round, LeagueWeek league,
+    private Optional<DecisionRecord> write(ClaimRound round, LeagueWeek league,
             WaiverEvidence.Screen screen, Optional<WaiverPreference> preference,
-            LatestWeekData.Report data, boolean reachesUser) {
+            LatestWeekData.Report data) {
         BoardForm form = new BoardForm(check, screen.candidates(), preference
                 .filter(stated -> stated.mode() == WaiverPreference.Mode.FOCUS)
                 .map(stated -> Set.copyOf(stated.positions()))
@@ -213,14 +212,12 @@ public class WaiverBoardService {
         Optional<Integer> budget = league.league().waiverBudget();
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved -> approved(approved.answer(),
-                    screen, budget, data.complete() ? List.of() : List.of(data.notice()),
-                    reachesUser);
-            case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
+                    screen, budget, data.complete() ? List.of() : List.of(data.notice()));
+            case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.WithheldWithNotice(
                     "The board failed its checks twice: " + String.join(" ", rejected.failures()),
-                    reachesUser ? FAILED_CHECKS_NOTICE : null);
+                    FAILED_CHECKS_NOTICE);
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
-                    new Outcome.Withheld(unavailable.reason(),
-                            reachesUser ? MODEL_UNAVAILABLE_NOTICE : null);
+                    new Outcome.WithheldWithNotice(unavailable.reason(), MODEL_UNAVAILABLE_NOTICE);
         };
         DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION,
                 round.boardRunId(), RunKind.WAIVER_BOARD, round.now(), userId,
@@ -230,7 +227,7 @@ public class WaiverBoardService {
                 preferences(preference), screen.screened(),
                 screen.comparisons(), evidenceOf(screen.bundle()),
                 versions(screen.bundle(), form, result), result.exchanges(), outcome);
-        return Optional.of(runs.record(record));
+        return Optional.of(record);
     }
 
     /**
@@ -238,28 +235,27 @@ public class WaiverBoardService {
      * agent screenable, so the user hears why no board is coming
      * instead of nothing at all.
      */
-    private Outcome unscreenable(ClaimRound round, LeagueWeek league, String reason,
-            boolean reachesUser) {
+    private DecisionRecord unscreenable(ClaimRound round, LeagueWeek league, String reason) {
         String notice = "No waiver board this round: I could not screen the free agents "
                 + "before the claim deadline, because " + reason
                 + ". Place any claims yourself in Sleeper.";
-        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION,
+        return new DecisionRecord(DecisionRecord.SCHEMA_VERSION,
                 round.boardRunId(), RunKind.WAIVER_BOARD, round.now(), userId,
                 round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()),
                 new RosterContext(NullNode.getInstance(), Optional.empty()),
                 preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
                 Versions.ofThisBuild("none", "none", "none"), List.of(),
-                new Outcome.Withheld("The free agents could not be screened: " + reason,
-                        reachesUser ? notice : null));
-        return runs.record(record);
+                new Outcome.WithheldWithNotice(
+                        "The free agents could not be screened: " + reason, notice));
     }
 
-    private Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> budget, List<String> notes, boolean reachesUser) {
-        List<String> messages = BoardMessage.render(answer, screen, budget, notes);
-        return reachesUser
-                ? new Outcome.SentBoard(messages, BoardMessage.renderAll(answer, screen, budget))
-                : new Outcome.DryRun(messages);
+    private static Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
+            Optional<Integer> budget, List<String> notes) {
+        List<Outcome.BoardPick> picks = answer.hold() ? List.of() : answer.picks().stream()
+                .map(entry -> new Outcome.BoardPick(entry.playerId(), entry.drop()))
+                .toList();
+        return new Outcome.SentBoard(BoardMessage.render(answer, screen, budget, notes),
+                BoardMessage.renderAll(answer, screen, budget), Optional.of(picks));
     }
 
     /**
@@ -274,8 +270,8 @@ public class WaiverBoardService {
         Optional<Sendable> board = switch (outcome) {
             case Outcome.SentBoard sentBoard -> Optional.of(new Sendable(
                     sentBoard.messages(), !sentBoard.allOptions().isEmpty()));
-            case Outcome.Withheld withheld -> Optional.ofNullable(withheld.notice())
-                    .map(notice -> new Sendable(List.of(notice), false));
+            case Outcome.WithheldWithNotice withheld ->
+                    Optional.of(new Sendable(List.of(withheld.notice()), false));
             default -> Optional.empty();
         };
         return board.flatMap(messages -> send(round, messages));

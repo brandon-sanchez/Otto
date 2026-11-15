@@ -356,8 +356,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
                 .allSatisfy(exchange -> assertThat(exchange.checkFailures())
                         .anySatisfy(failure -> assertThat(failure)
                                 .contains("8138 is not a free agent")));
-        assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class);
-        assertThat(((Outcome.Withheld) record.outcome()).reason())
+        assertThat(record.outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
+        assertThat(((Outcome.WithheldWithNotice) record.outcome()).reason())
                 .startsWith("The board failed its checks twice");
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
@@ -381,7 +381,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         clock.set(FALLBACK);
         checkRunner.runCheck();
 
-        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
                         containing("No waiver board this round")))
@@ -438,7 +438,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
         checkRunner.runCheck();
 
-        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
                         containing("No waiver board this round")))

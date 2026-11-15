@@ -325,7 +325,7 @@ class FaabBidScenarioTest extends WireSeamTest {
         assertThat(record.exchanges().getLast().checkFailures())
                 .anySatisfy(failure -> assertThat(failure)
                         .contains("5850 is dropped for two claims placed together"));
-        assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
     }
 
     @Test

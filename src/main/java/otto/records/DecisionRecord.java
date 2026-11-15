@@ -82,4 +82,11 @@ public record DecisionRecord(
                 league, roster, preferences, candidates, comparisons, evidence, versions,
                 exchanges, outcome);
     }
+
+    /** Returns this record with another outcome in place of its own. */
+    public DecisionRecord withOutcome(Outcome replaced) {
+        return new DecisionRecord(schemaVersion, runId, kind, startedAt, userId, leagueId,
+                league, roster, preferences, candidates, comparisons, evidence, versions,
+                exchanges, replaced);
+    }
 }

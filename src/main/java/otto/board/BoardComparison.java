@@ -312,16 +312,8 @@ public class BoardComparison {
     private Optional<List<ComparisonRound.Pick>> newBoard(String leagueId,
             ComparisonRound round) {
         Optional<DecisionRecord> board = records.read(userId, leagueId, round.boardRunId());
-        if (board.isEmpty() || board.get().outcome() instanceof Outcome.Withheld) {
-            return Optional.empty();
-        }
-        Optional<BoardAnswer> answer = board.get().exchanges().reversed().stream()
-                .filter(exchange -> exchange.checkFailures().isEmpty())
-                .findFirst()
-                .map(ModelExchange::response)
-                .flatMap(response -> BoardForm.parse(response.isTextual()
-                        ? response.textValue() : response.toString()));
-        if (answer.isEmpty()) {
+        Optional<List<Outcome.BoardPick>> recorded = board.flatMap(BoardComparison::picks);
+        if (recorded.isEmpty()) {
             return Optional.empty();
         }
         // Only the pool the board could pick from was addable; the rest
@@ -335,8 +327,7 @@ public class BoardComparison {
                 .map(PlayerDirectory::players)
                 .orElse(Map.of());
         List<Slot> slots = Slot.startingSlots(round.startingSlots());
-        List<BoardAnswer.Entry> entries = answer.get().hold() ? List.of() : answer.get().picks();
-        return Optional.of(entries.stream()
+        return Optional.of(recorded.get().stream()
                 .map(entry -> {
                     String position = Optional.ofNullable(players.get(entry.playerId()))
                             .map(DirectoryPlayer::position)
@@ -350,12 +341,42 @@ public class BoardComparison {
                 .toList());
     }
 
+    /**
+     * The picks a board record keeps, or, for a record that keeps none,
+     * the picks of its last checked answer read back from its exchanges.
+     * Empty when the round sent no checked board.
+     */
+    private static Optional<List<Outcome.BoardPick>> picks(DecisionRecord board) {
+        return switch (board.outcome()) {
+            case Outcome.SentBoard sent -> sent.picks().or(() -> checkedPicks(board));
+            case Outcome.DryRun dryRun -> dryRun.picks().or(() -> checkedPicks(board));
+            default -> Optional.empty();
+        };
+    }
+
+    private static Optional<List<Outcome.BoardPick>> checkedPicks(DecisionRecord board) {
+        return board.exchanges().reversed().stream()
+                .filter(exchange -> exchange.checkFailures().isEmpty())
+                .findFirst()
+                .map(ModelExchange::response)
+                .flatMap(response -> BoardForm.parse(response.isTextual()
+                        ? response.textValue() : response.toString()))
+                .map(answer -> (answer.hold() ? List.<BoardAnswer.Entry>of() : answer.picks())
+                        .stream()
+                        .map(entry -> new Outcome.BoardPick(entry.playerId(), entry.drop()))
+                        .toList());
+    }
+
     private String newBoardMissing(String leagueId, ComparisonRound round) {
         return records.read(userId, leagueId, round.boardRunId())
                 .map(DecisionRecord::outcome)
-                .map(outcome -> outcome instanceof Outcome.Withheld withheld
-                        ? "the evidence-based board was withheld: " + withheld.reason()
-                        : "the evidence-based board's checked answer could not be read back")
+                .map(outcome -> switch (outcome) {
+                    case Outcome.Withheld withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    case Outcome.WithheldWithNotice withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    default -> "the evidence-based board's checked answer could not be read back";
+                })
                 .orElse("the evidence-based board recorded nothing for this round");
     }
 

@@ -17,6 +17,7 @@ import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
 import otto.board.BoardComparison;
+import otto.board.BoardRouting;
 import otto.board.SentWaiverBoard;
 import otto.board.WaiverBoardService;
 import otto.claims.ClaimRound;
@@ -63,6 +64,7 @@ public class CheckRunner {
     private final WaiverAlertService waiverAlertService;
     private final WaiverBoardService waiverBoard;
     private final BoardComparison boardComparison;
+    private final BoardRouting routing;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -77,6 +79,7 @@ public class CheckRunner {
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
             WaiverBoardService waiverBoard, BoardComparison boardComparison,
+            BoardRouting routing,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, ModelChain models,
             Clock clock, OttoProperties properties) {
@@ -93,6 +96,7 @@ public class CheckRunner {
         this.waiverAlertService = waiverAlertService;
         this.waiverBoard = waiverBoard;
         this.boardComparison = boardComparison;
+        this.routing = routing;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -142,7 +146,7 @@ public class CheckRunner {
             try {
                 alerts.addAll(alertService.process(leagueWeek));
                 if (round.isPresent()) {
-                    if (waiverBoard.sent() == SentWaiverBoard.SCORED) {
+                    if (routing.sent() == SentWaiverBoard.SCORED) {
                         waiverAlertService.considerWaiverAlert(round.get(), scored)
                                 .ifPresent(alerts::add);
                     }

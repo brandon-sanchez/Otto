@@ -112,8 +112,7 @@ class WaiverBoardRollbackScenarioTest extends WireSeamTest {
 
         DecisionRecord record = StoredRecords.of(decisionRecords, properties.storageDir(),
                 USER_ID, LEAGUE_ID, RunKind.WAIVER_BOARD).getFirst();
-        assertThat(record.outcome()).isInstanceOfSatisfying(Outcome.Withheld.class,
-                withheld -> assertThat(withheld.notice()).isNull());
+        assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class);
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("No waiver board this round")));
     }
