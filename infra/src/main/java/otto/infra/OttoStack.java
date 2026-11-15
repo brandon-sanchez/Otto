@@ -222,7 +222,10 @@ public class OttoStack extends Stack {
      * draws from the shared pool like any other. The Check is then only
      * as safe as the storage layer makes it, which is safe but louder:
      * two overlapping runs both write, and the loser is refused and
-     * retried on the next tick rather than corrupting anything.
+     * retried on the next tick rather than corrupting anything. Both
+     * runs may pay for the same model call, but an Alert goes out once:
+     * the outbox takes a lease on each Alert's keys in the table, in one
+     * conditional write, and only the run holding them sends.
      */
     private Number scheduledConcurrency() {
         int reserved = Integer.parseInt(context("scheduledReservedConcurrency", "1"));

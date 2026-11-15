@@ -1,5 +1,6 @@
 package otto;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,6 +18,7 @@ import otto.harness.FakeS3;
 import otto.storage.ConcurrentDocumentChange;
 import otto.storage.DocumentBackend;
 import otto.storage.JsonStore;
+import otto.storage.Lease;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -228,6 +230,27 @@ class AwsStorageScenarioTest {
         assertThat(dynamo.holds("alert-delivery-key:abc")).isTrue();
         assertThat(dynamo.holds("alert-delivery-id:1")).isTrue();
         assertThat(s3.writes()).isZero();
+    }
+
+    @Test
+    void aDeliveryLeaseIsHeldByOneContainerUntilItIsReleasedOrRunsOut() {
+        Instant now = Instant.parse("2026-09-15T17:00:00Z");
+        JsonStore otherContainer = new JsonStore(backend());
+        String lease = "alert-delivery-lease:abc";
+
+        assertThat(store.lease(lease, new Lease("first", now.plusSeconds(120)), now)).isTrue();
+        assertThat(otherContainer.lease(lease, new Lease("second", now.plusSeconds(120)), now))
+                .isFalse();
+        assertThat(otherContainer.lease(lease, new Lease("second", now.plusSeconds(300)),
+                now.plusSeconds(121))).as("a lease that ran out is free").isTrue();
+        store.release(lease, "first");
+        assertThat(store.lease(lease, new Lease("first", now.plusSeconds(400)),
+                now.plusSeconds(200))).as("a stale release leaves the new holder's lease")
+                .isFalse();
+        otherContainer.release(lease, "second");
+        assertThat(store.lease(lease, new Lease("first", now.plusSeconds(400)),
+                now.plusSeconds(200))).isTrue();
+        assertThat(s3.writes()).as("a lease is a small record").isZero();
     }
 
     @Test

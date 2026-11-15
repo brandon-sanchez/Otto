@@ -1,8 +1,10 @@
 package otto.aws;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import otto.storage.DocumentBackend;
+import otto.storage.Lease;
 
 /**
  * The deployed assistant's storage: every nflverse feed and the
@@ -41,6 +43,16 @@ public class AwsDocumentBackend implements DocumentBackend {
     @Override
     public void store(String name, byte[] json) {
         backendFor(name).store(name, json);
+    }
+
+    @Override
+    public boolean lease(String name, Lease lease, Instant now) {
+        return backendFor(name).lease(name, lease, now);
+    }
+
+    @Override
+    public void release(String name, String holder) {
+        backendFor(name).release(name, holder);
     }
 
     /** Flushes the feeds, which flush the bundle after them, then the small records. */
