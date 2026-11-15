@@ -90,6 +90,16 @@ minute rather than one per document. The run reads the object once and
 writes it once, at the end, whether or not the run finished - a Check
 that half succeeded still keeps what it learned.
 
+The nflverse feeds are the exception: each is an object of its own
+under `nflverse/`. Play-by-play and FTN charting run to megabytes a
+season, and in the bundle every Check paid to read them though only the
+waiver board, matchup and usage paths use them. Each feed is held in
+memory with its ETag and asked for again with `If-None-Match` on every
+read, so an unchanged feed costs a 304 and is not parsed again, and a
+feed the feed jobs rewrote is read on the next read. A feed still in
+the bundle is read from it once, written out as its own object and
+dropped from the bundle, so the move needed no manual step.
+
 Two entry points write that object: the Check and the webhook both
 append to the Event Log. The write therefore carries the ETag the run
 read, S3 refuses a write whose ETag has moved, and the backend re-reads
@@ -320,6 +330,6 @@ The stack lives in `infra/` with its own build, because the app's
 deployable must not carry the CDK libraries.
 
 IAM is least-privilege per function. The documents bucket grant names
-the one object key the app writes, so a function that went wrong could
-not fill the bucket with anything else. The Decision Records grant
+the bundle's key and the feeds' prefix, so a function that went wrong
+could not fill the bucket with anything else. The Decision Records grant
 names the two prefixes the app writes under, and allows no delete.

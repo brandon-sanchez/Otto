@@ -11,6 +11,7 @@ import otto.aws.AwsDocumentBackend;
 import otto.aws.DocumentPlacement;
 import otto.aws.DynamoDbBackend;
 import otto.aws.S3BundleBackend;
+import otto.aws.S3FeedObjects;
 import otto.harness.FakeDynamoDb;
 import otto.harness.FakeS3;
 import otto.storage.ConcurrentDocumentChange;
@@ -21,16 +22,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * What the deployed assistant does with its documents. The big ones go
- * to S3 as one object a run; the small ones go to DynamoDB one at a
- * time; and two entry points writing at once cost neither of them
- * their work.
+ * What the deployed assistant does with its documents. The nflverse
+ * feeds go to S3 one object each; the other big ones go to S3 as one
+ * object a run; the small ones go to DynamoDB one at a time; and two
+ * entry points writing at once cost neither of them their work.
  */
 class AwsStorageScenarioTest {
 
     private static final String BUCKET = "otto-documents";
     private static final String TABLE = "otto-records";
     private static final String KEY = "documents.json";
+    private static final String PLAY_BY_PLAY = "nflverse-play-by-play";
+    private static final String PLAY_BY_PLAY_KEY = "nflverse/nflverse-play-by-play.json";
+    private static final String WEEKLY_STATS = "nflverse-weekly-stats";
 
     private FakeS3 s3;
     private FakeDynamoDb dynamo;
@@ -51,8 +55,100 @@ class AwsStorageScenarioTest {
     }
 
     private DocumentBackend backend() {
-        return new AwsDocumentBackend(
-                new S3BundleBackend(s3, BUCKET), new DynamoDbBackend(dynamo, TABLE));
+        S3BundleBackend bundle = new S3BundleBackend(s3, BUCKET);
+        return new AwsDocumentBackend(new S3FeedObjects(s3, BUCKET, bundle), bundle,
+                new DynamoDbBackend(dynamo, TABLE));
+    }
+
+    /** A stand-in for one stored nflverse feed. */
+    record Feed(String season, List<String> rows) {
+    }
+
+    @Test
+    void eachFeedIsAnObjectOfItsOwnOutsideTheBundle() {
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass", "run")));
+        store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
+        store.flush();
+
+        assertThat(s3.storedAsText(PLAY_BY_PLAY_KEY)).contains("pass");
+        assertThat(s3.storedAsText(KEY)).contains("snapshot-current")
+                .doesNotContain(PLAY_BY_PLAY);
+    }
+
+    @Test
+    void aCheckThatReadsOnlyItsOwnDocumentsNeverFetchesPlayByPlay() {
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass")));
+        store.write(WEEKLY_STATS, new Feed("2026", List.of("week 1")));
+        store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
+        store.flush();
+
+        JsonStore check = new JsonStore(backend());
+        check.read("snapshot-current", Snapshot.class);
+        check.read(WEEKLY_STATS, Feed.class);
+
+        assertThat(s3.readsOf(PLAY_BY_PLAY_KEY)).isZero();
+    }
+
+    @Test
+    void anUnchangedFeedIsConfirmedWithoutABodyAndNotParsedAgain() {
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass")));
+        store.flush();
+        JsonStore reader = new JsonStore(backend());
+        Feed first = reader.read(PLAY_BY_PLAY, Feed.class).orElseThrow();
+        int served = s3.bodiesServed();
+
+        Feed again = reader.read(PLAY_BY_PLAY, Feed.class).orElseThrow();
+
+        assertThat(s3.readsOf(PLAY_BY_PLAY_KEY)).isEqualTo(2);
+        assertThat(s3.bodiesServed()).as("the second read is a 304").isEqualTo(served);
+        assertThat(again).isSameAs(first);
+    }
+
+    @Test
+    void aFeedTheFeedJobRewroteIsReadOnTheVeryNextRead() {
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass")));
+        store.flush();
+        JsonStore check = new JsonStore(backend());
+        check.read(PLAY_BY_PLAY, Feed.class);
+
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass", "sack")));
+        store.flush();
+
+        assertThat(check.read(PLAY_BY_PLAY, Feed.class))
+                .contains(new Feed("2026", List.of("pass", "sack")));
+    }
+
+    @Test
+    void aFeedRewrittenWhileStillInTheBundleLeavesTheBundleInTheSameFlush() {
+        s3.writeBehindTheCaller(KEY, """
+                {"snapshot-current":{"week":"2","starters":["Kamara"]},\
+                "nflverse-play-by-play":{"season":"2026","rows":["pass"]}}""".getBytes());
+        DocumentBackend backend = backend();
+
+        backend.store(PLAY_BY_PLAY, """
+                {"season":"2026","rows":["pass","sack"]}""".getBytes());
+        backend.flush();
+
+        assertThat(s3.storedAsText(PLAY_BY_PLAY_KEY)).contains("sack");
+        assertThat(s3.storedAsText(KEY)).contains("snapshot-current")
+                .doesNotContain(PLAY_BY_PLAY);
+    }
+
+    @Test
+    void aFeedStillInTheBundleIsReadOnceAndMovedOutOfIt() {
+        s3.writeBehindTheCaller(KEY, """
+                {"snapshot-current":{"week":"2","starters":["Kamara"]},\
+                "nflverse-play-by-play":{"season":"2026","rows":["pass"]}}""".getBytes());
+
+        assertThat(store.read(PLAY_BY_PLAY, Feed.class))
+                .contains(new Feed("2026", List.of("pass")));
+        store.flush();
+
+        assertThat(s3.storedAsText(PLAY_BY_PLAY_KEY)).contains("pass");
+        assertThat(s3.storedAsText(KEY)).contains("snapshot-current")
+                .doesNotContain(PLAY_BY_PLAY);
+        assertThat(new JsonStore(backend()).read(PLAY_BY_PLAY, Feed.class))
+                .contains(new Feed("2026", List.of("pass")));
     }
 
     @Test
@@ -210,8 +306,11 @@ class AwsStorageScenarioTest {
                 "mutes", "conversation", "last-check", "alert-id-sequence",
                 "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1");
 
-        assertThat(big).allMatch(DocumentPlacement::isBig);
-        assertThat(small).noneMatch(DocumentPlacement::isBig);
+        List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting");
+
+        assertThat(big).allMatch(name -> DocumentPlacement.of(name) != DocumentPlacement.SMALL);
+        assertThat(small).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.SMALL);
+        assertThat(feeds).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.FEED);
     }
 
     /**
@@ -221,8 +320,10 @@ class AwsStorageScenarioTest {
      */
     @Test
     void aDocumentNobodyHasPlacedGoesToTheStoreWithNoSizeLimit() {
-        assertThat(DocumentPlacement.isBig("nflverse-something-new")).isTrue();
-        assertThat(DocumentPlacement.isBig("a-document-added-next-season")).isTrue();
+        assertThat(DocumentPlacement.of("nflverse-something-new"))
+                .isEqualTo(DocumentPlacement.FEED);
+        assertThat(DocumentPlacement.of("a-document-added-next-season"))
+                .isEqualTo(DocumentPlacement.BUNDLE);
     }
 
     @Test

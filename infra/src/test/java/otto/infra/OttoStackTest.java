@@ -264,6 +264,15 @@ class OttoStackTest {
         assertThat(template.toJSON().toString()).contains("/records/*", "/article-text/*");
     }
 
+    @Test
+    void theFeedObjectsAreGrantedUnderThePrefixTheAppWritesThem() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
+                "S3FeedObjects.java"));
+
+        assertThat(app).contains("PREFIX = \"nflverse/\"");
+        assertThat(template.toJSON().toString()).contains("/nflverse/*");
+    }
+
     private static Template stackWith(String key, String value) {
         return Template.fromStack(new OttoStack(
                 new App(AppProps.builder()
