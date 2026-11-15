@@ -72,7 +72,6 @@ public class AdviceWriter {
 
             """;
 
-    /** The fields every advice answer carries, one per line, for both shapes below. */
     private static final String ANSWER_FIELDS = String.join(",\n",
             "  \"message\": \"the text the user receives\"",
             "  \"move\": {\"start\": \"<playerId>\", \"bench\": \"<playerId or null>\", "

@@ -36,12 +36,6 @@ import otto.storage.JsonStore;
 public class WatchlistWatcher {
 
     /**
-     * Sharply is Sleeper's own ranking: a player who was outside the
-     * most-added list over the last day and is now inside it. That needs
-     * no invented multiplier, and it fires once per entry.
-     */
-
-    /**
      * How far a projection must move to be worth a message: one point
      * in league scoring, the same size as the bench-over-starter edge
      * the spec calls worth acting on. Anything smaller is feed drift.
@@ -131,6 +125,10 @@ public class WatchlistWatcher {
     }
 
     /**
+     * Sharply is Sleeper's own ranking: a player who was outside the
+     * most-added list over the last day and is inside it at this read.
+     * That needs no invented multiplier, and it fires once per entry.
+     *
      * @return the most-added ids now, or empty when the feed is down -
      *         the stored reading then stays as it was, so the entry is
      *         still news once the feed is back

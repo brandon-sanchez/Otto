@@ -37,12 +37,6 @@ public class ResearchDiscovery {
      */
     static final int BATCH = 40;
 
-    /**
-     * The trending read the Watchlist watcher and the waiver board make,
-     * at the same lookback and limit, so the three share one Sleeper cache
-     * entry.
-     */
-
     private static final String INDEX = "research-index";
 
     private final ResearchCache cache;

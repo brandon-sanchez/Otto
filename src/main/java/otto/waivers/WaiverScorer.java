@@ -77,12 +77,6 @@ public class WaiverScorer {
     /** Superflex starts two quarterbacks, so a third is cover, not depth. */
     private static final int QB_NEED_BELOW = 3;
 
-    /**
-     * Sleeper's trending window, and how deep into the list to read.
-     * The Watchlist watcher asks for the same window and the same
-     * depth, so the two readers share one poll and one cached body.
-     */
-
     /** The spec's news window, and how many items to ask Sleeper for. */
     private static final Duration NEWS_WINDOW = Duration.ofDays(7);
     private static final int NEWS_ITEMS = 5;

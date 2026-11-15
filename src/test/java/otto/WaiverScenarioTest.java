@@ -649,7 +649,7 @@ class WaiverScenarioTest extends WireSeamTest {
 
         runCheckAt(TUESDAY_EVENING);
 
-        // The scored board is still ranked as a silent baseline, so the
+        // The scored board is ranked as a silent baseline, so the
         // week can be judged, but nothing reaches the chat.
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));

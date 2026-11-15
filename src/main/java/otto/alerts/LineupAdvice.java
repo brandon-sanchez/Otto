@@ -233,15 +233,15 @@ public class LineupAdvice {
     }
 
     /**
-     * True while a role slip still has a decision open: it is not yet
-     * settled by advice withheld, held for the board, or found moot.
+     * True while a role slip has a decision open: no advice about it
+     * has been withheld, held for the board, or found moot.
      */
     boolean slipOpen(AlertCandidate slip) {
         return !ledger.settled(slip.key());
     }
 
     /**
-     * The outcome of checked advice about a role slip. Advice sent now
+     * The outcome of checked advice about a role slip. Sent advice
      * becomes the last advice about him at once, since the outbox
      * carries it to delivery; held advice becomes it only once a board
      * carries it, so a board that never goes out cannot silence the

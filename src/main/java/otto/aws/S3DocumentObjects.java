@@ -20,8 +20,8 @@ import otto.storage.DocumentBackend;
 /**
  * The nflverse feeds, each held as an S3 object of its own under
  * {@value #PREFIX}. Play-by-play and FTN charting run to megabytes a
- * season, and in the bundle every Check paid to read them; on their own
- * a feed is fetched only by the code that reads it.
+ * season, so keeping them out of the bundle every Check reads means a
+ * feed is fetched only by the code that reads it.
  *
  * <p>Each feed's bytes are held in memory with the ETag they were read
  * at, and every read asks S3 again with {@code If-None-Match}. An
@@ -31,9 +31,8 @@ import otto.storage.DocumentBackend;
  * {@link #loadVersioned} reports, which lets the caller skip parsing
  * bytes it has parsed before.
  *
- * <p>A feed stored in the bundle before the feeds moved out is read
- * from the bundle once, written out as its own object, and dropped from
- * the bundle at the next flush, so the move needs no manual step.
+ * <p>A feed found only in the bundle is read from it once, written out
+ * as its own object, and dropped from the bundle at the next flush.
  *
  * <p>Writes wait for {@link #flush}, like the bundle's. Only the
  * scheduled feed jobs write feeds, one at a time, so a write over a
@@ -60,7 +59,7 @@ public class S3DocumentObjects implements DocumentBackend {
 
     /**
      * @param legacy the bundle a feed is read from, and then dropped
-     *        from, when it has no object of its own yet
+     *        from, when it has no object of its own
      */
     public S3DocumentObjects(S3Client s3, String bucket, S3BundleBackend legacy) {
         this.s3 = s3;

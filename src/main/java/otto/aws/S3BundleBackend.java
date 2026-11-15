@@ -74,7 +74,7 @@ public class S3BundleBackend implements DocumentBackend {
      */
     private final Map<String, JsonNode> base = new LinkedHashMap<>();
 
-    /** Documents that moved out of the bundle, to drop from it at the flush. */
+    /** Documents stored elsewhere, to drop from the bundle at the flush. */
     private final Set<String> forgotten = new LinkedHashSet<>();
 
     private ObjectNode bundle;
@@ -108,14 +108,8 @@ public class S3BundleBackend implements DocumentBackend {
     }
 
     /**
-     * Stores this run's documents in one write. The bundle is marked
-     * stale either way, so the next run re-reads it: the other entry
-     * point may have written between the two, and a conditional read
-     * costs nothing when it has not.
-     */
-    /**
-     * Drops a document that is stored elsewhere now from the bundle at
-     * the next flush, and reads it as absent until then.
+     * Drops a document stored elsewhere from the bundle at the next
+     * flush, and reads it as absent until then.
      */
     synchronized void forget(String name) {
         forgotten.add(name);
@@ -123,6 +117,12 @@ public class S3BundleBackend implements DocumentBackend {
         base.remove(name);
     }
 
+    /**
+     * Stores this run's documents in one write. The bundle is marked
+     * stale either way, so the next run re-reads it: the other entry
+     * point may have written between the two, and a conditional read
+     * costs nothing when it has not.
+     */
     @Override
     public synchronized void flush() {
         try {
