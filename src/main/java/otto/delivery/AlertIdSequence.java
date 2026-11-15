@@ -1,4 +1,4 @@
-package otto.alerts;
+package otto.delivery;
 
 import org.springframework.stereotype.Component;
 

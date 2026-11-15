@@ -1,5 +1,7 @@
 package otto.alerts;
 
+import otto.delivery.AlertDeliveryOutbox;
+
 /**
  * The checked text of one Alert, and what the outbox matches a retry of
  * it against.

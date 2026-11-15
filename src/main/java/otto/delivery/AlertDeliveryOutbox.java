@@ -1,4 +1,4 @@
-package otto.alerts;
+package otto.delivery;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
-import otto.alerts.OutboxFaults;
+import otto.delivery.OutboxFaults;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;

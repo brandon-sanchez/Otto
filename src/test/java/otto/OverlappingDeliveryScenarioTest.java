@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import otto.alerts.AlertDeliveryOutbox;
-import otto.alerts.AlertIdSequence;
+import otto.delivery.AlertDeliveryOutbox;
+import otto.delivery.AlertIdSequence;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;

@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 
-import otto.alerts.AlertDeliveryOutbox;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.events.Event;
 import otto.events.EventType;
 

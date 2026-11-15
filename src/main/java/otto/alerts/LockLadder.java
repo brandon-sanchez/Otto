@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
