@@ -1,0 +1,17 @@
+{
+  "tag_name": "pbp",
+  "assets": [
+    {
+      "name": "play_by_play_2025.csv",
+      "updated_at": "2026-02-10T07:31:55Z"
+    },
+    {
+      "name": "play_by_play_2026.csv",
+      "updated_at": "2026-10-06T07:12:40Z"
+    },
+    {
+      "name": "play_by_play_2026.csv.gz",
+      "updated_at": "2026-10-06T07:12:39Z"
+    }
+  ]
+}

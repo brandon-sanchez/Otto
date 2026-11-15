@@ -30,11 +30,9 @@ public record WeeklyStats(
     /**
      * One player's line from one game, and the defense that allowed it.
      *
-     * @param targetShare his share of his team's targets in that game,
-     *        nflverse's own {@code target_share} column, or null when
-     *        the row carries no readable value. A null is not a zero:
-     *        one says the file did not say, the other says the offence
-     *        never looked at him.
+     * @param usage his share of his team's work in that game
+     * @param stats the recorded stats in Sleeper's vocabulary; a stat the
+     *        row did not record is absent rather than zero
      */
     public record StatLine(
             String gsisId,
@@ -43,8 +41,40 @@ public record WeeklyStats(
             String team,
             String opponent,
             int week,
-            Double targetShare,
+            Usage usage,
             Map<String, Double> stats) {
 
+    }
+
+    /**
+     * What one game says about a player's role in his offence. Every
+     * nullable field is null when the file left it out or could not be
+     * read: one says the file did not say, a zero says the offence never
+     * looked at him.
+     *
+     * @param teamTargets every target his team threw in that game, over
+     *        every position the file lists
+     * @param teamCarries every carry his team ran in that game, over every
+     *        position the file lists
+     * @param targetShare nflverse's {@code target_share}, from 0 to 1
+     * @param carryShare his carries divided by {@code teamCarries}, or
+     *        null when the team ran no carries
+     * @param airYardsShare nflverse's {@code air_yards_share}. It can be
+     *        negative: a team's air yards include throws behind the line.
+     * @param wopr nflverse's weighted opportunity rating,
+     *        1.5 times target share plus 0.7 times air-yards share
+     * @param racr nflverse's receiver air conversion ratio, receiving
+     *        yards per air yard
+     * @param receivingEpa nflverse's expected points added on his targets
+     */
+    public record Usage(
+            int teamTargets,
+            int teamCarries,
+            Double targetShare,
+            Double carryShare,
+            Double airYardsShare,
+            Double wopr,
+            Double racr,
+            Double receivingEpa) {
     }
 }

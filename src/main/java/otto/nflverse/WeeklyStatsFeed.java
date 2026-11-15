@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 
 import static otto.nflverse.FeedRows.KEPT_POSITIONS;
 import static otto.nflverse.FeedRows.REGULAR_SEASON;
-import static otto.nflverse.FeedRows.blankOrNa;
+import static otto.nflverse.FeedRows.optionalNumber;
 import static otto.nflverse.FeedRows.requireColumns;
 
 /**
@@ -21,6 +21,9 @@ import static otto.nflverse.FeedRows.requireColumns;
  */
 final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStats> {
 
+    private static final String CARRIES = "carries";
+    private static final String TARGETS = "targets";
+
     /**
      * An nflverse stat column and the Sleeper stat key that names the
      * same thing. Translating here means one vocabulary downstream:
@@ -29,8 +32,8 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
      * are deliberately absent - no league scoring setting names them.
      */
     private static final Map<String, String> SLEEPER_STAT_KEYS = Map.ofEntries(
-            Map.entry("carries", "rush_att"),
-            Map.entry("targets", "rec_tgt"),
+            Map.entry(CARRIES, "rush_att"),
+            Map.entry(TARGETS, "rec_tgt"),
             Map.entry("passing_yards", "pass_yd"),
             Map.entry("passing_tds", "pass_td"),
             Map.entry("passing_interceptions", "pass_int"),
@@ -44,18 +47,12 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
             Map.entry("receiving_2pt_conversions", "rec_2pt"),
             Map.entry("fumbles_lost_total", "fum_lost"));
 
-    /**
-     * The share of his team's targets a player saw in one game. It is
-     * nflverse's own column, computed against a real team denominator,
-     * and it is what the waiver breakout tag reads for receivers and
-     * tight ends. It is no league's scoring key, so it rides beside the
-     * translated stats rather than inside them.
-     */
     private static final String TARGET_SHARE = "target_share";
 
     private static final Set<String> COLUMNS = Set.of(
             "player_id", "player_display_name", "position", "season_type", "team",
-            "opponent_team", "week", TARGET_SHARE);
+            "opponent_team", "week", TARGET_SHARE, "air_yards_share", "wopr", "racr",
+            "receiving_epa");
 
     @Override
     public FeedId id() {
@@ -89,52 +86,62 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
 
     @Override
     public List<WeeklyStats.StatLine> read(Basis basis, Stream<Csv.Row> rows) {
-        List<WeeklyStats.StatLine> lines = new ArrayList<>();
+        List<AwaitingTeamTotals> kept = new ArrayList<>();
+        Map<TeamGame, TeamTotals> teamTotals = new HashMap<>();
         rows.forEach(row -> {
             requireColumns(row, COLUMNS);
             requireColumns(row, SLEEPER_STAT_KEYS.keySet());
-            String position = row.text("position");
-            if (!KEPT_POSITIONS.contains(position)
-                    || !REGULAR_SEASON.equals(row.text("season_type"))
-                    || row.text("player_id").isBlank()) {
+            if (!REGULAR_SEASON.equals(row.text("season_type"))) {
                 return;
             }
-            lines.add(new WeeklyStats.StatLine(
-                    row.text("player_id"),
-                    row.text("player_display_name"),
-                    position,
-                    NflTeams.normalize(row.text("team")),
-                    NflTeams.normalize(row.text("opponent_team")),
-                    row.integer("week"),
-                    targetShare(row),
+            String team = NflTeams.normalize(row.text("team"));
+            int week = row.integer("week");
+            teamTotals.merge(new TeamGame(team, week),
+                    new TeamTotals(row.integer(TARGETS), row.integer(CARRIES)), TeamTotals::plus);
+            String position = row.text("position");
+            if (!KEPT_POSITIONS.contains(position) || row.text("player_id").isBlank()) {
+                return;
+            }
+            kept.add(new AwaitingTeamTotals(row.text("player_id"), row.text("player_display_name"), position,
+                    team, NflTeams.normalize(row.text("opponent_team")), week,
+                    row.integer(CARRIES), targetShare(row),
+                    optionalNumber(row, "air_yards_share"), optionalNumber(row, "wopr"),
+                    optionalNumber(row, "racr"), optionalNumber(row, "receiving_epa"),
                     statsOf(row)));
         });
-        return lines;
+        return kept.stream()
+                .map(line -> line.withTotals(teamTotals.get(new TeamGame(line.team(), line.week()))))
+                .toList();
     }
 
-    /**
-     * The published target share, or nothing when the row does not
-     * carry one. A blank, an "NA" or a value that is not a number reads
-     * as absent rather than as zero: a zero would say the offence never
-     * looked at him, which is a claim this file did not make.
-     *
-     * A value outside nought to one is refused for the same reason,
-     * and so are "NaN" and "Infinity", which both parse as doubles. A
-     * share of more than the whole offence would clear every bar the
-     * breakout lanes hold, which is the one wrong answer this column
-     * could produce on its own.
-     */
+    private record TeamGame(String team, int week) {
+    }
+
+    private record TeamTotals(int targets, int carries) {
+
+        TeamTotals plus(TeamTotals other) {
+            return new TeamTotals(targets + other.targets, carries + other.carries);
+        }
+    }
+
+    private record AwaitingTeamTotals(String gsisId, String player, String position, String team,
+            String opponent, int week, int carries, Double targetShare, Double airYardsShare,
+            Double wopr, Double racr, Double receivingEpa, Map<String, Double> stats) {
+
+        WeeklyStats.StatLine withTotals(TeamTotals totals) {
+            Double carryShare = totals.carries() > 0
+                    ? (double) carries / totals.carries() : null;
+            return new WeeklyStats.StatLine(gsisId, player, position, team, opponent, week,
+                    new WeeklyStats.Usage(totals.targets(), totals.carries(), targetShare,
+                            carryShare,
+                            airYardsShare, wopr, racr, receivingEpa),
+                    stats);
+        }
+    }
+
     private static Double targetShare(Csv.Row row) {
-        String value = row.text(TARGET_SHARE).trim();
-        if (blankOrNa(value)) {
-            return null;
-        }
-        try {
-            double share = Double.parseDouble(value);
-            return share >= 0.0 && share <= 1.0 ? share : null;
-        } catch (NumberFormatException notANumber) {
-            return null;
-        }
+        Double share = optionalNumber(row, TARGET_SHARE);
+        return share != null && share >= 0.0 && share <= 1.0 ? share : null;
     }
 
     /** Only the stats the row actually recorded; a zero says nothing. */
@@ -147,6 +154,11 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
             }
         });
         return stats;
+    }
+
+    @Override
+    public int contentVersion() {
+        return 2;
     }
 
     /**

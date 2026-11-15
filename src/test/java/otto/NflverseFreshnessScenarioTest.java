@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -245,7 +246,7 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void ftnDatePulledIsStoredPerGameWithoutKeepingPlays() {
+    void ftnDatePulledIsStoredPerGameAndOnlyThrownReadsAreKept() {
         afterWeek3();
 
         FtnCharting charting = store.ftnCharting().orElseThrow();
@@ -257,8 +258,13 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         tuple(new Unit.Game(4, "2026_04_PIT_CLE"),
                                 Instant.parse("2026-10-03T11:01:17.672216Z")))
                 .hasSize(13);
-        assertThat(jsonStore.read("nflverse-ftn-charting", Map.class).orElseThrow())
-                .doesNotContainKey("rows");
+        assertThat(charting.reads()).hasSize(16)
+                .contains(new FtnCharting.Read("2026_01_GB_MIN", "78", "1"),
+                        new FtnCharting.Read("2026_01_BUF_HOU", "86", "CHK"))
+                .noneMatch(read -> read.code().equals("0"));
+        assertThat(charting.reads()).filteredOn(FtnCharting.Read::firstRead)
+                .extracting(FtnCharting.Read::playId)
+                .containsExactly("78", "84", "63", "75");
         assertThat(readiness.weekStatus(FeedId.FTN_CHARTING, "2026", 3))
                 .isEqualTo(new WeekStatus.Complete(FTN_RELEASE, List.of()));
     }
@@ -322,7 +328,17 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         new WeekStatus.Complete(ROSTERS_RELEASE, List.of())),
                 Map.entry(FeedId.DEPTH_CHARTS, new WeekStatus.Unknown(
                         "8 of 8 teams' 2026 week 3 charts have been replaced by newer ones")),
-                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())));
+                Map.entry(FeedId.FTN_CHARTING, new WeekStatus.Complete(FTN_RELEASE, List.of())),
+                Map.entry(FeedId.PLAY_BY_PLAY, new WeekStatus.Incomplete(List.of(
+                        new Unit.Game(3, "2026_03_ATL_GB"), new Unit.Game(3, "2026_03_LAC_BUF"),
+                        new Unit.Game(3, "2026_03_ARI_SF"), new Unit.Game(3, "2026_03_PHI_CHI")),
+                        List.of())),
+                Map.entry(FeedId.EXPECTED_POINTS, new WeekStatus.Incomplete(Stream.of(
+                        "ATL", "GB", "LAC", "BUF", "ARI", "SF", "PHI", "CHI")
+                        .<Unit>map(team -> new Unit.TeamWeek(3, team))
+                        .toList(), List.of())),
+                Map.entry(FeedId.PLAYERS,
+                        new WeekStatus.Unknown("the file has no weeks, so no week is owed by it")));
     }
 
     @Test
@@ -440,7 +456,7 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
 
         nflverse.verify(2, getRequestedFor(urlEqualTo(NflverseStubs.STATS_2026_PATH)));
         assertThat(correctedStatsUnits()).isEmpty();
-        assertThat(store.weeklyStats().orElseThrow().coverage().contentVersion()).isEqualTo(1);
+        assertThat(store.weeklyStats().orElseThrow().coverage().contentVersion()).isEqualTo(2);
         assertThat(statsUnit(2, "SF").fingerprint()).isNotZero();
         assertThat(statsUnit(2, "SF").firstSeenAt()).isEqualTo(FIRST_RELEASE);
 

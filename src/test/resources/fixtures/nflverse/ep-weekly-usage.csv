@@ -1,0 +1,12 @@
+season,posteam,week,game_id,player_id,full_name,position,rec_attempt,rush_attempt,rec_touchdown,rush_touchdown,rec_touchdown_exp,rush_touchdown_exp,total_touchdown,total_touchdown_exp,total_fantasy_points,total_fantasy_points_exp
+2026,LAC,4,2026_04_LAC_SEA,00-0036355,Justin Herbert,QB,1,6,0,0,0.24,0.42,1,1.3199999999999998,11.559999999999999,17.6
+2026,LAC,4,2026_04_LAC_SEA,00-0040189,Oronde Gadsden II,TE,8,1,0,0,0.08,0,0,0.08,8.799999999999999,10.879999999999999
+2026,LAC,4,2026_04_LAC_SEA,00-0038454,Keaton Mitchell,RB,6,10,0,0,0.07,0.03,0,0.1,11.3,13.44
+2026,LAC,4,2026_04_LAC_SEA,00-0039391,Kimani Vidal,RB,3,5,1,0,0.17,0.02,1,0.19,11.6,7.89
+2026,LAC,4,2026_04_LAC_SEA,00-0040727,Tre Harris,WR,5,0,0,0,0.05,0,0,0.29,9,8.26
+2026,LAC,4,2026_04_LAC_SEA,00-0038544,Quentin Johnston,WR,2,1,0,0,0.26,0.01,0,0.27,5,4.29
+2026,LAC,4,2026_04_LAC_SEA,NA,NA,NA,1,0,0,0,0,0,0,0,0,0.9
+2026,LAC,4,2026_04_LAC_SEA,00-0039915,Ladd McConkey,WR,2,0,0,0,0.01,0,0,0.01,0,3.01
+2026,LAC,4,2026_04_LAC_SEA,00-0040666,Omarion Hampton,RB,2,9,0,1,0.01,0.77,1,0.78,13.3,11.05
+2026,LAC,4,2026_04_LAC_SEA,00-0034272,Marquez Valdes-Scantling,WR,1,0,0,0,0,0,0,0,0,1.28
+2026,LAC,4,2026_04_LAC_SEA,00-0038573,Derius Davis,WR,1,0,0,0,0,0,0,0,1.6,1.39

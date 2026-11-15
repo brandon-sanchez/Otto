@@ -45,4 +45,12 @@ sealed interface Grain<R> {
             return new Coverage.Unit.Team(team.apply(row));
         }
     }
+
+    record Whole<R>() implements Grain<R> {
+
+        @Override
+        public Coverage.Unit unit(R row) {
+            return new Coverage.Unit.File();
+        }
+    }
 }

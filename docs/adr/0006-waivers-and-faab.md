@@ -13,6 +13,10 @@ claim deadline, read from its Sleeper settings, instead of a fixed
 Tuesday. The two sections marked (revised, #111) replace the Tuesday
 rules.
 
+Amended (2026-11-13, issue #120): running backs are read by target
+share as well as snap share. The section marked (revised, #120) adds
+the back's target-share lane; the snap-share lanes stand.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -300,6 +304,23 @@ lead with target share; their snap share is explanation, not a gate.
 This supersedes #33's decision not to download snap counts. Live tag
 behaviour showed that touches answer usage while the workhorse finding
 was specifically about the role the coach put on the field.
+
+## A back's receiving role is read by target share too (revised, #120)
+
+Snap share alone missed backs whose role grows through the passing
+game. Keaton Mitchell took 19% of the Chargers' targets in week 4 of
+2026 on 37% of the snaps, and no snap lane could see it. A back is now
+read on two lanes, snaps and targets, and either one tags him:
+
+- `FAST_BACK_TARGET_SHARE` = 25%. A back with a quarter of his team's
+  targets in one game is being used as a receiver first.
+- `SLOW_BACK_TARGET_SHARE` = 15% in two straight games. A season share
+  near 15% belongs to the backs whose receiving work makes them weekly
+  PPR starters.
+
+A rising three-game share is reported per lane and says which share
+rose. When the target lane tags a back, his newest snap share rides in
+the reasons, as it does for a receiver.
 
 ## A stream is a matchup that explains more than half the edge
 
