@@ -280,9 +280,10 @@ class OttoStackTest {
         String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "records",
                 "DecisionRecords.java"));
 
-        List.of("records", "article-text").forEach(prefix ->
+        List.of("records", "article-text", "outcomes").forEach(prefix ->
                 assertThat(app).contains("\"" + prefix + "\""));
-        assertThat(template.toJSON().toString()).contains("/records/*", "/article-text/*");
+        assertThat(template.toJSON().toString()).contains("/records/*", "/article-text/*",
+                "/outcomes/*");
     }
 
     @Test
@@ -395,7 +396,7 @@ class OttoStackTest {
     }
 
     @Test
-    void theFunctionsWriteRecordsAndArticleText() {
+    void theFunctionsWriteRecordsArticleTextAndOutcomeRecords() {
         List<String> granted = new ArrayList<>();
         for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
             Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
@@ -413,7 +414,7 @@ class OttoStackTest {
                 .as("one grant each: the scheduled function and the webhook")
                 .hasSize(2)
                 .allSatisfy(resources -> assertThat(resources)
-                        .contains("/records/*", "/article-text/*"));
+                        .contains("/records/*", "/article-text/*", "/outcomes/*"));
     }
 
     @SuppressWarnings("unchecked")
