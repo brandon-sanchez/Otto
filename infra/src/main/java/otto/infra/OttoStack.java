@@ -82,7 +82,9 @@ public class OttoStack extends Stack {
     /**
      * The nightly defense-versus-position build reads a season of
      * nflverse rows, which is the longest thing the assistant does. A
-     * Check is seconds; the timeout is sized for the slowest job.
+     * Check is seconds; the timeout is sized for the slowest job. The
+     * app's Check budget for model calls, in {@code application.yml},
+     * is sized to fit inside it.
      */
     private static final Duration SCHEDULED_TIMEOUT = Duration.seconds(300);
 
@@ -109,6 +111,13 @@ public class OttoStack extends Stack {
      * own. The app spells it too, in {@code S3DocumentObjects}.
      */
     private static final String FEEDS_PREFIX = "nflverse/";
+
+    /**
+     * The prefix the team-reports feed state is stored under as an
+     * object of its own. The app spells it too, in
+     * {@code S3DocumentObjects}.
+     */
+    private static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
     /**
      * The two key prefixes of the Decision Records bucket. The app
@@ -213,7 +222,10 @@ public class OttoStack extends Stack {
      * draws from the shared pool like any other. The Check is then only
      * as safe as the storage layer makes it, which is safe but louder:
      * two overlapping runs both write, and the loser is refused and
-     * retried on the next tick rather than corrupting anything.
+     * retried on the next tick rather than corrupting anything. Both
+     * runs may pay for the same model call, but an Alert goes out once:
+     * the outbox takes a lease on each Alert's keys in the table, in one
+     * conditional write, and only the run holding them sends.
      */
     private Number scheduledConcurrency() {
         int reserved = Integer.parseInt(context("scheduledReservedConcurrency", "1"));
@@ -372,14 +384,15 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * The bundle, the feed objects and one table, and nothing else in
-     * either service. The bucket grant names the keys the app writes, so
-     * a function that went wrong could not fill the bucket with anything
-     * else.
+     * The bundle, the feed objects, the team-reports state and one
+     * table, and nothing else in either service. The bucket grant names
+     * the keys the app writes, so a function that went wrong could not
+     * fill the bucket with anything else.
      */
     private void readWriteStorage(Bucket documents, Table records, Function function) {
         documents.grantReadWrite(function, DOCUMENTS_KEY);
         documents.grantReadWrite(function, FEEDS_PREFIX + "*");
+        documents.grantReadWrite(function, TEAM_REPORTS_PREFIX + "*");
         records.grantReadWriteData(function);
     }
 
@@ -520,6 +533,8 @@ public class OttoStack extends Stack {
         // later, least recently read players first, so it does not retry.
         schedule("ResearchSchedule", target, invoker, "rate(10 minutes)", null,
                 "research", 0);
+        // ReportWindows.SCHEDULE_PERIOD in the app mirrors this rate, and
+        // a test on each side pins it.
         schedule("TeamReportsSchedule", target, invoker, "rate(5 minutes)", null,
                 "team-reports", 0);
     }

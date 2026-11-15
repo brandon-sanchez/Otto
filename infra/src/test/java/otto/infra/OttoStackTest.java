@@ -61,6 +61,22 @@ class OttoStackTest {
                 "SnapStart", Map.of("ApplyOn", "PublishedVersions")));
     }
 
+    /**
+     * The app sizes its model budgets to these timeouts: the Ask
+     * budget in {@code application.yml} to the webhook's and the Check
+     * budget to the scheduled function's, which
+     * {@code AwsEntryPointScenarioTest} pins on the app side.
+     */
+    @Test
+    void theFunctionTimeoutsAreTheOnesTheAppsBudgetsFit() {
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.WebhookHandler",
+                "Timeout", 60));
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.ScheduledHandler",
+                "Timeout", 300));
+    }
+
     @Test
     void theCheckLoopRunsOneAtATime() {
         template.hasResourceProperties("AWS::Lambda::Function", Map.of(
@@ -293,6 +309,15 @@ class OttoStackTest {
 
         assertThat(app).contains("PREFIX = \"nflverse/\"");
         assertThat(template.toJSON().toString()).contains("/nflverse/*");
+    }
+
+    @Test
+    void theTeamReportsStateIsGrantedUnderThePrefixTheAppWritesIt() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
+                "S3DocumentObjects.java"));
+
+        assertThat(app).contains("TEAM_REPORTS_PREFIX = \"team-reports/\"");
+        assertThat(template.toJSON().toString()).contains("/team-reports/*");
     }
 
     private static Template stackWith(String key, String value) {

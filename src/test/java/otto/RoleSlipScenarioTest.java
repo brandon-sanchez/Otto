@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -32,6 +33,7 @@ import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchCache;
 import otto.settings.Trigger;
+import otto.storage.JsonStore;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -104,6 +106,9 @@ class RoleSlipScenarioTest extends WireSeamTest {
     @Autowired
     private OttoProperties properties;
 
+    @Autowired
+    private JsonStore jsonStore;
+
     private void usageOnDisk(Consumer<WireMockServer> usage) {
         SleeperStubs.healthyInSeason(sleeper);
         OutboundStubs.telegramOk(telegram);
@@ -166,7 +171,8 @@ class RoleSlipScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("38%")));
         DecisionRecord record = onlyRoleSlipRecord();
         assertThat(record.kind()).isEqualTo(RunKind.PLAYER_DECISION);
-        assertThat(record.outcome()).isEqualTo(new Outcome.HeldForBoard(BENCH_AND_KEEP_MESSAGE));
+        assertThat(record.outcome()).isInstanceOfSatisfying(Outcome.HeldForBoard.class,
+                held -> assertThat(held.message()).isEqualTo(BENCH_AND_KEEP_MESSAGE));
         assertThat(roleSlips.heldForBoard()).singleElement()
                 .satisfies(held -> assertThat(held.message()).isEqualTo(BENCH_AND_KEEP_MESSAGE));
     }
@@ -292,6 +298,23 @@ class RoleSlipScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(ROLE_SLIP_REQUEST)));
+    }
+
+    @Test
+    void adviceHeldAgainFromAnEarlierRunKeepsWhatMakesItTheSameAdvice() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        checkWithAdvice(BENCH_AND_KEEP);
+        String signature = roleSlips.heldForBoard().getFirst().signature();
+        jsonStore.write("role-slips", Map.of());
+
+        clock.advance(Duration.ofMinutes(2));
+        checkRunner.runCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(ROLE_SLIP_REQUEST)));
+        assertThat(signature).isNotNull();
+        assertThat(roleSlips.heldForBoard()).singleElement()
+                .satisfies(held -> assertThat(held.signature()).isEqualTo(signature));
     }
 
     @Test

@@ -42,6 +42,9 @@ public class TelegramWebhook {
 
     private static final String VIEW_ALL = "all";
 
+    private static final String COULD_NOT_SEND_ALL =
+            "I could not send the full list. Tap again in a minute.";
+
     private final String webhookSecret;
     private final String chatId;
     private final AlertActions alertActions;
@@ -154,14 +157,32 @@ public class TelegramWebhook {
         acknowledge(callback, ack);
     }
 
+    /**
+     * Sends the board's full list and says how it went. A failure to
+     * read or record it is answered like a failed send: Telegram sends
+     * again an update whose webhook call fails, and that retry would
+     * fail the same way.
+     */
     private String viewAllOptions(long alertId) {
-        Optional<List<String>> options = boardOptions.allOptions(alertId);
-        if (options.isEmpty()) {
-            return "That board is no longer on my log.";
+        try {
+            Optional<List<String>> options = boardOptions.unsentOptions(alertId);
+            if (options.isEmpty()) {
+                return "That board is no longer on my log.";
+            }
+            int delivered = 0;
+            for (String part : options.get()) {
+                if (!telegram.sendMessage(part)) {
+                    break;
+                }
+                delivered++;
+            }
+            boolean finished = delivered == options.get().size();
+            boardOptions.sent(alertId, delivered, finished);
+            return finished ? "Here is every option on that board." : COULD_NOT_SEND_ALL;
+        } catch (RuntimeException e) {
+            log.error("Could not send the full list of board {}", alertId, e);
+            return COULD_NOT_SEND_ALL;
         }
-        return options.get().stream().allMatch(telegram::sendMessage)
-                ? "Here is every option on that board."
-                : "I could not send the full list. Tap again in a minute.";
     }
 
     /**

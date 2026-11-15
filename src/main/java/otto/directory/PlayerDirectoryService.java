@@ -30,6 +30,14 @@ public class PlayerDirectoryService {
     private static final String PLAYERS_PATH = "/v1/players/nfl";
     private static final Set<String> KEPT_POSITIONS = Set.of("QB", "RB", "WR", "TE");
 
+    /**
+     * How much earlier than a full interval a check may come and still be
+     * due. The checked-at time is taken partway through a Check, so the
+     * next minute's Check usually lands a moment short of a full interval
+     * and would otherwise skip until the minute after.
+     */
+    private static final Duration SCHEDULE_JITTER = Duration.ofSeconds(5);
+
     private final SleeperClient sleeper;
     private final PlayerDirectoryStore store;
     private final EventLog eventLog;
@@ -79,7 +87,8 @@ public class PlayerDirectoryService {
         Instant now = clock.instant();
         Optional<PlayerDirectory> existing = store.read();
         if (mode == RefreshMode.IF_DUE && existing.isPresent()
-                && Duration.between(existing.get().checkedAt(), now).compareTo(checkInterval) < 0) {
+                && Duration.between(existing.get().checkedAt(), now)
+                        .compareTo(checkInterval.minus(SCHEDULE_JITTER)) < 0) {
             return new Update.Skipped();
         }
 

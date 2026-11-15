@@ -29,6 +29,14 @@ import org.slf4j.LoggerFactory;
  * <p>Each run has one deadline, set by its {@link CallSite}. A provider
  * gets the time left minus a reserve for each later provider that may
  * still be asked, so one that hangs cannot use up the whole run.
+ *
+ * <p>The runs of one Check also share {@link ModelProperties.Budgets#check()},
+ * so that several Alerts in one Check cannot outlast the scheduled
+ * function's timeout. A run starts only while its whole deadline still
+ * fits in what the Check has left. Past that, {@link #call} throws
+ * {@link OutOfCheckTime} before asking anyone, and the run is left for
+ * the next Check: a run cut short instead would record its advice as
+ * withheld, and the next Check would repeat that outcome.
  */
 public class ModelChain {
 
@@ -39,6 +47,9 @@ public class ModelChain {
     private final ModelProperties.Budgets budgets;
 
     private final ExecutorService abandonableCalls = Executors.newVirtualThreadPerTaskExecutor();
+
+    /** When the Check this thread runs must end, in {@link System#nanoTime} terms. */
+    private static final ScopedValue<Long> CHECK_ENDS = ScopedValue.newInstance();
 
     public ModelChain(List<ChatProvider> providers, ProviderBreakers breakers,
             ModelProperties.Budgets budgets) {
@@ -136,6 +147,17 @@ public class ModelChain {
         }
     }
 
+    /**
+     * A run not started because the Check it belongs to has too little
+     * time left for it. The next Check makes the run.
+     */
+    public static final class OutOfCheckTime extends RuntimeException {
+
+        OutOfCheckTime() {
+            super("The Check has too little time left to start this model run.");
+        }
+    }
+
     /** A model call that did not answer within its turn's share of the deadline. */
     public static final class ModelTimeout extends RuntimeException {
 
@@ -200,12 +222,28 @@ public class ModelChain {
     }
 
     /**
+     * Runs {@code check} as one Check: every model run it makes shares
+     * {@link ModelProperties.Budgets#check()}.
+     */
+    public <T> T withinCheck(Supplier<T> check) {
+        return ScopedValue.where(CHECK_ENDS, System.nanoTime() + budgets.check().toNanos())
+                .call(check::get);
+    }
+
+    /**
      * Runs the call against each provider in turn until one gives a
      * usable answer or the site's deadline passes.
+     *
+     * @throws OutOfCheckTime inside {@link #withinCheck}, when the site's
+     *         deadline no longer fits in what the Check has left; no
+     *         provider is asked
      */
     public <T> Result<T> call(CallSite site, ProviderCall<T> call) {
         ModelProperties.Budget budget = budget(site);
         long deadline = System.nanoTime() + budget.deadline().toNanos();
+        if (CHECK_ENDS.isBound() && CHECK_ENDS.get() - deadline < 0) {
+            throw new OutOfCheckTime();
+        }
         List<Skip> skipped = new ArrayList<>();
         for (int index = 0; index < providers.size(); index++) {
             ChatProvider provider = providers.get(index);
@@ -213,10 +251,9 @@ public class ModelChain {
                     .filter(next -> breakers.refusal(next.name()).isEmpty())
                     .count();
             long until = deadline - later * budget.reserve().toNanos();
-            Optional<String> refusal = breakers.refusal(provider.name())
-                    .or(() -> until > System.nanoTime()
-                            ? Optional.empty()
-                            : Optional.of("Not called: no time was left for it."));
+            Optional<String> refusal = until > System.nanoTime()
+                    ? breakers.admit(provider.name())
+                    : Optional.of("Not called: no time was left for it.");
             if (refusal.isPresent()) {
                 skipped.add(new Skip(provider.name(), provider.model(), refusal.get(), false));
                 call.passedOver(provider, refusal.get());

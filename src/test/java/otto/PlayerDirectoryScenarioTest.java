@@ -61,6 +61,22 @@ class PlayerDirectoryScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void theNextMinutesCheckRefreshesTheDirectoryEvenWhenItFiresSlightlyEarly() {
+        stubPlayersFile("sleeper/players-nfl.json", "players-v1");
+        checkRunner.runCheck();
+
+        sleeper.resetAll();
+        sleeper.stubFor(get(urlEqualTo("/v1/players/nfl"))
+                .withHeader("If-None-Match", equalTo("\"players-v1\""))
+                .willReturn(aResponse().withStatus(304)));
+        clock.advance(Duration.ofSeconds(57));
+        checkRunner.runCheck();
+
+        sleeper.verify(1, getRequestedFor(urlEqualTo("/v1/players/nfl"))
+                .withHeader("If-None-Match", equalTo("\"players-v1\"")));
+    }
+
+    @Test
     void aPlayersFileChangeUpdatesTheDirectoryAndEmitsStatusEvents() {
         stubPlayersFile("sleeper/players-nfl.json", "players-v1");
         checkRunner.runCheck();

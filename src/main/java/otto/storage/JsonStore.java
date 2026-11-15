@@ -2,6 +2,7 @@ package otto.storage;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +75,22 @@ public class JsonStore {
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot write stored document " + name, e);
         }
+    }
+
+    /**
+     * Takes the named lease, see {@link DocumentBackend#lease}.
+     *
+     * @return false when another holder's lease is still live
+     */
+    public boolean lease(String name, Lease lease, Instant now) {
+        parsed.remove(name);
+        return backend.lease(name, lease, now);
+    }
+
+    /** Ends the holder's lease on {@code name}, see {@link DocumentBackend#release}. */
+    public void release(String name, String holder) {
+        parsed.remove(name);
+        backend.release(name, holder);
     }
 
     /**

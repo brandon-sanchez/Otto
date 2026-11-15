@@ -92,6 +92,9 @@ accounts are capped at 10 concurrent Lambda executions, and AWS refuses
 a reservation that would leave fewer than 10 unreserved - so none can be
 made. Request a quota increase for Lambda concurrent executions, then
 redeploy without the flag to limit the Check to one run at a time.
+Until then, two Checks can overlap. Each Alert still goes out once,
+because only the Check that holds the Alert's lease in DynamoDB sends
+it, but both Checks can pay for the same model call.
 
 ## 3. Hand the deploys to GitHub Actions
 

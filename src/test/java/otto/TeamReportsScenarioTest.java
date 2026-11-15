@@ -2,13 +2,21 @@ package otto;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
@@ -30,6 +38,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(OutputCaptureExtension.class)
 class TeamReportsScenarioTest extends WireSeamTest {
 
     private static final Instant SATURDAY_AFTERNOON = Instant.parse("2026-11-14T21:00:00Z");
@@ -248,6 +257,65 @@ class TeamReportsScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void oneMalformedPostIsSkippedAndReportedWhileTheRestOfTheFeedIsRead() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        String brokenPost = """
+                <item>
+                  <title><![CDATA[Chiefs sign a practice squad receiver]]></title>
+                  <link>https://www.chiefs.com/news/practice-squad-move</link>
+                  <pubDate>Saturday, November 14 2026</pubDate>
+                </item>
+                """;
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED)).willReturn(rss(
+                Fixtures.read("team-sites/chiefs-rss.xml")
+                        .replaceFirst("<item>", java.util.regex.Matcher.quoteReplacement(
+                                brokenPost) + "<item>"))));
+        site("chiefs.com", INJURY_PAGE, "team-sites/chiefs-injury-report.html");
+
+        TeamReports.Run run = teamReports.poll();
+
+        assertThat(run.problems()).singleElement().asString()
+                .contains("chiefs.com", "feed post", "Saturday, November 14 2026");
+        assertThat(OfficialUpdate.latest(cache.read(WALKER), "KC", SATURDAY_AFTERNOON))
+                .hasValueSatisfying(update -> assertThat(update.published())
+                        .isEqualTo(CHIEFS_REPORT_POSTED));
+    }
+
+    @Test
+    void aFeedWhosePostsAreAllMalformedIsAChangedLayout() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED)).willReturn(rss("""
+                <rss version="2.0"><channel><title>News</title>
+                <item><title>No link or date</title></item>
+                </channel></rss>""")));
+
+        TeamReports.Run run = teamReports.poll();
+
+        assertThat(run.problems()).singleElement().asString()
+                .contains("chiefs.com", "feed", "layout");
+    }
+
+    @Test
+    void aFeedThatKeepsFailingIsLoggedAsAnErrorOnItsThirdRunInARow(CapturedOutput output) {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED))
+                .willReturn(aResponse().withStatus(503)));
+
+        teamReports.poll();
+        clock.advance(Duration.ofMinutes(5));
+        teamReports.poll();
+        assertThat(output.getOut()).doesNotContainPattern("ERROR.*otto\\.research\\.TeamReports");
+
+        clock.advance(Duration.ofMinutes(5));
+        teamReports.poll();
+        assertThat(output.getOut()).containsPattern(
+                "ERROR.*otto\\.research\\.TeamReports.*chiefs\\.com.*3 runs in a row");
+    }
+
+    @Test
     void aPostLinkingOffTheTeamSiteIsReportedAndNeverFetched() {
         knownPlayers();
         clock.set(WEEK_9_GAME_DAY);
@@ -292,6 +360,82 @@ class TeamReportsScenarioTest extends WireSeamTest {
         clock.advance(Duration.ofMinutes(56));
         teamReports.poll();
         teamSites.verify(2, getRequestedFor(urlPathEqualTo("/chiefs.com" + FEED)));
+    }
+
+    @Test
+    void aLateRunInAReportWindowDoesNotMakeTheNextOnTimeRunSkipTheFeed() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamReports.poll();
+        clock.advance(Duration.ofSeconds(390));
+        teamReports.poll();
+        clock.advance(Duration.ofSeconds(210));
+        teamReports.poll();
+
+        teamSites.verify(3, getRequestedFor(urlPathEqualTo("/chiefs.com" + FEED)));
+    }
+
+    @Test
+    void aRunThatRunsLongStopsStartingFeedsAndTheNextRunReadsTheRest() throws Exception {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED)).willReturn(rss(
+                "<rss version=\"2.0\"><channel><title>News</title></channel></rss>")
+                .withFixedDelay(1000)));
+
+        CompletableFuture<TeamReports.Run> slow = CompletableFuture.supplyAsync(
+                teamReports::poll);
+        awaitRequest("/chiefs.com" + FEED);
+        clock.advance(Duration.ofMinutes(3));
+        slow.get(10, TimeUnit.SECONDS);
+
+        teamSites.verify(0, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
+        teamReports.poll();
+        teamSites.verify(1, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
+    }
+
+    @Test
+    void aTeamWhoseReportWaitedLongestIsReadBeforeTeamsThatPostedSince() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        List<String> firstEight = List.of("azcardinals.com", "atlantafalcons.com",
+                "baltimoreravens.com", "buffalobills.com", "panthers.com", "chicagobears.com",
+                "bengals.com", "clevelandbrowns.com");
+        String ninth = "dallascowboys.com";
+        Instant posted = SATURDAY_AFTERNOON.minus(Duration.ofMinutes(10));
+        firstEight.forEach(host -> injuryReportPosted(host, "v1", posted));
+        injuryReportPosted(ninth, "v1", posted.minus(Duration.ofMinutes(10)));
+        teamReports.poll();
+        teamSites.verify(0, getRequestedFor(urlPathEqualTo("/" + ninth + INJURY_PAGE)));
+
+        clock.advance(Duration.ofMinutes(5));
+        firstEight.forEach(host -> injuryReportPosted(host, "v2", clock.instant()));
+        teamReports.poll();
+
+        teamSites.verify(1, getRequestedFor(urlPathEqualTo("/" + ninth + INJURY_PAGE)));
+    }
+
+    private static void injuryReportPosted(String host, String version, Instant published) {
+        teamSites.stubFor(get(urlPathEqualTo("/" + host + FEED)).willReturn(rss("""
+                <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+                <title>News</title>
+                <item>
+                  <title>Week 10 Injury Report</title>
+                  <link>https://www.%1$s/news/week-10-injury-report-%2$s</link>
+                  <pubDate>%3$s</pubDate>
+                  <guid isPermaLink="false">%1$s-%2$s</guid>
+                  <media:keywords>Injury Report</media:keywords>
+                </item>
+                </channel></rss>""".formatted(host, version,
+                DateTimeFormatter.RFC_1123_DATE_TIME.format(published.atZone(ZoneOffset.UTC))))));
+    }
+
+    private static void awaitRequest(String path) throws InterruptedException {
+        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (teamSites.findAll(getRequestedFor(urlPathEqualTo(path))).isEmpty()) {
+            assertThat(System.nanoTime()).isLessThan(until);
+            Thread.sleep(10);
+        }
     }
 
     private static void site(String host, String path, String fixture) {

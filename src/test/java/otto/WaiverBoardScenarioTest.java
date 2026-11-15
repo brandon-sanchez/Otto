@@ -503,6 +503,66 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aFullListCutShortByTelegramResumesWhereItStoppedOnTheNextTap() {
+        String reasoning = "He has a real role and is worth a look. ".repeat(17).strip();
+        List<String> six = Stream.of("10001", "10004", "10003", "10005", "10002", "20101")
+                .map(playerId -> entry(playerId, reasoning))
+                .toList();
+        tuesdayEveningWithTheModelAnswering(board(false, OPENING, six, List.of()));
+        String viewAll = "all:" + boardAlertId();
+        telegram.resetRequests();
+        telegram.stubFor(post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .atPriority(1)
+                .withRequestBody(matchingJsonPath("$.text", containing("6. ")))
+                .willReturn(aResponse().withStatus(500)));
+
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(viewAll));
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo("I could not send the full list. Tap again in a minute."))));
+        telegram.resetAll();
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.telegramCallbackAnswered(telegram);
+
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(viewAll));
+
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        containing("All your waiver options"))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("6. "))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo("Here is every option on that board."))));
+    }
+
+    @Test
+    void aBoardWhoseRecordCannotBeReadIsAnsweredRatherThanRedelivered() throws IOException {
+        List<String> six = Stream.of("10001", "10004", "10003", "10005", "10002", "20101")
+                .map(playerId -> entry(playerId, "He has a real role and is worth a look."))
+                .toList();
+        tuesdayEveningWithTheModelAnswering(board(false, OPENING, six, List.of()));
+        String viewAll = "all:" + boardAlertId();
+        Path league = Path.of(properties.storageDir(), "decision-records", "records",
+                "user=" + USER_ID, "league=" + LEAGUE_ID);
+        try (Stream<Path> files = Files.walk(league)) {
+            for (Path file : files.sorted(Comparator.reverseOrder()).toList()) {
+                Files.delete(file);
+            }
+        }
+        Files.writeString(league, "a file where the league's records would go");
+        telegram.resetRequests();
+
+        assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(viewAll)))
+                .isEqualTo(WebhookResult.OK);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        equalTo("I could not send the full list. Tap again in a minute."))));
+    }
+
+    @Test
     void aBoardOfFiveOrFewerHasNoViewAllOptionsButton() {
         tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(IRVING), List.of()));
 

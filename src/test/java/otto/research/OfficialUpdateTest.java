@@ -51,6 +51,34 @@ class OfficialUpdateTest {
     }
 
     @Test
+    void aNewerTeamReportThatStatesNothingRetiresAnEarlierAnnouncement() {
+        ResearchItem lastWeek = new ResearchItem("49ers:1", "49ers", TEAM_SITE,
+                "McCaffrey ruled out for Sunday", null, null, NOW.minus(Duration.ofDays(2)), NOW,
+                "hash", null, Set.of());
+        ResearchItem thisWeek = new ResearchItem("49ers:2", "49ers", TEAM_SITE,
+                "McCaffrey did not practice Wednesday", null, null, NOW.minusSeconds(60), NOW,
+                "hash", null, Set.of());
+
+        assertThat(OfficialUpdate.latest(new PlayerResearch("4034", List.of(lastWeek, thisWeek)),
+                "SF", NOW)).isEmpty();
+    }
+
+    @Test
+    void aNewerStoryFromAnotherSiteLeavesTheTeamsAnnouncementStanding() {
+        ResearchItem announcement = new ResearchItem("49ers:1", "49ers", TEAM_SITE,
+                "McCaffrey ruled out for Sunday", null, null, NOW.minus(Duration.ofHours(5)), NOW,
+                "hash", null, Set.of());
+        ResearchItem elsewhere = new ResearchItem("rotowire:2", "rotowire",
+                "https://rotowire.com/news/2", "McCaffrey did not practice", null, null,
+                NOW.minusSeconds(60), NOW, "hash", null, Set.of());
+
+        assertThat(OfficialUpdate.latest(
+                new PlayerResearch("4034", List.of(announcement, elsewhere)), "SF", NOW))
+                .map(OfficialUpdate::availability)
+                .contains(OfficialUpdate.Availability.WILL_NOT_PLAY);
+    }
+
+    @Test
     void anotherSiteIsNoAnnouncementEvenWhenItQuotesTheTeam() {
         assertThat(read("49ers say McCaffrey ruled out", "https://rotowire.com/news/1",
                 NOW.minusSeconds(60))).isEmpty();

@@ -54,11 +54,15 @@ public record OfficialUpdate(String storyKey, String team, String teamName, Stri
             + "|may not play|might not play|could miss|hopes to play|expected to play|if)\\b");
 
     /**
-     * Returns the newest announcement from the player's own team that
-     * states plainly whether he plays, published inside
-     * {@link PreSendResearch#REPORT_WINDOW}; empty when there is none.
-     * A story from any other site, one with no publication time, or one
-     * that hedges or says both is never an announcement.
+     * Returns what the newest story about him on his own team's site,
+     * published inside {@link PreSendResearch#REPORT_WINDOW}, states
+     * plainly about whether he plays; empty when there is no such story
+     * or it hedges, says both, or says nothing about his playing. Only
+     * the newest one counts: a later team report that states nothing,
+     * such as a practice report for the next game, retires an earlier
+     * announcement, which may be about a game already played. A story
+     * from any other site or one with no publication time is never an
+     * announcement.
      *
      * @param team the Sleeper abbreviation of the team he plays for now
      */
@@ -68,22 +72,22 @@ public record OfficialUpdate(String storyKey, String team, String teamName, Stri
         return research.items().stream()
                 .filter(item -> item.published() != null && !item.published().isBefore(since)
                         && !item.published().isAfter(now))
-                .map(item -> of(item, team))
-                .flatMap(Optional::stream)
-                .findFirst();
+                .flatMap(item -> OfficialTeams.publishedBy(team, item.canonicalUrl()).stream()
+                        .map(official -> new Published(item, official)))
+                .findFirst()
+                .flatMap(published -> of(published, team));
     }
 
-    private static Optional<OfficialUpdate> of(ResearchItem item, String team) {
-        Optional<OfficialTeams.Team> official = OfficialTeams.publishedBy(team,
-                item.canonicalUrl());
-        if (official.isEmpty()) {
-            return Optional.empty();
-        }
+    private record Published(ResearchItem item, OfficialTeams.Team team) {
+    }
+
+    private static Optional<OfficialUpdate> of(Published published, String team) {
+        ResearchItem item = published.item();
         String statement = Stream.of(item.headline(), item.detail())
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining(": "));
         return availability(statement).map(availability -> new OfficialUpdate(item.storyKey(),
-                team, official.get().name(), official.get().host(), availability, statement,
+                team, published.team().name(), published.team().host(), availability, statement,
                 item.published()));
     }
 

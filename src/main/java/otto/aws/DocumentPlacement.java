@@ -17,7 +17,8 @@ import java.util.Set;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, three markers, each Alert delivery record, and
+ * its newest turns, three markers, each Alert delivery record, where
+ * each waiver board's full list resumes, and
  * the research cache: one player's stories, capped at a fixed count,
  * and the index of when each player was last read. Big means
  * everything that grows with the league, the roster of players or the
@@ -42,6 +43,7 @@ public final class DocumentPlacement {
     public static boolean isBig(String name) {
         return !SMALL.contains(name)
                 && !name.startsWith("alert-delivery-")
+                && !name.startsWith("board-options-sent-")
                 && !name.startsWith("research-");
     }
 }

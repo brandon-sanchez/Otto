@@ -18,10 +18,14 @@ import otto.storage.ConcurrentDocumentChange;
 import otto.storage.DocumentBackend;
 
 /**
- * The nflverse feeds, each held as an S3 object of its own under
- * {@value #PREFIX}. Play-by-play and FTN charting run to megabytes a
- * season, so keeping them out of the bundle every Check reads means a
- * feed is fetched only by the code that reads it.
+ * The documents held as S3 objects of their own: the nflverse feeds,
+ * each under {@value #PREFIX}, and the team-reports feed state under
+ * {@value #TEAM_REPORTS_PREFIX}. Play-by-play and FTN charting run to
+ * megabytes a season, so keeping them out of the bundle every Check
+ * reads means a feed is fetched only by the code that reads it. The
+ * team-reports state is rewritten every few minutes; in the bundle,
+ * each rewrite would cost every Check after it a full bundle read in
+ * place of a 304.
  *
  * <p>Each feed's bytes are held in memory with the ETag they were read
  * at, and every read asks S3 again with {@code If-None-Match}. An
@@ -37,7 +41,7 @@ import otto.storage.DocumentBackend;
  * feed written out is always dropped from the bundle in the same flush.
  *
  * <p>Writes wait for {@link #flush}, like the bundle's. Only the
- * scheduled feed jobs write feeds, one at a time, so a write over a
+ * scheduled jobs write these documents, one at a time, so a write over a
  * version this container read, which finds the object changed under
  * it, is refused as a {@link ConcurrentDocumentChange} rather than
  * merged.
@@ -47,7 +51,12 @@ public class S3DocumentObjects implements DocumentBackend {
     /** The key prefix every feed object is stored under. */
     public static final String PREFIX = "nflverse/";
 
+    /** The key prefix the team-reports state is stored under. */
+    public static final String TEAM_REPORTS_PREFIX = "team-reports/";
+
     private static final String FEED_NAME_PREFIX = "nflverse-";
+
+    private static final String TEAM_REPORTS = "team-reports";
 
     private final S3Client s3;
     private final String bucket;
@@ -70,9 +79,12 @@ public class S3DocumentObjects implements DocumentBackend {
         this.legacy = legacy;
     }
 
-    /** True for the documents this backend stores: every nflverse feed. */
+    /**
+     * True for the documents this backend stores: every nflverse feed and
+     * the team-reports state.
+     */
     public static boolean holds(String name) {
-        return name.startsWith(FEED_NAME_PREFIX);
+        return name.startsWith(FEED_NAME_PREFIX) || name.equals(TEAM_REPORTS);
     }
 
     @Override
@@ -185,6 +197,6 @@ public class S3DocumentObjects implements DocumentBackend {
     }
 
     private static String key(String name) {
-        return PREFIX + name + ".json";
+        return (name.equals(TEAM_REPORTS) ? TEAM_REPORTS_PREFIX : PREFIX) + name + ".json";
     }
 }

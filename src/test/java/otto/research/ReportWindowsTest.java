@@ -1,5 +1,6 @@
 package otto.research;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -45,5 +46,28 @@ class ReportWindowsTest {
         Instant sundayFourPmEastern = Instant.parse("2026-11-15T21:00:00Z");
         assertThat(ReportWindows.interval("PIT", sundayFourPmEastern, List.of()))
                 .isEqualTo(ReportWindows.OTHERWISE);
+    }
+
+    /** The TeamReportsSchedule rate in OttoStack, which OttoStackTest pins. */
+    private static final Duration STACK_RATE = Duration.ofMinutes(5);
+
+    @Test
+    void aFeedInAReportWindowIsDueOnEveryRunOfTheStacksSchedule() {
+        Instant read = KICKOFF.minus(Duration.ofMinutes(90));
+
+        assertThat(ReportWindows.due(read, ReportWindows.DURING, read.plus(STACK_RATE))).isTrue();
+        assertThat(ReportWindows.due(read, ReportWindows.DURING,
+                read.plus(STACK_RATE.dividedBy(2)).plusSeconds(1))).isTrue();
+        assertThat(ReportWindows.due(read, ReportWindows.DURING, read.plusSeconds(60))).isFalse();
+    }
+
+    @Test
+    void anHourlyFeedIsDueOnTheRunNearestTheHour() {
+        Instant read = KICKOFF.minus(Duration.ofHours(5));
+
+        assertThat(ReportWindows.due(read, ReportWindows.OTHERWISE,
+                read.plus(Duration.ofMinutes(58)))).isTrue();
+        assertThat(ReportWindows.due(read, ReportWindows.OTHERWISE,
+                read.plus(Duration.ofMinutes(55)))).isFalse();
     }
 }

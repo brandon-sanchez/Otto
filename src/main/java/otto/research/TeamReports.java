@@ -4,10 +4,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,17 @@ import otto.storage.JsonStore;
  * wording of the facts. No article text is kept: the sites allow
  * personal use and RSS, not building a copy of their content.
  *
+ * <p>Teams go in the order their news has waited: first those with a
+ * post whose report is still unread, oldest post first, then the rest
+ * by how long ago their feed was read. A run reads at most a few
+ * reports, and on an afternoon when every team posts, a fixed order
+ * would spend them on the same teams each run.
+ *
+ * <p>A run stops starting feeds once two minutes have passed, well
+ * inside the scheduled function's timeout, and the feeds it did not
+ * reach are read on the next run. The feed state is written whatever
+ * happens, so the feeds a run did read are not read again.
+ *
  * <p>A feed or page that fails or changes shape is skipped and reported,
  * and what the cache already held stands. A post whose report could not
  * be read is tried again on later runs, up to {@link TeamRun#MAX_REPORT_READS}
@@ -49,6 +62,21 @@ public class TeamReports {
     private static final String STATE = "team-reports";
 
     private static final int REPORT_READS_PER_RUN = 8;
+
+    /**
+     * How long a run keeps starting feeds. Each feed can take up to the
+     * team-site timeout and a report read more, and 32 of them in a row
+     * could outlast the five-minute function timeout, which would lose
+     * the feed state of the whole run.
+     */
+    private static final Duration RUN_BUDGET = Duration.ofSeconds(120);
+
+    /**
+     * Runs in a row a team's feed may fail before each further failure
+     * is logged as an error, which the error alarm counts. One failed
+     * read is a blip the next run usually clears and is only a warning.
+     */
+    private static final int FAILED_RUNS_LOGGED_AS_ERROR = 3;
 
     private final TeamSites sites;
     private final ResearchCache cache;
@@ -94,7 +122,7 @@ public class TeamReports {
      *
      * <p>Side effects: an HTTP request per due feed and per report read,
      * a research cache write per player with new facts, and one write of
-     * the feed state.
+     * the feed state, made even when the run fails partway.
      */
     public Run poll() {
         Instant now = clock.instant();
@@ -108,20 +136,55 @@ public class TeamReports {
                 .orElse(Map.of()));
         List<Schedule.Game> games = nflverse.schedule().map(Schedule::rows).orElse(List.of());
         TeamRun.Tally tally = new TeamRun.Tally(REPORT_READS_PER_RUN);
-        OfficialTeams.all().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> {
-                    TeamRun.FeedState held = feeds.getOrDefault(entry.getKey(),
-                            TeamRun.FeedState.NEW);
-                    Duration interval = ReportWindows.interval(entry.getKey(), now, games);
-                    if (held.polled() == null || !now.isBefore(held.polled().plus(interval))) {
-                        feeds.put(entry.getKey(), new TeamRun(sites, cache, entry.getKey(),
-                                entry.getValue(), players.get(), now, tally).run(held));
+        Instant stopStarting = now.plus(RUN_BUDGET);
+        List<Map.Entry<String, OfficialTeams.Team>> teams = OfficialTeams.all().entrySet().stream()
+                .sorted(longestWaitingFirst(feeds))
+                .toList();
+        try {
+            for (Map.Entry<String, OfficialTeams.Team> entry : teams) {
+                if (!clock.instant().isBefore(stopStarting)) {
+                    log.warn("team reports: stopped starting feeds after {}; the rest wait "
+                            + "for the next run", RUN_BUDGET);
+                    break;
+                }
+                TeamRun.FeedState held = feeds.getOrDefault(entry.getKey(),
+                        TeamRun.FeedState.NEW);
+                Duration interval = ReportWindows.interval(entry.getKey(), now, games);
+                if (held.polled() == null || ReportWindows.due(held.polled(), interval, now)) {
+                    TeamRun.FeedState read = new TeamRun(sites, cache, entry.getKey(),
+                            entry.getValue(), players.get(), now, tally).run(held);
+                    feeds.put(entry.getKey(), read);
+                    if (read.failedRuns() >= FAILED_RUNS_LOGGED_AS_ERROR) {
+                        log.error("team reports: the {} feed failed {} runs in a row",
+                                entry.getValue().host(), read.failedRuns());
                     }
-                });
-        store.write(STATE, new State(feeds));
+                }
+            }
+        } finally {
+            store.write(STATE, new State(feeds));
+        }
         Run run = tally.run();
         run.problems().forEach(problem -> log.warn("team reports: {}", problem));
         return run;
+    }
+
+    private static Comparator<Map.Entry<String, OfficialTeams.Team>> longestWaitingFirst(
+            Map<String, TeamRun.FeedState> feeds) {
+        Function<Map.Entry<String, OfficialTeams.Team>, TeamRun.FeedState> state =
+                entry -> feeds.getOrDefault(entry.getKey(), TeamRun.FeedState.NEW);
+        return Comparator.comparing(
+                        (Map.Entry<String, OfficialTeams.Team> entry) -> oldestPending(
+                                state.apply(entry)))
+                .thenComparing(entry -> Optional.ofNullable(state.apply(entry).polled())
+                        .orElse(Instant.MIN))
+                .thenComparing(Map.Entry::getKey);
+    }
+
+    /** The oldest unread post's time, or {@link Instant#MAX} when none waits. */
+    private static Instant oldestPending(TeamRun.FeedState state) {
+        return state.pending().stream()
+                .map(pending -> pending.post().published())
+                .min(Comparator.naturalOrder())
+                .orElse(Instant.MAX);
     }
 }
