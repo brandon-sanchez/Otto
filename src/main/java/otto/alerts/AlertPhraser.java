@@ -24,7 +24,10 @@ public class AlertPhraser {
             Phrase the computed recommendation below as a short Telegram alert,
             2-5 lines. State the action when confidence is HIGH; voice the
             doubt with the pros and cons when it is MEDIUM. Use only the
-            facts given. Never invent numbers, names, or reasons.
+            facts given. Never invent numbers, names, or reasons. When the
+            event includes latestReport, it is the newest injury,
+            availability or roster report, read just now: mention it and
+            credit latestReportSource.
 
             Use Telegram-friendly plain text. An IR eligibility alert starts
             with ----- IR UPDATE -----. An alert that requires a healthy player
