@@ -1,6 +1,7 @@
 package otto;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -8,6 +9,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ import otto.telegram.WebhookResult;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -356,7 +359,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("No waiver board this round"))));
+                        containing("No waiver board this round")))
+                .withRequestBody(matchingJsonPath("$.text", containing("past my checks"))));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("James Cook")));
     }
@@ -377,7 +381,39 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("No waiver board this round"))));
+                        containing("No waiver board this round")))
+                .withRequestBody(matchingJsonPath("$.text",
+                        containing("could not reach the model"))));
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("past my checks")));
+    }
+
+    @Test
+    void aRoundThatCannotBeScreenedWaitsThenSaysWhatIsMissingInsideTheBuffer() throws IOException {
+        aWaiverWeekOnDisk();
+        Files.delete(Path.of(properties.storageDir(), HexFormat.of()
+                .formatHex("player-directory".getBytes(StandardCharsets.UTF_8)) + ".json"));
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PLAYERS_PATH))
+                .willReturn(aResponse().withStatus(500)));
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+
+        assertThat(boardRecords()).isEmpty();
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("No waiver board this round")));
+
+        clock.set(FALLBACK);
+        checkRunner.runCheck();
+        checkRunner.runCheck();
+
+        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text",
+                        containing("No waiver board this round")))
+                .withRequestBody(matchingJsonPath("$.text",
+                        containing("there is no player directory yet"))));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST)));
     }
 
     @Test

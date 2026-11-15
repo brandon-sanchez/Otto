@@ -2,6 +2,7 @@ package otto.records;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -66,7 +67,21 @@ public sealed interface Outcome {
     record HeldForBoard(String message) implements Outcome {
     }
 
-    record Withheld(String reason) implements Outcome {
+    /**
+     * Nothing the run produced reached the user.
+     *
+     * @param reason why, for whoever reads the record
+     * @param notice the message sent in its place to tell the user
+     *        nothing is coming, or null when the run sends nothing at
+     *        all
+     */
+    record Withheld(String reason, @JsonInclude(JsonInclude.Include.NON_NULL) String notice)
+            implements Outcome {
+
+        /** A withheld run that sends nothing in its place. */
+        public Withheld(String reason) {
+            this(reason, null);
+        }
     }
 
     /**

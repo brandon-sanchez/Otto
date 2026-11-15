@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,8 +64,10 @@ import otto.waivers.WaiverAlertService;
  *
  * <p>A board that fails its checks twice is never replaced by the
  * scored board: the user is told no board is coming this round. When the
- * model cannot be reached, each Check tries again until the fallback
- * buffer, and from then on the round is withheld the same way.
+ * model cannot be reached, or no free agent can be screened because the
+ * player directory or the user's roster is missing, each Check tries
+ * again until the fallback buffer, and from then on the round is
+ * withheld the same way. Each notice says which of the three it was.
  *
  * <p>The run id is derived from the league and the claim deadline, so
  * every Check in the window finds the round's record and builds nothing
@@ -82,10 +85,15 @@ public class WaiverBoardService {
     /** How long before the claim deadline a board is built even though data is late. */
     static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
 
-    /** What the user reads in a round whose board is withheld. */
-    static final String WITHHELD_NOTICE = "No waiver board this round: I could not get one "
-            + "past my checks before the claim deadline, and I never send unchecked picks in "
-            + "its place. Place any claims yourself in Sleeper.";
+    /** What the user reads in a round whose board failed its checks twice. */
+    static final String FAILED_CHECKS_NOTICE = "No waiver board this round: I could not get "
+            + "one past my checks before the claim deadline, and I never send unchecked picks "
+            + "in its place. Place any claims yourself in Sleeper.";
+
+    /** What the user reads in a round whose board the model could not be reached to write. */
+    static final String MODEL_UNAVAILABLE_NOTICE = "No waiver board this round: I could not "
+            + "reach the model that writes it before the claim deadline, and I never send "
+            + "unchecked picks in its place. Place any claims yourself in Sleeper.";
 
     private static final String RUN_ID_PREFIX = "waiver-board-";
     private static final int RUN_ID_HASH_LENGTH = 32;
@@ -186,6 +194,8 @@ public class WaiverBoardService {
         String leagueId = league.league().leagueId();
         Optional<WaiverPreference> preference = preferences.forRound(leagueId, deadline);
         return switch (evidence.screen(league, deadline, preference, now, data)) {
+            case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
+                    Optional.of(unscreenable(runId, league, unavailable.reason(), now));
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board waits: {}", unavailable.reason());
                 yield Optional.empty();
@@ -214,9 +224,10 @@ public class WaiverBoardService {
             case AdviceResult.Approved<BoardAnswer> approved -> approved(approved.answer(),
                     screen, budget, data.complete() ? List.of() : List.of(data.notice()));
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
-                    "The board failed its checks twice: " + String.join(" ", rejected.failures()));
+                    "The board failed its checks twice: " + String.join(" ", rejected.failures()),
+                    FAILED_CHECKS_NOTICE);
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
-                    new Outcome.Withheld(unavailable.reason());
+                    new Outcome.Withheld(unavailable.reason(), MODEL_UNAVAILABLE_NOTICE);
         };
         DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
                 RunKind.WAIVER_BOARD, now, userId, league.league().leagueId(),
@@ -228,6 +239,27 @@ public class WaiverBoardService {
                 versions(screen.bundle(), form), result.exchanges(), outcome);
         records.save(record);
         return Optional.of(record);
+    }
+
+    /**
+     * The record of a round the fallback buffer reached with no free
+     * agent screenable, so the user hears why no board is coming
+     * instead of nothing at all.
+     */
+    private DecisionRecord unscreenable(String runId, LeagueWeek league, String reason,
+            Instant now) {
+        String notice = "No waiver board this round: I could not screen the free agents "
+                + "before the claim deadline, because " + reason
+                + ". Place any claims yourself in Sleeper.";
+        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
+                RunKind.WAIVER_BOARD, now, userId, league.league().leagueId(),
+                OttoJson.MAPPER.valueToTree(league.league()),
+                new RosterContext(NullNode.getInstance(), Optional.empty()),
+                preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
+                new Versions("none", codeVersion(), "none", model), List.of(),
+                new Outcome.Withheld("The free agents could not be screened: " + reason, notice));
+        records.save(record);
+        return record;
     }
 
     private Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
@@ -251,8 +283,8 @@ public class WaiverBoardService {
         Optional<Sendable> board = switch (record.outcome()) {
             case Outcome.SentBoard sentBoard -> Optional.of(new Sendable(
                     sentBoard.messages(), !sentBoard.allOptions().isEmpty()));
-            case Outcome.Withheld _ -> Optional.of(new Sendable(
-                    List.of(WITHHELD_NOTICE), false));
+            case Outcome.Withheld withheld -> Optional.ofNullable(withheld.notice())
+                    .map(notice -> new Sendable(List.of(notice), false));
             default -> Optional.empty();
         };
         return board.flatMap(messages -> send(key, record, deadline, messages, now));
@@ -304,8 +336,11 @@ public class WaiverBoardService {
     }
 
     private Versions versions(EvidenceBundle bundle, BoardForm form) {
-        String code = Objects.requireNonNullElse(
+        return new Versions(bundle.identity(), codeVersion(), form.promptVersion(), model);
+    }
+
+    private static String codeVersion() {
+        return Objects.requireNonNullElse(
                 OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, form.promptVersion(), model);
     }
 }
