@@ -12,7 +12,7 @@ import otto.aws.AwsDocumentBackend;
 import otto.aws.DocumentPlacement;
 import otto.aws.DynamoDbBackend;
 import otto.aws.S3BundleBackend;
-import otto.aws.S3DocumentObjects;
+import otto.aws.S3FeedObjects;
 import otto.harness.FakeDynamoDb;
 import otto.harness.FakeS3;
 import otto.storage.ConcurrentDocumentChange;
@@ -58,7 +58,7 @@ class AwsStorageScenarioTest {
 
     private DocumentBackend backend() {
         S3BundleBackend bundle = new S3BundleBackend(s3, BUCKET);
-        return new AwsDocumentBackend(new S3DocumentObjects(s3, BUCKET, bundle),
+        return new AwsDocumentBackend(new S3FeedObjects(s3, BUCKET, bundle), bundle,
                 new DynamoDbBackend(dynamo, TABLE));
     }
 
@@ -136,15 +136,15 @@ class AwsStorageScenarioTest {
     }
 
     @Test
-    void aFeedRewrittenWhileStillInTheBundleLeavesTheBundleInTheFeedsOwnFlush() {
+    void aFeedRewrittenWhileStillInTheBundleLeavesTheBundleInTheSameFlush() {
         s3.writeBehindTheCaller(KEY, """
                 {"snapshot-current":{"week":"2","starters":["Kamara"]},\
                 "nflverse-play-by-play":{"season":"2026","rows":["pass"]}}""".getBytes());
-        S3DocumentObjects feeds = new S3DocumentObjects(s3, BUCKET, new S3BundleBackend(s3, BUCKET));
+        DocumentBackend backend = backend();
 
-        feeds.store(PLAY_BY_PLAY, """
+        backend.store(PLAY_BY_PLAY, """
                 {"season":"2026","rows":["pass","sack"]}""".getBytes());
-        feeds.flush();
+        backend.flush();
 
         assertThat(s3.storedAsText(PLAY_BY_PLAY_KEY)).contains("sack");
         assertThat(s3.storedAsText(KEY)).contains("snapshot-current")
@@ -356,8 +356,12 @@ class AwsStorageScenarioTest {
                 "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1",
                 "board-options-sent-1");
 
-        assertThat(big).allMatch(DocumentPlacement::isBig);
-        assertThat(small).noneMatch(DocumentPlacement::isBig);
+        List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting",
+                "team-reports");
+
+        assertThat(big).allMatch(name -> DocumentPlacement.of(name) != DocumentPlacement.SMALL);
+        assertThat(small).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.SMALL);
+        assertThat(feeds).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.FEED);
     }
 
     /**
@@ -367,8 +371,10 @@ class AwsStorageScenarioTest {
      */
     @Test
     void aDocumentNobodyHasPlacedGoesToTheStoreWithNoSizeLimit() {
-        assertThat(DocumentPlacement.isBig("nflverse-something-new")).isTrue();
-        assertThat(DocumentPlacement.isBig("a-document-added-next-season")).isTrue();
+        assertThat(DocumentPlacement.of("nflverse-something-new"))
+                .isEqualTo(DocumentPlacement.FEED);
+        assertThat(DocumentPlacement.of("a-document-added-next-season"))
+                .isEqualTo(DocumentPlacement.BUNDLE);
     }
 
     @Test

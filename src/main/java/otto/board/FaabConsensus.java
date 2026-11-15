@@ -112,22 +112,21 @@ record FaabConsensus(List<Suggestion> comparable, List<Suggestion> unconverted) 
      * source suggested a bid.
      *
      * @param leagueBudget the budget each team starts with, which the
-     *        average is converted to; empty when unknown
+     *        average is converted to
      */
-    Optional<String> line(Optional<Integer> leagueBudget) {
+    Optional<String> line(LeagueBudget leagueBudget) {
         if (isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(average()
                 .map(share -> "Published FAAB consensus: about %s%s.".formatted(percent(share),
-                        leagueBudget.map(budget -> " (%s in your league)"
-                                .formatted(dollars(share, budget))).orElse("")))
+                        leagueBudget.inLeague(share, "your league")))
                 .orElseGet(() -> "Published FAAB suggestions: %d, too few for a consensus."
                         .formatted(comparable.size() + unconverted.size())));
     }
 
     /** Returns the facts the model may quote about the published suggestions. */
-    Map<String, String> facts(Optional<Integer> leagueBudget) {
+    Map<String, String> facts(LeagueBudget leagueBudget) {
         Map<String, String> facts = new LinkedHashMap<>();
         if (isEmpty()) {
             facts.put("publishedConsensus", "no published FAAB suggestion in the research cache");
@@ -135,9 +134,8 @@ record FaabConsensus(List<Suggestion> comparable, List<Suggestion> unconverted) 
         }
         facts.put("publishedConsensus", average()
                 .map(share -> "about %s of the budget%s, the average of %d independent sources"
-                        .formatted(percent(share), leagueBudget.map(budget ->
-                                " (%s in this league)".formatted(dollars(share, budget)))
-                                .orElse(""), comparable.size()))
+                        .formatted(percent(share), leagueBudget.inLeague(share, "this league"),
+                                comparable.size()))
                 .orElse("none: fewer than %d independent comparable suggestions, so these are "
                         .formatted(MINIMUM_SOURCES) + "limited evidence"));
         facts.put("suggestions", Stream.concat(
@@ -189,9 +187,5 @@ record FaabConsensus(List<Suggestion> comparable, List<Suggestion> unconverted) 
 
     private static String percent(double share) {
         return String.format(Locale.ROOT, "%.0f%%", share * 100);
-    }
-
-    private static String dollars(double share, int budget) {
-        return "$" + Math.round(share * budget);
     }
 }

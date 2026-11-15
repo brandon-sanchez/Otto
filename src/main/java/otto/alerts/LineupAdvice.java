@@ -138,8 +138,6 @@ public class LineupAdvice {
      * @param transition the status-transition candidate, or the
      *        {@link OfficialUpdateDetector} candidate for a team
      *        announcement Sleeper has not caught up with
-     * @param legality the lineup-legality candidate for the same player
-     *        in this Check, or null when his slot is not a problem
      * @param research the facts read for him right before sending; his
      *        latest report joins the evidence, and without one his
      *        recovery is an unknown the advice must be conditional on.
@@ -150,19 +148,46 @@ public class LineupAdvice {
      *         advice cannot be had; empty when he has left the roster
      */
     public Optional<AlertText.Advised> forStatusChange(String alertKey, AlertCandidate transition,
+            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Instant now) {
+        if (!roster.players().contains(transition.playerId())) {
+            return Optional.empty();
+        }
+        return decide(alertKey, transition, DecisionEvidence.draft(transition, research,
+                availability(transition, roster, now), leagueWeek, roster, directoryPlayers(),
+                this::profile, now), research, leagueWeek, roster, now);
+    }
+
+    /**
+     * The advice for a status change on one of the user's players whose
+     * slot is also a lineup problem in this Check, as
+     * {@link #forStatusChange(String, AlertCandidate, Map, LeagueWeek, RosterSnapshot, Instant)}
+     * gives, with the slot fixed in the same advice.
+     *
+     * @param legality the lineup-legality candidate for the same player
+     */
+    public Optional<AlertText.Advised> forStatusChange(String alertKey, AlertCandidate transition,
             AlertCandidate legality, Map<String, String> research, LeagueWeek leagueWeek,
             RosterSnapshot roster, Instant now) {
         if (!roster.players().contains(transition.playerId())) {
             return Optional.empty();
         }
-        Collection<DirectoryPlayer> players = directory.read()
-                .map(stored -> stored.players().values())
-                .orElse(List.of());
-        LineupEvidence.Draft draft = DecisionEvidence.draft(transition, legality, research,
-                availability(transition, roster, now), leagueWeek, roster, players,
-                this::profile, now);
+        return decide(alertKey, transition, DecisionEvidence.draft(transition, legality,
+                research, availability(transition, roster, now), leagueWeek, roster,
+                directoryPlayers(), this::profile, now), research, leagueWeek, roster, now);
+    }
+
+    private Optional<AlertText.Advised> decide(String alertKey, AlertCandidate transition,
+            LineupEvidence.Draft draft, Map<String, String> research, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Instant now) {
         return write(alertKey, RunKind.PLAYER_DECISION,
                 draft.withNews(transition.playerId(), research, now), leagueWeek, roster, now);
+    }
+
+    private Collection<DirectoryPlayer> directoryPlayers() {
+        return directory.read()
+                .map(stored -> stored.players().values())
+                .orElse(List.of());
     }
 
     private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,

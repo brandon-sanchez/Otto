@@ -93,7 +93,6 @@ public class OttoStack extends Stack {
 
     private static final RetentionDays LOG_RETENTION = RetentionDays.TWO_WEEKS;
 
-    /** Where the alarms read their counts from. */
     private static final String METRIC_NAMESPACE = "Otto";
 
     /**
@@ -108,14 +107,14 @@ public class OttoStack extends Stack {
 
     /**
      * The prefix each nflverse feed is stored under as an object of its
-     * own. The app spells it too, in {@code S3DocumentObjects}.
+     * own. The app spells it too, in {@code S3FeedObjects}.
      */
     private static final String FEEDS_PREFIX = "nflverse/";
 
     /**
      * The prefix the team-reports feed state is stored under as an
      * object of its own. The app spells it too, in
-     * {@code S3DocumentObjects}.
+     * {@code S3FeedObjects}.
      */
     private static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
@@ -133,7 +132,6 @@ public class OttoStack extends Stack {
     /** The values {@code otto.sent-waiver-board} accepts; mirrors the app's SentWaiverBoard. */
     private static final List<String> SENT_WAIVER_BOARDS = List.of("EVIDENCE", "SCORED");
 
-    /** What one month of this is allowed to cost. */
     private static final Number MONTHLY_BUDGET_USD = 20;
 
     public OttoStack(Construct scope, String id, StackProps props) {
@@ -508,8 +506,7 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * The schedules. Everything else the assistant
-     * does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
+     * Everything else the assistant does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
      * 20-minute Done follow-up - derives from the 1-minute loop and the
      * Event Log, and has no schedule here to drift out of step with it.
      */

@@ -152,13 +152,14 @@ final class BidCheck {
                         .formatted(playerId, BoardMessage.SHOWN) + "picks.");
                 continue;
             }
-            if (pick.get().drop().isEmpty()) {
+            BoardAnswer.Entry entry = pick.get();
+            if (entry.drop().isEmpty()) {
                 withoutDrop++;
-            } else if (!drops.add(pick.get().drop().get())) {
+            } else if (!drops.add(entry.drop().get())) {
                 failures.add("Player id %s is dropped for two claims placed together."
-                        .formatted(pick.get().drop().get()));
+                        .formatted(entry.drop().get()));
             }
-            highs += pick.get().bid().map(bid -> (int) bid.high()).orElse(0);
+            highs += entry.bid().map(bid -> (int) bid.high()).orElse(0);
         }
         if (withoutDrop > openSpots) {
             failures.add(("The claims placed together need %d open roster spots and the user "

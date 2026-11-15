@@ -22,6 +22,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 
+import otto.aws.RedactedCredentialsConfig;
 import otto.aws.S3RecordObjects;
 import otto.aws.SsmSecrets;
 import otto.harness.FakeS3;
@@ -33,6 +34,7 @@ import otto.records.EvidenceStatus;
 import otto.records.FileRecordObjects;
 import otto.records.ModelExchange;
 import otto.records.Outcome;
+import otto.records.RedactedCredentials;
 import otto.records.RosterContext;
 import otto.records.RunKind;
 import otto.records.Versions;
@@ -62,7 +64,7 @@ class DecisionRecordStorageScenarioTest {
     void newStorage() {
         s3 = new FakeS3().withGovernanceRetention();
         records = new DecisionRecords(new S3RecordObjects(s3, BUCKET),
-                List.of(MODEL_KEY, BOT_TOKEN, "", "unset"));
+                new RedactedCredentials(List.of(MODEL_KEY, BOT_TOKEN, "", "unset")));
     }
 
     @Test
@@ -139,10 +141,12 @@ class DecisionRecordStorageScenarioTest {
     void aCredentialShortEnoughToOccurByChanceNeverReshapesARecord() {
         String recordKey = "records/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json";
         FakeS3 unredacted = new FakeS3();
-        new DecisionRecords(new S3RecordObjects(unredacted, BUCKET), List.of())
+        new DecisionRecords(new S3RecordObjects(unredacted, BUCKET),
+                new RedactedCredentials(List.of()))
                 .saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
 
-        new DecisionRecords(new S3RecordObjects(s3, BUCKET), Arrays.asList("1", null))
+        new DecisionRecords(new S3RecordObjects(s3, BUCKET),
+                new RedactedCredentials(Arrays.asList("1", null)))
                 .saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
 
         JsonNode stored = json(s3.storedAsText(recordKey));
@@ -162,7 +166,8 @@ class DecisionRecordStorageScenarioTest {
         StandardEnvironment environment = new StandardEnvironment();
         environment.getPropertySources()
                 .addFirst(new MapPropertySource(SsmSecrets.SOURCE_NAME, parameters));
-        records = new DecisionRecords(new S3RecordObjects(s3, BUCKET), environment);
+        records = new DecisionRecords(new S3RecordObjects(s3, BUCKET),
+                new RedactedCredentialsConfig().redactedCredentials(environment));
 
         records.saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e",
                 "ssm-only-secret-42"));
@@ -294,7 +299,8 @@ class DecisionRecordStorageScenarioTest {
 
     @Test
     void theLaptopKeepsRecordsAsFiles(@TempDir Path dir) {
-        DecisionRecords local = new DecisionRecords(new FileRecordObjects(dir), List.of(MODEL_KEY));
+        DecisionRecords local = new DecisionRecords(new FileRecordObjects(dir),
+                new RedactedCredentials(List.of(MODEL_KEY)));
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
 
         local.saveFirst(saved);

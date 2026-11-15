@@ -320,7 +320,7 @@ class OttoStackTest {
     @Test
     void theFeedObjectsAreGrantedUnderThePrefixTheAppWritesThem() throws IOException {
         String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
-                "S3DocumentObjects.java"));
+                "S3FeedObjects.java"));
 
         assertThat(app).contains("PREFIX = \"nflverse/\"");
         assertThat(template.toJSON().toString()).contains("/nflverse/*");
@@ -329,7 +329,7 @@ class OttoStackTest {
     @Test
     void theTeamReportsStateIsGrantedUnderThePrefixTheAppWritesIt() throws IOException {
         String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
-                "S3DocumentObjects.java"));
+                "S3FeedObjects.java"));
 
         assertThat(app).contains("TEAM_REPORTS_PREFIX = \"team-reports/\"");
         assertThat(template.toJSON().toString()).contains("/team-reports/*");

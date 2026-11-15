@@ -1,6 +1,5 @@
 package otto.decisions;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -91,7 +90,7 @@ public record UsageDrop(int week, Measure measure, Map<Integer, Double> before, 
             return Optional.empty();
         }
         Map<Integer, Double> before = new LinkedHashMap<>();
-        List<PlayerUsage.Game> earlier = new ArrayList<>(games.subList(0, games.size() - 1));
+        List<PlayerUsage.Game> earlier = games.subList(0, games.size() - 1);
         for (int index = earlier.size() - 1; index >= 0 && before.size() < MAX_GAMES_BEFORE;
                 index--) {
             PlayerUsage.Game game = earlier.get(index);

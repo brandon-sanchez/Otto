@@ -9,8 +9,9 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import otto.alerts.AlertDeliveryOutbox;
-import otto.alerts.AlertIdSequence;
+import otto.delivery.AlertDeliveryOutbox;
+import otto.delivery.AlertIdSequence;
+import otto.delivery.DeliveryBasis;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OverlappingDeliveryScenarioTest extends WireSeamTest {
 
     private static final String KEY = "alert:edge:2026-w2:5850-over-8138";
+    private static final DeliveryBasis BASIS = DeliveryBasis.of("basis");
 
     @Autowired
     private AlertDeliveryOutbox outbox;
@@ -64,12 +66,12 @@ class OverlappingDeliveryScenarioTest extends WireSeamTest {
         Event alert = new Event(KEY, EventType.ALERT_SENT, clock.instant(), Map.of());
 
         CompletableFuture<List<Event>> first = CompletableFuture.supplyAsync(
-                () -> outbox.deliver("Start Josh Jacobs.", "basis", List.of(alert)));
+                () -> outbox.deliver(BASIS, () -> "Start Josh Jacobs.", List.of(alert)));
         awaitTelegramCalled();
-        List<Event> during = otherContainer.deliver("Start Josh Jacobs.", "basis",
+        List<Event> during = otherContainer.deliver(BASIS, () -> "Start Josh Jacobs.",
                 List.of(alert));
         List<Event> delivered = first.get(10, TimeUnit.SECONDS);
-        List<Event> after = otherContainer.deliver("Start Josh Jacobs.", "basis",
+        List<Event> after = otherContainer.deliver(BASIS, () -> "Start Josh Jacobs.",
                 List.of(alert));
 
         assertThat(delivered).extracting(Event::key).containsExactly(KEY);

@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.alerts.AlertDeliveryOutbox;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.events.Event;
 import otto.records.DecisionRecords;
 import otto.records.Outcome;

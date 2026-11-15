@@ -45,7 +45,52 @@ final class DecisionEvidence {
     private DecisionEvidence() {
     }
 
+    /**
+     * The evidence for a status change on a player whose slot is not a
+     * lineup problem in this Check. A starter his team ruled out still
+     * gets his slot filled.
+     */
+    static LineupEvidence.Draft draft(AlertCandidate transition, Map<String, String> research,
+            PlayerAvailability availability, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Collection<DirectoryPlayer> directory,
+            Function<String, Optional<Players.Player>> profiles, Instant now) {
+        StatusChange change = statusChange(transition, research, availability, leagueWeek,
+                roster, directory, profiles, now);
+        String playerId = transition.playerId();
+        if (change.announced() && availability.ruledOut()
+                && roster.starters().contains(playerId)) {
+            return withAnnouncedSlotFix(change.builder(), roster.starters().indexOf(playerId),
+                    leagueWeek.week(), change.task(), change.plans(), change.unknowns(),
+                    change.urgent());
+        }
+        return change.builder().decisionDraft(change.task(), List.of(), true,
+                change.plans().legal(), change.unknowns(), Optional.of(change.urgent()), false);
+    }
+
+    /**
+     * The evidence for a status change on a player whose slot is also a
+     * lineup problem in this Check, so the advice fixes the slot too.
+     *
+     * @param legality the lineup-legality candidate for the same player
+     */
     static LineupEvidence.Draft draft(AlertCandidate transition, AlertCandidate legality,
+            Map<String, String> research, PlayerAvailability availability,
+            LeagueWeek leagueWeek, RosterSnapshot roster,
+            Collection<DirectoryPlayer> directory,
+            Function<String, Optional<Players.Player>> profiles, Instant now) {
+        StatusChange change = statusChange(transition, research, availability, leagueWeek,
+                roster, directory, profiles, now);
+        return withSlotFix(change.builder(), legality, leagueWeek.week(), change.name(),
+                change.to(), change.task(), change.plans(), change.unknowns(), change.urgent());
+    }
+
+    /** The evidence every status-change decision shares, before its slot is handled. */
+    private record StatusChange(LineupEvidence builder, String name, PlayerHealth to,
+            boolean announced, String task, RosterPlans.Plans plans, List<String> unknowns,
+            String urgent) {
+    }
+
+    private static StatusChange statusChange(AlertCandidate transition,
             Map<String, String> research, PlayerAvailability availability,
             LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
@@ -88,16 +133,7 @@ final class DecisionEvidence {
                         + AvailabilityEvidence.disagreementSuffix(availability);
         String task = "Advise what to do with %s after %s: choose one of rosterPlans."
                 .formatted(name, announced ? "his team's announcement" : "his status change");
-        if (legality == null && announced && availability.ruledOut()
-                && roster.starters().contains(playerId)) {
-            return withAnnouncedSlotFix(builder, roster.starters().indexOf(playerId), week, task,
-                    plans, unknowns, urgent);
-        }
-        if (legality == null) {
-            return builder.decisionDraft(task, List.of(), true, plans.legal(), unknowns,
-                    Optional.of(urgent), false);
-        }
-        return withSlotFix(builder, legality, week, name, to, task, plans, unknowns, urgent);
+        return new StatusChange(builder, name, to, announced, task, plans, unknowns, urgent);
     }
 
     /**
@@ -137,8 +173,7 @@ final class DecisionEvidence {
                 .formatted(name) + "rosterPlans"
                 + (moves.isEmpty() ? "." : ", and say whether to bench him this week for one "
                         + "of legalMoves or keep him in.");
-        boolean dropTempting = mistakenDropPlausible(plans, playerId, roster, week,
-                planned.replacement());
+        boolean dropTempting = mistakenDropPlausible(planned, playerId, roster, week);
         return Optional.of(builder.decisionDraft(task, moves, true, plans.legal(), List.of(),
                 Optional.empty(), !dropTempting));
     }
@@ -199,7 +234,7 @@ final class DecisionEvidence {
         profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
-        builder.addItem(experience(playerId, planned.listed(), leagueWeek));
+        builder.addItem(experience(playerId, planned, leagueWeek));
     }
 
     private static void addSlipEvidence(LineupEvidence builder, Map<String, String> facts,
@@ -226,13 +261,13 @@ final class DecisionEvidence {
         }
     }
 
-    private static boolean mistakenDropPlausible(RosterPlans.Plans plans, String playerId,
-            RosterSnapshot roster, WeekFacts week, Optional<DirectoryPlayer> replacement) {
-        boolean droppable = plans.legal().stream()
+    private static boolean mistakenDropPlausible(Planned planned, String playerId,
+            RosterSnapshot roster, WeekFacts week) {
+        boolean droppable = planned.plans().legal().stream()
                 .anyMatch(plan -> plan.id().equals(RosterPlans.DROP));
         Optional<Double> his = week.projections()
                 .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)));
-        Optional<Double> free = replacement.flatMap(player -> week.projections()
+        Optional<Double> free = planned.replacement().flatMap(player -> week.projections()
                 .flatMap(table -> table.points(player.playerId(), player.position())));
         return droppable && his.isPresent() && free.isPresent()
                 && free.get() >= his.get() * TEMPTING_REPLACEMENT;
@@ -366,8 +401,9 @@ final class DecisionEvidence {
                 .findFirst();
     }
 
-    private static EvidenceItem experience(String playerId, Optional<DirectoryPlayer> listed,
+    private static EvidenceItem experience(String playerId, Planned planned,
             LeagueWeek leagueWeek) {
+        Optional<DirectoryPlayer> listed = planned.listed();
         Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("yearsInLeague", years.map(String::valueOf).orElse(UNKNOWN));

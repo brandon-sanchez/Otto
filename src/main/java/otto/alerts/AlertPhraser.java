@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.advice.Sha256;
+import otto.delivery.DeliveryBasis;
 import otto.model.ModelChain;
 import otto.research.PreSendResearch;
 import otto.storage.OttoJson;
@@ -87,12 +88,12 @@ public class AlertPhraser {
      * {@link PreSendResearch#READ_STATUS_FACTS} are left out, because
      * they describe the news read rather than anything the Alert says.
      */
-    public String basis(Map<String, String> eventFacts, Recommendation recommendation) {
+    public DeliveryBasis basis(Map<String, String> eventFacts, Recommendation recommendation) {
         Map<String, String> said = new TreeMap<>(eventFacts);
         said.keySet().removeAll(PreSendResearch.READ_STATUS_FACTS);
         try {
-            return Sha256.hex(OttoJson.MAPPER.writeValueAsString(said)
-                    + OttoJson.MAPPER.writeValueAsString(recommendation));
+            return DeliveryBasis.of(Sha256.hex(OttoJson.MAPPER.writeValueAsString(said)
+                    + OttoJson.MAPPER.writeValueAsString(recommendation)));
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Cannot fingerprint Alert facts", e);
         }

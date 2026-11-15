@@ -1,19 +1,17 @@
 package otto.alerts;
 
+import java.util.Map;
+
+import otto.delivery.DeliveryBasis;
+
 /**
- * The checked text of one Alert, and what the outbox matches a retry of
- * it against.
+ * How one Alert's text is written, and what the outbox matches a retry
+ * of it against.
  */
 public sealed interface AlertText {
 
-    /** Returns the text the user reads. */
-    String text();
-
-    /**
-     * Returns the fingerprint of what the text was written from, which
-     * {@link AlertDeliveryOutbox#pendingText} matches a retry against.
-     */
-    String basis();
+    /** Returns the fingerprint of what the text is written from. */
+    DeliveryBasis basis();
 
     /**
      * Advice the model wrote and {@link otto.advice.AdviceWriter} checked.
@@ -24,16 +22,19 @@ public sealed interface AlertText {
     record Advised(String runId, String text) implements AlertText {
 
         @Override
-        public String basis() {
-            return runId;
+        public DeliveryBasis basis() {
+            return DeliveryBasis.of(runId);
         }
     }
 
     /**
-     * An Alert phrased from its Recommendation, which makes no run.
+     * An Alert the phrasing model words from its Recommendation at send
+     * time, which makes no run.
      *
      * @param basis the phrasing's fingerprint and the Alert keys it covers
+     * @param facts the facts the phrasing is given
      */
-    record Phrased(String text, String basis) implements AlertText {
+    record Phrased(DeliveryBasis basis, Map<String, String> facts,
+            Recommendation recommendation) implements AlertText {
     }
 }

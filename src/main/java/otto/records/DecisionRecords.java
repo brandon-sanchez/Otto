@@ -2,14 +2,9 @@ package otto.records;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -20,13 +15,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.EnumerablePropertySource;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import otto.aws.SsmSecrets;
 import otto.storage.OttoJson;
 
 /**
@@ -78,19 +68,6 @@ public class DecisionRecords {
     /** Ids become key segments, so nothing in one may reshape a key. */
     private static final Pattern KEY_SEGMENT = Pattern.compile("[A-Za-z0-9_-]+");
 
-    private static final String REDACTED = "[redacted]";
-
-    /** The api-key default when no key is configured; not a credential. */
-    private static final String UNSET = "unset";
-
-    /** The credentials the laptop holds; it reads them from its environment, not SSM. */
-    private static final List<String> NAMED_CREDENTIALS = List.of(
-            "otto.telegram.bot-token",
-            "otto.telegram.webhook-secret",
-            "spring.ai.openai.api-key",
-            "otto.models.anthropic.api-key",
-            "otto.models.gemini.api-key");
-
     private static final TypeReference<DecisionRecord> RECORD_TYPE = new TypeReference<>() {
     };
 
@@ -100,27 +77,11 @@ public class DecisionRecords {
 
     private final RecordObjects objects;
 
-    /** Longest first, so a credential that contains another is replaced whole. */
-    private final List<String> credentials;
+    private final RedactedCredentials credentials;
 
-    /**
-     * Every value read from SSM counts as a credential, so a secret
-     * added to the parameter path later is kept out of records with no
-     * change here.
-     */
-    @Autowired
-    public DecisionRecords(RecordObjects objects, Environment environment) {
-        this(objects, credentials(environment));
-    }
-
-    /** @param credentials every secret value the app holds; nulls and blanks are ignored */
-    public DecisionRecords(RecordObjects objects, Collection<String> credentials) {
+    public DecisionRecords(RecordObjects objects, RedactedCredentials credentials) {
         this.objects = objects;
-        this.credentials = credentials.stream()
-                .filter(value -> value != null && !value.isBlank() && !value.equals(UNSET))
-                .distinct()
-                .sorted(Comparator.comparingInt(String::length).reversed())
-                .toList();
+        this.credentials = credentials;
     }
 
     private static Map<String, String> articleText(DecisionRecord record) {
@@ -239,11 +200,7 @@ public class DecisionRecords {
 
     private JsonNode redacted(JsonNode node) {
         if (node.isTextual()) {
-            String text = node.textValue();
-            for (String credential : credentials) {
-                text = text.replace(credential, REDACTED);
-            }
-            return TextNode.valueOf(text);
+            return TextNode.valueOf(credentials.redact(node.textValue()));
         }
         if (node.isObject()) {
             ObjectNode copy = OttoJson.MAPPER.createObjectNode();
@@ -257,19 +214,6 @@ public class DecisionRecords {
             return copy;
         }
         return node;
-    }
-
-    private static List<String> credentials(Environment environment) {
-        List<String> values = new ArrayList<>();
-        NAMED_CREDENTIALS.forEach(name -> values.add(environment.getProperty(name)));
-        if (environment instanceof ConfigurableEnvironment configurable
-                && configurable.getPropertySources().get(SsmSecrets.SOURCE_NAME)
-                        instanceof EnumerablePropertySource<?> ssm) {
-            for (String name : ssm.getPropertyNames()) {
-                values.add(Objects.toString(ssm.getProperty(name), null));
-            }
-        }
-        return values;
     }
 
     private static String key(String root, String userId, String leagueId, String runId) {

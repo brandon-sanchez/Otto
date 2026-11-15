@@ -187,11 +187,12 @@ public class AdviceWriter {
             AdviceCheck.Verdict<T> verdict = form.check(bundle, reply);
             exchanges.add(exchange(provider, attempt, request, response(reply),
                     verdict.failures()));
-            if (verdict.passed()) {
-                return new AdviceResult.Approved<>(verdict.answer().orElseThrow(), exchanges);
+            if (verdict instanceof AdviceCheck.Verdict.Passed<T> passed) {
+                return new AdviceResult.Approved<>(passed.answer(), exchanges);
             }
             failures = verdict.failures();
-            if (verdict.answer().isEmpty() && turn.laterProviderRemains()) {
+            if (verdict instanceof AdviceCheck.Verdict.Failed<T> failed
+                    && failed.answer().isEmpty() && turn.laterProviderRemains()) {
                 throw new ModelChain.UnusableReply(String.join(" ", failures));
             }
             log.info("Advice attempt {} from {} failed its checks: {}", attempt,

@@ -1,6 +1,5 @@
 package otto.claims;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,8 @@ import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 
-import otto.alerts.AlertDeliveryOutbox;
+import otto.delivery.AlertDeliveryOutbox;
+import otto.delivery.DeliveryBasis;
 import otto.events.Event;
 import otto.events.EventType;
 
@@ -49,16 +49,17 @@ public class BoardDelivery {
      * @param withHeldAdvice lays out the board's messages with the held
      *        advice messages under them
      * @param viewAllOptions whether View all options hangs under the board
-     * @param facts the facts the Alert Event records; the sent text and
-     *        the held runs are added here
+     * @param facts the facts the Alert Event records; the held runs are
+     *        added here and the sent text by the outbox
      * @return the Event recorded when Telegram accepted the board
      */
-    public Optional<Event> deliver(ClaimRound round, String basis,
+    public Optional<Event> deliver(ClaimRound round, DeliveryBasis basis,
             Function<List<String>, List<String>> withHeldAdvice, boolean viewAllOptions,
             Map<String, String> facts) {
         List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
         List<String> parts = withHeldAdvice.apply(messages(held));
-        return send(round, basis(basis, held), parts, viewAllOptions, facts, held);
+        return delivered(held, outbox.deliver(parts, viewAllOptions, withHeld(basis, held),
+                templates(round, facts, held)));
     }
 
     /**
@@ -72,29 +73,28 @@ public class BoardDelivery {
      * @param basis what the phrasing was written from
      * @param phrase writes the board's text
      */
-    public Optional<Event> deliverPhrased(ClaimRound round, String basis,
+    public Optional<Event> deliverPhrased(ClaimRound round, DeliveryBasis basis,
             Supplier<String> phrase, Map<String, String> facts) {
         List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
-        String fullBasis = basis(basis, held);
-        String text = outbox.pendingText(List.of(round.alertKey()), fullBasis)
-                .orElseGet(() -> withHeldAdvice(phrase.get(), messages(held)));
-        return send(round, fullBasis, List.of(text), false, facts, held);
+        return delivered(held, outbox.deliver(withHeld(basis, held),
+                () -> withHeldAdvice(phrase.get(), messages(held)),
+                templates(round, facts, held)));
     }
 
-    private Optional<Event> send(ClaimRound round, String basis, List<String> parts,
-            boolean viewAllOptions, Map<String, String> facts, List<RoleSlipLedger.Held> held) {
-        List<String> heldRuns = held.stream().map(RoleSlipLedger.Held::runId).toList();
+    private static List<Event> templates(ClaimRound round, Map<String, String> facts,
+            List<RoleSlipLedger.Held> held) {
         Map<String, String> recorded = new HashMap<>(facts);
-        recorded.put("text", String.join("\n\n", parts));
-        if (!heldRuns.isEmpty()) {
-            recorded.put("heldAdviceRuns", String.join(",", heldRuns));
+        if (!held.isEmpty()) {
+            recorded.put("heldAdviceRuns", String.join(",", runs(held)));
         }
-        Optional<Event> delivered = outbox.deliver(parts, viewAllOptions, basis,
-                        List.of(new Event(round.alertKey(), EventType.ALERT_SENT, round.now(),
-                                Map.copyOf(recorded))))
-                .stream().findFirst();
-        if (delivered.isPresent() && !heldRuns.isEmpty()) {
-            roleSlips.deliveredInBoard(heldRuns);
+        return List.of(new Event(round.alertKey(), EventType.ALERT_SENT, round.now(),
+                Map.copyOf(recorded)));
+    }
+
+    private Optional<Event> delivered(List<RoleSlipLedger.Held> held, List<Event> sent) {
+        Optional<Event> delivered = sent.stream().findFirst();
+        if (delivered.isPresent() && !held.isEmpty()) {
+            roleSlips.deliveredInBoard(runs(held));
         }
         return delivered;
     }
@@ -104,9 +104,12 @@ public class BoardDelivery {
      * runs of the held advice it carries, so the same board with
      * different advice under it counts as a new delivery.
      */
-    private static String basis(String board, List<RoleSlipLedger.Held> held) {
-        return held.isEmpty() ? board : board + "+" + String.join("+",
-                held.stream().map(RoleSlipLedger.Held::runId).toList());
+    private static DeliveryBasis withHeld(DeliveryBasis board, List<RoleSlipLedger.Held> held) {
+        return board.plus(runs(held));
+    }
+
+    private static List<String> runs(List<RoleSlipLedger.Held> held) {
+        return held.stream().map(RoleSlipLedger.Held::runId).toList();
     }
 
     private static List<String> messages(List<RoleSlipLedger.Held> held) {

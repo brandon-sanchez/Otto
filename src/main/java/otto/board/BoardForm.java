@@ -141,9 +141,8 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
     public AdviceCheck.Verdict<BoardAnswer> check(EvidenceBundle bundle, String reply) {
         Optional<BoardAnswer> parsed = parse(reply);
         if (parsed.isEmpty()) {
-            return new AdviceCheck.Verdict<>(Optional.empty(), List.of(
-                    "The answer is not the JSON object the instructions ask for, with a "
-                            + "non-empty \"opening\"."));
+            return AdviceCheck.Verdict.unreadable("The answer is not the JSON object the "
+                    + "instructions ask for, with a non-empty \"opening\".");
         }
         BoardAnswer answer = parsed.get();
         List<String> failures = new ArrayList<>(checkShape(answer));
@@ -161,7 +160,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
                 failures.add("Never write a \"Cons:\" list; say what could change the call.");
             }
         }
-        return new AdviceCheck.Verdict<>(parsed, failures);
+        return AdviceCheck.Verdict.checked(answer, failures);
     }
 
     private List<String> checkShape(BoardAnswer answer) {

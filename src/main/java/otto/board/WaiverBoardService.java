@@ -4,7 +4,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
@@ -18,6 +17,7 @@ import otto.advice.AdviceWriter;
 import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
+import otto.delivery.DeliveryBasis;
 import otto.events.Event;
 import otto.model.ModelChain;
 import otto.records.DecisionRecord;
@@ -176,7 +176,9 @@ public class WaiverBoardService {
                     String.join("; ", data.missing()));
             return Optional.empty();
         }
-        Optional<WaiverPreference> preference = preferences.forRound(round);
+        RoundPreference preference = preferences.forRound(round)
+                .map(RoundPreference::of)
+                .orElseGet(RoundPreference::none);
         return switch (evidence.screen(league, round.deadline(), preference, round.now(), data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
                     Optional.of(unscreenable(round, league, unavailable.reason()));
@@ -190,12 +192,9 @@ public class WaiverBoardService {
     }
 
     private Optional<DecisionRecord> write(ClaimRound round, LeagueWeek league,
-            WaiverEvidence.Screen screen, Optional<WaiverPreference> preference,
+            WaiverEvidence.Screen screen, RoundPreference preference,
             LatestWeekData.Report data) {
-        BoardForm form = new BoardForm(check, screen.candidates(), preference
-                .filter(stated -> stated.mode() == WaiverPreference.Mode.FOCUS)
-                .map(stated -> Set.copyOf(stated.positions()))
-                .orElse(Set.of()),
+        BoardForm form = new BoardForm(check, screen.candidates(), preference.focus(),
                 new BidCheck(screen.bidding().policy(), screen.user(),
                         league.league().activeRosterSpots(), screen.candidates()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
@@ -204,7 +203,7 @@ public class WaiverBoardService {
             log.info("The waiver board waits for the model: {}", unavailable.reason());
             return Optional.empty();
         }
-        Optional<Integer> budget = league.league().waiverBudget();
+        LeagueBudget budget = LeagueBudget.of(league);
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved -> approved(approved.answer(),
                     screen, budget, data.complete() ? List.of() : List.of(data.notice()));
@@ -236,7 +235,7 @@ public class WaiverBoardService {
                 + "before the claim deadline, because " + reason
                 + ". Place any claims yourself in Sleeper.";
         return boardRecord(round, league)
-                .preferences(preferences(Optional.empty()))
+                .preferences(preferences(RoundPreference.none()))
                 .outcome(new Outcome.WithheldWithNotice(
                         "The free agents could not be screened: " + reason, notice));
     }
@@ -247,7 +246,7 @@ public class WaiverBoardService {
     }
 
     private static Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> budget, List<String> notes) {
+            LeagueBudget budget, List<String> notes) {
         List<Outcome.BoardPick> picks = answer.hold() ? List.of() : answer.picks().stream()
                 .map(entry -> new Outcome.BoardPick(entry.playerId(), entry.drop()))
                 .toList();
@@ -280,15 +279,15 @@ public class WaiverBoardService {
         facts.put("runId", round.boardRunId());
         facts.put("leagueId", round.leagueId());
         facts.put("claimDeadline", round.deadline().toString());
-        return delivery.deliver(round, round.boardRunId(),
+        return delivery.deliver(round, DeliveryBasis.of(round.boardRunId()),
                 held -> BoardMessage.withHeldAdvice(board.messages(), held),
                 board.viewAllOptions(), facts);
     }
 
-    private JsonNode preferences(Optional<WaiverPreference> preference) {
+    private JsonNode preferences(RoundPreference preference) {
         Map<String, Object> active = new LinkedHashMap<>();
         active.put("settings", settings.current());
-        active.put("waiverPreference", preference.orElse(null));
+        active.put("waiverPreference", preference.stated().orElse(null));
         return OttoJson.MAPPER.valueToTree(active);
     }
 }

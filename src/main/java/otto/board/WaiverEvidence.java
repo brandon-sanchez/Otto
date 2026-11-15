@@ -128,14 +128,13 @@ public class WaiverEvidence {
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
      *
-     * @param preference the preference the user set for this claim
-     *        round, or empty when he set none
+     * @param preference what the user asked of this claim round's board
      * @return unavailable when there is no player directory or no
      *         roster for the user, since without both no player can be
      *         known to be a free agent
      */
     public SourceResult<Screen> screen(LeagueWeek league, ZonedDateTime deadline,
-            Optional<WaiverPreference> preference, Instant now,
+            RoundPreference preference, Instant now,
             LatestWeekData.Report latestWeek) {
         Optional<PlayerDirectory> players = directory.read();
         if (players.isEmpty()) {
@@ -151,13 +150,9 @@ public class WaiverEvidence {
         }
         List<DirectoryPlayer> freeAgents = freeAgents(players.get(), league);
 
-        Optional<WaiverPreference> only = preference
-                .filter(stated -> stated.mode() == WaiverPreference.Mode.ONLY);
-        List<DirectoryPlayer> eligible = only
-                .map(stated -> freeAgents.stream()
-                        .filter(player -> stated.positions().contains(player.position()))
-                        .toList())
-                .orElse(freeAgents);
+        List<DirectoryPlayer> eligible = freeAgents.stream()
+                .filter(preference::screens)
+                .toList();
 
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
         List<LaneRead> reads = lanes.stream()
@@ -169,7 +164,7 @@ public class WaiverEvidence {
         Map<String, DirectoryPlayer> candidates = pool.candidates();
         List<Candidate> screened = freeAgents.stream()
                 .map(player -> screened(player, reasons.get(player.playerId()),
-                        trendingOnly.contains(player.playerId()), only))
+                        trendingOnly.contains(player.playerId()), preference))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
@@ -184,7 +179,7 @@ public class WaiverEvidence {
 
         List<EvidenceItem> evidence = new ArrayList<>();
         evidence.add(boardItem(league, deadline, now, gaps));
-        preference.ifPresent(stated -> evidence.add(preferenceItem(stated)));
+        preference.stated().ifPresent(stated -> evidence.add(preferenceItem(stated)));
         if (rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok) {
             evidence.add(needsItem(league, ok.value(), now));
         }
@@ -256,10 +251,11 @@ public class WaiverEvidence {
     }
 
     private static Candidate screened(DirectoryPlayer player, List<String> reasons,
-            boolean trendingOnly, Optional<WaiverPreference> only) {
+            boolean trendingOnly, RoundPreference preference) {
         if (reasons == null) {
             return new Candidate(player.playerId(), player.fullName(), false,
-                    leftOut(player, only));
+                    preference.leftOutBy(player)
+                            .orElse("no lane named him among the free agents worth a look"));
         }
         String named = String.join("; ", reasons);
         return new Candidate(player.playerId(), player.fullName(), true,
@@ -326,12 +322,6 @@ public class WaiverEvidence {
         facts.put("missingData", gaps.isEmpty() ? "none" : String.join("; ", gaps));
         return new EvidenceItem("board", "otto:waiver-board", Optional.empty(), now,
                 "the claim round this board is for", facts);
-    }
-
-    private static String leftOut(DirectoryPlayer player, Optional<WaiverPreference> only) {
-        return only.filter(stated -> !stated.positions().contains(player.position()))
-                .map(stated -> "the user asked for " + stated.phrase() + " on this round's board")
-                .orElse("no lane named him among the free agents worth a look");
     }
 
     private static EvidenceItem preferenceItem(WaiverPreference preference) {

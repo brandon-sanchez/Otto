@@ -55,13 +55,13 @@ final class BoardMessage {
      * order.
      *
      * @param leagueBudget the budget each team starts with, which the
-     *        published consensus is converted to; empty when unknown
+     *        published consensus is converted to
      * @param notes text written by code rather than the model, such as
      *        which data is missing, placed between the heading and the
      *        model's opening; empty for none
      */
     static List<String> render(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> leagueBudget, List<String> notes) {
+            LeagueBudget leagueBudget, List<String> notes) {
         List<String> blocks = new ArrayList<>();
         List<String> opening = new ArrayList<>(notes);
         if (screen.bidding().policy() instanceof BidPolicy.Withheld withheld) {
@@ -92,7 +92,7 @@ final class BoardMessage {
      * @param leagueBudget as for {@link #render}
      */
     static List<String> renderAll(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> leagueBudget) {
+            LeagueBudget leagueBudget) {
         List<BoardAnswer.Entry> entries = answer.entries();
         if (entries.size() <= SHOWN) {
             return List.of();
@@ -138,7 +138,7 @@ final class BoardMessage {
     }
 
     private static String entry(BoardAnswer.Entry entry, WaiverEvidence.Screen screen,
-            Optional<Integer> leagueBudget) {
+            LeagueBudget leagueBudget) {
         List<String> lines = new ArrayList<>();
         lines.add(heading(entry, screen.candidates()));
         if (screen.trendingOnly().contains(entry.playerId())) {

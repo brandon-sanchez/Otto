@@ -69,18 +69,48 @@ public class AdviceCheck {
      * The outcome of checking one reply.
      *
      * @param <T> the shape the reply is read into
-     * @param answer the parsed answer, empty when the reply could not be
-     *        read as one
-     * @param failures empty when the answer passed every check
      */
-    public record Verdict<T>(Optional<T> answer, List<String> failures) {
+    public sealed interface Verdict<T> {
 
-        public Verdict {
-            failures = List.copyOf(failures);
+        /** Returns what the answer failed, written for the model; empty when it passed. */
+        List<String> failures();
+
+        /**
+         * Returns the verdict on an answer read from its reply: passed
+         * when there are no failures.
+         */
+        static <T> Verdict<T> checked(T answer, List<String> failures) {
+            return failures.isEmpty()
+                    ? new Passed<>(answer)
+                    : new Failed<>(Optional.of(answer), failures);
         }
 
-        public boolean passed() {
-            return answer.isPresent() && failures.isEmpty();
+        /** Returns the verdict on a reply that could not be read as an answer. */
+        static <T> Verdict<T> unreadable(String failure) {
+            return new Failed<>(Optional.empty(), List.of(failure));
+        }
+
+        /** An answer that passed every check. */
+        record Passed<T>(T answer) implements Verdict<T> {
+
+            @Override
+            public List<String> failures() {
+                return List.of();
+            }
+        }
+
+        /**
+         * A reply that failed at least one check.
+         *
+         * @param answer the parsed answer, empty when the reply could not
+         *        be read as one
+         * @param failures never empty
+         */
+        record Failed<T>(Optional<T> answer, List<String> failures) implements Verdict<T> {
+
+            public Failed {
+                failures = List.copyOf(failures);
+            }
         }
     }
 
@@ -88,11 +118,10 @@ public class AdviceCheck {
     public Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
         Optional<AdviceAnswer> parsed = parse(reply);
         if (parsed.isEmpty()) {
-            return new Verdict<>(Optional.empty(), List.of(
-                    "The answer is not the JSON object the instructions ask for, with a "
-                            + "non-empty \"message\"."));
+            return Verdict.unreadable("The answer is not the JSON object the instructions ask "
+                    + "for, with a non-empty \"message\".");
         }
-        return new Verdict<>(parsed, checkAnswer(bundle, parsed.get()));
+        return Verdict.checked(parsed.get(), checkAnswer(bundle, parsed.get()));
     }
 
     /**

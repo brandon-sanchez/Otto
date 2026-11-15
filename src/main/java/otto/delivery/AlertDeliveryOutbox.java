@@ -1,4 +1,4 @@
-package otto.alerts;
+package otto.delivery;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,20 +120,12 @@ public class AlertDeliveryOutbox {
     }
 
     /**
-     * Returns the text of a pending delivery for any of these keys
-     * when it was written from the same basis. A caller that finds one
-     * sends it as it stands instead of writing it again, so a retry
-     * after a transport failure costs no model call.
-     */
-    public synchronized Optional<String> pendingText(List<String> keys, String basis) {
-        return pending(keys).stream()
-                .filter(delivery -> basis.equals(delivery.basis()))
-                .map(Delivery::text)
-                .findFirst();
-    }
-
-    /**
      * Sends one Alert covering every template's key and records it.
+     *
+     * <p>When a delivery for any of these keys is still pending from
+     * the same basis, its text goes out as it stands and {@code compose}
+     * is not called, so a retry after a transport failure costs no model
+     * call.
      *
      * <p>When an earlier attempt for any of these keys is still
      * pending, this Alert is its re-checked version: it takes over that
@@ -141,26 +134,32 @@ public class AlertDeliveryOutbox {
      * the keys is cancelled, so the problems they named go out once, in
      * this message.
      *
-     * <p>Side effects: a lease write per key, store writes before and
-     * after one Telegram send, and Event Log appends once Telegram
-     * accepts the message.
+     * <p>Side effects: {@code compose} when no pending text matches, a
+     * lease write per key, store writes before and after one Telegram
+     * send, and Event Log appends once Telegram accepts the message.
      *
-     * @param basis the fingerprint of what the text was written from,
-     *        which {@link #pendingText} matches a retry against
+     * @param compose writes the Alert's text; it runs outside the
+     *        outbox's lock and before any lease is taken
+     * @param templates the Events to record, one per Alert key; the
+     *        Alert id and the sent text are added to their facts
      * @return the events appended to the Event Log, empty when Telegram
      *         did not accept the message, another container is delivering
      *         one of these keys, or one of them was sent already
      */
-    public List<Event> deliver(String text, String basis, List<Event> templates) {
+    public List<Event> deliver(DeliveryBasis basis, Supplier<String> compose,
+            List<Event> templates) {
+        String text = pendingText(templates.stream().map(Event::key).toList(), basis)
+                .orElseGet(compose);
         return deliver(List.of(text), false, basis, templates);
     }
 
     /**
      * Sends one Alert as several Telegram messages, in order, with the
      * buttons under the last, and records it as
-     * {@link #deliver(String, String, List)} does. A retry resumes after
-     * the last part Telegram accepted, as long as those parts are
-     * unchanged; a part that changed sends the Alert again from the top.
+     * {@link #deliver(DeliveryBasis, Supplier, List)} does. A retry
+     * resumes after the last part Telegram accepted, as long as those
+     * parts are unchanged; a part that changed sends the Alert again
+     * from the top.
      *
      * <p>Side effects: a store write after each part Telegram accepts.
      *
@@ -169,7 +168,7 @@ public class AlertDeliveryOutbox {
      *        whose tap arrives as "all:" and the Alert id
      */
     public synchronized List<Event> deliver(List<String> parts, boolean viewAllOptions,
-            String basis, List<Event> templates) {
+            DeliveryBasis basis, List<Event> templates) {
         List<String> leased = new ArrayList<>();
         try {
             for (Event template : templates) {
@@ -183,7 +182,7 @@ public class AlertDeliveryOutbox {
             if (templates.stream().map(Event::key).anyMatch(this::alreadySent)) {
                 return List.of();
             }
-            return deliverLeased(parts, viewAllOptions, basis, templates);
+            return deliverLeased(parts, viewAllOptions, basis.value(), templates);
         } finally {
             leased.forEach(key -> store.release(LEASE_PREFIX + encoded(key), holder));
         }
@@ -197,7 +196,7 @@ public class AlertDeliveryOutbox {
         waiting.stream().skip(1).forEach(superseded -> cancel(superseded,
                 "merged into Alert " + alertId));
         List<Event> events = templates.stream()
-                .map(event -> withAlertId(event, alertId))
+                .map(event -> recorded(event, alertId, text))
                 .toList();
         int partsSent = waiting.isEmpty() ? 0 : unchangedPartsSent(waiting.getFirst(), parts);
         Delivery delivery = new Delivery(alertId, Status.PENDING, text, basis, events, parts,
@@ -244,6 +243,13 @@ public class AlertDeliveryOutbox {
     private boolean lease(String key) {
         Instant now = clock.instant();
         return store.lease(LEASE_PREFIX + encoded(key), new Lease(holder, now.plus(LEASE)), now);
+    }
+
+    private synchronized Optional<String> pendingText(List<String> keys, DeliveryBasis basis) {
+        return pending(keys).stream()
+                .filter(delivery -> basis.value().equals(delivery.basis()))
+                .map(Delivery::text)
+                .findFirst();
     }
 
     private List<Delivery> pending(List<String> keys) {
@@ -302,9 +308,10 @@ public class AlertDeliveryOutbox {
         return store.read(ID_PREFIX + alertId, Delivery.class);
     }
 
-    private static Event withAlertId(Event event, long alertId) {
+    private static Event recorded(Event event, long alertId, String text) {
         Map<String, String> facts = new LinkedHashMap<>(event.facts());
         facts.put("alertId", String.valueOf(alertId));
+        facts.put("text", text);
         return new Event(event.key(), event.type(), event.at(), Map.copyOf(facts));
     }
 

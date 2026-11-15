@@ -134,7 +134,6 @@ public class TelegramWebhook {
         return chatId.equals(message.path("chat").path("id").asText(""));
     }
 
-    /** Free text goes to the Ask loop and its reply back to the chat. */
     private void answerAsk(JsonNode message) {
         String text = message.path("text").asText("");
         if (text.isBlank()) {

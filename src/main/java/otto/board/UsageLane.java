@@ -52,13 +52,14 @@ class UsageLane implements EvidenceLane {
                         .map(WeeklyStats.StatLine::week)
                         .max(Integer::compare))
                 .orElse(0);
-        String basis = usage.filter(PlayerUsage::priorSeasonFinal).isPresent()
+        boolean priorSeason = usage.filter(PlayerUsage::priorSeasonFinal).isPresent();
+        String basis = priorSeason
                 ? "role and opportunity last season, early-season context only"
                 : "role and opportunity in his most recent games";
         return new Read() {
             @Override
             public Map<String, String> shortlist(List<DirectoryPlayer> freeAgents) {
-                if (usage.filter(PlayerUsage::priorSeasonFinal).isPresent()) {
+                if (priorSeason) {
                     return Map.of();
                 }
                 return Facts.leaders(freeAgents, player -> latestSnapShare(player),

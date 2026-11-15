@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
@@ -146,22 +147,17 @@ class LockLadder {
             }
 
             String player = roster.playerNames().getOrDefault(playerId, playerId);
-            Recommendation recommendation = primary
-                    .map(AlertCandidate::recommendation)
-                    .orElseGet(() -> impairedWarning(playerId, player, health));
             Map<String, String> facts = new HashMap<>(primary
                     .map(AlertCandidate::facts)
                     .orElseGet(() -> Map.of("player", player)));
             facts.put("finalWarning", "true");
             facts.put("minutesToLock",
-                    String.valueOf(Duration.between(now, lock.get()).toMinutes()));
+                    String.valueOf(Duration.between(now, kickoff).toMinutes()));
             facts.putAll(research);
 
-            String text = written.get().text();
             facts.put("playerId", playerId);
             facts.put("runId", written.get().runId());
-            facts.put("text", text);
-            sent.addAll(outbox.deliver(text, written.get().basis(), List.of(
+            sent.addAll(outbox.deliver(written.get().basis(), written.get()::text, List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -172,17 +168,6 @@ class LockLadder {
                 .filter(event -> event.type() == EventType.ALERT_SENT)
                 .filter(event -> playerId.equals(event.facts().get("playerId")))
                 .anyMatch(event -> !event.at().isBefore(windowStart));
-    }
-
-    private Recommendation impairedWarning(String playerId, String player, PlayerHealth health) {
-        return new Recommendation(
-                playerId,
-                player,
-                "Last call before lock: %s is still %s in your lineup"
-                        .formatted(player, health),
-                Confidence.MEDIUM,
-                List.of("Replacing him now avoids a possible zero"),
-                List.of("%s may still play and outscore the bench".formatted(player)));
     }
 
     /**
@@ -226,13 +211,12 @@ class LockLadder {
                     "player", player,
                     "health", health.name(),
                     "irReminder", "true");
-            String basis = phraser.basis(facts, recommendation);
-            String text = outbox.pendingText(List.of(key), basis)
-                    .orElseGet(() -> phraser.phrase(facts, recommendation));
-            sent.addAll(outbox.deliver(text, basis, List.of(new Event(
-                    key, EventType.ALERT_SENT, now, AlertService.alertFacts(
-                            new AlertCandidate(AlertCandidate.Source.TRANSITION, key, playerId,
-                                    team, recommendation, facts), Map.of(), text)))));
+            sent.addAll(outbox.deliver(phraser.basis(facts, recommendation),
+                    () -> phraser.phrase(facts, recommendation), List.of(new Event(
+                            key, EventType.ALERT_SENT, now, AlertService.alertFacts(
+                                    new AlertCandidate(AlertCandidate.Source.TRANSITION, key,
+                                            playerId, team, recommendation, facts),
+                                    Map.of())))));
         }
         return sent;
     }
