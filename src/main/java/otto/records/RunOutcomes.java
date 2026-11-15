@@ -3,6 +3,7 @@ package otto.records;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +73,24 @@ public class RunOutcomes {
                 .filter(run -> run.runId().equals(runId))
                 .map(Unsaved::outcome)
                 .findFirst();
+    }
+
+    /**
+     * Returns the outcome a run reached already, or else makes the run
+     * and records it. Every caller that repeats a run each Check until
+     * it is done goes through here, so a run with a known outcome is
+     * never made again.
+     *
+     * <p>Side effects: the reads of {@link #earlier}, then whatever
+     * {@code make} does and the writes of {@link #record}.
+     *
+     * @param make builds the run's record, or returns empty when the run
+     *        is not ready to be made this Check
+     * @return the run's outcome, empty while it waits
+     */
+    public Optional<Outcome> earlierOrMade(String userId, String leagueId, String runId,
+            Supplier<Optional<DecisionRecord>> make) {
+        return earlier(userId, leagueId, runId).or(() -> make.get().map(this::record));
     }
 
     /**

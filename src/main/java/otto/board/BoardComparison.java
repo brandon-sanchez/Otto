@@ -74,7 +74,6 @@ import otto.storage.OttoJson;
 public class BoardComparison {
 
     private static final String PENDING = "waiver-comparisons";
-    private static final String PROMPT_VERSION = "none";
 
     /**
      * From the claim deadline to the Friday after the week's Monday
@@ -219,17 +218,17 @@ public class BoardComparison {
                 league.week().scoring().settings(),
                 league.week().startingSlots().stream().map(Slot::name).toList(),
                 lineupPool, picks, built.unavailable());
-        return new DecisionRecord(DecisionRecord.SCHEMA_VERSION, round.baselinesRunId(),
-                RunKind.WAIVER_BASELINES, round.now(), userId, round.leagueId(),
-                OttoJson.MAPPER.valueToTree(league.league()),
-                new RosterContext(OttoJson.MAPPER.valueToTree(user),
+        return DecisionRecord.forRun(round.baselinesRunId(), RunKind.WAIVER_BASELINES,
+                        round.now(), userId, round.leagueId(),
+                        OttoJson.MAPPER.valueToTree(league.league()))
+                .roster(new RosterContext(OttoJson.MAPPER.valueToTree(user),
                         league.league().waiverBudget().map(budget ->
-                                Math.max(0, budget - user.waiverBudgetUsed()))),
-                OttoJson.MAPPER.valueToTree(settings.current()), candidates(built),
-                OttoJson.MAPPER.valueToTree(comparison), List.of(),
-                Versions.ofThisBuild(league.snapshot().at().toString(), PROMPT_VERSION,
-                        PROMPT_VERSION),
-                List.of(), new Outcome.Silent("baselines are kept only to judge the waiver "
+                                Math.max(0, budget - user.waiverBudgetUsed()))))
+                .preferences(OttoJson.MAPPER.valueToTree(settings.current()))
+                .candidates(candidates(built))
+                .comparisons(OttoJson.MAPPER.valueToTree(comparison))
+                .versions(Versions.withoutModel(league.snapshot().at().toString()))
+                .outcome(new Outcome.Silent("baselines are kept only to judge the waiver "
                         + "board against; they are never sent"));
     }
 

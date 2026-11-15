@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.NullNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -16,20 +15,16 @@ import otto.OttoProperties;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
-import otto.advice.EvidenceBundle;
 import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
 import otto.events.Event;
 import otto.model.ModelChain;
 import otto.records.DecisionRecord;
-import otto.records.Evidence;
-import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
 import otto.records.RunKind;
 import otto.records.RunOutcomes;
-import otto.records.Versions;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.sleeper.SourceResult;
@@ -152,9 +147,9 @@ public class WaiverBoardService {
             return Optional.empty();
         }
         boolean reachesUser = routing.evidenceBoardReachesUser();
-        Optional<Outcome> recorded = runs.earlier(userId, round.leagueId(), round.boardRunId())
-                .or(() -> build(round, league).map(record -> runs.record(
-                        reachesUser ? record : record.withOutcome(unsent(record.outcome())))));
+        Optional<Outcome> recorded = runs.earlierOrMade(userId, round.leagueId(),
+                round.boardRunId(), () -> build(round, league).map(record -> reachesUser
+                        ? record : record.withOutcome(unsent(record.outcome()))));
         return recorded.filter(outcome -> reachesUser)
                 .flatMap(outcome -> deliver(round, outcome));
     }
@@ -219,15 +214,16 @@ public class WaiverBoardService {
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
                     new Outcome.WithheldWithNotice(unavailable.reason(), MODEL_UNAVAILABLE_NOTICE);
         };
-        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION,
-                round.boardRunId(), RunKind.WAIVER_BOARD, round.now(), userId,
-                round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()),
-                new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
-                        screen.bidding().policy().budget()),
-                preferences(preference), screen.screened(),
-                screen.comparisons(), evidenceOf(screen.bundle()),
-                versions(screen.bundle(), form, result), result.exchanges(), outcome);
-        return Optional.of(record);
+        return Optional.of(boardRecord(round, league)
+                .roster(new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
+                        screen.bidding().policy().budget()))
+                .preferences(preferences(preference))
+                .candidates(screen.screened())
+                .comparisons(screen.comparisons())
+                .evidence(screen.bundle().recorded())
+                .versions(screen.bundle().versions(form, result))
+                .exchanges(result.exchanges())
+                .outcome(outcome));
     }
 
     /**
@@ -239,14 +235,15 @@ public class WaiverBoardService {
         String notice = "No waiver board this round: I could not screen the free agents "
                 + "before the claim deadline, because " + reason
                 + ". Place any claims yourself in Sleeper.";
-        return new DecisionRecord(DecisionRecord.SCHEMA_VERSION,
-                round.boardRunId(), RunKind.WAIVER_BOARD, round.now(), userId,
-                round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()),
-                new RosterContext(NullNode.getInstance(), Optional.empty()),
-                preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
-                Versions.ofThisBuild("none", "none", "none"), List.of(),
-                new Outcome.WithheldWithNotice(
+        return boardRecord(round, league)
+                .preferences(preferences(Optional.empty()))
+                .outcome(new Outcome.WithheldWithNotice(
                         "The free agents could not be screened: " + reason, notice));
+    }
+
+    private DecisionRecord.Builder boardRecord(ClaimRound round, LeagueWeek league) {
+        return DecisionRecord.forRun(round.boardRunId(), RunKind.WAIVER_BOARD, round.now(),
+                userId, round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()));
     }
 
     private static Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
@@ -293,18 +290,5 @@ public class WaiverBoardService {
         active.put("settings", settings.current());
         active.put("waiverPreference", preference.orElse(null));
         return OttoJson.MAPPER.valueToTree(active);
-    }
-
-    private static List<Evidence> evidenceOf(EvidenceBundle bundle) {
-        return bundle.evidence().stream()
-                .map(item -> new Evidence(item.id(), item.source(), Optional.empty(),
-                        item.publishedAt(), item.retrievedAt(), item.scoringBasis(),
-                        EvidenceStatus.READ, Optional.empty()))
-                .toList();
-    }
-
-    private static Versions versions(EvidenceBundle bundle, BoardForm form,
-            AdviceResult<BoardAnswer> result) {
-        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), result.model());
     }
 }

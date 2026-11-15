@@ -69,7 +69,7 @@ class DecisionRecordStorageScenarioTest {
     void aSavedRecordReadsBackWholeFromUnderItsUserAndLeague() {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
 
-        records.save(saved);
+        records.saveFirst(saved);
 
         assertThat(s3.keys()).contains(
                 "records/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json");
@@ -85,7 +85,7 @@ class DecisionRecordStorageScenarioTest {
     @Test
     void copiedArticleTextIsStoredApartAndItsExpiryLeavesTheFacts() {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
-        records.save(saved);
+        records.saveFirst(saved);
 
         String recordKey = "records/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json";
         String textKey =
@@ -113,7 +113,7 @@ class DecisionRecordStorageScenarioTest {
     @Test
     void aRecordWithNoCopiedTextStoresNoArticleText() {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
-        records.save(new DecisionRecord(saved.schemaVersion(), saved.runId(), saved.kind(),
+        records.saveFirst(new DecisionRecord(saved.schemaVersion(), saved.runId(), saved.kind(),
                 saved.startedAt(), saved.userId(), saved.leagueId(), saved.league(),
                 saved.roster(), saved.preferences(), saved.candidates(), saved.comparisons(),
                 List.of(), saved.versions(), saved.exchanges(), saved.outcome()));
@@ -123,8 +123,8 @@ class DecisionRecordStorageScenarioTest {
 
     @Test
     void aCredentialInARunNeverReachesStorage() {
-        records.save(record("owner", "league-1", "20261010T153000Z-3f9a1c2e", MODEL_KEY));
-        records.save(record("owner", "league-1", "20261010T153100Z-4a5b6c7d", BOT_TOKEN));
+        records.saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e", MODEL_KEY));
+        records.saveFirst(record("owner", "league-1", "20261010T153100Z-4a5b6c7d", BOT_TOKEN));
 
         assertThat(s3.keys()).hasSize(4).allSatisfy(key -> assertThat(s3.storedAsText(key))
                 .doesNotContain(MODEL_KEY)
@@ -140,10 +140,10 @@ class DecisionRecordStorageScenarioTest {
         String recordKey = "records/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json";
         FakeS3 unredacted = new FakeS3();
         new DecisionRecords(new S3RecordObjects(unredacted, BUCKET), List.of())
-                .save(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
+                .saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
 
         new DecisionRecords(new S3RecordObjects(s3, BUCKET), Arrays.asList("1", null))
-                .save(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
+                .saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
 
         JsonNode stored = json(s3.storedAsText(recordKey));
         assertThat(s3.storedAsText(recordKey)).contains("[redacted]");
@@ -164,7 +164,7 @@ class DecisionRecordStorageScenarioTest {
                 .addFirst(new MapPropertySource(SsmSecrets.SOURCE_NAME, parameters));
         records = new DecisionRecords(new S3RecordObjects(s3, BUCKET), environment);
 
-        records.save(record("owner", "league-1", "20261010T153000Z-3f9a1c2e",
+        records.saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e",
                 "ssm-only-secret-42"));
 
         assertThat(s3.keys()).hasSize(2).allSatisfy(key -> assertThat(s3.storedAsText(key))
@@ -175,8 +175,8 @@ class DecisionRecordStorageScenarioTest {
     @Test
     void aRetriedSaveConvergesAndARunIdIsNeverRewritten() {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
-        records.save(saved);
-        records.save(saved);
+        records.saveFirst(saved);
+        records.saveFirst(saved);
 
         assertThat(s3.writes()).as("one record and one article text, stored once").isEqualTo(2);
 
@@ -186,9 +186,7 @@ class DecisionRecordStorageScenarioTest {
                 saved.comparisons(), saved.evidence(), saved.versions(), saved.exchanges(),
                 new Outcome.Withheld("the board failed its checks twice"));
 
-        assertThatThrownBy(() -> records.save(different))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("run=20261010T153000Z-3f9a1c2e");
+        assertThat(records.saveFirst(different)).isEqualTo(saved);
         assertThat(records.read("owner", "league-1", "20261010T153000Z-3f9a1c2e"))
                 .contains(saved);
     }
@@ -196,7 +194,7 @@ class DecisionRecordStorageScenarioTest {
     @Test
     void aRunRebuiltAfterAnAmbiguousSaveKeepsTheRecordItsEarlierAttemptStored() {
         DecisionRecord first = record("owner", "league-1", "waiver-board-3f9a1c2e");
-        records.save(first);
+        records.saveFirst(first);
         DecisionRecord rebuilt = rebuiltLater(first);
 
         DecisionRecord kept = records.saveFirst(rebuilt);
@@ -252,7 +250,7 @@ class DecisionRecordStorageScenarioTest {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
         s3.loseNextPutToAnIdenticalWriter();
 
-        records.save(saved);
+        records.saveFirst(saved);
 
         assertThat(records.read("owner", "league-1", "20261010T153000Z-3f9a1c2e"))
                 .contains(saved);
@@ -260,12 +258,12 @@ class DecisionRecordStorageScenarioTest {
 
     @Test
     void deletingAUserRemovesEveryRecordInEveryLeagueAndNoOneElses() {
-        records.save(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
-        records.save(record("owner", "league-1", "20261017T153000Z-4b5c6d7e"));
-        records.save(record("owner", "league-1", "20261024T153000Z-5c6d7e8f"));
-        records.save(record("owner", "league-2", "20261011T090000Z-0b1c2d3e"));
-        records.save(record("owner", "league-2", "20261018T090000Z-1c2d3e4f"));
-        records.save(record("owner-2", "league-1", "20261010T153000Z-77aa88bb"));
+        records.saveFirst(record("owner", "league-1", "20261010T153000Z-3f9a1c2e"));
+        records.saveFirst(record("owner", "league-1", "20261017T153000Z-4b5c6d7e"));
+        records.saveFirst(record("owner", "league-1", "20261024T153000Z-5c6d7e8f"));
+        records.saveFirst(record("owner", "league-2", "20261011T090000Z-0b1c2d3e"));
+        records.saveFirst(record("owner", "league-2", "20261018T090000Z-1c2d3e4f"));
+        records.saveFirst(record("owner-2", "league-1", "20261010T153000Z-77aa88bb"));
         records.saveOutcome("owner", "league-2", "20261011T090000Z-0b1c2d3e",
                 Map.of("judged", true));
         s3.expire("article-text/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json");
@@ -286,7 +284,7 @@ class DecisionRecordStorageScenarioTest {
 
     @Test
     void anIdThatWouldReshapeAKeyIsRefused() {
-        assertThatThrownBy(() -> records.save(record("owner/../x", "league-1",
+        assertThatThrownBy(() -> records.saveFirst(record("owner/../x", "league-1",
                 "20261010T153000Z-3f9a1c2e")))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> records.deleteUser("owner/"))
@@ -295,21 +293,12 @@ class DecisionRecordStorageScenarioTest {
     }
 
     @Test
-    void aRunIdSortsByWhenTheRunStarted() {
-        String earlier = DecisionRecord.newRunId(STARTED);
-        String later = DecisionRecord.newRunId(STARTED.plusSeconds(1));
-
-        assertThat(earlier).matches("20261010T153000Z-[0-9a-f]{8}");
-        assertThat(earlier).isLessThan(later);
-    }
-
-    @Test
     void theLaptopKeepsRecordsAsFiles(@TempDir Path dir) {
         DecisionRecords local = new DecisionRecords(new FileRecordObjects(dir), List.of(MODEL_KEY));
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
 
-        local.save(saved);
-        local.save(saved);
+        local.saveFirst(saved);
+        local.saveFirst(saved);
 
         assertThat(dir.resolve(
                 "records/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json"))

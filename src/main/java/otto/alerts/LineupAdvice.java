@@ -34,14 +34,11 @@ import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
 import otto.records.DecisionRecord;
-import otto.records.Evidence;
-import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
 import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.RunOutcomes;
-import otto.records.Versions;
 import otto.research.OfficialUpdate;
 import otto.research.PreSendResearch;
 import otto.research.ResearchCache;
@@ -361,23 +358,23 @@ public class LineupAdvice {
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
         String runId = runId(alertKey, draft.bundle());
-        Optional<Outcome> earlier = runs.earlier(userId, leagueId, runId);
-        if (earlier.isPresent()) {
-            return new Run(runId, earlier.get());
-        }
-
-        AdviceForm<AdviceAnswer> form = kind == RunKind.PLAYER_DECISION
-                ? writer.playerDecision()
-                : writer.lineup();
-        AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
-        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind,
-                now, userId, leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
-                new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
-                OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
-                comparisons(draft.bundle()), evidence(draft.bundle()),
-                versions(draft.bundle(), form, result),
-                result.exchanges(), outcome(result, draft, approve));
-        Outcome outcome = runs.record(record);
+        Outcome outcome = runs.earlierOrMade(userId, leagueId, runId, () -> {
+            AdviceForm<AdviceAnswer> form = kind == RunKind.PLAYER_DECISION
+                    ? writer.playerDecision()
+                    : writer.lineup();
+            AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
+            return Optional.of(DecisionRecord.forRun(runId, kind, now, userId, leagueId,
+                            OttoJson.MAPPER.valueToTree(leagueWeek.league()))
+                    .roster(new RosterContext(OttoJson.MAPPER.valueToTree(roster),
+                            Optional.empty()))
+                    .preferences(OttoJson.MAPPER.valueToTree(settings.current()))
+                    .candidates(candidates(draft))
+                    .comparisons(comparisons(draft.bundle()))
+                    .evidence(draft.bundle().recorded())
+                    .versions(draft.bundle().versions(form, result))
+                    .exchanges(result.exchanges())
+                    .outcome(outcome(result, draft, approve)));
+        }).orElseThrow();
         return new Run(runId, outcome);
     }
 
@@ -425,18 +422,5 @@ public class LineupAdvice {
             comparisons.put("rosterPlans", bundle.rosterPlans());
         }
         return OttoJson.MAPPER.valueToTree(comparisons);
-    }
-
-    private static List<Evidence> evidence(EvidenceBundle bundle) {
-        return bundle.evidence().stream()
-                .map(item -> new Evidence(item.id(), item.source(), Optional.empty(),
-                        item.publishedAt(), item.retrievedAt(), item.scoringBasis(),
-                        EvidenceStatus.READ, Optional.empty()))
-                .toList();
-    }
-
-    private static Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form,
-            AdviceResult<AdviceAnswer> result) {
-        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), result.model());
     }
 }

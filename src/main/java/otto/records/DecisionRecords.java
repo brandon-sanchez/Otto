@@ -123,23 +123,6 @@ public class DecisionRecords {
                 .toList();
     }
 
-    /**
-     * Stores a record. The article text goes first: a record must never
-     * be stored pointing at text that a failed save left unwritten.
-     *
-     * @throws IllegalStateException when this run id already holds a
-     *         different record
-     */
-    public void save(DecisionRecord record) {
-        Map<String, String> articleText = articleText(record);
-        if (!articleText.isEmpty()) {
-            writeOnce(key(ARTICLE_TEXT, record.userId(), record.leagueId(), record.runId()),
-                    articleText);
-        }
-        writeOnce(key(RECORDS, record.userId(), record.leagueId(), record.runId()),
-                withoutArticleText(record));
-    }
-
     private static Map<String, String> articleText(DecisionRecord record) {
         Map<String, String> articleText = new LinkedHashMap<>();
         record.evidence().forEach(evidence -> evidence.sourceText()

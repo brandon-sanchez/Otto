@@ -1,13 +1,11 @@
 package otto.records;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.HexFormat;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 
 /**
  * The retained account of one recommendation run: what Otto knew,
@@ -27,7 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  *
  * @param schemaVersion the shape this record was written in,
  *        {@link #SCHEMA_VERSION} for every record written now
- * @param runId sortable by time; see {@link #newRunId(Instant)}
+ * @param runId derived from what identifies the run (see {@link RunIds#stable}),
+ *        so every Check that repeats the run finds this record
  * @param league the league's identity and rules as Otto read them
  * @param preferences the preferences active for this run
  * @param comparisons what Otto computed between the candidates
@@ -52,9 +51,6 @@ public record DecisionRecord(
 
     public static final int SCHEMA_VERSION = 1;
 
-    private static final DateTimeFormatter RUN_STARTED =
-            DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
-
     public DecisionRecord {
         candidates = List.copyOf(candidates);
         evidence = List.copyOf(evidence);
@@ -65,16 +61,92 @@ public record DecisionRecord(
     }
 
     /**
-     * A new run id, such as {@code 20261010T153000Z-3f9a1c2e}. The start
-     * time leads so a league's records list in the order they ran; the
-     * random tail keeps two runs that start in the same second apart.
-     * A retried save converges only under the same run id, so a caller
-     * that may be retried across invocations derives its run id from a
-     * stable identity of the run instead of calling this again.
+     * Starts the record of one run. A part left unset stays empty: no
+     * roster, preferences or comparisons, no candidates, evidence or
+     * model exchanges, and {@link Versions#withoutModel} over no data.
+     *
+     * @param league the league document as Otto read it
      */
-    public static String newRunId(Instant startedAt) {
-        return RUN_STARTED.format(startedAt) + "-"
-                + HexFormat.of().toHexDigits(ThreadLocalRandom.current().nextInt());
+    public static Builder forRun(String runId, RunKind kind, Instant startedAt, String userId,
+            String leagueId, JsonNode league) {
+        return new Builder(runId, kind, startedAt, userId, leagueId, league);
+    }
+
+    /** Assembles a {@link DecisionRecord}; {@link #outcome} finishes it. */
+    public static final class Builder {
+
+        private final String runId;
+        private final RunKind kind;
+        private final Instant startedAt;
+        private final String userId;
+        private final String leagueId;
+        private final JsonNode league;
+        private RosterContext roster = new RosterContext(NullNode.getInstance(), Optional.empty());
+        private JsonNode preferences = NullNode.getInstance();
+        private List<Candidate> candidates = List.of();
+        private JsonNode comparisons = NullNode.getInstance();
+        private List<Evidence> evidence = List.of();
+        private Versions versions = Versions.withoutModel(Versions.NONE);
+        private List<ModelExchange> exchanges = List.of();
+
+        private Builder(String runId, RunKind kind, Instant startedAt, String userId,
+                String leagueId, JsonNode league) {
+            this.runId = runId;
+            this.kind = kind;
+            this.startedAt = startedAt;
+            this.userId = userId;
+            this.leagueId = leagueId;
+            this.league = league;
+        }
+
+        /** Sets the user's roster as the run saw it. */
+        public Builder roster(RosterContext value) {
+            roster = value;
+            return this;
+        }
+
+        /** Sets the preferences active for the run. */
+        public Builder preferences(JsonNode value) {
+            preferences = value;
+            return this;
+        }
+
+        /** Sets the players the run considered. */
+        public Builder candidates(List<Candidate> value) {
+            candidates = value;
+            return this;
+        }
+
+        /** Sets what the run computed between the candidates. */
+        public Builder comparisons(JsonNode value) {
+            comparisons = value;
+            return this;
+        }
+
+        /** Sets the sources the run looked at. */
+        public Builder evidence(List<Evidence> value) {
+            evidence = value;
+            return this;
+        }
+
+        /** Sets the versions of everything that could have changed the answer. */
+        public Builder versions(Versions value) {
+            versions = value;
+            return this;
+        }
+
+        /** Sets every model call the run made, in order. */
+        public Builder exchanges(List<ModelExchange> value) {
+            exchanges = value;
+            return this;
+        }
+
+        /** Returns the record of the run, ended with this outcome. */
+        public DecisionRecord outcome(Outcome outcome) {
+            return new DecisionRecord(SCHEMA_VERSION, runId, kind, startedAt, userId, leagueId,
+                    league, roster, preferences, candidates, comparisons, evidence, versions,
+                    exchanges, outcome);
+        }
     }
 
     DecisionRecord withEvidence(List<Evidence> evidence) {

@@ -23,6 +23,16 @@ public record Evidence(
         EvidenceStatus status,
         Optional<String> sourceText) {
 
+    /**
+     * Returns a source that was read in full, with no link and no
+     * copied text.
+     */
+    public static Evidence read(String id, String source, Optional<Instant> publishedAt,
+            Instant retrievedAt, String scoringBasis) {
+        return new Evidence(id, source, Optional.empty(), publishedAt, retrievedAt,
+                scoringBasis, EvidenceStatus.READ, Optional.empty());
+    }
+
     Evidence withSourceText(Optional<String> sourceText) {
         return new Evidence(id, source, url, publishedAt, retrievedAt, scoringBasis, status,
                 sourceText);
