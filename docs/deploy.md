@@ -129,12 +129,16 @@ call `deleteWebhook`.
 The evidence-based waiver board is the one sent. The scored board is
 still built every round, so it can take over at once:
 
-1. In the Lambda console, set `OTTO_SENT_WAIVER_BOARD` to `SCORED` on the
-   scheduled function. The next Check sends the scored board, and the
-   evidence-based board is recorded unsent.
-2. The next deploy replaces the function's environment, which removes
-   the variable. To keep the rollback, change `sent-waiver-board` in
-   `src/main/resources/application.yml` to `SCORED` and merge it.
+1. Set `sentWaiverBoard` to `SCORED` in the `context` block of
+   `infra/cdk.json` and merge it. The deploy that follows the merge sets
+   `OTTO_SENT_WAIVER_BOARD` on both functions. The next Check sends the
+   scored board, and the evidence-based board is recorded unsent.
+2. For a rollback that cannot wait for a merge, run the deploy by hand
+   with `-c sentWaiverBoard=SCORED`. Merge the `cdk.json` change as well,
+   or the next deploy on merge sets the board back to `EVIDENCE`.
 
-Set it back to `EVIDENCE`, or remove the variable, to send the
-evidence-based board again.
+A round already decided keeps its board: a switch mid-round never sends
+the other board's notice for that round.
+
+Set `sentWaiverBoard` back to `EVIDENCE` to send the evidence-based board
+again.
