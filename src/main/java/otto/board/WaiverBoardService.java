@@ -102,12 +102,14 @@ public class WaiverBoardService {
 
     private Optional<DecisionRecord> write(ClaimRound round, LeagueWeek league,
             WaiverEvidence.Screen screen) {
-        BoardForm form = new BoardForm(check, screen.candidates());
+        BoardForm form = new BoardForm(check, screen.candidates(),
+                new BidCheck(screen.bidding().policy(), screen.user(),
+                        league.league().activeRosterSpots(), screen.candidates()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
         return switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved -> Optional.of(record(round, league,
-                    screen, form, result,
-                    new Outcome.DryRun(BoardMessage.render(approved.answer(), screen))));
+                    screen, form, result, new Outcome.DryRun(BoardMessage.render(
+                            approved.answer(), screen, LeagueBudget.of(league)))));
             case AdviceResult.Rejected<BoardAnswer> rejected -> Optional.of(record(round, league,
                     screen, form, result, new Outcome.Withheld("The board failed its checks "
                             + "twice: " + String.join(" ", rejected.failures()))));
@@ -125,7 +127,7 @@ public class WaiverBoardService {
                         round.now(), userId, round.leagueId(),
                         OttoJson.MAPPER.valueToTree(league.league()))
                 .roster(new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
-                        Optional.empty()))
+                        screen.bidding().policy().budget()))
                 .preferences(preferences())
                 .candidates(screen.screened())
                 .comparisons(screen.comparisons())

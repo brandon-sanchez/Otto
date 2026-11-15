@@ -1,0 +1,31 @@
+[
+  {
+    "type": "waiver",
+    "transaction_id": "1300000000000000001",
+    "status": "complete",
+    "status_updated": 1788937500000,
+    "created": 1788937500000,
+    "roster_ids": [2],
+    "consenter_ids": [2],
+    "adds": {"4866": 2},
+    "drops": null,
+    "settings": {"waiver_bid": 23, "seq": 0},
+    "draft_picks": [],
+    "waiver_budget": []
+  },
+  {
+    "type": "waiver",
+    "transaction_id": "1300000000000000002",
+    "status": "failed",
+    "status_updated": 1788937500000,
+    "created": 1788937400000,
+    "roster_ids": [1],
+    "consenter_ids": [1],
+    "adds": {"4866": 1},
+    "drops": null,
+    "settings": {"waiver_bid": 18, "seq": 0},
+    "metadata": {"notes": "This player was claimed by another owner."},
+    "draft_picks": [],
+    "waiver_budget": []
+  }
+]
