@@ -173,6 +173,6 @@ class BaselineBoards {
         String position = player == null ? "" : player.position();
         return new ComparisonRound.Pick(playerId, player == null ? playerId : player.fullName(),
                 position, free.contains(playerId),
-                slots.stream().anyMatch(slot -> slot.accepts(position)));
+                slots.stream().anyMatch(slot -> slot.accepts(position)), Optional.empty());
     }
 }

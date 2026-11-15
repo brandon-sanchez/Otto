@@ -828,12 +828,16 @@ Record that is never sent:
 When the waiver trigger is off, no baseline is built, because the
 scored board is not built either.
 
-Each strategy is judged on lineup gain: the points the user's best
-lineup would have scored that week with the pickup on the roster, less
-what it scored without him. The lineup is the user's roster as it stood
-at decision time, IR and taxi excluded, in league scoring and from
-actual points. A pickup who would not have started gains nothing, and
-no pickup gains nothing by definition. Only players who were addable
+Each strategy is judged on net lineup gain: the points the user's best
+lineup would have scored that week with the pickup on the roster and
+without the player the claim drops, less what it scored without the
+pickup. The board's pickups drop the player it named. A baseline's
+pickups, on a full roster, drop the active player projected lowest for
+the week, an unprojected player first. The lineup is the user's roster
+as it stood at decision time, IR and taxi excluded, in league scoring
+and from actual points. A pickup who would not have started gains
+nothing, one whose drop would have started can lose points, and no
+pickup gains nothing by definition. Only players who were addable
 (on no roster in the league) and legal (a starting slot takes their
 position) at decision time are counted. Each strategy reports how many
 pickups it proposed and how many were counted, and the comparison

@@ -107,10 +107,18 @@ final class ComparisonJudge {
                 excluded);
     }
 
+    /**
+     * Returns the best lineup with the pickup and without the player he
+     * drops, minus the best lineup without the pickup.
+     */
     private double gain(ComparisonRound.Pick pick, double scored) {
         Map<String, Double> withPick = new HashMap<>(lineupPoints);
-        withPick.put(pick.playerId(), scored);
         Map<String, String> positions = new HashMap<>(round.lineupPool());
+        pick.drop().ifPresent(dropped -> {
+            withPick.remove(dropped);
+            positions.remove(dropped);
+        });
+        withPick.put(pick.playerId(), scored);
         positions.put(pick.playerId(), pick.position());
         return bestLineup(withPick, positions) - withoutPickup;
     }

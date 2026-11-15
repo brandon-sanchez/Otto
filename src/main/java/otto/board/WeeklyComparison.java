@@ -9,12 +9,13 @@ import java.util.Optional;
  * pickups would have added to the user's lineup in the week they were
  * claimed for. Stored as the outcome record of the round's baselines.
  *
- * <p>A pickup's worth is its lineup gain: the points the user's best
- * lineup that week would have scored with him on the roster, less what
- * it scored without him, both in league scoring and from actual
- * points. A pickup who would not have started gains nothing, and no
- * pickup gains nothing by definition. Only players who were addable
- * and legal when the round was decided are counted.
+ * <p>A pickup's worth is its net lineup gain: the points the user's
+ * best lineup that week would have scored with him on the roster and
+ * without the player his claim drops, less what it scored without him,
+ * both in league scoring and from actual points. A pickup who would not
+ * have started gains nothing, one whose drop would have started can
+ * lose points, and no pickup gains nothing by definition. Only players
+ * who were addable and legal when the round was decided are counted.
  *
  * @param baselinesRunId the run id of the baselines' Decision Record
  *        this outcome judges
