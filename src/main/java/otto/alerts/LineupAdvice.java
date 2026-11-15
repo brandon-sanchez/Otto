@@ -39,8 +39,9 @@ import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
 
 /**
- * Writes the text of bench-edge, lineup-legality, final-pregame and
- * status-change Alerts. The model writes each one from an evidence
+ * Writes the text of bench-edge, lineup-legality, final-pregame,
+ * status-change and role-slip Alerts ({@link RoleSlipAdvice} decides
+ * when role-slip advice goes out). The model writes each one from an evidence
  * bundle and {@link AdviceWriter} checks it. When the model is down or
  * its advice fails twice, an urgent Alert (a slot that scores zero, or
  * a starter still uncertain as his game nears) and a status change go
@@ -200,7 +201,7 @@ public class LineupAdvice {
     }
 
     /** Returns the nflverse profile of a player, by Sleeper id. */
-    private Optional<Players.Player> profile(String sleeperId) {
+    Optional<Players.Player> profile(String sleeperId) {
         Optional<String> gsisId = nflverse.playerIds().flatMap(ids -> ids.gsisFor(sleeperId));
         return gsisId.flatMap(id -> nflverse.players().flatMap(feed -> feed.rows().stream()
                 .filter(player -> id.equals(player.gsisId()))
@@ -224,7 +225,7 @@ public class LineupAdvice {
     }
 
     /** The run an Alert's advice came from, and how it ended. */
-    private record Run(String runId, Outcome outcome) {
+    record Run(String runId, Outcome outcome) {
     }
 
     private Optional<AlertText.Advised> write(String alertKey, RunKind kind, LineupEvidence.Draft draft,
@@ -242,7 +243,7 @@ public class LineupAdvice {
      *
      * @param approve the outcome of advice that passed its checks
      */
-    private Run run(String alertKey, RunKind kind, LineupEvidence.Draft draft,
+    Run run(String alertKey, RunKind kind, LineupEvidence.Draft draft,
             LeagueWeek leagueWeek, RosterSnapshot roster, Instant now,
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
@@ -283,7 +284,7 @@ public class LineupAdvice {
     }
 
     /** Returns the advice to send now when the run ended with a sent message. */
-    private static Optional<AlertText.Advised> sent(Run run) {
+    static Optional<AlertText.Advised> sent(Run run) {
         return run.outcome() instanceof Outcome.Sent sent
                 ? Optional.of(new AlertText.Advised(run.runId(), sent.message()))
                 : Optional.empty();
