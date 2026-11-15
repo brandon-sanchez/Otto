@@ -39,6 +39,11 @@ class UsageLane implements EvidenceLane {
     }
 
     @Override
+    public String name() {
+        return "UsageLane";
+    }
+
+    @Override
     public Read read(Inputs inputs) {
         Optional<PlayerUsage> usage = PlayerUsage.from(nflverse);
         Optional<PlayerIdMap> ids = nflverse.playerIds();

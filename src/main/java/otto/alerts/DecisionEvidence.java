@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 import otto.advice.EvidenceItem;
 import otto.advice.LineupMove;
-import otto.advice.RosterPlan;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.decisions.PlayerAvailability;
@@ -75,35 +74,10 @@ final class DecisionEvidence {
                 ? List.of()
                 : unknownRecovery(builder, research, name, now));
 
-        Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
-                directory);
-        replacement.ifPresent(free -> builder.addPlayer(free.playerId(), free.fullName(),
-                "best projected free agent at his position", freeAgentFacts(free),
-                projection(week, free)));
-        Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
-        replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
-
-        Optional<DirectoryPlayer> listed = listed(playerId, directory);
-        Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
-        RosterPlans.Plans plans = RosterPlans.forStatusChange(leagueWeek.league(), roster, week,
-                now, playerId, to, reported, replacement.map(DirectoryPlayer::playerId), years,
-                id -> names.getOrDefault(id, id));
-        plans.legal().stream()
-                .flatMap(plan -> plan.drop().stream())
-                .filter(drop -> !drop.equals(playerId))
-                .forEach(drop -> builder.addPlayer(drop, "bench player a plan would drop"));
-        if (!plans.ruledOut().isEmpty()) {
-            builder.addItem(new EvidenceItem("plans-ruled-out", "otto:roster-rules",
-                    Optional.empty(), now, "roster plans that are not legal now, and why",
-                    plans.ruledOut()));
-        }
-        builder.addItem(new EvidenceItem("league", "sleeper:league", Optional.empty(),
-                leagueWeek.snapshot().at(), "the league's format and roster rules",
-                leagueFacts(leagueWeek, roster)));
-        profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
-                builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
-                        Optional.empty(), now, "his age and where he was drafted", facts)));
-        builder.addItem(experience(playerId, listed, leagueWeek));
+        Planned planned = plans(builder, playerId, to, reported, leagueWeek, roster, directory,
+                now);
+        RosterPlans.Plans plans = planned.plans();
+        addPlanEvidence(builder, planned, playerId, leagueWeek, roster, profiles, now);
         unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
                 leagueWeek.snapshot().at(), now));
 
@@ -144,19 +118,10 @@ final class DecisionEvidence {
         builder.addPlayer(playerId, "the player whose role may have slipped");
         addSlipEvidence(builder, slip.facts(), now);
 
-        Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
-                directory);
-        replacement.ifPresent(free -> builder.addPlayer(free.playerId(), free.fullName(),
-                "best projected free agent at his position", freeAgentFacts(free),
-                projection(week, free)));
-        Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
-        replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
         PlayerHealth health = roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE);
-        Optional<DirectoryPlayer> listed = listed(playerId, directory);
-        Optional<Integer> years = listed.flatMap(DirectoryPlayer::yearsInLeague);
-        RosterPlans.Plans plans = RosterPlans.forStatusChange(leagueWeek.league(), roster, week,
-                now, playerId, health, true, replacement.map(DirectoryPlayer::playerId), years,
-                id -> names.getOrDefault(id, id));
+        Planned planned = plans(builder, playerId, health, true, leagueWeek, roster, directory,
+                now);
+        RosterPlans.Plans plans = planned.plans();
 
         int slotIndex = roster.starters().indexOf(playerId);
         boolean starting = slotIndex >= 0 && slotIndex < week.startingSlots().size();
@@ -166,6 +131,59 @@ final class DecisionEvidence {
         if (onlyHold && moves.isEmpty()) {
             return Optional.empty();
         }
+        addPlanEvidence(builder, planned, playerId, leagueWeek, roster, profiles, now);
+
+        String task = "Advise what to do with %s, whose role may have slipped: choose one of "
+                .formatted(name) + "rosterPlans"
+                + (moves.isEmpty() ? "." : ", and say whether to bench him this week for one "
+                        + "of legalMoves or keep him in.");
+        boolean dropTempting = mistakenDropPlausible(plans, playerId, roster, week,
+                planned.replacement());
+        return Optional.of(builder.decisionDraft(task, moves, true, plans.legal(), List.of(),
+                Optional.empty(), !dropTempting));
+    }
+
+    /**
+     * The roster plans legal for a player, with the best projected free
+     * agent at his position, whom a plan that opens a roster spot adds.
+     *
+     * @param listed the player's directory entry, empty when the
+     *        directory does not list him
+     */
+    private record Planned(RosterPlans.Plans plans, Optional<DirectoryPlayer> replacement,
+            Optional<DirectoryPlayer> listed) {
+    }
+
+    /** Works out the plans, adding the replacement free agent to the evidence. */
+    private static Planned plans(LineupEvidence builder, String playerId, PlayerHealth health,
+            boolean recoveryReported, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Collection<DirectoryPlayer> directory, Instant now) {
+        WeekFacts week = leagueWeek.week();
+        Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
+                directory);
+        replacement.ifPresent(free -> builder.addPlayer(free.playerId(), free.fullName(),
+                "best projected free agent at his position", freeAgentFacts(free),
+                projection(week, free)));
+        Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
+        replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
+        Optional<DirectoryPlayer> listed = listed(playerId, directory);
+        RosterPlans.Plans plans = RosterPlans.forStatusChange(leagueWeek.league(), roster, week,
+                now, new RosterPlans.DecisionSubject(playerId, health, recoveryReported,
+                        replacement.map(DirectoryPlayer::playerId),
+                        listed.flatMap(DirectoryPlayer::yearsInLeague)),
+                id -> names.getOrDefault(id, id));
+        return new Planned(plans, replacement, listed);
+    }
+
+    /**
+     * Adds what the plans rest on: the bench players a plan would drop,
+     * the plans ruled out, the league's roster rules, and the player's
+     * profile and experience.
+     */
+    private static void addPlanEvidence(LineupEvidence builder, Planned planned, String playerId,
+            LeagueWeek leagueWeek, RosterSnapshot roster,
+            Function<String, Optional<Players.Player>> profiles, Instant now) {
+        RosterPlans.Plans plans = planned.plans();
         plans.legal().stream()
                 .flatMap(plan -> plan.drop().stream())
                 .filter(drop -> !drop.equals(playerId))
@@ -181,15 +199,7 @@ final class DecisionEvidence {
         profiles.apply(playerId).map(profile -> profileFacts(profile, now)).ifPresent(facts ->
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
-        builder.addItem(experience(playerId, listed, leagueWeek));
-
-        String task = "Advise what to do with %s, whose role may have slipped: choose one of "
-                .formatted(name) + "rosterPlans"
-                + (moves.isEmpty() ? "." : ", and say whether to bench him this week for one "
-                        + "of legalMoves or keep him in.");
-        boolean dropTempting = mistakenDropPlausible(plans, playerId, roster, week, replacement);
-        return Optional.of(builder.decisionDraft(task, moves, true, plans.legal(), List.of(),
-                Optional.empty(), !dropTempting));
+        builder.addItem(experience(playerId, planned.listed(), leagueWeek));
     }
 
     private static void addSlipEvidence(LineupEvidence builder, Map<String, String> facts,

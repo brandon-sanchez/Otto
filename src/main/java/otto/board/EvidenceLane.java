@@ -23,6 +23,12 @@ import otto.snapshot.RosterSnapshot;
 public interface EvidenceLane {
 
     /**
+     * Returns the lane's name. A board's Decision Record keys each
+     * lane's picks by it, so a name never changes once records carry it.
+     */
+    String name();
+
+    /**
      * Reads the lane's sources once for one board.
      *
      * <p>Side effects: whatever reads the lane's sources make, such as

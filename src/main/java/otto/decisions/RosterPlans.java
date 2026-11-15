@@ -91,11 +91,10 @@ public final class RosterPlans {
     }
 
     /**
-     * Builds the plans for a rostered player whose status changed, or
-     * a healthy one whose role may have slipped.
+     * The rostered player a roster decision is about.
      *
-     * @param playerId the player the decision is about, on the user's
-     *        active roster, IR or taxi squad
+     * @param playerId the player, on the user's active roster, IR or
+     *        taxi squad
      * @param health his designation now
      * @param recoveryReported whether a current report explains his
      *        status; without one, dropping him is not offered
@@ -103,12 +102,22 @@ public final class RosterPlans {
      *        would add, empty when none could be priced
      * @param yearsInLeague the NFL seasons he has completed, empty when
      *        unknown; taxi eligibility turns on it
+     */
+    public record DecisionSubject(String playerId, PlayerHealth health, boolean recoveryReported,
+            Optional<String> replacement, Optional<Integer> yearsInLeague) {
+    }
+
+    /**
+     * Builds the plans for a rostered player whose status changed, or
+     * a healthy one whose role may have slipped.
+     *
      * @param names the full name of any player id, rostered or not
      */
     public static Plans forStatusChange(SleeperAdapter.League league, RosterSnapshot roster,
-            WeekFacts week, Instant now, String playerId, PlayerHealth health,
-            boolean recoveryReported, Optional<String> replacement,
-            Optional<Integer> yearsInLeague, Function<String, String> names) {
+            WeekFacts week, Instant now, DecisionSubject subject, Function<String, String> names) {
+        String playerId = subject.playerId();
+        PlayerHealth health = subject.health();
+        Optional<String> replacement = subject.replacement();
         RosterPlans plans = new RosterPlans(league, roster, week, now, names);
         if (roster.reserve().contains(playerId)) {
             plans.onReserve(playerId, health, replacement);
@@ -116,9 +125,9 @@ public final class RosterPlans {
             plans.onTaxi(playerId);
         } else {
             plans.onActiveRoster(playerId, health, replacement);
-            plans.toTaxi(playerId, yearsInLeague, replacement);
+            plans.toTaxi(playerId, subject.yearsInLeague(), replacement);
         }
-        plans.drop(playerId, health, recoveryReported, replacement);
+        plans.drop(playerId, health, subject.recoveryReported(), replacement);
         if (plans.legal.isEmpty()) {
             plans.add(new RosterPlan(HOLD, "Leave %s where he is: no roster move is open to him "
                     .formatted(names.apply(playerId)) + "right now.", Optional.empty(),

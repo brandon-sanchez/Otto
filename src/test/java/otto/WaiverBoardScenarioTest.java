@@ -200,6 +200,17 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void theRecordKeysEachLanesPicksByTheNameEarlierRecordsCarry() {
+        tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(IRVING, ROBINSON),
+                List.of()));
+
+        assertThat(onlyBoardRecord().comparisons().path("lanes").fieldNames())
+                .toIterable()
+                .containsExactlyInAnyOrder("NewsLane", "ProductionLane", "ProjectionLane",
+                        "TrendingLane", "UsageLane");
+    }
+
+    @Test
     void theBoardGoesOutOnceHoweverManyChecksRunInItsWindow() {
         tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(IRVING), List.of()));
 
