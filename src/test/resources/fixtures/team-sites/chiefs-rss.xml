@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>News</title>
+    <description>Latest News</description>
+    <atom:link href="https://www.chiefs.com/rss/news" rel="self" type="application/rss+xml" />
+    <link>https://www.chiefs.com</link>
+    <language>en-US</language>
+    <image>
+      <title>News</title>
+      <url>https://static.nfl.com/static/content/public/static/wildcat/assets/img/logos/teams/KC.svg</url>
+      <link>https://www.chiefs.com</link>
+    </image>
+      <item>
+        <title><![CDATA[Week 10 Injury Report | Chiefs vs. Falcons ]]></title>
+          <description><![CDATA[Injuries for the Chiefs Week 10 matchup against the Atlanta Falcons]]></description>
+        <link>https://www.chiefs.com/news/week-10-injury-report-chiefs-vs-falcons-2026</link>
+        <pubDate>Sat, 14 Nov 2026 20:31:00 GMT</pubDate>
+        <guid isPermaLink="false">0e7e6462-5608-4715-9e23-86281e600ce8</guid>
+        <source url="https://www.chiefs.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/xqyrcoqs2ie7ylbss0ji.png" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/xqyrcoqs2ie7ylbss0ji.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[Injury Report, all-content, Kansas City Chiefs at Atlanta Falcons (2026-REG-10)]]>
+            </media:keywords>
+      </item>
+      <item>
+        <title><![CDATA[Five Things to Watch on Sunday | Chiefs vs. Falcons]]></title>
+          <description><![CDATA[Here’s a quick game preview heading into Sunday]]></description>
+        <link>https://www.chiefs.com/news/five-things-to-watch-on-sunday-chiefs-vs-falcons-x8239</link>
+        <pubDate>Sat, 14 Nov 2026 20:27:53 GMT</pubDate>
+        <guid isPermaLink="false">e562b3a6-db8f-4cb0-9d85-c1ed7f6bdb84</guid>
+        <source url="https://www.chiefs.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/xi8o6xddzl0oaj4ot9ky.jpg" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/xi8o6xddzl0oaj4ot9ky.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[all-content, Game Previews, Kansas City Chiefs at Atlanta Falcons (2026-REG-10)]]>
+            </media:keywords>
+      </item>
+      <item>
+        <title><![CDATA[Week 9 Inactive Players | Jets vs. Chiefs]]></title>
+          <description><![CDATA[All the inactive players for the Chiefs Week 9 matchup against the New York Jets]]></description>
+        <link>https://www.chiefs.com/news/week-9-inactive-players-jets-vs-chiefs</link>
+        <pubDate>Sun, 08 Nov 2026 16:37:23 GMT</pubDate>
+        <guid isPermaLink="false">d6a5a901-d9e4-45d0-8998-6d0d4e9e94dc</guid>
+        <source url="https://www.chiefs.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/b0vai67ivkfven2sqb7u.jpg" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/chiefs/b0vai67ivkfven2sqb7u.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[Inactives, all-content, New York Jets at Kansas City Chiefs (2026-REG-9)]]>
+            </media:keywords>
+      </item>
+  </channel>
+</rss>

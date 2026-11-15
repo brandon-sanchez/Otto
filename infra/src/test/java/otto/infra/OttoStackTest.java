@@ -120,8 +120,8 @@ class OttoStackTest {
     }
 
     @Test
-    void thereAreFourSchedules() {
-        template.resourceCountIs("AWS::Scheduler::Schedule", 4);
+    void thereAreFiveSchedules() {
+        template.resourceCountIs("AWS::Scheduler::Schedule", 5);
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(1 minute)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"check\"}"))));
@@ -136,6 +136,9 @@ class OttoStackTest {
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(10 minutes)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"research\"}"))));
+        template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
+                "ScheduleExpression", "rate(5 minutes)",
+                "Target", Match.objectLike(Map.of("Input", "{\"job\":\"team-reports\"}"))));
     }
 
     @Test
@@ -289,6 +292,15 @@ class OttoStackTest {
 
         assertThat(app).contains("PREFIX = \"nflverse/\"");
         assertThat(template.toJSON().toString()).contains("/nflverse/*");
+    }
+
+    @Test
+    void theTeamReportsStateIsGrantedUnderThePrefixTheAppWritesIt() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "aws",
+                "S3FeedObjects.java"));
+
+        assertThat(app).contains("TEAM_REPORTS_PREFIX = \"team-reports/\"");
+        assertThat(template.toJSON().toString()).contains("/team-reports/*");
     }
 
     private static Template stackWith(String key, String value) {

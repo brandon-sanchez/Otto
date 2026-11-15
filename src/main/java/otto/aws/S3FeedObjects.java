@@ -19,7 +19,8 @@ import otto.storage.DocumentBackend;
 
 /**
  * The documents {@link DocumentPlacement#FEED} places in S3 objects of
- * their own: the nflverse feeds, each under {@value #PREFIX}.
+ * their own: the nflverse feeds, each under {@value #PREFIX}, and the
+ * team-reports state under {@value #TEAM_REPORTS_PREFIX}.
  *
  * <p>Each feed's bytes are held in memory with the ETag they were read
  * at, and every read asks S3 again with {@code If-None-Match}. An
@@ -39,6 +40,9 @@ public class S3FeedObjects implements DocumentBackend {
 
     /** The key prefix every feed object is stored under. */
     public static final String PREFIX = "nflverse/";
+
+    /** The key prefix the team-reports state is stored under. */
+    public static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
     private static final int NOT_MODIFIED = 304;
 
@@ -160,6 +164,7 @@ public class S3FeedObjects implements DocumentBackend {
     }
 
     private static String key(String name) {
-        return PREFIX + name + ".json";
+        return (DocumentPlacement.isTeamReports(name) ? TEAM_REPORTS_PREFIX : PREFIX)
+                + name + ".json";
     }
 }

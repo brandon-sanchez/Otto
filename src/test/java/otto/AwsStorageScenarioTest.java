@@ -78,6 +78,21 @@ class AwsStorageScenarioTest {
     }
 
     @Test
+    void theTeamReportsStateIsAnObjectOfItsOwnSoItsRunsLeaveTheBundleAlone() {
+        store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
+        store.flush();
+        int writes = s3.writes();
+
+        JsonStore teamReports = new JsonStore(backend());
+        teamReports.write("team-reports", Map.of("feeds", Map.of()));
+        teamReports.flush();
+
+        assertThat(s3.storedAsText("team-reports/team-reports.json")).contains("feeds");
+        assertThat(s3.writes()).as("one write, and none of it the bundle").isEqualTo(writes + 1);
+        assertThat(s3.storedAsText(KEY)).doesNotContain("team-reports");
+    }
+
+    @Test
     void aCheckThatReadsOnlyItsOwnDocumentsNeverFetchesPlayByPlay() {
         store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass")));
         store.write(WEEKLY_STATS, new Feed("2026", List.of("week 1")));
@@ -340,7 +355,8 @@ class AwsStorageScenarioTest {
                 "mutes", "conversation", "last-check", "alert-id-sequence",
                 "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1");
 
-        List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting");
+        List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting",
+                "team-reports");
 
         assertThat(big).allMatch(name -> DocumentPlacement.of(name) != DocumentPlacement.SMALL);
         assertThat(small).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.SMALL);

@@ -23,7 +23,8 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /**
  * The one seam all tests use: boot the real Spring context, invoke entry
- * points directly. Stub HTTP servers play Sleeper, Telegram, and the LLM.
+ * points directly. Stub HTTP servers play Sleeper, Telegram, nflverse, the
+ * team sites, and the LLM.
  * Storage goes to a wiped-per-test temp directory. The clock is injected.
  */
 @SpringBootTest
@@ -42,6 +43,7 @@ public abstract class WireSeamTest {
     protected static final WireMockServer telegram = newServer();
     protected static final WireMockServer llm = newServer();
     protected static final WireMockServer nflverse = newServer();
+    protected static final WireMockServer teamSites = newServer();
     private static final Path storageDir = newStorageDir();
 
     private static WireMockServer newServer() {
@@ -73,6 +75,7 @@ public abstract class WireSeamTest {
         registry.add("otto.nflverse.api-base-url", nflverse::baseUrl);
         registry.add("otto.nflverse.download-base-url", nflverse::baseUrl);
         registry.add("otto.nflverse.player-ids-base-url", nflverse::baseUrl);
+        registry.add("otto.team-sites.url-template", () -> teamSites.baseUrl() + "/{host}");
         registry.add("spring.ai.openai.base-url", llm::baseUrl);
         registry.add("spring.ai.openai.api-key", () -> "test-llm-key");
     }
@@ -92,6 +95,7 @@ public abstract class WireSeamTest {
         telegram.resetAll();
         llm.resetAll();
         nflverse.resetAll();
+        teamSites.resetAll();
         clock.set(TEST_START);
         sleeperCache.clear();
         breakers.reset();

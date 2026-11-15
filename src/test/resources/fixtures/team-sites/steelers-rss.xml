@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>News</title>
+    <description>Latest News</description>
+    <atom:link href="https://www.steelers.com/rss/news" rel="self" type="application/rss+xml" />
+    <link>https://www.steelers.com</link>
+    <language>en-US</language>
+    <image>
+      <title>News</title>
+      <url>https://static.nfl.com/static/content/public/static/wildcat/assets/img/logos/teams/PIT.svg</url>
+      <link>https://www.steelers.com</link>
+    </image>
+      <item>
+        <title><![CDATA[Steelers activate Harmon ahead of Bengals game]]></title>
+          <description><![CDATA[The Steelers made multiple roster moves on Saturday]]></description>
+        <link>https://www.steelers.com/news/steelers-activate-harmon-ahead-of-bengals-game</link>
+        <pubDate>Sat, 14 Nov 2026 20:01:01 GMT</pubDate>
+        <guid isPermaLink="false">d847080b-cd63-4716-8fb9-be39a6d9e662</guid>
+        <source url="https://www.steelers.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/c4a3ykufmbsbitrjavex.jpg" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/c4a3ykufmbsbitrjavex.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[Transactions, Bordas & Bordas, Featured, Sights and Sounds, Pittsburgh Steelers at Cincinnati Bengals (2026-REG-10)]]>
+            </media:keywords>
+      </item>
+      <item>
+        <title><![CDATA[Week 10 Injury Report (Bengals) Updated ]]></title>
+          <description><![CDATA[A look at player injuries and practice participation for Week 10]]></description>
+        <link>https://www.steelers.com/news/week-10-injury-report-bengals-x6285</link>
+        <pubDate>Sat, 14 Nov 2026 17:33:00 GMT</pubDate>
+        <guid isPermaLink="false">177b9772-c723-43df-ab27-abf458089db8</guid>
+        <source url="https://www.steelers.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/gqgrkpcpfjd9rovypzzl.jpg" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/gqgrkpcpfjd9rovypzzl.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[Injury Report, UPMC, Featured, Sights and Sounds, Pittsburgh Steelers at Cincinnati Bengals (2026-REG-10)]]>
+            </media:keywords>
+      </item>
+      <item>
+        <title><![CDATA[Four-Down Territory: The eye in the sky]]></title>
+          <description><![CDATA[A look at an unsung assistant doing his job well, another coach's return to Cincinnati and more]]></description>
+        <link>https://www.steelers.com/news/four-down-territory-the-eye-in-the-sky</link>
+        <pubDate>Sat, 14 Nov 2026 14:00:00 GMT</pubDate>
+        <guid isPermaLink="false">7f5e12ca-1143-4e2d-8d53-d783e7b97945</guid>
+        <source url="https://www.steelers.com/rss/news">News</source>
+          <media:content url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/kwm0pepox4jgwxjliqtb.jpg" />
+          <enclosure url="https://static.clubs.nfl.com/image/upload/t_editorial_landscape_12_desktop/steelers/kwm0pepox4jgwxjliqtb.jpg" length="0" type="image/jpeg"></enclosure>
+            <media:keywords>
+              <![CDATA[Four Down Territory, Non-Sponsored, Brian Batko Content, Featured, Sights and Sounds]]>
+            </media:keywords>
+      </item>
+  </channel>
+</rss>
