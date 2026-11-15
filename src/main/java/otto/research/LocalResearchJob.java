@@ -16,6 +16,7 @@ public class LocalResearchJob {
     private final ResearchDiscovery discovery;
     private final TeamReports teamReports;
 
+    /** Runs {@code discovery} and {@code teamReports} on the deployed schedules' cadence. */
     public LocalResearchJob(ResearchDiscovery discovery, TeamReports teamReports) {
         this.discovery = discovery;
         this.teamReports = teamReports;

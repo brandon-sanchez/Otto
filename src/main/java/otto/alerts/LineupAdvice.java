@@ -9,15 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import otto.OttoApplication;
 import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceForm;
@@ -25,8 +23,8 @@ import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.LineupMove;
-import otto.advice.Sha256;
 import otto.ask.LeagueWeek;
+import otto.claims.BoardSchedule;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
@@ -36,20 +34,21 @@ import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
 import otto.records.DecisionRecord;
-import otto.records.DecisionRecords;
 import otto.records.Evidence;
 import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
+import otto.records.RunIds;
 import otto.records.RunKind;
+import otto.records.RunOutcomes;
 import otto.records.Versions;
 import otto.research.OfficialUpdate;
+import otto.research.PreSendResearch;
 import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
-import otto.waivers.WaiverAlertService;
 
 /**
  * Writes the text of bench-edge, lineup-legality, final-pregame,
@@ -68,12 +67,9 @@ import otto.waivers.WaiverAlertService;
 public class LineupAdvice {
 
     private static final String RUN_ID_PREFIX = "alert-";
-    private static final int RUN_ID_HASH_LENGTH = 32;
-
-    private static final Logger log = LoggerFactory.getLogger(LineupAdvice.class);
 
     private final AdviceWriter writer;
-    private final DecisionRecords records;
+    private final RunOutcomes runs;
     private final SettingsStore settings;
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
@@ -81,14 +77,16 @@ public class LineupAdvice {
     private final RoleSlipLedger ledger;
     private final MuteStore muteStore;
     private final AlertDeliveryOutbox outbox;
+    private final PreSendResearch preSendResearch;
     private final String userId;
 
-    public LineupAdvice(AdviceWriter writer, DecisionRecords records, SettingsStore settings,
+    public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
-            AlertDeliveryOutbox outbox, OttoProperties properties) {
+            AlertDeliveryOutbox outbox, PreSendResearch preSendResearch,
+            OttoProperties properties) {
         this.writer = writer;
-        this.records = records;
+        this.runs = runs;
         this.settings = settings;
         this.directory = directory;
         this.nflverse = nflverse;
@@ -96,6 +94,7 @@ public class LineupAdvice {
         this.ledger = ledger;
         this.muteStore = muteStore;
         this.outbox = outbox;
+        this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
     }
 
@@ -111,9 +110,11 @@ public class LineupAdvice {
     /**
      * The text for an edge or legality candidate.
      *
-     * @param research the facts {@link otto.research.PreSendResearch}
-     *        read for the candidate's player right before sending; its
-     *        newest report joins the evidence
+     * @param research the facts {@link PreSendResearch} read for the
+     *        candidate's player right before sending; its newest report
+     *        joins the evidence. For a bench edge, the bench player the
+     *        swap would start has his news read here too, so neither
+     *        side of the swap rests on cached news.
      * @param kickoff the game start of the candidate's player when this
      *        is the final pregame warning, or null otherwise
      * @return empty when the advice is withheld
@@ -130,8 +131,12 @@ public class LineupAdvice {
             default -> throw new IllegalArgumentException(
                     "No lineup advice for a " + candidate.source() + " candidate");
         };
-        return write(alertKey, RunKind.ALERT, draft.withNews(candidate.playerId(), research, now),
-                leagueWeek, roster, now);
+        LineupEvidence.Draft withNews = draft.withNews(candidate.playerId(), research, now);
+        if (candidate.source() == AlertCandidate.Source.EDGE) {
+            String startInstead = candidate.facts().get(BenchEdgeDetector.BENCH_ID);
+            withNews = withNews.withNews(startInstead, preSendResearch.factsFor(startInstead), now);
+        }
+        return write(alertKey, RunKind.ALERT, withNews, leagueWeek, roster, now);
     }
 
     /**
@@ -206,10 +211,16 @@ public class LineupAdvice {
             return Optional.empty();
         }
         LineupEvidence.Draft decision = draft.get().withNews(slip.playerId(), research, now);
+        AtomicReference<String> signature = new AtomicReference<>();
         Run run = run(alertKey, RunKind.PLAYER_DECISION, decision, leagueWeek, roster, now,
-                answer -> roleSlipOutcome(answer, decision, slip, leagueWeek, roster, now));
+                answer -> {
+                    signature.set(signature(answer, slip));
+                    return roleSlipOutcome(answer, signature.get(), decision, slip, leagueWeek,
+                            roster, now);
+                });
         if (run.outcome() instanceof Outcome.HeldForBoard held) {
-            ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message()));
+            ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message(),
+                    signature.get()));
         }
         if (!(run.outcome() instanceof Outcome.Sent)) {
             ledger.settle(slip.key());
@@ -217,22 +228,38 @@ public class LineupAdvice {
         return sent(run);
     }
 
-    private Outcome roleSlipOutcome(AdviceAnswer answer, LineupEvidence.Draft draft,
-            AlertCandidate slip, LeagueWeek leagueWeek, RosterSnapshot roster, Instant now) {
+    /**
+     * True while a role slip has a decision open: no advice about it
+     * has been withheld, held for the board, or found moot.
+     */
+    boolean slipOpen(AlertCandidate slip) {
+        return !ledger.settled(slip.key());
+    }
+
+    /**
+     * The outcome of checked advice about a role slip. Sent advice
+     * becomes the last advice about him at once, since the outbox
+     * carries it to delivery; held advice becomes it only once a board
+     * carries it, so a board that never goes out cannot silence the
+     * advice later.
+     */
+    private Outcome roleSlipOutcome(AdviceAnswer answer, String signature,
+            LineupEvidence.Draft draft, AlertCandidate slip, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Instant now) {
         boolean hold = answer.plan().map(RosterPlans.HOLD::equals).orElse(true);
         if (hold && answer.move().isEmpty() && draft.holdStaysSilent()) {
             return new Outcome.Withheld("The model advised keeping him as he is, and no "
                     + "mistaken drop is plausible, so the hold is not sent unasked.");
         }
-        String signature = signature(answer, slip);
         if (ledger.lastAdvice(slip.playerId()).filter(signature::equals).isPresent()) {
             return new Outcome.Withheld("The action and its reasons match the last advice "
                     + "about him, which is not sent again.");
         }
+        if (!waitingCostsAMove(answer, leagueWeek, roster, now)) {
+            return new Outcome.HeldForBoard(answer.message());
+        }
         ledger.advised(slip.playerId(), signature);
-        return waitingCostsAMove(answer, leagueWeek, roster, now)
-                ? new Outcome.Sent(answer.message())
-                : new Outcome.HeldForBoard(answer.message());
+        return new Outcome.Sent(answer.message());
     }
 
     /**
@@ -256,20 +283,22 @@ public class LineupAdvice {
      * True when holding the advice for the next waiver board could cost
      * the user a move: no board is coming before the next claim
      * deadline, or the advice changes a lineup whose first kickoff is
-     * before the board or not known.
+     * not known or comes before the latest the board can go out. A
+     * board waiting for late data goes out as late as
+     * {@link BoardSchedule#latest}, not at the evening it is due.
      */
     private boolean waitingCostsAMove(AdviceAnswer answer, LeagueWeek leagueWeek,
             RosterSnapshot roster, Instant now) {
         Optional<ZonedDateTime> deadline = leagueWeek.league().rules().nextClaimDeadline(now);
         if (deadline.isEmpty() || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())
-                || outbox.alreadySent(WaiverAlertService.boardKey(deadline.get()))) {
+                || outbox.alreadySent(BoardSchedule.alertKey(deadline.get()))) {
             return true;
         }
         if (answer.move().isEmpty()) {
             return false;
         }
-        Instant boardDue = WaiverAlertService.eveningBefore(deadline.get()).toInstant();
+        Instant latestBoard = BoardSchedule.latest(deadline.get());
         LineupMove move = answer.move().get();
         Optional<Instant> firstKickoff = leagueWeek.week().games().flatMap(games -> Stream
                 .of(move.start(), move.bench())
@@ -277,7 +306,7 @@ public class LineupAdvice {
                 .map(id -> games.lockFor(roster.playerTeams().get(id)))
                 .flatMap(Optional::stream)
                 .min(Comparator.naturalOrder()));
-        return firstKickoff.map(kickoff -> kickoff.isBefore(boardDue)).orElse(true);
+        return firstKickoff.map(kickoff -> kickoff.isBefore(latestBoard)).orElse(true);
     }
 
     private PlayerAvailability availability(AlertCandidate transition, RosterSnapshot roster,
@@ -336,7 +365,7 @@ public class LineupAdvice {
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
         String runId = runId(alertKey, draft.bundle());
-        Optional<Outcome> earlier = earlierOutcome(leagueId, runId);
+        Optional<Outcome> earlier = runs.earlier(userId, leagueId, runId);
         if (earlier.isPresent()) {
             return new Run(runId, earlier.get());
         }
@@ -345,14 +374,14 @@ public class LineupAdvice {
                 ? writer.playerDecision()
                 : writer.lineup();
         AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
-        Outcome outcome = outcome(result, draft, approve);
-        save(new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind, now, userId,
-                leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
+        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind,
+                now, userId, leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
                 new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
                 comparisons(draft.bundle()), evidence(draft.bundle()),
                 versions(draft.bundle(), form, result),
-                result.exchanges(), outcome));
+                result.exchanges(), outcome(result, draft, approve));
+        Outcome outcome = runs.record(record);
         return new Run(runId, outcome);
     }
 
@@ -377,26 +406,8 @@ public class LineupAdvice {
                 : Optional.empty();
     }
 
-    private Optional<Outcome> earlierOutcome(String leagueId, String runId) {
-        try {
-            return records.read(userId, leagueId, runId).map(DecisionRecord::outcome);
-        } catch (RuntimeException e) {
-            log.warn("Cannot read Decision Record {}; asking the model again", runId, e);
-            return Optional.empty();
-        }
-    }
-
-    private void save(DecisionRecord record) {
-        try {
-            records.save(record);
-        } catch (RuntimeException e) {
-            log.error("Cannot save Decision Record {}", record.runId(), e);
-        }
-    }
-
     private static String runId(String alertKey, EvidenceBundle bundle) {
-        return RUN_ID_PREFIX
-                + Sha256.hex(alertKey + "\n" + bundle.identity()).substring(0, RUN_ID_HASH_LENGTH);
+        return RunIds.stable(RUN_ID_PREFIX, alertKey, bundle.identity());
     }
 
     private static List<Candidate> candidates(LineupEvidence.Draft draft) {
@@ -430,8 +441,6 @@ public class LineupAdvice {
 
     private static Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form,
             AdviceResult<AdviceAnswer> result) {
-        String code = Objects.requireNonNullElse(
-                OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, form.promptVersion(), result.model());
+        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), result.model());
     }
 }

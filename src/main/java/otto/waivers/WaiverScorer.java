@@ -77,14 +77,6 @@ public class WaiverScorer {
     /** Superflex starts two quarterbacks, so a third is cover, not depth. */
     private static final int QB_NEED_BELOW = 3;
 
-    /**
-     * Sleeper's trending window, and how deep into the list to read.
-     * The Watchlist watcher asks for the same window and the same
-     * depth, so the two readers share one poll and one cached body.
-     */
-    private static final int TRENDING_LOOKBACK_HOURS = 24;
-    private static final int TRENDING_LIMIT = 25;
-
     /** The spec's news window, and how many items to ask Sleeper for. */
     private static final Duration NEWS_WINDOW = Duration.ofDays(7);
     private static final int NEWS_ITEMS = 5;
@@ -337,7 +329,8 @@ public class WaiverScorer {
             this.outlooks = rosters.map(WeeklyRosters::outlooks).orElseGet(Map::of);
 
             SourceResult<List<SleeperAdapter.TrendingPlayer>> trending =
-                    withinCadence.trendingAdds(TRENDING_LOOKBACK_HOURS, TRENDING_LIMIT);
+                    withinCadence.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                            SleeperAdapter.TRENDING_LIMIT);
             this.trendingAdds = trending
                     instanceof SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> ok
                             ? addsByPlayer(ok.value())
@@ -815,7 +808,7 @@ public class WaiverScorer {
             }
             return Optional.of(("%,d Sleeper leagues added him in the last %d hours, against "
                     + "%,d for the most-added player").formatted(
-                            adds, TRENDING_LOOKBACK_HOURS, topTrendingAdds));
+                            adds, SleeperAdapter.TRENDING_LOOKBACK_HOURS, topTrendingAdds));
         }
 
         /** What a depth-chart move is worth, and whether it is a breakout. */

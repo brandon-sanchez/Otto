@@ -97,7 +97,7 @@ public class AlertDeliveryOutbox {
      * sends it as it stands instead of writing it again, so a retry
      * after a transport failure costs no model call.
      */
-    public Optional<String> pendingText(List<String> keys, String basis) {
+    public synchronized Optional<String> pendingText(List<String> keys, String basis) {
         return pending(keys).stream()
                 .filter(delivery -> basis.equals(delivery.basis()))
                 .map(Delivery::text)

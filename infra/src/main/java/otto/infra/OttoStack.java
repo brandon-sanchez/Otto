@@ -1,9 +1,9 @@
 package otto.infra;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
@@ -95,13 +95,20 @@ public class OttoStack extends Stack {
     private static final String METRIC_NAMESPACE = "Otto";
 
     /**
-     * The one object every big document lives in. The app spells this
-     * too, in {@code S3BundleBackend}, and cannot share the constant
-     * across the two builds. It is here to keep the bucket grant down
-     * to the one key the app writes; a drift between the two shows up
-     * as a denied write on the first Check after a deploy.
+     * The one object every big document but the nflverse feeds lives
+     * in. The app spells this too, in {@code S3BundleBackend}, and
+     * cannot share the constant across the two builds. It is here to
+     * keep the bucket grant down to the keys the app writes; a drift
+     * between the two shows up as a denied write on the first Check
+     * after a deploy.
      */
     private static final String DOCUMENTS_KEY = "documents.json";
+
+    /**
+     * The prefix each nflverse feed is stored under as an object of its
+     * own. The app spells it too, in {@code S3DocumentObjects}.
+     */
+    private static final String FEEDS_PREFIX = "nflverse/";
 
     /**
      * The two key prefixes of the Decision Records bucket. The app
@@ -113,6 +120,9 @@ public class OttoStack extends Stack {
     private static final String OUTCOMES_PREFIX = "outcomes/";
 
     private static final int DAYS_PER_SEASON = 365;
+
+    /** The values {@code otto.sent-waiver-board} accepts; mirrors the app's SentWaiverBoard. */
+    private static final List<String> SENT_WAIVER_BOARDS = List.of("EVIDENCE", "SCORED");
 
     /** What one month of this is allowed to cost. */
     private static final Number MONTHLY_BUDGET_USD = 20;
@@ -133,7 +143,8 @@ public class OttoStack extends Stack {
                 "OTTO_BUCKET", documents.getBucketName(),
                 "OTTO_TABLE", records.getTableName(),
                 "OTTO_RECORDS_BUCKET", decisionRecords.getBucketName(),
-                "OTTO_PARAMETER_PATH", parameterPath);
+                "OTTO_PARAMETER_PATH", parameterPath,
+                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard());
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
         Function scheduled = appFunction("Scheduled", "otto.aws.ScheduledHandler",
@@ -237,11 +248,34 @@ public class OttoStack extends Stack {
      * the owner's to set; a season counts as 365 days.
      */
     private int articleTextDays() {
-        int seasons = Integer.parseInt(context("articleTextSeasons", "3"));
+        String value = context("articleTextSeasons", "3");
+        int seasons;
+        try {
+            seasons = Integer.parseInt(value.strip());
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException(
+                    "articleTextSeasons must be a whole number of seasons, not \"" + value + "\"",
+                    e);
+        }
         if (seasons < 1) {
             throw new IllegalStateException("articleTextSeasons must be at least 1");
         }
         return seasons * DAYS_PER_SEASON;
+    }
+
+    /**
+     * Which waiver board reaches the user, from the
+     * {@code sentWaiverBoard} context value: {@code EVIDENCE} or the
+     * {@code SCORED} rollback. It lives in the stack, so the deploy that
+     * follows every merge keeps a rollback rather than resetting it.
+     */
+    private String sentWaiverBoard() {
+        String board = context("sentWaiverBoard", "EVIDENCE").strip();
+        if (!SENT_WAIVER_BOARDS.contains(board)) {
+            throw new IllegalStateException("sentWaiverBoard must be one of "
+                    + String.join(", ", SENT_WAIVER_BOARDS) + ", not \"" + board + "\"");
+        }
+        return board;
     }
 
     /**
@@ -338,12 +372,14 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * One object and one table, and nothing else in either service. The
-     * bucket grant names the one key the app writes, so a function that
-     * went wrong could not fill the bucket with anything else.
+     * The bundle, the feed objects and one table, and nothing else in
+     * either service. The bucket grant names the keys the app writes, so
+     * a function that went wrong could not fill the bucket with anything
+     * else.
      */
     private void readWriteStorage(Bucket documents, Table records, Function function) {
         documents.grantReadWrite(function, DOCUMENTS_KEY);
+        documents.grantReadWrite(function, FEEDS_PREFIX + "*");
         records.grantReadWriteData(function);
     }
 
@@ -351,9 +387,9 @@ public class OttoStack extends Stack {
      * Write and read records, and nothing more: no function deletes one
      * or bypasses the lock. Deleting an account needs
      * {@code s3:DeleteObjectVersion} and
-     * {@code s3:BypassGovernanceRetention}, and those belong to whatever
-     * entry point deletes accounts, which does not exist yet. It also
-     * needs adding to {@link #guardDecisionRecords}.
+     * {@code s3:BypassGovernanceRetention}, which only an entry point
+     * that deletes accounts may hold, and only once
+     * {@link #guardDecisionRecords} lets its role through.
      *
      * <p>{@code s3:ListBucket} is here only for what S3 answers about a
      * missing key. Without it S3 says 403 rather than 404, and article
@@ -389,18 +425,19 @@ public class OttoStack extends Stack {
      * {@code If-None-Match} is refused, so nobody writes over a key.
      *
      * <p>Only the account root deletes a version or changes its lock.
-     * The entry point that deletes accounts, once it exists, has to be
-     * added here on purpose.
+     * Any role that deletes accounts is let through here by name, on
+     * purpose, or its deletes are refused.
      */
     private void guardDecisionRecords(Bucket bucket, List<Function> backend) {
         String root = new AccountRootPrincipal().getArn();
-        List<String> readers = new ArrayList<>();
-        backend.forEach(function -> readers.add(function.getRole().getRoleArn()));
-        readers.add(root);
-        Arrays.stream(context("recordReaderArns", "").split(","))
-                .map(String::trim)
-                .filter(arn -> !arn.isEmpty())
-                .forEach(readers::add);
+        List<String> readers = Stream.of(
+                        backend.stream().map(function -> function.getRole().getRoleArn()),
+                        Stream.of(root),
+                        Arrays.stream(context("recordReaderArns", "").split(","))
+                                .map(String::trim)
+                                .filter(arn -> !arn.isEmpty()))
+                .flatMap(arns -> arns)
+                .toList();
         bucket.addToResourcePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.DENY)
                 .principals(List.of(new AnyPrincipal()))

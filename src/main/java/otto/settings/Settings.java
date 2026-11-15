@@ -9,10 +9,10 @@ import java.util.Optional;
 import otto.lineup.PositionCutoffs;
 
 /**
- * The Settings document the spec pins for v1: on or off per trigger
- * type, the point edge worth a message, the Notable Player cutoffs, the
- * most the user will bid on one waiver claim, and a quiet-hours field
- * that exists and stays empty until quiet hours ship.
+ * The Settings document: on or off per trigger type, the point edge
+ * worth a message, the Notable Player cutoffs, the most the user will
+ * bid on one waiver claim, and a quiet-hours field that nothing sets
+ * or reads, kept so the stored shape has a place for quiet hours.
  *
  * The compact constructor fills in whatever a stored document does not
  * carry, so a document written before a trigger existed still loads and

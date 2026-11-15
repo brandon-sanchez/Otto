@@ -1,8 +1,8 @@
 package otto.aws;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.Optional;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -36,6 +36,7 @@ public class S3RecordObjects implements RecordObjects {
     private final S3Client s3;
     private final String bucket;
 
+    /** Stores records as objects in {@code bucket}. */
     public S3RecordObjects(S3Client s3, String bucket) {
         this.s3 = s3;
         this.bucket = bucket;
@@ -104,11 +105,12 @@ public class S3RecordObjects implements RecordObjects {
                             .keyMarker(keyMarker)
                             .versionIdMarker(versionIdMarker)
                             .build());
-            List<ObjectIdentifier> versions = new ArrayList<>();
-            page.versions().forEach(version -> versions.add(
-                    identifier(version.key(), version.versionId())));
-            page.deleteMarkers().forEach(marker -> versions.add(
-                    identifier(marker.key(), marker.versionId())));
+            List<ObjectIdentifier> versions = Stream.concat(
+                    page.versions().stream()
+                            .map(version -> identifier(version.key(), version.versionId())),
+                    page.deleteMarkers().stream()
+                            .map(marker -> identifier(marker.key(), marker.versionId())))
+                    .toList();
             if (!versions.isEmpty()) {
                 delete(prefix, versions);
             }

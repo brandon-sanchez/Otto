@@ -641,7 +641,7 @@ class WaiverScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void switchingTheWaiverTriggerOffStopsTheBoardBeingBuiltAtAll() {
+    void switchingTheWaiverTriggerOffSendsNoBoard() {
         aWaiverWeekOnDisk();
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "Five waiver targets for Wednesday.");
@@ -649,10 +649,10 @@ class WaiverScenarioTest extends WireSeamTest {
 
         runCheckAt(TUESDAY_EVENING);
 
-        // Off means off: no board, no Event, and no news feeds read.
+        // The scored board is ranked as a silent baseline, so the
+        // week can be judged, but nothing reaches the chat.
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
-        sleeper.verify(0, getRequestedFor(urlPathMatching("/players/nfl/[0-9]+/news")));
 
         // Switched back on, the next Tuesday evening board goes out.
         settings.change(current -> current.withTrigger(Trigger.WAIVER, true));

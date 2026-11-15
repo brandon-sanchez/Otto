@@ -4,15 +4,20 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.events.EventLog;
+import otto.events.EventType;
 import otto.harness.AdviceStubs;
+import otto.harness.Fixtures;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.storage.JsonStore;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
@@ -23,6 +28,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * An Alert Telegram did not accept is checked again on the next Check
@@ -47,6 +53,12 @@ class DelayedAlertScenarioTest extends WireSeamTest {
 
     @Autowired
     private CheckRunner checkRunner;
+
+    @Autowired
+    private EventLog eventLog;
+
+    @Autowired
+    private JsonStore store;
 
     private void declineWhileTelegramIsDown() {
         SleeperStubs.healthyInSeason(sleeper);
@@ -73,6 +85,14 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         SleeperStubs.noNewsByDefault(sleeper);
+    }
+
+    /** The fixture rosters after the user dropped Christian McCaffrey and started Josh Jacobs. */
+    private static String mccaffreyDroppedForJacobs() {
+        String mccaffrey = "\"" + MCCAFFREY + "\",";
+        return Fixtures.read("sleeper/rosters.json")
+                .replaceFirst(mccaffrey, "")
+                .replaceFirst(mccaffrey, "\"5850\",");
     }
 
     private static String newsFeed(String title, String description, Instant published) {
@@ -134,6 +154,28 @@ class DelayedAlertScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aDelayedAlertIsCancelledUnsentWhenThePlayerLeftTheRosterWhileItWaited() {
+        declineWhileTelegramIsDown();
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.ROSTERS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withHeader("ETag", "\"rosters-v2\"")
+                .withBody(mccaffreyDroppedForJacobs())));
+        llm.resetRequests();
+
+        checkRunner.runCheck();
+        clock.advance(Duration.ofSeconds(61));
+        SleeperStubs.stubNotModified(sleeper, SleeperStubs.ROSTERS_PATH, "rosters-v2");
+        checkRunner.runCheck();
+
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
+        assertThat(eventLog.all()).noneMatch(event -> event.type() == EventType.ALERT_SENT);
+        assertThat(firstDeliveryStatus()).isEqualTo("CANCELLED");
+    }
+
+    @Test
     void aDelayedAlertIsCancelledWhenThePlayerRecoveredWhileItWaited() {
         declineWhileTelegramIsDown();
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
@@ -155,5 +197,12 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo(RECOVERY_PHRASE))));
+        assertThat(firstDeliveryStatus()).isEqualTo("CANCELLED");
+    }
+
+    /** The stored status of the delivery the decline was first queued as. */
+    private String firstDeliveryStatus() {
+        return store.read("alert-delivery-id:1", JsonNode.class).orElseThrow()
+                .path("status").asText();
     }
 }
