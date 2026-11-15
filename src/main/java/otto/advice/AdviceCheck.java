@@ -48,6 +48,7 @@ public class AdviceCheck {
 
     private final PlayerDirectoryStore directory;
 
+    /** Checks names against the players {@code directory} knows. */
     public AdviceCheck(PlayerDirectoryStore directory) {
         this.directory = directory;
     }

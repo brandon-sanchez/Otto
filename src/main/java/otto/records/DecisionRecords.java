@@ -33,7 +33,7 @@ import otto.storage.OttoJson;
  * Every Decision Record Otto keeps, and every rule about how it is kept.
  *
  * <p>Records are stored per user and per league, under Hive-style keys
- * so Athena can partition on them later:
+ * a query engine such as Athena can partition on:
  * {@code records/user=<userId>/league=<leagueId>/run=<runId>.json}.
  * Everything one user owns sits under one prefix, so deleting an
  * account is one prefix per object kind and cannot miss a league.
@@ -222,14 +222,16 @@ public class DecisionRecords {
     }
 
     /**
-     * Deletes every record, outcome record and article text one user has, in every
-     * league. The bucket holds objects under governance-mode retention,
-     * so whatever calls this in the deployed assistant needs
-     * {@code s3:ListBucketVersions}, {@code s3:DeleteObjectVersion} and
-     * {@code s3:BypassGovernanceRetention} on the records bucket. No
-     * function holds them today. The caller must stop new runs for the
-     * user before deleting, or a save already in flight can recreate a
-     * record.
+     * Deletes every record, outcome record and article text one user
+     * has, in every league, every stored version included.
+     *
+     * <p>The bucket holds objects under governance-mode retention, so a
+     * deployed caller needs {@code s3:ListBucketVersions},
+     * {@code s3:DeleteObjectVersion} and
+     * {@code s3:BypassGovernanceRetention} on the records bucket, and
+     * the bucket policy must let its role delete. The caller must stop
+     * new runs for the user before deleting, or a save already in
+     * flight can recreate a record.
      */
     public void deleteUser(String userId) {
         objects.deleteAll(userPrefix(RECORDS, userId));
