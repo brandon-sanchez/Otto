@@ -12,7 +12,18 @@ import otto.records.ModelExchange;
  */
 public sealed interface AdviceResult<T> {
 
+    /** What {@link #model()} returns when no model answered. */
+    String NO_MODEL = "none";
+
     List<ModelExchange> exchanges();
+
+    /**
+     * Returns the id of the model that wrote the answer, approved or
+     * not, or {@link #NO_MODEL} when no provider answered.
+     */
+    default String model() {
+        return this instanceof Unavailable<T> ? NO_MODEL : exchanges().getLast().model();
+    }
 
     /** An answer that passed every check, on the first try or the correction. */
     record Approved<T>(T answer, List<ModelExchange> exchanges) implements AdviceResult<T> {
@@ -32,7 +43,7 @@ public sealed interface AdviceResult<T> {
         }
     }
 
-    /** The model could not be reached or answered with nothing. */
+    /** No provider in the model chain gave an answer that could be read. */
     record Unavailable<T>(String reason, List<ModelExchange> exchanges)
             implements AdviceResult<T> {
 

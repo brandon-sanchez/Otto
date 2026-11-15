@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import otto.OttoApplication;
@@ -83,13 +82,11 @@ public class LineupAdvice {
     private final MuteStore muteStore;
     private final AlertDeliveryOutbox outbox;
     private final String userId;
-    private final String model;
 
     public LineupAdvice(AdviceWriter writer, DecisionRecords records, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
-            AlertDeliveryOutbox outbox, OttoProperties properties,
-            @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
+            AlertDeliveryOutbox outbox, OttoProperties properties) {
         this.writer = writer;
         this.records = records;
         this.settings = settings;
@@ -100,7 +97,6 @@ public class LineupAdvice {
         this.muteStore = muteStore;
         this.outbox = outbox;
         this.userId = properties.userId();
-        this.model = model;
     }
 
     /**
@@ -355,7 +351,7 @@ public class LineupAdvice {
                 new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
                 comparisons(draft.bundle()), evidence(draft.bundle()),
-                versions(draft.bundle(), form),
+                versions(draft.bundle(), form, result),
                 result.exchanges(), outcome));
         return new Run(runId, outcome);
     }
@@ -432,9 +428,10 @@ public class LineupAdvice {
                 .toList();
     }
 
-    private Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form) {
+    private static Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form,
+            AdviceResult<AdviceAnswer> result) {
         String code = Objects.requireNonNullElse(
                 OttoApplication.class.getPackage().getImplementationVersion(), "dev");
-        return new Versions(bundle.identity(), code, form.promptVersion(), model);
+        return new Versions(bundle.identity(), code, form.promptVersion(), result.model());
     }
 }

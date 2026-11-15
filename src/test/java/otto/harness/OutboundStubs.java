@@ -40,7 +40,7 @@ public final class OutboundStubs {
     }
 
     /** Escapes a phrase into a valid JSON string literal. */
-    static String jsonString(String phrase) {
+    public static String jsonString(String phrase) {
         try {
             return OttoJson.MAPPER.writeValueAsString(phrase);
         } catch (JsonProcessingException e) {

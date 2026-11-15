@@ -6,19 +6,19 @@ import java.util.TreeMap;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
 import otto.advice.Sha256;
+import otto.model.ModelChain;
 import otto.research.PreSendResearch;
 import otto.storage.OttoJson;
 
 /**
  * Words a Recommendation as the outbound Alert text: one single-shot
- * LLM call with no tools. The pipeline hands the model computed JSON
- * facts; the model phrases them and never alters them. On any failure
- * a deterministic fallback text carries the same facts, so an Alert
- * always goes out.
+ * LLM call with no tools, through the {@link ModelChain}. The pipeline
+ * hands the model computed JSON facts; the model phrases them and never
+ * alters them. On any failure a deterministic fallback text carries the
+ * same facts, so an Alert always goes out.
  */
 @Component
 public class AlertPhraser {
@@ -42,26 +42,42 @@ public class AlertPhraser {
 
     private static final Logger log = LoggerFactory.getLogger(AlertPhraser.class);
 
-    private final ChatClient chat;
+    private final ModelChain chain;
 
-    public AlertPhraser(ChatClient.Builder builder) {
-        this.chat = builder.build();
+    public AlertPhraser(ModelChain chain) {
+        this.chain = chain;
     }
 
+    /**
+     * Returns the Alert text for a Recommendation, phrased by the first
+     * provider in the model chain that answers, or the deterministic
+     * fallback text when none does.
+     */
     public String phrase(Map<String, String> eventFacts, Recommendation recommendation) {
+        String facts;
         try {
-            String facts = OttoJson.MAPPER.writeValueAsString(Map.of(
+            facts = OttoJson.MAPPER.writeValueAsString(Map.of(
                     "event", eventFacts,
                     "recommendation", recommendation));
-            String content = chat.prompt().system(SYSTEM).user(facts).call().content();
-            if (content == null || content.isBlank()) {
-                return fallback(recommendation);
-            }
-            return content;
-        } catch (Exception e) {
-            log.warn("LLM phrasing failed, using deterministic fallback", e);
+        } catch (JsonProcessingException e) {
+            log.warn("Cannot write Alert facts, using deterministic fallback", e);
             return fallback(recommendation);
         }
+        return switch (chain.call(provider -> {
+            String content = provider.chat().prompt().system(SYSTEM).user(facts).call()
+                    .content();
+            if (content == null || content.isBlank()) {
+                throw new ModelChain.UnusableReply("The model answered with nothing.");
+            }
+            return content;
+        })) {
+            case ModelChain.Result.Answered<String> answered -> answered.value();
+            case ModelChain.Result.Exhausted<String> exhausted -> {
+                log.warn("LLM phrasing failed, using deterministic fallback: {}",
+                        exhausted.reason());
+                yield fallback(recommendation);
+            }
+        };
     }
 
     /**

@@ -147,8 +147,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
                         "full name"),
                 Arguments.of("a wrong comparison", EDGE_ANSWER.replace(
                         "\"higher\": \"5850\", \"lower\": \"8138\"",
-                        "\"higher\": \"8138\", \"lower\": \"5850\""), "James Cook"),
-                Arguments.of("an answer that is not JSON", EDGE_MESSAGE, "JSON"));
+                        "\"higher\": \"8138\", \"lower\": \"5850\""), "James Cook"));
     }
 
     @ParameterizedTest(name = "{0} is corrected once")

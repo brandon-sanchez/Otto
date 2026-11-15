@@ -83,6 +83,9 @@ public abstract class WireSeamTest {
     @Autowired
     private otto.sleeper.SleeperCache sleeperCache;
 
+    @Autowired
+    private otto.model.ProviderBreakers breakers;
+
     @BeforeEach
     void resetSeam() throws IOException {
         sleeper.resetAll();
@@ -91,6 +94,7 @@ public abstract class WireSeamTest {
         nflverse.resetAll();
         clock.set(TEST_START);
         sleeperCache.clear();
+        breakers.reset();
         wipe(storageDir);
     }
 

@@ -362,9 +362,11 @@ class DecisionRecordStorageScenarioTest {
                                 {"headers":{"Authorization":"Bearer %s"},"prompt":"rank these"}"""
                                 .formatted(secret)),
                                 json("{\"text\":\"Bid 40 on Wright\"}"),
-                                List.of("bid exceeds the verified budget")),
+                                List.of("bid exceeds the verified budget"), "openai",
+                                "gpt-5.6-luna"),
                         new ModelExchange(2, json("{\"prompt\":\"correct the bid\"}"),
-                                json("{\"text\":\"Bid 12 on Wright\"}"), List.of())),
+                                json("{\"text\":\"Bid 12 on Wright\"}"), List.of(), "openai",
+                                "gpt-5.6-luna")),
                 new Outcome.Sent("Bid 12 on Jaylen Wright."));
     }
 
