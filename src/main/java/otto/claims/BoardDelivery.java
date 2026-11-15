@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
@@ -16,8 +17,9 @@ import otto.events.EventType;
 /**
  * Sends a claim round's waiver board through the Alert outbox under the
  * round's Alert key, with the role-slip advice held for it underneath.
- * The held advice goes out word for word as it passed its checks and is
- * forgotten once Telegram accepts the board.
+ * Whichever board the round sends, the held advice goes out word for
+ * word as it passed its checks and is forgotten once Telegram accepts
+ * the board.
  */
 @Component
 public class BoardDelivery {
@@ -38,19 +40,38 @@ public class BoardDelivery {
     }
 
     /**
+     * Sends a board of ready-made messages.
+     *
+     * <p>Side effects: the outbox's writes and Telegram sends, the Event
+     * Log append, and a role-slip ledger write when held advice went out.
+     *
+     * @param basis what the board's messages were written from
+     * @param withHeldAdvice lays out the board's messages with the held
+     *        advice messages under them
+     * @param viewAllOptions whether View all options hangs under the board
+     * @param facts the facts the Alert Event records; the held runs are
+     *        added here and the sent text by the outbox
+     * @return the Event recorded when Telegram accepted the board
+     */
+    public Optional<Event> deliver(ClaimRound round, DeliveryBasis basis,
+            Function<List<String>, List<String>> withHeldAdvice, boolean viewAllOptions,
+            Map<String, String> facts) {
+        List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
+        List<String> parts = withHeldAdvice.apply(messages(held));
+        return delivered(held, outbox.deliver(parts, viewAllOptions, withHeld(basis, held),
+                templates(round, facts, held)));
+    }
+
+    /**
      * Sends a board written in one message by a model call. A retry of
      * a delivery still pending from the same basis sends the text
      * already written, at no further model call.
      *
-     * <p>Side effects: the phrasing call when no pending text matches,
-     * the outbox's writes and Telegram send, the Event Log append, and a
-     * role-slip ledger write when held advice went out.
+     * <p>Side effects: as {@link #deliver}, plus the phrasing call when
+     * no pending text matches.
      *
      * @param basis what the phrasing was written from
      * @param phrase writes the board's text
-     * @param facts the facts the Alert Event records; the held runs are
-     *        added here and the sent text by the outbox
-     * @return the Event recorded when Telegram accepted the board
      */
     public Optional<Event> deliverPhrased(ClaimRound round, DeliveryBasis basis,
             Supplier<String> phrase, Map<String, String> facts) {

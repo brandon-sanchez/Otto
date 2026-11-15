@@ -2,6 +2,7 @@ package otto.telegram;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.alerts.AlertActions;
 import otto.ask.AskService;
+import otto.board.WaiverBoardOptions;
 import otto.storage.OttoJson;
 
 /**
@@ -36,19 +38,26 @@ public class TelegramWebhook {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramWebhook.class);
 
-    private static final Pattern TAP = Pattern.compile("(done|ignore|mute):(\\d{1,18})");
+    private static final Pattern TAP = Pattern.compile("(done|ignore|mute|all):(\\d{1,18})");
+
+    private static final String VIEW_ALL = "all";
+
+    private static final String COULD_NOT_SEND_ALL =
+            "I could not send the full list. Tap again in a minute.";
 
     private final String webhookSecret;
     private final String chatId;
     private final AlertActions alertActions;
+    private final WaiverBoardOptions boardOptions;
     private final AskService ask;
     private final TelegramClient telegram;
 
     public TelegramWebhook(OttoProperties properties, AlertActions alertActions,
-            AskService ask, TelegramClient telegram) {
+            WaiverBoardOptions boardOptions, AskService ask, TelegramClient telegram) {
         this.webhookSecret = properties.telegram().webhookSecret();
         this.chatId = properties.telegram().chatId();
         this.alertActions = alertActions;
+        this.boardOptions = boardOptions;
         this.ask = ask;
         this.telegram = telegram;
     }
@@ -125,7 +134,6 @@ public class TelegramWebhook {
         return chatId.equals(message.path("chat").path("id").asText(""));
     }
 
-    /** Free text goes to the Ask loop and its reply back to the chat. */
     private void answerAsk(JsonNode message) {
         String text = message.path("text").asText("");
         if (text.isBlank()) {
@@ -136,11 +144,44 @@ public class TelegramWebhook {
 
     private void answerTap(JsonNode callback) {
         Matcher tap = TAP.matcher(callback.path("data").asText(""));
-        String ack = tap.matches()
-                ? alertActions.apply(tap.group(1), Long.parseLong(tap.group(2)))
-                        .orElse("That alert is no longer on my log.")
-                : "I do not recognize that button.";
+        if (!tap.matches()) {
+            acknowledge(callback, "I do not recognize that button.");
+            return;
+        }
+        long alertId = Long.parseLong(tap.group(2));
+        String ack = VIEW_ALL.equals(tap.group(1))
+                ? viewAllOptions(alertId)
+                : alertActions.apply(tap.group(1), alertId)
+                        .orElse("That alert is no longer on my log.");
         acknowledge(callback, ack);
+    }
+
+    /**
+     * Sends the board's full list and says how it went. A failure to
+     * read or record it is answered like a failed send: Telegram sends
+     * again an update whose webhook call fails, and that retry would
+     * fail the same way.
+     */
+    private String viewAllOptions(long alertId) {
+        try {
+            Optional<List<String>> options = boardOptions.unsentOptions(alertId);
+            if (options.isEmpty()) {
+                return "That board is no longer on my log.";
+            }
+            int delivered = 0;
+            for (String part : options.get()) {
+                if (!telegram.sendMessage(part)) {
+                    break;
+                }
+                delivered++;
+            }
+            boolean finished = delivered == options.get().size();
+            boardOptions.sent(alertId, delivered, finished);
+            return finished ? "Here is every option on that board." : COULD_NOT_SEND_ALL;
+        } catch (RuntimeException e) {
+            log.error("Could not send the full list of board {}", alertId, e);
+            return COULD_NOT_SEND_ALL;
+        }
     }
 
     /**

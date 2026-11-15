@@ -28,7 +28,10 @@ import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -89,7 +92,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-in-season.json",
                 REHEARSAL_BIDDING_BOARD);
 
-        assertClaimsIrving(boardRecordedAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
@@ -97,7 +100,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-dynasty.json",
                 REHEARSAL_PRIORITY_BOARD);
 
-        assertClaimsIrving(boardRecordedAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
@@ -105,7 +108,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         tuesdayEveningBeforeWednesdayClaims("sleeper/league-keeper.json",
                 REHEARSAL_BIDDING_BOARD);
 
-        assertClaimsIrving(boardRecordedAfterPassingItsChecks());
+        assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     private static String claimingOnWednesday(String league) {
@@ -132,7 +135,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         checkRunner.runCheck();
     }
 
-    private JsonNode boardRecordedAfterPassingItsChecks() {
+    private JsonNode boardSentAfterPassingItsChecks() {
         List<DecisionRecord> records = StoredRecords.of(decisionRecords,
                 properties.storageDir(), USER_ID, LEAGUE_ID, RunKind.WAIVER_BOARD);
         assertThat(records).hasSize(1);
@@ -141,7 +144,9 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         assertThat(last.checkFailures())
                 .as("check failures on the model's board %s", last.response())
                 .isEmpty();
-        assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options"))));
         return last.response();
     }
 

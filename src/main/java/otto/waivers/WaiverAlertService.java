@@ -29,6 +29,8 @@ import otto.sleeper.SourceResult;
  * role tags and a FAAB range each, in the user's chat at 18:00
  * America/Los_Angeles the evening before the league's own claim
  * deadline. On Sleeper's default schedule that is Tuesday evening.
+ * The Check runs it only while {@code otto.sent-waiver-board} is
+ * SCORED, the rollback from the evidence-based board.
  *
  * <p>Role-slip advice held for the board goes out under it, through
  * {@link BoardDelivery}.
