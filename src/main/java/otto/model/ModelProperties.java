@@ -56,13 +56,15 @@ public record ModelProperties(List<String> order, Breaker breaker, Budgets budge
      *
      * @param ask a chat reply, which must fit the webhook function's
      *        60-second timeout with time left to send it
+     * @param advice checked advice: Alerts, player decisions and the
+     *        waiver board, which run on the scheduled function
      * @param phrasing the wording of a Recommendation as an Alert
      * @param check the time from the start of a Check within which every
      *        one of its runs must end; it must fit the scheduled
      *        function's 300-second timeout with time left to send and
      *        store what the Check found
      */
-    public record Budgets(Budget ask, Budget phrasing, Duration check) {
+    public record Budgets(Budget ask, Budget advice, Budget phrasing, Duration check) {
     }
 
     /**

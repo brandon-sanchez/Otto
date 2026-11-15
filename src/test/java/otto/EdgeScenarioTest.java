@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.harness.AdviceStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -39,7 +40,7 @@ class EdgeScenarioTest extends WireSeamTest {
         SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
                 projectionsFixture, "projections-v1");
         OutboundStubs.telegramOk(telegram);
-        OutboundStubs.llmPhrases(llm, "Jacobs projects better than Cook this week.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
     }
 
     @Test

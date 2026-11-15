@@ -8,7 +8,6 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,7 +28,6 @@ import otto.lineup.GameWeek;
 import otto.research.PreSendResearch;
 import otto.settings.Settings;
 import otto.settings.SettingsStore;
-import otto.settings.Trigger;
 import otto.snapshot.LeagueStatus;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
@@ -47,8 +45,8 @@ import otto.snapshot.SnapshotDiffer;
  * candidate's key is recorded in both, so neither detector re-fires later.
  *
  * The Lock Ladder governs timing: one Alert on detect, one final
- * warning inside the half hour before the player's game lock, nothing
- * after lock.
+ * warning inside the half hour before the player's game lock (see
+ * {@link LockLadder}), nothing after lock.
  */
 @Component
 public class AlertService {
@@ -62,14 +60,12 @@ public class AlertService {
      */
     private static final Duration RETRY_WINDOW = Duration.ofHours(4);
 
-    /** The Lock Ladder's final rung: one warning inside this window. */
-    private static final Duration FINAL_WARNING_WINDOW = Duration.ofMinutes(30);
-
-    private static final Comparator<AlertCandidate> BY_CONFIDENCE =
+    /** Orders candidates most confident first. */
+    static final Comparator<AlertCandidate> BY_CONFIDENCE =
             Comparator.comparingInt(candidate -> candidate.recommendation().confidence().ordinal());
 
     /** What the Lock Ladder's final rung warns about: this week's lineup. */
-    private static final Set<AlertCandidate.Source> LINEUP_PROBLEMS =
+    static final Set<AlertCandidate.Source> LINEUP_PROBLEMS =
             EnumSet.of(AlertCandidate.Source.LEGALITY, AlertCandidate.Source.EDGE);
 
     private final StatusTransitionDetector transitionDetector;
@@ -79,21 +75,23 @@ public class AlertService {
     private final WatchlistDetector watchlistDetector;
     private final AlertPhraser phraser;
     private final EventLog eventLog;
-    private final IgnoreLedger ignoreLedger;
     private final MuteStore muteStore;
     private final SettingsStore settings;
     private final AlertDeliveryOutbox outbox;
     private final Clock clock;
     private final LineupPlanner lineupPlanner;
     private final PreSendResearch preSendResearch;
+    private final LineupAdvice lineupAdvice;
+    private final LockLadder lockLadder;
 
     public AlertService(StatusTransitionDetector transitionDetector,
             LineupLegalityDetector legalityDetector, BenchEdgeDetector edgeDetector,
             LeagueActivityDetector activityDetector, WatchlistDetector watchlistDetector,
             AlertPhraser phraser, EventLog eventLog,
-            IgnoreLedger ignoreLedger, MuteStore muteStore, SettingsStore settings,
+            MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, Clock clock, LineupPlanner lineupPlanner,
-            PreSendResearch preSendResearch) {
+            PreSendResearch preSendResearch, LineupAdvice lineupAdvice,
+            LockLadder lockLadder) {
         this.transitionDetector = transitionDetector;
         this.legalityDetector = legalityDetector;
         this.edgeDetector = edgeDetector;
@@ -101,13 +99,14 @@ public class AlertService {
         this.watchlistDetector = watchlistDetector;
         this.phraser = phraser;
         this.eventLog = eventLog;
-        this.ignoreLedger = ignoreLedger;
         this.muteStore = muteStore;
         this.settings = settings;
         this.outbox = outbox;
         this.clock = clock;
         this.lineupPlanner = lineupPlanner;
         this.preSendResearch = preSendResearch;
+        this.lineupAdvice = lineupAdvice;
+        this.lockLadder = lockLadder;
     }
 
     /**
@@ -144,11 +143,9 @@ public class AlertService {
                 .filter(candidate -> !muted(candidate))
                 .toList();
 
-        List<Event> sent = new ArrayList<>(sendMerged(sendable, now));
-        userRoster.ifPresent(roster -> {
-            sent.addAll(finalWarnings(roster, week, sendable, now));
-            sent.addAll(reserveWarnings(roster, week, now));
-        });
+        List<Event> sent = new ArrayList<>(sendMerged(sendable, leagueWeek, userRoster, now));
+        userRoster.ifPresent(roster -> sent.addAll(lockLadder.warn(roster, leagueWeek, sendable,
+                now)));
         return sent;
     }
 
@@ -252,65 +249,6 @@ public class AlertService {
         }
     }
 
-    private List<Event> reserveWarnings(RosterSnapshot roster, WeekFacts week, Instant now) {
-        if (week.weekKey().isEmpty() || week.games().isEmpty()) {
-            return List.of();
-        }
-        List<Event> sent = new ArrayList<>();
-        for (String playerId : roster.reserve()) {
-            PlayerHealth health = roster.playerHealth().get(playerId);
-            if (health == null || health.ordinal() > PlayerHealth.QUESTIONABLE.ordinal()
-                    || !irEligibilityAlerted(playerId)) {
-                continue;
-            }
-            String team = roster.playerTeams().get(playerId);
-            Optional<Instant> lock = week.games().get().lockFor(team);
-            if (lock.isEmpty()) {
-                continue;
-            }
-            Instant windowStart = lock.get().minus(FINAL_WARNING_WINDOW);
-            if (now.isBefore(windowStart) || !now.isBefore(lock.get())) {
-                continue;
-            }
-            String key = "alert:final-ir:%s:%s".formatted(week.weekKey().get(), playerId);
-            if (outbox.alreadySent(key)) {
-                continue;
-            }
-            String player = roster.playerNames().getOrDefault(playerId, playerId);
-            Recommendation recommendation = new Recommendation(
-                    playerId,
-                    player,
-                    "IR reminder: %s is still eligible to leave IR before lock"
-                            .formatted(player),
-                    health == PlayerHealth.ACTIVE || health == PlayerHealth.PROBABLE
-                            ? Confidence.HIGH : Confidence.MEDIUM,
-                    List.of("Move him out now if you want to use him this week"),
-                    List.of(health == PlayerHealth.QUESTIONABLE
-                            ? "He is still QUESTIONABLE, so keeping him on IR preserves flexibility"
-                            : "A bench spot may need to be opened"));
-            Map<String, String> facts = Map.of(
-                    "playerId", playerId,
-                    "player", player,
-                    "health", health.name(),
-                    "irReminder", "true");
-            String text = phraser.phrase(facts, recommendation);
-            sent.addAll(outbox.deliver(text, List.of(new Event(
-                    key, EventType.ALERT_SENT, now, alertFacts(
-                            new AlertCandidate(AlertCandidate.Source.TRANSITION, key, playerId,
-                                    team, recommendation, facts), text)))));
-        }
-        return sent;
-    }
-
-    private boolean irEligibilityAlerted(String playerId) {
-        return eventLog.all().stream()
-                .filter(event -> event.type() == EventType.ALERT_SENT)
-                .filter(event -> playerId.equals(event.facts().get("playerId")))
-                .map(event -> event.facts().getOrDefault("action", ""))
-                .anyMatch(action -> action.startsWith("IR update:")
-                        || action.startsWith("IR action needed:"));
-    }
-
     /**
      * The diff events still worth a message. An event carries the time
      * the thing it records happened, so a transaction a recovered feed
@@ -397,7 +335,8 @@ public class AlertService {
         };
     }
 
-    private List<Event> sendMerged(List<AlertCandidate> sendable, Instant now) {
+    private List<Event> sendMerged(List<AlertCandidate> sendable, LeagueWeek leagueWeek,
+            Optional<RosterSnapshot> userRoster, Instant now) {
         Map<String, List<AlertCandidate>> groups = new LinkedHashMap<>();
         for (AlertCandidate candidate : sendable) {
             String groupKey = candidate.playerId() != null
@@ -418,121 +357,72 @@ public class AlertService {
             Map<String, String> research = primary.playerId() == null
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
-            Map<String, String> facts = new HashMap<>(primary.facts());
-            facts.putAll(research);
-            String text = phraser.phrase(facts, primary.recommendation());
+            Optional<AlertText> written =
+                    alertText(primary, research, leagueWeek, userRoster, now);
+            if (written.isEmpty()) {
+                continue;
+            }
+            String text = text(written.get());
             List<Event> templates = unalerted.stream()
                     .map(candidate -> new Event("alert:" + candidate.key(),
-                            EventType.ALERT_SENT, now, alertFacts(candidate, research, text)))
+                            EventType.ALERT_SENT, now,
+                            alertFacts(candidate, research, written.get(), text)))
                     .toList();
             sent.addAll(outbox.deliver(text, templates));
         }
         return sent;
     }
 
-    /**
-     * The ladder's final rung: inside the half hour before a starter's
-     * game lock, one warning per player per week when a problem is
-     * still present - an open legality or edge candidate, or a starter
-     * still carrying an uncertain designation. An Alert about the
-     * player already sent inside the window counts as the warning.
-     */
-    private List<Event> finalWarnings(RosterSnapshot roster, WeekFacts week,
-            List<AlertCandidate> sendable, Instant now) {
-        if (week.weekKey().isEmpty() || week.games().isEmpty()) {
-            return List.of();
+    private String text(AlertText written) {
+        return switch (written) {
+            case AlertText.Advised advised -> advised.text();
+            case AlertText.Phrased phrased ->
+                    phraser.phrase(phrased.facts(), phrased.recommendation());
+        };
+    }
+
+    private Map<String, String> alertFacts(AlertCandidate candidate,
+            Map<String, String> research, AlertText written, String text) {
+        Map<String, String> facts = new HashMap<>(alertFacts(candidate, research, text));
+        if (written instanceof AlertText.Advised advised) {
+            facts.put("runId", advised.runId());
         }
-        String weekKey = week.weekKey().get();
-        GameWeek games = week.games().get();
-        Set<String> ignoredKeys = ignoreLedger.ignoredKeys();
-
-        List<Event> sent = new ArrayList<>();
-        for (String playerId : new LinkedHashSet<>(roster.starters())) {
-            if (playerId == null || "0".equals(playerId)) {
-                continue;
-            }
-            String team = roster.playerTeams().get(playerId);
-            Optional<Instant> lock = games.lockFor(team);
-            if (lock.isEmpty()) {
-                continue;
-            }
-            Instant windowStart = lock.get().minus(FINAL_WARNING_WINDOW);
-            if (now.isBefore(windowStart) || !now.isBefore(lock.get())) {
-                continue;
-            }
-
-            // An Ignore stops the follow-ups it covers, but never
-            // shields an illegal lineup: legality problems always warn.
-            List<AlertCandidate> problems = sendable.stream()
-                    .filter(candidate -> LINEUP_PROBLEMS.contains(candidate.source()))
-                    .filter(candidate -> playerId.equals(candidate.playerId()))
-                    .filter(candidate -> candidate.source() == AlertCandidate.Source.LEGALITY
-                            || !ignoredKeys.contains(candidate.key()))
-                    .toList();
-            PlayerHealth health = roster.playerHealth().get(playerId);
-            boolean impaired = health != null && health.isWorseThan(PlayerHealth.PROBABLE)
-                    && settings.enabled(Trigger.STATUS_TRANSITION)
-                    && !muteStore.muted(Trigger.STATUS_TRANSITION.muteTarget())
-                    && !ignoreLedger.covers(playerId, health)
-                    && !muteStore.muted(MuteStore.playerTarget(playerId));
-            if (problems.isEmpty() && !impaired) {
-                continue;
-            }
-
-            String key = "alert:final:%s:%s".formatted(weekKey, playerId);
-            if (outbox.alreadySent(key) || alertedInWindow(playerId, windowStart)) {
-                continue;
-            }
-
-            String player = roster.playerNames().getOrDefault(playerId, playerId);
-            Optional<AlertCandidate> primary = problems.stream().min(BY_CONFIDENCE);
-            Recommendation recommendation = primary
-                    .map(AlertCandidate::recommendation)
-                    .orElseGet(() -> impairedWarning(playerId, player, health));
-            Map<String, String> facts = new HashMap<>(primary
-                    .map(AlertCandidate::facts)
-                    .orElseGet(() -> Map.of("player", player)));
-            facts.put("finalWarning", "true");
-            facts.put("minutesToLock",
-                    String.valueOf(Duration.between(now, lock.get()).toMinutes()));
-            facts.putAll(preSendResearch.factsFor(playerId));
-
-            String text = phraser.phrase(facts, recommendation);
-            facts.put("playerId", playerId);
-            facts.put("text", text);
-            sent.addAll(outbox.deliver(text, List.of(
-                    new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
-        }
-        return sent;
+        return Map.copyOf(facts);
     }
 
-    private boolean alertedInWindow(String playerId, Instant windowStart) {
-        return eventLog.all().stream()
-                .filter(event -> event.type() == EventType.ALERT_SENT)
-                .filter(event -> playerId.equals(event.facts().get("playerId")))
-                .anyMatch(event -> !event.at().isBefore(windowStart));
+    /** Who writes a merged Alert's text, chosen by its primary candidate. */
+    private enum Route {
+        /** A lineup edge or legality problem: the model advises a lineup move. */
+        LINEUP_PROBLEM,
+        /** Anything else: the phrasing model words the Recommendation. */
+        PHRASED
     }
 
-    private Recommendation impairedWarning(String playerId, String player, PlayerHealth health) {
-        return new Recommendation(
-                playerId,
-                player,
-                "Last call before lock: %s is still %s in your lineup"
-                        .formatted(player, health),
-                Confidence.MEDIUM,
-                List.of("Replacing him now avoids a possible zero"),
-                List.of("%s may still play and outscore the bench".formatted(player)));
+    private static Route route(AlertCandidate primary) {
+        return LINEUP_PROBLEMS.contains(primary.source()) ? Route.LINEUP_PROBLEM : Route.PHRASED;
     }
 
-    private Map<String, String> alertFacts(AlertCandidate candidate, String text) {
-        return alertFacts(candidate, Map.of(), text);
+    private Optional<AlertText> alertText(AlertCandidate primary, Map<String, String> research,
+            LeagueWeek leagueWeek, Optional<RosterSnapshot> userRoster, Instant now) {
+        return switch (route(primary)) {
+            case LINEUP_PROBLEM -> lineupAdvice.forProblem("alert:" + primary.key(), primary,
+                    research, leagueWeek, userRoster.orElseThrow(), now)
+                    .map(AlertText.class::cast);
+            case PHRASED -> Optional.of(phrased(primary, research));
+        };
+    }
+
+    private static AlertText phrased(AlertCandidate primary, Map<String, String> research) {
+        Map<String, String> facts = new HashMap<>(primary.facts());
+        facts.putAll(research);
+        return new AlertText.Phrased(facts, primary.recommendation());
     }
 
     /**
      * The facts an Alert's Event Log entry keeps: the candidate's own,
      * the research read right before sending, and what was sent.
      */
-    private Map<String, String> alertFacts(AlertCandidate candidate,
+    static Map<String, String> alertFacts(AlertCandidate candidate,
             Map<String, String> research, String text) {
         Recommendation recommendation = candidate.recommendation();
         Map<String, String> facts = new HashMap<>(candidate.facts());

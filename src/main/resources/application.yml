@@ -31,6 +31,9 @@ otto:
       ask:
         deadline: 45s
         reserve: 10s
+      advice:
+        deadline: 150s
+        reserve: 40s
       phrasing:
         deadline: 30s
         reserve: 8s

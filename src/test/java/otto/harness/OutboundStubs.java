@@ -8,6 +8,7 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import otto.storage.OttoJson;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -21,6 +22,12 @@ public final class OutboundStubs {
     public static final String ANSWER_CALLBACK_PATH = "/bottest-bot-token/answerCallbackQuery";
     public static final String GET_UPDATES_PATH = "/bottest-bot-token/getUpdates";
     public static final String CHAT_COMPLETIONS_PATH = "(/v1)?/chat/completions";
+
+    private static final String ADVICE_REQUEST = "legalMoves";
+
+    static final int ADVICE_PRIORITY = 1;
+
+    private static final String ADVICE_RUN = "fact-checked-advice";
 
     /** The canned Lane A run: one tool call, then the narration. */
     private static final String TOOL_RUN = "lane-a-tool-run";
@@ -130,6 +137,59 @@ public final class OutboundStubs {
                 .inScenario(TOOL_RUN)
                 .whenScenarioStateIs(TOOL_CALLED)
                 .willReturn(completion(contentBody(phrase))));
+    }
+
+    /**
+     * The model's answers to fact-checked advice requests, in the order
+     * it gives them; the last one repeats. Phrasing requests are left to
+     * whatever {@link #llmPhrases} stubbed.
+     */
+    public static void llmAdvises(WireMockServer llm, String... answers) {
+        for (int index = 0; index < answers.length; index++) {
+            String state = index == 0 ? Scenario.STARTED : "answer-" + index;
+            String next = index == answers.length - 1 ? state : "answer-" + (index + 1);
+            llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                    .atPriority(ADVICE_PRIORITY)
+                    .withRequestBody(containing(ADVICE_REQUEST))
+                    .inScenario(ADVICE_RUN)
+                    .whenScenarioStateIs(state)
+                    .willReturn(completion(contentBody(answers[index])))
+                    .willSetStateTo(next));
+        }
+    }
+
+    /**
+     * The model's answer to every fact-checked advice request whose body
+     * contains the given text.
+     */
+    public static void llmAdvisesOn(WireMockServer llm, String requestContains, String answer) {
+        llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                .atPriority(ADVICE_PRIORITY)
+                .withRequestBody(containing(ADVICE_REQUEST))
+                .withRequestBody(containing(requestContains))
+                .willReturn(completion(contentBody(answer))));
+    }
+
+    /**
+     * The model's answers, in the order it gives them, to every advice
+     * request whose body contains the given text; the last one repeats.
+     * Other advice requests are left to the other stubs.
+     */
+    public static void llmAdvisesInOrderOn(WireMockServer llm, String requestContains,
+            String... answers) {
+        String run = "advice-on-" + requestContains;
+        for (int index = 0; index < answers.length; index++) {
+            String state = index == 0 ? Scenario.STARTED : "answer-" + index;
+            String next = index == answers.length - 1 ? state : "answer-" + (index + 1);
+            llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                    .atPriority(ADVICE_PRIORITY)
+                    .withRequestBody(containing(ADVICE_REQUEST))
+                    .withRequestBody(containing(requestContains))
+                    .inScenario(run)
+                    .whenScenarioStateIs(state)
+                    .willReturn(completion(contentBody(answers[index])))
+                    .willSetStateTo(next));
+        }
     }
 
     /** The model is unreachable: a request error the SDK does not retry. */

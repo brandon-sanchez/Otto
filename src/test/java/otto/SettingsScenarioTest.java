@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.harness.AdviceStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -62,6 +63,7 @@ class SettingsScenarioTest extends WireSeamTest {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.telegramCallbackAnswered(telegram);
         OutboundStubs.llmPhrases(llm, "Lineup notice.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
         checkRunner.runCheck();
     }
 
@@ -105,6 +107,7 @@ class SettingsScenarioTest extends WireSeamTest {
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         OutboundStubs.llmPhrases(llm, "Start Jacobs over Cook.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
@@ -128,6 +131,7 @@ class SettingsScenarioTest extends WireSeamTest {
         sleeper.resetAll();
         SleeperStubs.allNotModified(sleeper);
         OutboundStubs.llmPhrases(llm, "Start Jacobs over Cook.");
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));

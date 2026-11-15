@@ -64,11 +64,11 @@ class AwsEntryPointScenarioTest {
         Properties yaml = applicationYaml();
         Duration check = DurationStyle.detectAndParse(
                 yaml.getProperty("otto.models.budgets.check"));
-        Duration phrasing = DurationStyle.detectAndParse(
-                yaml.getProperty("otto.models.budgets.phrasing.deadline"));
+        Duration advice = DurationStyle.detectAndParse(
+                yaml.getProperty("otto.models.budgets.advice.deadline"));
 
         assertThat(check.plus(STORE_ALLOWANCE)).isLessThanOrEqualTo(SCHEDULED_TIMEOUT);
-        assertThat(check).as("a Check fits at least one phrasing run").isGreaterThan(phrasing);
+        assertThat(check).as("a Check fits at least one advice run").isGreaterThan(advice);
     }
 
     @Test

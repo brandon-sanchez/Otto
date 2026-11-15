@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
  * function's timeout. A run starts only while its whole deadline still
  * fits in what the Check has left. Past that, {@link #call} throws
  * {@link OutOfCheckTime} before asking anyone, and the run is left for
- * the next Check.
+ * the next Check: a run cut short instead would record its advice as
+ * withheld, and the next Check would repeat that outcome.
  */
 public class ModelChain {
 
@@ -61,6 +62,8 @@ public class ModelChain {
     public enum CallSite {
         /** A chat reply; see {@link ModelProperties.Budgets#ask()}. */
         ASK,
+        /** Checked advice; see {@link ModelProperties.Budgets#advice()}. */
+        ADVICE,
         /** An Alert's wording; see {@link ModelProperties.Budgets#phrasing()}. */
         PHRASING
     }
@@ -288,6 +291,7 @@ public class ModelChain {
     private ModelProperties.Budget budget(CallSite site) {
         return switch (site) {
             case ASK -> budgets.ask();
+            case ADVICE -> budgets.advice();
             case PHRASING -> budgets.phrasing();
         };
     }
