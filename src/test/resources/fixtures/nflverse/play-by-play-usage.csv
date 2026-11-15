@@ -186,3 +186,4 @@ play_id,game_id,home_team,away_team,season_type,week,posteam,defteam,yardline_10
 4634,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,10,qb_kneel,(:54) 14-S.Darnold kneels to LAC 11 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
 4656,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,11,qb_kneel,(:32) 14-S.Darnold kneels to LAC 12 for -1 yards.,0,1,0,0,0,,,,,00-0034869,S.Darnold,0,2026
 4678,2026_04_LAC_SEA,SEA,LAC,REG,4,SEA,LAC,,,END GAME,,,,0,,,,,,,,,2026
+117,2026_04_LAC_SEA,SEA,LAC,REG,4,LAC,SEA,49,run,(14:01) 45-Z.Unlisted up the middle to SEA 47 for 2 yards (3-N.Emmanwori).,0,1,0,0,0,,,,,00-0099901,Z.Unlisted,0,2026

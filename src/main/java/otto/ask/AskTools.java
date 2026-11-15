@@ -40,6 +40,7 @@ public class AskTools {
     private final WatchlistService watchlist;
     private final SettingsService settings;
     private final SettingsStore settingsStore;
+    private final TeamUsage teamUsage;
     private final LeagueRankLookup leagueRanks;
     private final WaiverPreferences waiverPreferences;
     private final Clock clock;
@@ -47,7 +48,7 @@ public class AskTools {
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
-            LeagueRankLookup leagueRanks,
+            TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, Clock clock) {
         this.loader = loader;
         this.planner = planner;
@@ -58,6 +59,7 @@ public class AskTools {
         this.watchlist = watchlist;
         this.settings = settings;
         this.settingsStore = settingsStore;
+        this.teamUsage = teamUsage;
         this.leagueRanks = leagueRanks;
         this.waiverPreferences = waiverPreferences;
         this.clock = clock;
@@ -248,6 +250,26 @@ public class AskTools {
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player) {
         return players.news(player, clock.instant());
+    }
+
+    @Tool(name = "get_team_usage", description = """
+            One NFL team's usage by position group over its last four
+            finished games, week by week, from nflverse: each player's
+            snaps and snap share, targets and target share, carries and
+            carry share, and the group's share of the team's targets and
+            carries. Its table is written to fit one message; show it as
+            it is. Call this for "Chargers RB usage", "Lions targets by
+            position", backfield splits and target shares.""")
+    public ToolAnswer<TeamUsage.Report> getTeamUsage(
+            @ToolParam(description = """
+                    The NFL team as the user wrote it: a nickname, a city
+                    or a code, such as Chargers, LA Chargers or LAC.""")
+            String team,
+            @ToolParam(required = false, description = """
+                    QB, RB, WR or TE. Leave it out to compare every
+                    group's share of the team's targets and carries.""")
+            String position) {
+        return teamUsage.forTeam(team, position);
     }
 
     @Tool(name = "get_league_rank", description = """
