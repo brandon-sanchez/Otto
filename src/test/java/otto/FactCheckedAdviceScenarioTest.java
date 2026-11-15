@@ -125,6 +125,10 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         return Stream.of(
                 Arguments.of("a wrong number", edgeAnswer(EDGE_MESSAGE.replace("16.5", "18.0"),
                         "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"), "18.0"),
+                Arguments.of("a real number pinned on the wrong player", edgeAnswer(
+                        EDGE_MESSAGE + " James Cook projects 16.5 points if he starts.",
+                        "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"),
+                        "16.5 is not in the evidence about James Cook"),
                 Arguments.of("a player outside the evidence", edgeAnswer(
                         EDGE_MESSAGE + " Saquon Barkley is the better pickup.",
                         "{\"start\":\"5850\",\"bench\":\"8138\",\"slot\":\"RB\"}"),

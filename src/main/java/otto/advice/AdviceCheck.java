@@ -3,6 +3,7 @@ package otto.advice;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,9 @@ public class AdviceCheck {
     private static final Pattern DOLLARS = Pattern.compile("\\$\\s?(\\d+)");
     private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
     private static final String PROJECTION = "projection";
+
+    /** Where one sentence ends and the next begins; a decimal point is never followed by a space. */
+    private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
     private final PlayerDirectoryStore directory;
 
@@ -128,6 +132,14 @@ public class AdviceCheck {
                         "The message names %s, who is not in the evidence.".formatted(name)));
     }
 
+    /**
+     * Holds every number in the message to the evidence, and every
+     * number in a sentence that names players to the evidence about
+     * them, so a real stat cannot be pinned on the wrong player. The
+     * evidence about a player is every item that names him or his id,
+     * every item that names no player, his projection, and the items
+     * cited by claims about him.
+     */
     private void checkNumbers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
         Set<BigDecimal> known = bundle.numbers();
         EvidenceBundle.numbersIn(answer.message()).stream()
@@ -135,6 +147,51 @@ public class AdviceCheck {
                 .distinct()
                 .forEach(number -> failures.add(
                         "The number %s is not in the evidence.".formatted(number)));
+        for (String sentence : SENTENCE_END.split(answer.message())) {
+            List<BundlePlayer> named = bundle.players().stream()
+                    .filter(player -> names(sentence, player))
+                    .toList();
+            if (named.isEmpty()) {
+                continue;
+            }
+            Set<BigDecimal> about = numbersAbout(bundle, answer, named);
+            EvidenceBundle.numbersIn(sentence).stream()
+                    .filter(number -> known.contains(EvidenceBundle.normalized(number)))
+                    .filter(number -> !about.contains(EvidenceBundle.normalized(number)))
+                    .distinct()
+                    .forEach(number -> failures.add(
+                            "The number %s is not in the evidence about %s.".formatted(number,
+                                    named.stream().map(BundlePlayer::fullName)
+                                            .collect(Collectors.joining(" or ")))));
+        }
+    }
+
+    private static Set<BigDecimal> numbersAbout(EvidenceBundle bundle, AdviceAnswer answer,
+            List<BundlePlayer> named) {
+        Set<String> cited = answer.claims().stream()
+                .filter(claim -> named.stream().anyMatch(player -> names(claim.text(), player)))
+                .flatMap(claim -> claim.evidence().stream())
+                .collect(Collectors.toSet());
+        Stream<String> items = bundle.evidence().stream()
+                .filter(item -> cited.contains(item.id())
+                        || named.stream().anyMatch(player -> about(item, player))
+                        || bundle.players().stream().noneMatch(player -> about(item, player)))
+                .flatMap(item -> item.facts().values().stream());
+        Stream<String> projections = named.stream()
+                .flatMap(player -> player.projectedPoints().stream());
+        return EvidenceBundle.numbersOf(Stream.of(items, projections,
+                bundle.kickoffPhrase().stream()).flatMap(texts -> texts));
+    }
+
+    private static boolean about(EvidenceItem item, BundlePlayer player) {
+        return Arrays.asList(item.id().split("-")).contains(player.playerId())
+                || item.facts().values().stream().anyMatch(value ->
+                        value.equals(player.playerId()) || value.contains(player.fullName()));
+    }
+
+    private static boolean names(String text, BundlePlayer player) {
+        return text.contains(player.fullName())
+                || word(lastName(player.fullName())).matcher(text).find();
     }
 
     private void checkClaims(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
