@@ -151,3 +151,22 @@ call `deleteWebhook`.
   console and wait fifteen minutes. An alarm email should arrive.
   Re-enable it afterwards. Until it has fired once, you do
   not know the assistant can tell you it has stopped.
+
+## 6. Roll back the waiver board
+
+The evidence-based waiver board is the one sent. The scored board is
+still built every round, so it can take over at once:
+
+1. Set `sentWaiverBoard` to `SCORED` in the `context` block of
+   `infra/cdk.json` and merge it. The deploy that follows the merge sets
+   `OTTO_SENT_WAIVER_BOARD` on both functions. The next Check sends the
+   scored board, and the evidence-based board is recorded unsent.
+2. For a rollback that cannot wait for a merge, run the deploy by hand
+   with `-c sentWaiverBoard=SCORED`. Merge the `cdk.json` change as well,
+   or the next deploy on merge sets the board back to `EVIDENCE`.
+
+A round already decided keeps its board: a switch mid-round never sends
+the other board's notice for that round.
+
+Set `sentWaiverBoard` back to `EVIDENCE` to send the evidence-based board
+again.
