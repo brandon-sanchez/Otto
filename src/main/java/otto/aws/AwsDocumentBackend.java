@@ -11,19 +11,18 @@ import otto.storage.DocumentBackend;
  */
 public class AwsDocumentBackend implements DocumentBackend {
 
-    private final DocumentBackend feeds;
+    private final S3DocumentObjects feeds;
     private final DocumentBackend big;
     private final DocumentBackend small;
 
     /**
-     * @param feeds the nflverse feeds, see {@link S3DocumentObjects#holds}
-     * @param big the bundle of the other big documents
+     * @param feeds the nflverse feeds, see {@link S3DocumentObjects#holds};
+     *        its bundle holds the other big documents
      * @param small the small records
      */
-    public AwsDocumentBackend(DocumentBackend feeds, DocumentBackend big,
-            DocumentBackend small) {
+    public AwsDocumentBackend(S3DocumentObjects feeds, DocumentBackend small) {
         this.feeds = feeds;
-        this.big = big;
+        this.big = feeds.bundle();
         this.small = small;
     }
 
@@ -42,14 +41,12 @@ public class AwsDocumentBackend implements DocumentBackend {
         backendFor(name).store(name, json);
     }
 
+    /** Flushes the feeds, which flush the bundle after them, then the small records. */
     @Override
     public void flush() {
-        // Feeds first: a feed moved out of the bundle is dropped from it
-        // by the bundle's flush that follows.
         try {
             feeds.flush();
         } finally {
-            big.flush();
             small.flush();
         }
     }

@@ -33,6 +33,8 @@ import otto.storage.DocumentBackend;
  *
  * <p>A feed found only in the bundle is read from it once, written out
  * as its own object, and dropped from the bundle at the next flush.
+ * This backend flushes the bundle itself, after its own writes, so a
+ * feed written out is always dropped from the bundle in the same flush.
  *
  * <p>Writes wait for {@link #flush}, like the bundle's. Only the
  * scheduled feed jobs write feeds, one at a time, so a write over a
@@ -59,7 +61,8 @@ public class S3DocumentObjects implements DocumentBackend {
 
     /**
      * @param legacy the bundle a feed is read from, and then dropped
-     *        from, when it has no object of its own
+     *        from, when it has no object of its own; this backend's
+     *        {@link #flush} flushes it
      */
     public S3DocumentObjects(S3Client s3, String bucket, S3BundleBackend legacy) {
         this.s3 = s3;
@@ -111,13 +114,27 @@ public class S3DocumentObjects implements DocumentBackend {
         pending.put(name, json);
     }
 
+    /**
+     * Writes this run's feeds, then flushes the bundle, so the bundle's
+     * write drops every feed just written out. The bundle is flushed
+     * even when a feed's write fails, so the bundle's other documents
+     * are kept.
+     *
+     * @throws ConcurrentDocumentChange when a feed changed in S3 after
+     *         this container read it
+     */
     @Override
     public synchronized void flush() {
         try {
             pending.forEach(this::put);
         } finally {
             pending.clear();
+            legacy.flush();
         }
+    }
+
+    S3BundleBackend bundle() {
+        return legacy;
     }
 
     /**
