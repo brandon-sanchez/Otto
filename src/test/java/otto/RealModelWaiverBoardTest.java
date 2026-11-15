@@ -49,6 +49,26 @@ class RealModelWaiverBoardTest extends WireSeamTest {
     /** Sleeper's {@code waiver_day_of_week} for Wednesday, the claim day the fixture covers. */
     private static final int WEDNESDAY = 2;
 
+    private static final String REHEARSAL_BOARD = """
+            {
+              "hold": false,
+              "opening": "Bucky Irving is the claim to make this week.",
+              "picks": [{"playerId": "10001", "reasoning": "Bucky Irving played 71%% of \
+            offensive snaps in his latest game, and his coach named him the starter.", \
+            %s"limit": "%s"}],
+              "optional": [],
+              "claims": [
+                {"text": "Bucky Irving played 71%% of offensive snaps", "evidence": ["usage-10001"]}
+              ]
+            }
+            """;
+
+    private static final String REHEARSAL_BIDDING_BOARD = REHEARSAL_BOARD.formatted(
+            "\"bid\": {\"low\": 1, \"target\": 2, \"high\": 3}, ", "He is a depth add.");
+
+    /** A rehearsal board for a league that claims by waiver priority: no bid, no limit. */
+    private static final String REHEARSAL_PRIORITY_BOARD = REHEARSAL_BOARD.formatted("", "");
+
     @Autowired
     private CheckRunner checkRunner;
 
@@ -69,21 +89,24 @@ class RealModelWaiverBoardTest extends WireSeamTest {
 
     @Test
     void aRedraftBoardClaimsTheNamedStarter() {
-        tuesdayEveningBeforeWednesdayClaims("sleeper/league-in-season.json");
+        tuesdayEveningBeforeWednesdayClaims("sleeper/league-in-season.json",
+                REHEARSAL_BIDDING_BOARD);
 
         assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
     void aDynastyBoardClaimsTheNamedStarter() {
-        tuesdayEveningBeforeWednesdayClaims("sleeper/league-dynasty.json");
+        tuesdayEveningBeforeWednesdayClaims("sleeper/league-dynasty.json",
+                REHEARSAL_PRIORITY_BOARD);
 
         assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
 
     @Test
     void aKeeperBoardClaimsTheNamedStarter() {
-        tuesdayEveningBeforeWednesdayClaims("sleeper/league-keeper.json");
+        tuesdayEveningBeforeWednesdayClaims("sleeper/league-keeper.json",
+                REHEARSAL_BIDDING_BOARD);
 
         assertClaimsIrving(boardSentAfterPassingItsChecks());
     }
@@ -93,7 +116,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
                 "\"waiver_day_of_week\": " + WEDNESDAY);
     }
 
-    private void tuesdayEveningBeforeWednesdayClaims(String league) {
+    private void tuesdayEveningBeforeWednesdayClaims(String league, String rehearsalBoard) {
         SleeperStubs.waiverWeek(sleeper);
         sleeper.stubFor(get(urlEqualTo(SleeperStubs.LEAGUE_PATH)).willReturn(aResponse()
                 .withStatus(200)
@@ -107,7 +130,7 @@ class RealModelWaiverBoardTest extends WireSeamTest {
         feeds.updateIfDue();
         defenseBuilder.build();
         researchDiscovery.discover();
-        RealModel.answersAdvice(llm);
+        RealModel.answersAdvice(llm, rehearsalBoard);
         clock.set(TUESDAY_EVENING);
         checkRunner.runCheck();
     }
