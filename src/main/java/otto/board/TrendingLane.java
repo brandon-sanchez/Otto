@@ -26,7 +26,6 @@ import otto.sleeper.SourceResult;
 @Order(5)
 class TrendingLane implements EvidenceLane {
 
-    /** How many trending free agents join the pool. */
     private static final int POOL_ENTRIES = 5;
 
     private final SleeperAdapter sleeper;

@@ -31,19 +31,16 @@ import otto.directory.PlayerLookup;
 @Component
 public class SettingsService {
 
-    /** The setting name for the edge threshold, as the chat spells it. */
     private static final String EDGE_THRESHOLD = "edge_threshold";
 
     /** The prefix of a Notable Player cutoff name: notable_qb and kin. */
     private static final String NOTABLE = "notable_";
 
-    /** The setting name for the most the user will bid on one waiver claim. */
     private static final String MAX_BID = "max_bid";
 
-    /** The values that clear the bid limit. */
     private static final Set<String> NO_LIMIT = Set.of("none", "off", "no_limit", "clear");
 
-    /** The quiet-hours field exists in v1 and stays empty. */
+    /** The quiet-hours field, which always stays empty. */
     private static final String QUIET_HOURS = "quiet_hours";
 
     private static final String QUIET_HOURS_REFUSAL =

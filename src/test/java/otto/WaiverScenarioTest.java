@@ -654,7 +654,6 @@ class WaiverScenarioTest extends WireSeamTest {
         assertThat(boardEvent(SEPTEMBER_BOARD)).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
 
-        // Switched back on, the next Tuesday evening board goes out.
         settings.change(current -> current.withTrigger(Trigger.WAIVER, true));
         runCheckAt(WINTER_TUESDAY_EVENING);
         assertThat(boardEvent(NOVEMBER_BOARD)).isPresent();

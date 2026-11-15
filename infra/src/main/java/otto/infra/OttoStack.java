@@ -93,7 +93,6 @@ public class OttoStack extends Stack {
 
     private static final RetentionDays LOG_RETENTION = RetentionDays.TWO_WEEKS;
 
-    /** Where the alarms read their counts from. */
     private static final String METRIC_NAMESPACE = "Otto";
 
     /**
@@ -133,7 +132,6 @@ public class OttoStack extends Stack {
     /** The values {@code otto.sent-waiver-board} accepts; mirrors the app's SentWaiverBoard. */
     private static final List<String> SENT_WAIVER_BOARDS = List.of("EVIDENCE", "SCORED");
 
-    /** What one month of this is allowed to cost. */
     private static final Number MONTHLY_BUDGET_USD = 20;
 
     public OttoStack(Construct scope, String id, StackProps props) {
@@ -508,8 +506,7 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * The schedules. Everything else the assistant
-     * does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
+     * Everything else the assistant does on a clock - the Lock Ladder, the Tuesday waiver Alert, the
      * 20-minute Done follow-up - derives from the 1-minute loop and the
      * Event Log, and has no schedule here to drift out of step with it.
      */

@@ -148,7 +148,6 @@ class SettingsScenarioTest extends WireSeamTest {
                 .isEqualTo(new PositionCutoffs(12, 30, 24, 12));
     }
 
-    /** The spec keeps the field and leaves it empty until quiet hours ship. */
     @Test
     void quietHoursStayEmptyInV1() {
         OutboundStubs.telegramOk(telegram);

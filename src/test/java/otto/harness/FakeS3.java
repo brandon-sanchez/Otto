@@ -67,7 +67,6 @@ public class FakeS3 implements S3Client {
     /** How many bodies the caller has actually been sent. */
     private int bodiesServed;
 
-    /** How many writes the caller has landed. */
     private int writes;
 
     /** How many reads the caller has asked for, by key. */
@@ -218,7 +217,7 @@ public class FakeS3 implements S3Client {
         }
     }
 
-    /** The keys that currently read as an object. */
+    /** The keys that read as an object. */
     public Set<String> keys() {
         Set<String> keys = new TreeSet<>();
         history.forEach((key, versions) -> {
