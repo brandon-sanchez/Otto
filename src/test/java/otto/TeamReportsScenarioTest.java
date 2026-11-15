@@ -2,6 +2,9 @@ package otto;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -389,6 +392,42 @@ class TeamReportsScenarioTest extends WireSeamTest {
         teamSites.verify(0, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
         teamReports.poll();
         teamSites.verify(1, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
+    }
+
+    @Test
+    void aTeamWhoseReportWaitedLongestIsReadBeforeTeamsThatPostedSince() {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        List<String> firstEight = List.of("azcardinals.com", "atlantafalcons.com",
+                "baltimoreravens.com", "buffalobills.com", "panthers.com", "chicagobears.com",
+                "bengals.com", "clevelandbrowns.com");
+        String ninth = "dallascowboys.com";
+        Instant posted = SATURDAY_AFTERNOON.minus(Duration.ofMinutes(10));
+        firstEight.forEach(host -> injuryReportPosted(host, "v1", posted));
+        injuryReportPosted(ninth, "v1", posted.minus(Duration.ofMinutes(10)));
+        teamReports.poll();
+        teamSites.verify(0, getRequestedFor(urlPathEqualTo("/" + ninth + INJURY_PAGE)));
+
+        clock.advance(Duration.ofMinutes(5));
+        firstEight.forEach(host -> injuryReportPosted(host, "v2", clock.instant()));
+        teamReports.poll();
+
+        teamSites.verify(1, getRequestedFor(urlPathEqualTo("/" + ninth + INJURY_PAGE)));
+    }
+
+    private static void injuryReportPosted(String host, String version, Instant published) {
+        teamSites.stubFor(get(urlPathEqualTo("/" + host + FEED)).willReturn(rss("""
+                <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+                <title>News</title>
+                <item>
+                  <title>Week 10 Injury Report</title>
+                  <link>https://www.%1$s/news/week-10-injury-report-%2$s</link>
+                  <pubDate>%3$s</pubDate>
+                  <guid isPermaLink="false">%1$s-%2$s</guid>
+                  <media:keywords>Injury Report</media:keywords>
+                </item>
+                </channel></rss>""".formatted(host, version,
+                DateTimeFormatter.RFC_1123_DATE_TIME.format(published.atZone(ZoneOffset.UTC))))));
     }
 
     private static void awaitRequest(String path) throws InterruptedException {

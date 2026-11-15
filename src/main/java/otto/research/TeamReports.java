@@ -4,10 +4,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,12 @@ import otto.storage.JsonStore;
  * to the team's site, with the post's link and time and Otto's own
  * wording of the facts. No article text is kept: the sites allow
  * personal use and RSS, not building a copy of their content.
+ *
+ * <p>Teams go in the order their news has waited: first those with a
+ * post whose report is still unread, oldest post first, then the rest
+ * by how long ago their feed was read. A run reads at most a few
+ * reports, and on an afternoon when every team posts, a fixed order
+ * would spend them on the same teams each run.
  *
  * <p>A run stops starting feeds once two minutes have passed, well
  * inside the scheduled function's timeout, and the feeds it did not
@@ -130,7 +138,7 @@ public class TeamReports {
         TeamRun.Tally tally = new TeamRun.Tally(REPORT_READS_PER_RUN);
         Instant stopStarting = now.plus(RUN_BUDGET);
         List<Map.Entry<String, OfficialTeams.Team>> teams = OfficialTeams.all().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
+                .sorted(longestWaitingFirst(feeds))
                 .toList();
         try {
             for (Map.Entry<String, OfficialTeams.Team> entry : teams) {
@@ -158,5 +166,27 @@ public class TeamReports {
         Run run = tally.run();
         run.problems().forEach(problem -> log.warn("team reports: {}", problem));
         return run;
+    }
+
+    private static Comparator<Map.Entry<String, OfficialTeams.Team>> longestWaitingFirst(
+            Map<String, TeamRun.FeedState> feeds) {
+        Function<Map.Entry<String, OfficialTeams.Team>, TeamRun.FeedState> state =
+                entry -> feeds.getOrDefault(entry.getKey(), TeamRun.FeedState.NEW);
+        Comparator<Optional<Instant>> emptyLast = Comparator.comparing(
+                waited -> waited.orElse(Instant.MAX));
+        Comparator<Optional<Instant>> emptyFirst = Comparator.comparing(
+                waited -> waited.orElse(Instant.MIN));
+        return Comparator.comparing(
+                        (Map.Entry<String, OfficialTeams.Team> entry) -> oldestPending(
+                                state.apply(entry)), emptyLast)
+                .thenComparing(entry -> Optional.ofNullable(state.apply(entry).polled()),
+                        emptyFirst)
+                .thenComparing(Map.Entry::getKey);
+    }
+
+    private static Optional<Instant> oldestPending(TeamRun.FeedState state) {
+        return state.pending().stream()
+                .map(pending -> pending.post().published())
+                .min(Comparator.naturalOrder());
     }
 }
