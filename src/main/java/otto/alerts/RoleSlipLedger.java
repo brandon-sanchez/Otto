@@ -46,8 +46,7 @@ public class RoleSlipLedger {
      * @param signature what makes later advice about him the same
      *        advice; it becomes his last advice once a board carries
      *        this one, and not before. Null when the advice was
-     *        repeated from an earlier run's record, which keeps no
-     *        signature.
+     *        repeated from a record that keeps no signature.
      */
     public record Held(String runId, String playerId, String message, String signature) {
     }

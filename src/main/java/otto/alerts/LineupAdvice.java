@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -211,16 +210,12 @@ public class LineupAdvice {
             return Optional.empty();
         }
         LineupEvidence.Draft decision = draft.get().withNews(slip.playerId(), research, now);
-        AtomicReference<String> signature = new AtomicReference<>();
         Run run = run(alertKey, RunKind.PLAYER_DECISION, decision, leagueWeek, roster, now,
-                answer -> {
-                    signature.set(signature(answer, slip));
-                    return roleSlipOutcome(answer, signature.get(), decision, slip, leagueWeek,
-                            roster, now);
-                });
+                answer -> roleSlipOutcome(answer, signature(answer, slip), decision, slip,
+                        leagueWeek, roster, now));
         if (run.outcome() instanceof Outcome.HeldForBoard held) {
             ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message(),
-                    signature.get()));
+                    held.signature()));
         }
         if (!(run.outcome() instanceof Outcome.Sent)) {
             ledger.settle(slip.key());
@@ -256,7 +251,7 @@ public class LineupAdvice {
                     + "about him, which is not sent again.");
         }
         if (!waitingCostsAMove(answer, leagueWeek, roster, now)) {
-            return new Outcome.HeldForBoard(answer.message());
+            return new Outcome.HeldForBoard(answer.message(), signature);
         }
         ledger.advised(slip.playerId(), signature);
         return new Outcome.Sent(answer.message());
