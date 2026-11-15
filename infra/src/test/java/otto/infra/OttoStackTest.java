@@ -61,6 +61,21 @@ class OttoStackTest {
                 "SnapStart", Map.of("ApplyOn", "PublishedVersions")));
     }
 
+    /**
+     * The app sizes its model budgets to these timeouts: the Ask
+     * budget in {@code application.yml} to the webhook's, which
+     * {@code AwsEntryPointScenarioTest} pins on the app side.
+     */
+    @Test
+    void theFunctionTimeoutsAreTheOnesTheAppsBudgetsFit() {
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.WebhookHandler",
+                "Timeout", 60));
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.ScheduledHandler",
+                "Timeout", 300));
+    }
+
     @Test
     void theCheckLoopRunsOneAtATime() {
         template.hasResourceProperties("AWS::Lambda::Function", Map.of(
