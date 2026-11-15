@@ -40,7 +40,7 @@ public final class OutboundStubs {
     }
 
     /** Escapes a phrase into a valid JSON string literal. */
-    static String jsonString(String phrase) {
+    public static String jsonString(String phrase) {
         try {
             return OttoJson.MAPPER.writeValueAsString(phrase);
         } catch (JsonProcessingException e) {
@@ -210,7 +210,8 @@ public final class OutboundStubs {
                 .withBody(body);
     }
 
-    private static String contentBody(String phrase) {
+    /** A chat-completions response body whose only message is the phrase. */
+    public static String contentBody(String phrase) {
         return """
                 {
                   "id": "chatcmpl-fixture",

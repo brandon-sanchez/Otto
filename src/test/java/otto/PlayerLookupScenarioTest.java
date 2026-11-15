@@ -2,6 +2,7 @@ package otto;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ class PlayerLookupScenarioTest extends WireSeamTest {
     @Test
     void punctuationVariantsResolveTheSamePlayer() {
         DirectoryPlayer chase = new DirectoryPlayer(
-                "7564", "Ja'Marr Chase", "WR", "CIN", PlayerHealth.ACTIVE);
+                "7564", "Ja'Marr Chase", "WR", "CIN", PlayerHealth.ACTIVE, Optional.empty());
         directoryStore.write(new PlayerDirectory(
                 "players-v1", Instant.parse("2026-09-15T17:00:00Z"),
                 Map.of(chase.playerId(), chase)));
@@ -42,9 +43,9 @@ class PlayerLookupScenarioTest extends WireSeamTest {
     @Test
     void anAmbiguousNameDoesNotDownloadTheDirectoryAgain() {
         DirectoryPlayer quarterback = new DirectoryPlayer(
-                "1", "Josh Allen", "QB", "BUF", PlayerHealth.ACTIVE);
+                "1", "Josh Allen", "QB", "BUF", PlayerHealth.ACTIVE, Optional.empty());
         DirectoryPlayer defender = new DirectoryPlayer(
-                "2", "Josh Allen", "TE", "FA", PlayerHealth.ACTIVE);
+                "2", "Josh Allen", "TE", "FA", PlayerHealth.ACTIVE, Optional.empty());
         directoryStore.write(new PlayerDirectory(
                 "players-v1", Instant.parse("2026-09-15T17:00:00Z"),
                 Map.of(quarterback.playerId(), quarterback,

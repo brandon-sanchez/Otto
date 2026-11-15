@@ -113,14 +113,12 @@ public class WaiverBoardService {
     private final RoleSlipLedger roleSlips;
     private final SentWaiverBoard sent;
     private final String userId;
-    private final String model;
 
     public WaiverBoardService(WaiverEvidence evidence, LatestWeekData latestWeek,
             AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
             SettingsStore settings, WaiverPreferences preferences, MuteStore muteStore,
             AlertDeliveryOutbox outbox, RoleSlipLedger roleSlips, OttoProperties properties,
-            @Value("${otto.sent-waiver-board:EVIDENCE}") SentWaiverBoard sent,
-            @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
+            @Value("${otto.sent-waiver-board:EVIDENCE}") SentWaiverBoard sent) {
         this.evidence = evidence;
         this.latestWeek = latestWeek;
         this.writer = writer;
@@ -133,7 +131,6 @@ public class WaiverBoardService {
         this.roleSlips = roleSlips;
         this.sent = sent;
         this.userId = properties.userId();
-        this.model = model;
     }
 
     /** Returns which waiver board reaches the user's chat. */
@@ -244,7 +241,7 @@ public class WaiverBoardService {
                         screen.bidding().policy().budget()),
                 preferences(preference), screen.screened(),
                 screen.comparisons(), evidenceOf(screen.bundle()),
-                versions(screen.bundle(), form), result.exchanges(), outcome);
+                versions(screen.bundle(), form, result), result.exchanges(), outcome);
         return Optional.of(runs.record(record));
     }
 
@@ -263,7 +260,7 @@ public class WaiverBoardService {
                 OttoJson.MAPPER.valueToTree(league.league()),
                 new RosterContext(NullNode.getInstance(), Optional.empty()),
                 preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
-                Versions.ofThisBuild("none", "none", model), List.of(),
+                Versions.ofThisBuild("none", "none", "none"), List.of(),
                 new Outcome.Withheld("The free agents could not be screened: " + reason,
                         reachesUser ? notice : null));
         return runs.record(record);
@@ -351,7 +348,8 @@ public class WaiverBoardService {
                 .toList();
     }
 
-    private Versions versions(EvidenceBundle bundle, BoardForm form) {
-        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), model);
+    private static Versions versions(EvidenceBundle bundle, BoardForm form,
+            AdviceResult<BoardAnswer> result) {
+        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), result.model());
     }
 }

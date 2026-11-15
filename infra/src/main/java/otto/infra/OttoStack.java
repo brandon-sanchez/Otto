@@ -462,6 +462,12 @@ public class OttoStack extends Stack {
                 .build());
     }
 
+    /**
+     * Lets the function read every parameter under the path. The
+     * parameters are SecureStrings, which CloudFormation cannot create,
+     * so docs/deploy.md has the owner create each one by hand, and one
+     * grant over the path covers every key without naming it.
+     */
     private void readSecrets(Function function, String parameterPath) {
         function.addToRolePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.ALLOW)

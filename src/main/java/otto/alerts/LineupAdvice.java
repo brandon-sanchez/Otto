@@ -14,7 +14,6 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
@@ -80,14 +79,12 @@ public class LineupAdvice {
     private final AlertDeliveryOutbox outbox;
     private final PreSendResearch preSendResearch;
     private final String userId;
-    private final String model;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
             AlertDeliveryOutbox outbox, PreSendResearch preSendResearch,
-            OttoProperties properties,
-            @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
+            OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
         this.settings = settings;
@@ -99,7 +96,6 @@ public class LineupAdvice {
         this.outbox = outbox;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
-        this.model = model;
     }
 
     /**
@@ -383,7 +379,7 @@ public class LineupAdvice {
                 new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
                 comparisons(draft.bundle()), evidence(draft.bundle()),
-                versions(draft.bundle(), form),
+                versions(draft.bundle(), form, result),
                 result.exchanges(), outcome(result, draft, approve));
         Outcome outcome = runs.record(record);
         return new Run(runId, outcome);
@@ -443,7 +439,8 @@ public class LineupAdvice {
                 .toList();
     }
 
-    private Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form) {
-        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), model);
+    private static Versions versions(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form,
+            AdviceResult<AdviceAnswer> result) {
+        return Versions.ofThisBuild(bundle.identity(), form.promptVersion(), result.model());
     }
 }

@@ -139,8 +139,15 @@ public class PlayerDirectoryService {
                     player.path("team").asText(null),
                     PlayerHealth.from(
                             player.path("status").asText(null),
-                            player.path("injury_status").asText(null))));
+                            player.path("injury_status").asText(null)),
+                    yearsInLeague(player.path("years_exp"))));
         });
         return players;
+    }
+
+    private static Optional<Integer> yearsInLeague(JsonNode yearsExp) {
+        return yearsExp.isIntegralNumber() && yearsExp.canConvertToInt() && yearsExp.asInt() >= 0
+                ? Optional.of(yearsExp.asInt())
+                : Optional.empty();
     }
 }
