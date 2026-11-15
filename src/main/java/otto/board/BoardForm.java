@@ -17,6 +17,7 @@ import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
 import otto.advice.EvidenceBundle;
+import otto.advice.RankConvention;
 import otto.directory.DirectoryPlayer;
 import otto.storage.OttoJson;
 
@@ -40,10 +41,13 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             evidence bundle: never from memory, never invented. Every number you write
             must appear in the evidence. Name only players listed in "players". Recommend
             only the free agents that have a "candidate-<playerId>" evidence item.
+            """ + RankConvention.ADVICE_RULES + """
 
             Weigh each candidate's role and opportunity first: snaps, targets, carries
             and their shares, air yards, red-zone, end-zone and first-read work, and
-            expected points. Read a quiet box score against how much he was used.
+            expected points. A matchup, such as the opponent's rank against his position
+            or the rest of his schedule, adds to a role and never replaces one. Read a
+            quiet box score against how much he was used.
             Treat falling usage as a warning even after good production. Let a verified
             role change outweigh a lagging projection. One strong game can justify a
             pickup, but never call it a breakout. A value written as unknown is not

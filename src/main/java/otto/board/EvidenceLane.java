@@ -59,9 +59,14 @@ public interface EvidenceLane {
 
         /**
          * Returns the free agents this lane's evidence makes worth a
-         * look, each with the reason in plain words, best first.
+         * look, each with the reason in plain words, best first. A lane
+         * whose evidence never alone makes a pickup worth a claim, such
+         * as a soft matchup, names nobody and only adds evidence about
+         * the candidates the other lanes name.
          */
-        Map<String, String> shortlist(List<DirectoryPlayer> freeAgents);
+        default Map<String, String> shortlist(List<DirectoryPlayer> freeAgents) {
+            return Map.of();
+        }
 
         /**
          * Returns the lane's evidence about one player; empty when the

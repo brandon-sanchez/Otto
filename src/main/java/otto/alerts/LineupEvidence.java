@@ -21,6 +21,7 @@ import otto.check.WeekFacts;
 import otto.decisions.RosterPlans;
 import otto.directory.PlayerHealth;
 import otto.lineup.Slot;
+import otto.matchup.MatchupFacts;
 import otto.snapshot.RosterSnapshot;
 
 final class LineupEvidence {
@@ -65,21 +66,23 @@ final class LineupEvidence {
     private final WeekFacts week;
     private final Instant rosterReadAt;
     private final Instant now;
+    private final MatchupFacts.Week matchups;
     private final List<EvidenceItem> evidence = new ArrayList<>();
     private final Map<String, BundlePlayer> players = new LinkedHashMap<>();
     private final Map<String, String> reasons = new LinkedHashMap<>();
 
     LineupEvidence(RosterSnapshot roster, WeekFacts week, Instant rosterReadAt,
-            Instant now) {
+            Instant now, MatchupFacts.Week matchups) {
         this.roster = roster;
         this.week = week;
         this.rosterReadAt = rosterReadAt;
         this.now = now;
+        this.matchups = matchups;
     }
 
     static Draft edge(AlertCandidate candidate, RosterSnapshot roster, WeekFacts week,
-            Instant rosterReadAt, Instant now, Instant kickoff) {
-        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now);
+            Instant rosterReadAt, Instant now, Instant kickoff, MatchupFacts.Week matchups) {
+        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now, matchups);
         Map<String, String> facts = candidate.facts();
         String bench = facts.get("benchId");
         String starter = facts.get("starterId");
@@ -96,8 +99,8 @@ final class LineupEvidence {
     }
 
     static Draft legality(AlertCandidate candidate, RosterSnapshot roster, WeekFacts week,
-            Instant rosterReadAt, Instant now, Instant kickoff) {
-        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now);
+            Instant rosterReadAt, Instant now, Instant kickoff, MatchupFacts.Week matchups) {
+        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now, matchups);
         int slotIndex = Integer.parseInt(candidate.facts().get("slotIndex"));
         Slot slot = week.startingSlots().get(slotIndex);
         String playerId = candidate.playerId();
@@ -122,8 +125,8 @@ final class LineupEvidence {
     }
 
     static Draft impaired(String playerId, RosterSnapshot roster, WeekFacts week,
-            Instant rosterReadAt, Instant now, Instant kickoff) {
-        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now);
+            Instant rosterReadAt, Instant now, Instant kickoff, MatchupFacts.Week matchups) {
+        LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now, matchups);
         int slotIndex = roster.starters().indexOf(playerId);
         Slot slot = week.startingSlots().get(slotIndex);
         builder.addPlayer(playerId, "starter with an uncertain designation");
@@ -203,7 +206,7 @@ final class LineupEvidence {
                         .thenComparing(Comparator.naturalOrder()))
                 .forEach(playerId -> {
                     addPlayer(playerId, "playable bench option for the %s slot"
-                            .formatted(slot.name()));
+                            .formatted(slot.name()), !moves.isEmpty());
                     moves.add(new LineupMove(playerId, bench, slot.name()));
                 });
         return moves;
@@ -222,6 +225,18 @@ final class LineupEvidence {
     }
 
     void addPlayer(String playerId, String reason) {
+        addPlayer(playerId, reason, false);
+    }
+
+    /**
+     * Adds a player's roster, projection and matchup items.
+     *
+     * @param brief true for one option among many, such as a bench player
+     *        behind the best option for a slot, who gets only the short
+     *        form of his matchup facts so an alert with many options stays
+     *        small
+     */
+    private void addPlayer(String playerId, String reason, boolean brief) {
         if (players.containsKey(playerId)) {
             return;
         }
@@ -243,6 +258,17 @@ final class LineupEvidence {
         evidence.add(new EvidenceItem("projection-" + playerId, "sleeper:projections",
                 Optional.empty(), now, "projected points this week in league scoring",
                 Map.of("projectedPoints", projection.orElse("no projection available"))));
+        String position = roster.playerPositions().get(playerId);
+        String team = roster.playerTeams().get(playerId);
+        if (brief) {
+            evidence.addAll(matchups.briefAbout(playerId, name(playerId), position, team));
+        } else {
+            addMatchups(playerId, name(playerId), position, team);
+        }
+    }
+
+    void addMatchups(String playerId, String fullName, String position, String team) {
+        evidence.addAll(matchups.about(playerId, fullName, position, team));
     }
 
     static String problemWithoutLockWording(String reason) {
