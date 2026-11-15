@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -204,10 +205,16 @@ public class LineupAdvice {
             return Optional.empty();
         }
         LineupEvidence.Draft decision = draft.get().withNews(slip.playerId(), research, now);
+        AtomicReference<String> signature = new AtomicReference<>();
         Run run = run(alertKey, RunKind.PLAYER_DECISION, decision, leagueWeek, roster, now,
-                answer -> roleSlipOutcome(answer, decision, slip, leagueWeek, roster, now));
+                answer -> {
+                    signature.set(signature(answer, slip));
+                    return roleSlipOutcome(answer, signature.get(), decision, slip, leagueWeek,
+                            roster, now);
+                });
         if (run.outcome() instanceof Outcome.HeldForBoard held) {
-            ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message()));
+            ledger.hold(new RoleSlipLedger.Held(run.runId(), slip.playerId(), held.message(),
+                    signature.get()));
         }
         if (!(run.outcome() instanceof Outcome.Sent)) {
             ledger.settle(slip.key());
@@ -223,22 +230,30 @@ public class LineupAdvice {
         return !ledger.settled(slip.key());
     }
 
-    private Outcome roleSlipOutcome(AdviceAnswer answer, LineupEvidence.Draft draft,
-            AlertCandidate slip, LeagueWeek leagueWeek, RosterSnapshot roster, Instant now) {
+    /**
+     * The outcome of checked advice about a role slip. Advice sent now
+     * becomes the last advice about him at once, since the outbox
+     * carries it to delivery; held advice becomes it only once a board
+     * carries it, so a board that never goes out cannot silence the
+     * advice later.
+     */
+    private Outcome roleSlipOutcome(AdviceAnswer answer, String signature,
+            LineupEvidence.Draft draft, AlertCandidate slip, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Instant now) {
         boolean hold = answer.plan().map(RosterPlans.HOLD::equals).orElse(true);
         if (hold && answer.move().isEmpty() && draft.holdStaysSilent()) {
             return new Outcome.Withheld("The model advised keeping him as he is, and no "
                     + "mistaken drop is plausible, so the hold is not sent unasked.");
         }
-        String signature = signature(answer, slip);
         if (ledger.lastAdvice(slip.playerId()).filter(signature::equals).isPresent()) {
             return new Outcome.Withheld("The action and its reasons match the last advice "
                     + "about him, which is not sent again.");
         }
+        if (!waitingCostsAMove(answer, leagueWeek, roster, now)) {
+            return new Outcome.HeldForBoard(answer.message());
+        }
         ledger.advised(slip.playerId(), signature);
-        return waitingCostsAMove(answer, leagueWeek, roster, now)
-                ? new Outcome.Sent(answer.message())
-                : new Outcome.HeldForBoard(answer.message());
+        return new Outcome.Sent(answer.message());
     }
 
     /**

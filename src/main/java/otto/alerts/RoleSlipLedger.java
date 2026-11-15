@@ -43,8 +43,13 @@ public class RoleSlipLedger {
      *
      * @param runId the Decision Record the advice came from
      * @param message the checked text the board carries
+     * @param signature what makes later advice about him the same
+     *        advice; it becomes his last advice once a board carries
+     *        this one, and not before. Null when the advice was
+     *        repeated from an earlier run's record, which keeps no
+     *        signature.
      */
-    public record Held(String runId, String playerId, String message) {
+    public record Held(String runId, String playerId, String message, String signature) {
     }
 
     /**
@@ -121,7 +126,8 @@ public class RoleSlipLedger {
     }
 
     /**
-     * Forgets held advice once a board carrying it was delivered.
+     * Forgets held advice once a board carrying it was delivered, and
+     * records it as the last advice about each of its players.
      *
      * <p>Side effects: one document write.
      *
@@ -129,10 +135,14 @@ public class RoleSlipLedger {
      */
     public void deliveredInBoard(List<String> runIds) {
         Document document = read();
+        Map<String, String> last = new LinkedHashMap<>(document.lastAdvice());
+        document.held().stream()
+                .filter(advice -> runIds.contains(advice.runId()) && advice.signature() != null)
+                .forEach(advice -> last.put(advice.playerId(), advice.signature()));
         List<Held> held = document.held().stream()
                 .filter(advice -> !runIds.contains(advice.runId()))
                 .toList();
         store.write(DOCUMENT, new Document(document.usageScannedAt(), document.usageDrops(),
-                document.settled(), document.lastAdvice(), held));
+                document.settled(), last, held));
     }
 }

@@ -319,6 +319,23 @@ class RoleSlipScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void heldAdviceThatNoBoardCarriedIsNotCountedAsSent() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        cooksRoleIsReported("\"rotowire\"", "James Cook lost his starting job to Ray Davis");
+        checkWithAdvice(BENCH_AND_KEEP);
+        assertThat(roleSlips.heldForBoard()).hasSize(1);
+
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        clock.advance(Duration.ofMinutes(2));
+        cooksRoleIsReported("\"espn\"", "9200", "James Cook headed for a committee",
+                clock.instant());
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(BENCH_AND_KEEP_MESSAGE))));
+    }
+
+    @Test
     void heldAdviceGoesOutWithTheNextWaiverBoard() {
         SleeperStubs.waiverWeek(sleeper);
         NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
