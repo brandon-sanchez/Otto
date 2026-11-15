@@ -3,6 +3,7 @@ package otto.storage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -103,5 +104,60 @@ public class JsonStore {
      */
     public void flush() {
         backend.flush();
+    }
+
+    /**
+     * Returns a read-only view that reads each document from this store
+     * at most once and hands back the same object on every later read.
+     * It suits work that reads the same large documents many times over
+     * a few seconds, such as building one piece of advice, and that must
+     * see one consistent copy of each. Drop it once that work is done,
+     * because it never sees a later write.
+     *
+     * <p>The view is not safe for use by more than one thread at a time.
+     * Its {@link #write} and {@link #flush} throw
+     * {@link UnsupportedOperationException}: a view holds no writes, and
+     * flushing through it would push the real store's batched writes
+     * from the middle of someone else's run.
+     */
+    public JsonStore snapshot() {
+        return new Snapshot(this);
+    }
+
+    private static final class Snapshot extends JsonStore {
+
+        private record Key(String name, JavaType type) {
+        }
+
+        private final JsonStore source;
+
+        private final Map<Key, Optional<?>> read = new HashMap<>();
+
+        Snapshot(JsonStore source) {
+            super(source.backend);
+            this.source = source;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> Optional<T> read(String name, JavaType type) {
+            return (Optional<T>) read.computeIfAbsent(new Key(name, type),
+                    key -> source.read(name, type));
+        }
+
+        @Override
+        public void write(String name, Object value) {
+            throw new UnsupportedOperationException("A snapshot is read-only: " + name);
+        }
+
+        @Override
+        public void flush() {
+            throw new UnsupportedOperationException("A snapshot holds no writes to flush");
+        }
+
+        @Override
+        public JsonStore snapshot() {
+            return this;
+        }
     }
 }
