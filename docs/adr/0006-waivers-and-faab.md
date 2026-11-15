@@ -803,6 +803,49 @@ The fallback is built once, like any other board, so a round whose
 first Check falls inside the buffer still gets it before the deadline.
 Data that arrives after the fallback does not rebuild the round.
 
+### The boards are compared every week
+
+The scored board keeps running silently beside the evidence-based
+board, so the evidence-based board can be judged and rolled back. In the same
+window as the board, Otto records the round's baselines as one Decision
+Record that is never sent:
+
+- **Scored board**: the scored board's top five.
+- **No pickup**: claim nobody.
+- **Need first**: the best-projected free agents at the neediest
+  position. A position that fills an open slot comes first, then the
+  position of the user's lowest-ranked slot against the league.
+- **Player rank only**: the best-projected free agents, whatever the
+  roster needs.
+- **Top trending adds**: Sleeper's five most-added players as published,
+  rostered ones included.
+
+When the waiver trigger is off, no baseline is built, because the
+scored board is not built either.
+
+Each strategy is judged on net lineup gain: the points the user's best
+lineup would have scored that week with the pickup on the roster and
+without the player the claim drops, less what it scored without the
+pickup. The board's pickups drop the player it named. A baseline's
+pickups, on a full roster, drop the active player projected lowest for
+the week, an unprojected player first. The lineup is the user's roster
+as it stood at decision time, IR and taxi excluded, in league scoring
+and from actual points. A pickup who would not have started gains
+nothing, one whose drop would have started can lose points, and no
+pickup gains nothing by definition. Only players who were addable
+(on no roster in the league) and legal (a starting slot takes their
+position) at decision time are counted. Each strategy reports how many
+pickups it proposed and how many were counted, and the comparison
+reports how many of the six decisions it could judge. A board that was
+withheld made no decision that can be judged.
+
+A round is judged once the week's stats are complete and nine days have
+passed since its claim deadline. By then the Thursday stat corrections
+have landed. The comparison is stored once as the baselines' outcome
+record, under `outcomes/`, and is never revised. The pass margins
+between the strategies are set after the dry run, once the week-to-week
+noise is known.
+
 ## Bids are the model's, inside bounds code verifies (#123)
 
 The scored board reads a bid off a fixed share of the budget for each

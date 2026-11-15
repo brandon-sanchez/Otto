@@ -16,6 +16,7 @@ import otto.alerts.AlertService;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.ask.LeagueWeek;
+import otto.board.BoardComparison;
 import otto.board.WaiverBoardService;
 import otto.claims.ClaimRound;
 import otto.directory.PlayerDirectoryService;
@@ -30,6 +31,7 @@ import otto.snapshot.Snapshot;
 import otto.snapshot.SnapshotBuilder;
 import otto.snapshot.SnapshotDiffer;
 import otto.snapshot.SnapshotStore;
+import otto.waivers.ScoredBoard;
 import otto.waivers.WaiverAlertService;
 import otto.watchlist.WatchlistWatcher;
 
@@ -59,6 +61,7 @@ public class CheckRunner {
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
     private final WaiverBoardService waiverBoard;
+    private final BoardComparison boardComparison;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
     private final SelfReportService selfReport;
@@ -72,7 +75,7 @@ public class CheckRunner {
             SnapshotStore snapshotStore, WeekFactsBuilder weekFactsBuilder,
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
-            WaiverBoardService waiverBoard,
+            WaiverBoardService waiverBoard, BoardComparison boardComparison,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, SelfReportService selfReport, ModelChain models,
             Clock clock, OttoProperties properties) {
@@ -88,6 +91,7 @@ public class CheckRunner {
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
         this.waiverBoard = waiverBoard;
+        this.boardComparison = boardComparison;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
         this.selfReport = selfReport;
@@ -133,16 +137,19 @@ public class CheckRunner {
             newEvents.addAll(watchlistWatcher.observe(week, now));
             LeagueWeek leagueWeek = new LeagueWeek(stage.league(), inSeason.get(), week);
             Optional<ClaimRound> round = ClaimRound.next(stage.league(), now);
+            ScoredBoard scored = waiverAlertService.scoredBoard(leagueWeek, now);
             try {
                 alerts.addAll(alertService.process(leagueWeek));
-                waiverAlertService
-                        .considerWaiverAlert(
-                                leagueWeek, now)
-                        .ifPresent(alerts::add);
-                round.ifPresent(open -> waiverBoard.considerBoard(leagueWeek, open));
+                if (round.isPresent()) {
+                    waiverAlertService.considerWaiverAlert(round.get(), scored)
+                            .ifPresent(alerts::add);
+                    waiverBoard.considerBoard(leagueWeek, round.get());
+                }
             } catch (ModelChain.OutOfCheckTime e) {
                 log.info("The Check has no model time left; the next Check sends the rest");
             }
+            round.ifPresent(open -> boardComparison.considerBaselines(leagueWeek, open, scored));
+            boardComparison.considerJudging(stage.league().leagueId(), now);
             verificationService.verify(inSeason.get(), week, now);
         }
 
