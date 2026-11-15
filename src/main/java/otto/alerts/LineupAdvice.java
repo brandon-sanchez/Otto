@@ -13,8 +13,6 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -35,13 +33,13 @@ import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
 import otto.records.DecisionRecord;
-import otto.records.DecisionRecords;
 import otto.records.Evidence;
 import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
 import otto.records.RunIds;
 import otto.records.RunKind;
+import otto.records.RunOutcomes;
 import otto.records.Versions;
 import otto.research.OfficialUpdate;
 import otto.research.ResearchCache;
@@ -69,10 +67,8 @@ public class LineupAdvice {
 
     private static final String RUN_ID_PREFIX = "alert-";
 
-    private static final Logger log = LoggerFactory.getLogger(LineupAdvice.class);
-
     private final AdviceWriter writer;
-    private final DecisionRecords records;
+    private final RunOutcomes runs;
     private final SettingsStore settings;
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
@@ -83,13 +79,13 @@ public class LineupAdvice {
     private final String userId;
     private final String model;
 
-    public LineupAdvice(AdviceWriter writer, DecisionRecords records, SettingsStore settings,
+    public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse,
             ResearchCache researchCache, RoleSlipLedger ledger, MuteStore muteStore,
             AlertDeliveryOutbox outbox, OttoProperties properties,
             @Value("${spring.ai.openai.chat.options.model:unknown}") String model) {
         this.writer = writer;
-        this.records = records;
+        this.runs = runs;
         this.settings = settings;
         this.directory = directory;
         this.nflverse = nflverse;
@@ -338,7 +334,7 @@ public class LineupAdvice {
             Function<AdviceAnswer, Outcome> approve) {
         String leagueId = leagueWeek.league().leagueId();
         String runId = runId(alertKey, draft.bundle());
-        Optional<Outcome> earlier = earlierOutcome(leagueId, runId);
+        Optional<Outcome> earlier = runs.earlier(userId, leagueId, runId);
         if (earlier.isPresent()) {
             return new Run(runId, earlier.get());
         }
@@ -347,14 +343,14 @@ public class LineupAdvice {
                 ? writer.playerDecision()
                 : writer.lineup();
         AdviceResult<AdviceAnswer> result = writer.write(draft.bundle(), form);
-        Outcome outcome = outcome(result, draft, approve);
-        save(new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind, now, userId,
-                leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
+        DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId, kind,
+                now, userId, leagueId, OttoJson.MAPPER.valueToTree(leagueWeek.league()),
                 new RosterContext(OttoJson.MAPPER.valueToTree(roster), Optional.empty()),
                 OttoJson.MAPPER.valueToTree(settings.current()), candidates(draft),
                 comparisons(draft.bundle()), evidence(draft.bundle()),
                 versions(draft.bundle(), form),
-                result.exchanges(), outcome));
+                result.exchanges(), outcome(result, draft, approve));
+        Outcome outcome = runs.record(record);
         return new Run(runId, outcome);
     }
 
@@ -377,23 +373,6 @@ public class LineupAdvice {
         return run.outcome() instanceof Outcome.Sent sent
                 ? Optional.of(new Written(sent.message(), Optional.of(run.runId())))
                 : Optional.empty();
-    }
-
-    private Optional<Outcome> earlierOutcome(String leagueId, String runId) {
-        try {
-            return records.read(userId, leagueId, runId).map(DecisionRecord::outcome);
-        } catch (RuntimeException e) {
-            log.warn("Cannot read Decision Record {}; asking the model again", runId, e);
-            return Optional.empty();
-        }
-    }
-
-    private void save(DecisionRecord record) {
-        try {
-            records.save(record);
-        } catch (RuntimeException e) {
-            log.error("Cannot save Decision Record {}", record.runId(), e);
-        }
     }
 
     private static String runId(String alertKey, EvidenceBundle bundle) {

@@ -389,6 +389,35 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aRecordThatCannotBeSavedNeverDrivesAModelCallEveryMinute() throws IOException {
+        aWaiverWeekOnDisk();
+        Path league = Path.of(properties.storageDir(), "decision-records", "records",
+                "user=" + USER_ID, "league=" + LEAGUE_ID);
+        if (Files.exists(league)) {
+            try (Stream<Path> files = Files.walk(league)) {
+                for (Path file : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.delete(file);
+                }
+            }
+        }
+        Files.createDirectories(league.getParent());
+        Files.writeString(league, "a file where the league's records would go");
+        OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST,
+                board(false, OPENING, List.of(IRVING), List.of()));
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+        clock.set(TUESDAY_EVENING.plus(Duration.ofMinutes(1)));
+        checkRunner.runCheck();
+        clock.set(TUESDAY_EVENING.plus(Duration.ofMinutes(2)));
+        checkRunner.runCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options"))));
+    }
+
+    @Test
     void aRoundThatCannotBeScreenedWaitsThenSaysWhatIsMissingInsideTheBuffer() throws IOException {
         aWaiverWeekOnDisk();
         Files.delete(Path.of(properties.storageDir(), HexFormat.of()

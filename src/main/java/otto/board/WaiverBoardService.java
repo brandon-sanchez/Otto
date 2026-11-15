@@ -28,13 +28,13 @@ import otto.ask.LeagueWeek;
 import otto.events.Event;
 import otto.events.EventType;
 import otto.records.DecisionRecord;
-import otto.records.DecisionRecords;
 import otto.records.Evidence;
 import otto.records.EvidenceStatus;
 import otto.records.Outcome;
 import otto.records.RosterContext;
 import otto.records.RunIds;
 import otto.records.RunKind;
+import otto.records.RunOutcomes;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
@@ -105,7 +105,7 @@ public class WaiverBoardService {
     private final LatestWeekData latestWeek;
     private final AdviceWriter writer;
     private final AdviceCheck check;
-    private final DecisionRecords records;
+    private final RunOutcomes runs;
     private final SettingsStore settings;
     private final WaiverPreferences preferences;
     private final MuteStore muteStore;
@@ -116,7 +116,7 @@ public class WaiverBoardService {
     private final String model;
 
     public WaiverBoardService(WaiverEvidence evidence, LatestWeekData latestWeek,
-            AdviceWriter writer, AdviceCheck check, DecisionRecords records,
+            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
             SettingsStore settings, WaiverPreferences preferences, MuteStore muteStore,
             AlertDeliveryOutbox outbox, RoleSlipLedger roleSlips, OttoProperties properties,
             @Value("${otto.sent-waiver-board:EVIDENCE}") SentWaiverBoard sent,
@@ -125,7 +125,7 @@ public class WaiverBoardService {
         this.latestWeek = latestWeek;
         this.writer = writer;
         this.check = check;
-        this.records = records;
+        this.runs = runs;
         this.settings = settings;
         this.preferences = preferences;
         this.muteStore = muteStore;
@@ -174,12 +174,12 @@ public class WaiverBoardService {
         }
         String leagueId = league.league().leagueId();
         String runId = runId(leagueId, deadline.get());
-        Optional<DecisionRecord> recorded = records.read(userId, leagueId, runId)
+        Optional<Outcome> recorded = runs.earlier(userId, leagueId, runId)
                 .or(() -> build(runId, league, deadline.get(), now));
-        return recorded.flatMap(record -> deliver(record, deadline.get(), now));
+        return recorded.flatMap(outcome -> deliver(runId, leagueId, outcome, deadline.get(), now));
     }
 
-    private Optional<DecisionRecord> build(String runId, LeagueWeek league,
+    private Optional<Outcome> build(String runId, LeagueWeek league,
             ZonedDateTime deadline, Instant now) {
         LatestWeekData.Report data = latestWeek.assess(league);
         boolean inBuffer = !now.isBefore(deadline.minus(FALLBACK_BUFFER).toInstant());
@@ -202,7 +202,7 @@ public class WaiverBoardService {
         };
     }
 
-    private Optional<DecisionRecord> write(String runId, LeagueWeek league,
+    private Optional<Outcome> write(String runId, LeagueWeek league,
             WaiverEvidence.Screen screen, Optional<WaiverPreference> preference,
             LatestWeekData.Report data, boolean inBuffer, Instant now) {
         BoardForm form = new BoardForm(check, screen.candidates(), preference
@@ -234,8 +234,7 @@ public class WaiverBoardService {
                 preferences(preference), screen.screened(),
                 screen.comparisons(), evidenceOf(screen.bundle()),
                 versions(screen.bundle(), form), result.exchanges(), outcome);
-        records.save(record);
-        return Optional.of(record);
+        return Optional.of(runs.record(record));
     }
 
     /**
@@ -243,7 +242,7 @@ public class WaiverBoardService {
      * agent screenable, so the user hears why no board is coming
      * instead of nothing at all.
      */
-    private DecisionRecord unscreenable(String runId, LeagueWeek league, String reason,
+    private Outcome unscreenable(String runId, LeagueWeek league, String reason,
             Instant now) {
         String notice = "No waiver board this round: I could not screen the free agents "
                 + "before the claim deadline, because " + reason
@@ -255,8 +254,7 @@ public class WaiverBoardService {
                 preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
                 Versions.ofThisBuild("none", "none", model), List.of(),
                 new Outcome.Withheld("The free agents could not be screened: " + reason, notice));
-        records.save(record);
-        return record;
+        return runs.record(record);
     }
 
     private Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
@@ -272,38 +270,39 @@ public class WaiverBoardService {
      * withheld, unless Telegram has accepted it already. A dry-run
      * round, or any round while the scored board is sent, sends nothing.
      */
-    private Optional<Event> deliver(DecisionRecord record, ZonedDateTime deadline, Instant now) {
+    private Optional<Event> deliver(String runId, String leagueId, Outcome outcome,
+            ZonedDateTime deadline, Instant now) {
         String key = WaiverAlertService.boardKey(deadline);
         if (sent != SentWaiverBoard.EVIDENCE || outbox.alreadySent(key)) {
             return Optional.empty();
         }
-        Optional<Sendable> board = switch (record.outcome()) {
+        Optional<Sendable> board = switch (outcome) {
             case Outcome.SentBoard sentBoard -> Optional.of(new Sendable(
                     sentBoard.messages(), !sentBoard.allOptions().isEmpty()));
             case Outcome.Withheld withheld -> Optional.ofNullable(withheld.notice())
                     .map(notice -> new Sendable(List.of(notice), false));
             default -> Optional.empty();
         };
-        return board.flatMap(messages -> send(key, record, deadline, messages, now));
+        return board.flatMap(messages -> send(key, runId, leagueId, deadline, messages, now));
     }
 
-    private Optional<Event> send(String key, DecisionRecord record, ZonedDateTime deadline,
-            Sendable board, Instant now) {
+    private Optional<Event> send(String key, String runId, String leagueId,
+            ZonedDateTime deadline, Sendable board, Instant now) {
         List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
         List<String> heldRuns = held.stream().map(RoleSlipLedger.Held::runId).toList();
         List<String> parts = BoardMessage.withHeldAdvice(board.messages(),
                 held.stream().map(RoleSlipLedger.Held::message).toList());
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("trigger", "waiver board");
-        facts.put("runId", record.runId());
-        facts.put("leagueId", record.leagueId());
+        facts.put("runId", runId);
+        facts.put("leagueId", leagueId);
         facts.put("claimDeadline", deadline.toString());
         facts.put("text", String.join("\n\n", parts));
         if (!heldRuns.isEmpty()) {
             facts.put("heldAdviceRuns", String.join(",", heldRuns));
         }
         Optional<Event> delivered = outbox.deliver(parts, board.viewAllOptions(),
-                        record.runId() + heldRuns,
+                        runId + heldRuns,
                         List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts))))
                 .stream().findFirst();
         if (delivered.isPresent() && !heldRuns.isEmpty()) {
