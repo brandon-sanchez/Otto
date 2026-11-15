@@ -3,6 +3,8 @@ package otto;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -368,6 +370,33 @@ class TeamReportsScenarioTest extends WireSeamTest {
         teamReports.poll();
 
         teamSites.verify(3, getRequestedFor(urlPathEqualTo("/chiefs.com" + FEED)));
+    }
+
+    @Test
+    void aRunThatRunsLongStopsStartingFeedsAndTheNextRunReadsTheRest() throws Exception {
+        knownPlayers();
+        clock.set(SATURDAY_AFTERNOON);
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED)).willReturn(rss(
+                "<rss version=\"2.0\"><channel><title>News</title></channel></rss>")
+                .withFixedDelay(1000)));
+
+        CompletableFuture<TeamReports.Run> slow = CompletableFuture.supplyAsync(
+                teamReports::poll);
+        awaitRequest("/chiefs.com" + FEED);
+        clock.advance(Duration.ofMinutes(3));
+        slow.get(10, TimeUnit.SECONDS);
+
+        teamSites.verify(0, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
+        teamReports.poll();
+        teamSites.verify(1, getRequestedFor(urlPathEqualTo("/steelers.com" + FEED)));
+    }
+
+    private static void awaitRequest(String path) throws InterruptedException {
+        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (teamSites.findAll(getRequestedFor(urlPathEqualTo(path))).isEmpty()) {
+            assertThat(System.nanoTime()).isLessThan(until);
+            Thread.sleep(10);
+        }
     }
 
     private static void site(String host, String path, String fixture) {
