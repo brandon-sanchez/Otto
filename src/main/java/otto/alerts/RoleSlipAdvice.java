@@ -84,7 +84,7 @@ public class RoleSlipAdvice {
                 .map(stored -> stored.players().values())
                 .orElse(List.of());
         Optional<LineupEvidence.Draft> draft = DecisionEvidence.roleSlip(slip, leagueWeek, roster,
-                players, lineupAdvice::profile, now);
+                players, lineupAdvice::profile, lineupAdvice.matchups(leagueWeek, now), now);
         if (draft.isEmpty()) {
             ledger.settle(slip.key());
             return Optional.empty();

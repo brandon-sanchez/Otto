@@ -31,6 +31,7 @@ public final class MatchupSources {
     private Optional<PlayerUsage> usage;
     private Optional<PressureRates> pressureRates;
     private Optional<BlitzRates> blitzRates;
+    private RushingContact rushingContact;
     private Optional<ScheduleStrength> scheduleStrength;
 
     MatchupSources(JsonStore snapshot) {
@@ -95,6 +96,14 @@ public final class MatchupSources {
                             .flatMap(players -> BlitzRates.of(plays, charting, players))));
         }
         return blitzRates;
+    }
+
+    /** Returns each runner's and each defense's contact figures. */
+    public RushingContact rushingContact() {
+        if (rushingContact == null) {
+            rushingContact = RushingContact.from(store);
+        }
+        return rushingContact;
     }
 
     /**
