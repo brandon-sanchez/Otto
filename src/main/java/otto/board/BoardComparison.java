@@ -44,7 +44,6 @@ import otto.records.RunIds;
 import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
-import otto.settings.Trigger;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
@@ -172,13 +171,13 @@ public class BoardComparison {
     }
 
     /**
-     * True from the evening the board is due until the claim deadline,
-     * while the waiver trigger is on: switching waivers off stops the
-     * scored board being built at all, its live news reads included.
+     * True from the evening the board is due until the claim deadline.
+     * The baselines are built even while the waiver trigger is off or
+     * muted, never sent, so every week has something to judge the
+     * board against.
      */
-    private boolean baselinesDue(ZonedDateTime deadline, Instant now) {
-        return !now.isBefore(WaiverAlertService.eveningBefore(deadline).toInstant())
-                && settings.enabled(Trigger.WAIVER);
+    private static boolean baselinesDue(ZonedDateTime deadline, Instant now) {
+        return !now.isBefore(WaiverAlertService.eveningBefore(deadline).toInstant());
     }
 
     /**

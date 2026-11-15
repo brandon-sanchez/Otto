@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Component;
 
@@ -57,6 +58,12 @@ public class WaiverAlertService {
     private final AlertDeliveryOutbox outbox;
     private final RoleSlipLedger roleSlips;
 
+    /** The latest Check's scored board, so the Alert and the baselines rank it once. */
+    private final AtomicReference<Ranked> lastRanked = new AtomicReference<>();
+
+    private record Ranked(LeagueWeek league, Instant now, SourceResult<WaiverBoard> board) {
+    }
+
     public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
             MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, RoleSlipLedger roleSlips) {
@@ -94,13 +101,31 @@ public class WaiverAlertService {
         // could not build one - or built an empty one - tries again on
         // the next minute inside the window. A board that never
         // computed is not a board that was sent.
-        return switch (scorer.rank(league, now,
-                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT))) {
+        return switch (scoredBoard(league, now)) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
                     : send(key, due, deadline.get(), ok.value(), now);
         };
+    }
+
+    /**
+     * Returns the scored board's top {@value WaiverQuery#ALERT_COUNT}
+     * free agents for this Check. Ranking reads live news, so one Check
+     * ranks once: the Alert and the waiver baselines share the result
+     * for the same {@link LeagueWeek}, which each Check builds afresh.
+     *
+     * <p>Side effects: the scorer's reads, on the first call of a Check.
+     */
+    public SourceResult<WaiverBoard> scoredBoard(LeagueWeek league, Instant now) {
+        Ranked last = lastRanked.get();
+        if (last != null && last.league() == league && last.now().equals(now)) {
+            return last.board();
+        }
+        SourceResult<WaiverBoard> board = scorer.rank(league, now,
+                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT));
+        lastRanked.set(new Ranked(league, now, board));
+        return board;
     }
 
     /**

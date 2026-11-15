@@ -24,9 +24,9 @@ import otto.needs.RosterNeeds;
 import otto.needs.RosterNeedsService;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
+import otto.waivers.WaiverAlertService;
 import otto.waivers.WaiverBoard;
 import otto.waivers.WaiverQuery;
-import otto.waivers.WaiverScorer;
 
 /**
  * Builds the baselines the waiver board is judged against for one
@@ -42,13 +42,13 @@ class BaselineBoards {
 
     private static final List<String> POSITIONS = WaiverQuery.ALL_POSITIONS;
 
-    private final WaiverScorer scorer;
+    private final WaiverAlertService scoredBoard;
     private final RosterNeedsService needs;
     private final SleeperAdapter sleeper;
 
-    BaselineBoards(WaiverScorer scorer, RosterNeedsService needs, SleeperAdapter sleeper,
-            OttoProperties properties) {
-        this.scorer = scorer;
+    BaselineBoards(WaiverAlertService scoredBoard, RosterNeedsService needs,
+            SleeperAdapter sleeper, OttoProperties properties) {
+        this.scoredBoard = scoredBoard;
         this.needs = needs;
         this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
     }
@@ -77,7 +77,7 @@ class BaselineBoards {
         Map<BoardStrategy, List<ComparisonRound.Pick>> picks = new EnumMap<>(BoardStrategy.class);
         Map<BoardStrategy, String> unavailable = new EnumMap<>(BoardStrategy.class);
 
-        switch (scorer.rank(league, now, WaiverQuery.everyPosition(BoardMessage.SHOWN))) {
+        switch (scoredBoard.scoredBoard(league, now)) {
             case SourceResult.Ok<WaiverBoard> ok -> picks.put(BoardStrategy.SCORED_BOARD,
                     ok.value().candidates().stream()
                             .map(candidate -> pick.apply(candidate.playerId()))

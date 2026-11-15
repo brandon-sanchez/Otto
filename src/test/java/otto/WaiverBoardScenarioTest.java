@@ -261,7 +261,10 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         telegram.resetRequests();
         clock.set(TUESDAY_EVENING.plus(Duration.ofDays(7)));
         checkRunner.runCheck();
-        assertThat(boardRecords()).hasSize(1);
+        assertThat(boardRecords()).hasSize(2)
+                .filteredOn(record -> !record.startedAt().equals(TUESDAY_EVENING))
+                .singleElement()
+                .satisfies(muted -> assertThat(muted.outcome()).isInstanceOf(Outcome.DryRun.class));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("Your waiver options")));
     }

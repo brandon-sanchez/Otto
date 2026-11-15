@@ -49,9 +49,13 @@ import otto.waivers.WaiverAlertService;
  * run and, when {@link SentWaiverBoard#EVIDENCE} is the board sent,
  * sends it with Done, Ignore and Mute buttons, plus View all options
  * when it ranks more players than it shows. While
- * {@link SentWaiverBoard#SCORED} is sent instead, the board is built and
- * recorded the same way but never sent, so switching back is one
- * setting. Nothing is built while the waiver trigger is off or muted.
+ * {@link SentWaiverBoard#SCORED} is sent instead, or while the waiver
+ * trigger is muted, the board is built and recorded the same way as a
+ * dry run and never sent, so switching back loses no week and every
+ * week can be judged against its baselines. A round decided as a dry
+ * run stays one: flipping the setting or unmuting mid-round never sends
+ * its board or its withheld notice. Nothing is built while the waiver
+ * trigger is off.
  *
  * <p>The board waits for the latest completed week's data, as
  * {@link LatestWeekData} judges it: while that week is short, each Check
@@ -168,19 +172,26 @@ public class WaiverBoardService {
         Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now);
         if (deadline.isEmpty()
                 || now.isBefore(WaiverAlertService.eveningBefore(deadline.get()).toInstant())
-                || !settings.enabled(Trigger.WAIVER)
-                || muteStore.muted(Trigger.WAIVER.muteTarget())) {
+                || !settings.enabled(Trigger.WAIVER)) {
             return Optional.empty();
         }
+        boolean reachesUser = sent == SentWaiverBoard.EVIDENCE
+                && !muteStore.muted(Trigger.WAIVER.muteTarget());
         String leagueId = league.league().leagueId();
         String runId = runId(leagueId, deadline.get());
         Optional<Outcome> recorded = runs.earlier(userId, leagueId, runId)
-                .or(() -> build(runId, league, deadline.get(), now));
-        return recorded.flatMap(outcome -> deliver(runId, leagueId, outcome, deadline.get(), now));
+                .or(() -> build(runId, league, deadline.get(), reachesUser, now));
+        return recorded.filter(outcome -> reachesUser)
+                .flatMap(outcome -> deliver(runId, leagueId, outcome, deadline.get(), now));
     }
 
+    /**
+     * @param reachesUser whether this round's board goes to the user;
+     *        when false it is recorded as a dry run, and a withheld
+     *        round records no notice to send
+     */
     private Optional<Outcome> build(String runId, LeagueWeek league,
-            ZonedDateTime deadline, Instant now) {
+            ZonedDateTime deadline, boolean reachesUser, Instant now) {
         LatestWeekData.Report data = latestWeek.assess(league);
         boolean inBuffer = !now.isBefore(deadline.minus(FALLBACK_BUFFER).toInstant());
         if (!data.complete() && !inBuffer) {
@@ -192,19 +203,21 @@ public class WaiverBoardService {
         Optional<WaiverPreference> preference = preferences.forRound(leagueId, deadline);
         return switch (evidence.screen(league, deadline, preference, now, data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
-                    Optional.of(unscreenable(runId, league, unavailable.reason(), now));
+                    Optional.of(unscreenable(runId, league, unavailable.reason(), reachesUser,
+                            now));
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board waits: {}", unavailable.reason());
                 yield Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok ->
-                    write(runId, league, ok.value(), preference, data, inBuffer, now);
+                    write(runId, league, ok.value(), preference, data, inBuffer, reachesUser,
+                            now);
         };
     }
 
     private Optional<Outcome> write(String runId, LeagueWeek league,
             WaiverEvidence.Screen screen, Optional<WaiverPreference> preference,
-            LatestWeekData.Report data, boolean inBuffer, Instant now) {
+            LatestWeekData.Report data, boolean inBuffer, boolean reachesUser, Instant now) {
         BoardForm form = new BoardForm(check, screen.candidates(), preference
                 .filter(stated -> stated.mode() == WaiverPreference.Mode.FOCUS)
                 .map(stated -> Set.copyOf(stated.positions()))
@@ -219,12 +232,14 @@ public class WaiverBoardService {
         Optional<Integer> budget = league.league().waiverBudget();
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<BoardAnswer> approved -> approved(approved.answer(),
-                    screen, budget, data.complete() ? List.of() : List.of(data.notice()));
+                    screen, budget, data.complete() ? List.of() : List.of(data.notice()),
+                    reachesUser);
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
                     "The board failed its checks twice: " + String.join(" ", rejected.failures()),
-                    FAILED_CHECKS_NOTICE);
+                    reachesUser ? FAILED_CHECKS_NOTICE : null);
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
-                    new Outcome.Withheld(unavailable.reason(), MODEL_UNAVAILABLE_NOTICE);
+                    new Outcome.Withheld(unavailable.reason(),
+                            reachesUser ? MODEL_UNAVAILABLE_NOTICE : null);
         };
         DecisionRecord record = new DecisionRecord(DecisionRecord.SCHEMA_VERSION, runId,
                 RunKind.WAIVER_BOARD, now, userId, league.league().leagueId(),
@@ -243,7 +258,7 @@ public class WaiverBoardService {
      * instead of nothing at all.
      */
     private Outcome unscreenable(String runId, LeagueWeek league, String reason,
-            Instant now) {
+            boolean reachesUser, Instant now) {
         String notice = "No waiver board this round: I could not screen the free agents "
                 + "before the claim deadline, because " + reason
                 + ". Place any claims yourself in Sleeper.";
@@ -253,14 +268,15 @@ public class WaiverBoardService {
                 new RosterContext(NullNode.getInstance(), Optional.empty()),
                 preferences(Optional.empty()), List.of(), NullNode.getInstance(), List.of(),
                 Versions.ofThisBuild("none", "none", model), List.of(),
-                new Outcome.Withheld("The free agents could not be screened: " + reason, notice));
+                new Outcome.Withheld("The free agents could not be screened: " + reason,
+                        reachesUser ? notice : null));
         return runs.record(record);
     }
 
     private Outcome approved(BoardAnswer answer, WaiverEvidence.Screen screen,
-            Optional<Integer> budget, List<String> notes) {
+            Optional<Integer> budget, List<String> notes, boolean reachesUser) {
         List<String> messages = BoardMessage.render(answer, screen, budget, notes);
-        return sent == SentWaiverBoard.EVIDENCE
+        return reachesUser
                 ? new Outcome.SentBoard(messages, BoardMessage.renderAll(answer, screen, budget))
                 : new Outcome.DryRun(messages);
     }
@@ -268,12 +284,12 @@ public class WaiverBoardService {
     /**
      * Sends a recorded round's board, or the notice that it was
      * withheld, unless Telegram has accepted it already. A dry-run
-     * round, or any round while the scored board is sent, sends nothing.
+     * round, or a withheld round that recorded no notice, sends nothing.
      */
     private Optional<Event> deliver(String runId, String leagueId, Outcome outcome,
             ZonedDateTime deadline, Instant now) {
         String key = WaiverAlertService.boardKey(deadline);
-        if (sent != SentWaiverBoard.EVIDENCE || outbox.alreadySent(key)) {
+        if (outbox.alreadySent(key)) {
             return Optional.empty();
         }
         Optional<Sendable> board = switch (outcome) {
