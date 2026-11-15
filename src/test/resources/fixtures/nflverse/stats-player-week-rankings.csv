@@ -1,0 +1,17 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,target_share,fantasy_points,fantasy_points_ppr,air_yards_share,wopr,racr,receiving_epa
+00-0042001,T.SF,Tight End SF,TE,TE,2026,1,REG,SF,LA,0,0,0,0,0,0,0,0,0,0,4,8,40,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042001,T.SF,Tight End SF,TE,TE,2026,2,REG,SF,MIA,0,0,0,0,0,0,0,0,0,0,4,9,45,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042001,T.SF,Tight End SF,TE,TE,2026,3,REG,SF,ARI,0,0,0,0,0,0,0,0,0,0,3,7,35,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042002,T.BUF,Tight End BUF,TE,TE,2026,1,REG,BUF,HOU,0,0,0,0,0,0,0,0,0,0,3,6,30,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042002,T.BUF,Tight End BUF,TE,TE,2026,2,REG,BUF,DET,0,0,0,0,0,0,0,0,0,0,3,6,30,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042002,T.BUF,Tight End BUF,TE,TE,2026,3,REG,BUF,LAC,0,0,0,0,0,0,0,0,0,0,3,6,30,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042003,T.ATL,Tight End ATL,TE,TE,2026,1,REG,ATL,PIT,0,0,0,0,0,0,0,0,0,0,3,7,35,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042003,T.ATL,Tight End ATL,TE,TE,2026,2,REG,ATL,CAR,0,0,0,0,0,0,0,0,0,0,2,5,25,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042003,T.ATL,Tight End ATL,TE,TE,2026,3,REG,ATL,GB,0,0,0,0,0,0,0,0,0,0,3,6,30,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042004,T.GB,Tight End GB,TE,TE,2026,1,REG,GB,MIN,0,0,0,0,0,0,0,0,0,0,1,2,10,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042004,T.GB,Tight End GB,TE,TE,2026,2,REG,GB,NYJ,0,0,0,0,0,0,0,0,0,0,1,3,15,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042004,T.GB,Tight End GB,TE,TE,2026,3,REG,GB,ATL,0,0,0,0,0,0,0,0,0,0,2,4,20,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042005,T.PHI,Tight End PHI,TE,TE,2026,3,REG,PHI,CHI,0,0,0,0,0,0,0,0,0,0,5,11,55,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042101,W.SF,Wide Out SF,WR,WR,2026,1,REG,SF,LA,0,0,0,0,0,0,0,0,0,0,6,12,60,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042101,W.SF,Wide Out SF,WR,WR,2026,2,REG,SF,MIA,0,0,0,0,0,0,0,0,0,0,6,12,60,0,0,0,NA,NA,NA,NA,NA,NA,NA
+00-0042101,W.SF,Wide Out SF,WR,WR,2026,3,REG,SF,ARI,0,0,0,0,0,0,0,0,0,0,6,12,60,0,0,0,NA,NA,NA,NA,NA,NA,NA

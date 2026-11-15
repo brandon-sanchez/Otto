@@ -1,6 +1,9 @@
 package otto.nflverse;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -17,6 +20,25 @@ public class NflverseStore {
 
     public NflverseStore(JsonStore store) {
         this.store = store;
+    }
+
+    /**
+     * Names the feeds as one evidence source, such as
+     * "nflverse:ftn_charting+pbp": their release tags in order, each once.
+     */
+    public static String source(List<FeedId> feeds) {
+        return "nflverse:" + feeds.stream()
+                .map(feed -> Feeds.of(feed).tag())
+                .distinct()
+                .collect(Collectors.joining("+"));
+    }
+
+    /** Returns when the newest stored copy of the feeds was published; empty when none is stored. */
+    public Optional<Instant> newestPublished(List<FeedId> feeds) {
+        return feeds.stream()
+                .flatMap(feed -> read(Feeds.of(feed)).stream())
+                .map(NflverseFeed::assetUpdatedAt)
+                .max(Instant::compareTo);
     }
 
     <R, D extends NflverseFeed> Optional<D> read(FeedSpec<R, D> spec) {
