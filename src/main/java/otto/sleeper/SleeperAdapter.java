@@ -245,6 +245,16 @@ public class SleeperAdapter {
             boolean won, Instant processed) {
     }
 
+    /**
+     * One pick of the league's draft.
+     *
+     * @param rosterId the roster that made the pick, 0 when Sleeper did
+     *        not say
+     * @param pickNumber the pick's place in the whole draft, from 1
+     */
+    public record DraftSelection(String playerId, int rosterId, int round, int pickNumber) {
+    }
+
     public record LeagueUser(String userId, String displayName) {
     }
 
@@ -356,10 +366,23 @@ public class SleeperAdapter {
      * no league scoring setting carries their key.
      */
     public SourceResult<Map<String, Map<String, Double>>> projections(String season, int week) {
-        String path = "/v1/projections/nfl/regular/%s/%d".formatted(season, week);
+        return statLines("/v1/projections/nfl/regular/%s/%d".formatted(season, week));
+    }
+
+    /**
+     * Per-player stat lines for one played week, every NFL player's and
+     * not only the rostered ones, read from Sleeper's undocumented stats
+     * endpoint. Points price through league scoring exactly as a
+     * projection does.
+     */
+    public SourceResult<Map<String, Map<String, Double>>> stats(String season, int week) {
+        return statLines("/v1/stats/nfl/regular/%s/%d".formatted(season, week));
+    }
+
+    private SourceResult<Map<String, Map<String, Double>>> statLines(String path) {
         return fetch(path).flatMap(body -> {
             if (!body.isObject()) {
-                return schemaDrift(path, "projections is not an object");
+                return schemaDrift(path, "stat lines are not an object");
             }
             Map<String, Map<String, Double>> statLines = new HashMap<>();
             body.properties().forEach(entry -> {
@@ -531,6 +554,52 @@ public class SleeperAdapter {
                         Instant.ofEpochMilli(updated.asLong())));
             }
             return ok(claims);
+        });
+    }
+
+    /**
+     * The picks of this league's own draft for the season: the newest
+     * completed draft Sleeper lists for the league. Empty when the league
+     * has not drafted, or drafted somewhere Sleeper does not list.
+     */
+    public SourceResult<List<DraftSelection>> draftPicks() {
+        String draftsPath = leaguePath + "/drafts";
+        return fetch(draftsPath).flatMap(drafts -> {
+            if (!drafts.isArray()) {
+                return schemaDrift(draftsPath, "drafts is not an array");
+            }
+            Optional<String> draftId = Optional.empty();
+            String newestSeason = "";
+            for (JsonNode draft : drafts) {
+                String season = draft.path("season").asText("");
+                String id = draft.path("draft_id").asText("");
+                if ("complete".equals(draft.path("status").asText()) && !id.isBlank()
+                        && season.compareTo(newestSeason) >= 0) {
+                    draftId = Optional.of(id);
+                    newestSeason = season;
+                }
+            }
+            if (draftId.isEmpty()) {
+                return ok(List.of());
+            }
+            String picksPath = "/v1/draft/" + draftId.get() + "/picks";
+            return fetch(picksPath).flatMap(picks -> {
+                if (!picks.isArray()) {
+                    return schemaDrift(picksPath, "picks is not an array");
+                }
+                List<DraftSelection> selections = new ArrayList<>();
+                for (JsonNode pick : picks) {
+                    if (!pick.hasNonNull("player_id") || !pick.path("pick_no").isIntegralNumber()
+                            || !pick.path("round").isIntegralNumber()) {
+                        return schemaDrift(picksPath, "a pick's player, number or round is "
+                                + "missing");
+                    }
+                    selections.add(new DraftSelection(pick.get("player_id").asText(),
+                            pick.path("roster_id").asInt(0), pick.get("round").asInt(),
+                            pick.get("pick_no").asInt()));
+                }
+                return ok(selections);
+            });
         });
     }
 

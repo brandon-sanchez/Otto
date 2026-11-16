@@ -27,11 +27,11 @@ final class HabitForm implements AdviceForm<AdviceAnswer> {
             evidence bundle: never from memory, never invented. Every number you write
             must appear in the evidence. Name only players listed in "players".
 
-            Each "habit-" item is a habit his own results show cost him points. Lead with
-            the points the costliest one cost him, then the pattern behind it in plain
-            words, then at most one fix, taken from its "fix" and offered as something to
-            try rather than an order. Bring in a second habit the same way only when it
-            fits. Never mention a habit the evidence does not list, and never lecture.
+            Each "habit-" item is a habit his own results show cost him points or FAAB
+            dollars. Lead with what the costliest one cost him, then the pattern behind
+            it in plain words, then at most one fix, taken from its "fix" and offered as
+            something to try rather than an order. Bring in a second habit the same way
+            only when it fits. Never mention a habit the evidence does not list, and never lecture.
             The "activity" item sums up his waiver, FAAB and trade moves: use it only
             when it helps explain a habit.
 
