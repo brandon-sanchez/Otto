@@ -24,12 +24,12 @@ import java.util.Set;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, three markers, each Alert delivery record, and
- * the research cache: one player's stories, capped at a fixed count,
- * and the index of when each player was last read. Big means
- * everything that grows with the league, the roster of players or the
- * season - the Snapshots, the Player Directory,
- * defense-versus-position and the Event Log.
+ * its newest turns, three markers, each Alert delivery record, where
+ * each waiver board's full list resumes, and the research cache: one
+ * player's stories, capped at a fixed count, and the index of when
+ * each player was last read. Big means everything that grows with the
+ * league, the roster of players or the season - the Snapshots, the
+ * Player Directory, defense-versus-position and the Event Log.
  */
 public enum DocumentPlacement {
 
@@ -58,6 +58,7 @@ public enum DocumentPlacement {
 
     private static final Set<String> SMALL_PREFIXES = Set.of(
             "alert-delivery-",
+            "board-options-sent-",
             "research-");
 
     /** Returns where the document with this name is stored. */

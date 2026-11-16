@@ -353,7 +353,8 @@ class AwsStorageScenarioTest {
                 "nflverse-depth-charts", "nflverse-weekly-rosters", "nflverse-player-ids");
         List<String> small = List.of("settings", "watchlist", "watchlist-observations",
                 "mutes", "conversation", "last-check", "alert-id-sequence",
-                "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1");
+                "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1",
+                "board-options-sent-1");
 
         List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting",
                 "team-reports");

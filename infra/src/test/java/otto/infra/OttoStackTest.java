@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -269,6 +270,36 @@ class OttoStackTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("articleTextSeasons")
                 .hasMessageContaining("three");
+    }
+
+    @Test
+    void theEvidenceBoardIsSentUnlessTheStackRollsItBack() {
+        template.allResourcesProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Environment", Match.objectLike(Map.of(
+                        "Variables", Match.objectLike(Map.of(
+                                "OTTO_SENT_WAIVER_BOARD", "EVIDENCE")))))));
+
+        stackWith("sentWaiverBoard", "SCORED").allResourcesProperties("AWS::Lambda::Function",
+                Match.objectLike(Map.of("Environment", Match.objectLike(Map.of(
+                        "Variables", Match.objectLike(Map.of(
+                                "OTTO_SENT_WAIVER_BOARD", "SCORED")))))));
+        assertThatThrownBy(() -> stackWith("sentWaiverBoard", "OLD"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("EVIDENCE, SCORED");
+    }
+
+    /**
+     * The stack accepts the boards the app's SentWaiverBoard names, and no
+     * other; a drift would show up only as a Lambda that fails to start.
+     */
+    @Test
+    void theSentWaiverBoardsAreTheOnesTheAppKnows() throws IOException {
+        String app = Files.readString(Path.of("..", "src", "main", "java", "otto", "board",
+                "SentWaiverBoard.java"));
+
+        assertThat(Pattern.compile("(?m)^    ([A-Z]+)[,\\s]*$").matcher(app)
+                .results().map(match -> match.group(1)).toList())
+                .containsExactly("EVIDENCE", "SCORED");
     }
 
     /**

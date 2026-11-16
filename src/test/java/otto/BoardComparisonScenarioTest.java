@@ -139,7 +139,7 @@ class BoardComparisonScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void theOldScorerAndEveryBaselineAreRecordedBesideTheNewBoardAndNothingMoreIsSent() {
+    void theOldScorerAndEveryBaselineAreRecordedSilentlyBesideTheSentBoard() {
         tuesdayEveningWithTheModelAnswering(BOARD);
 
         assertThat(records(RunKind.WAIVER_BOARD)).hasSize(1);
@@ -156,7 +156,7 @@ class BoardComparisonScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("Five waiver targets for Wednesday."))));
+                        containing("Your waiver options"))));
     }
 
     @Test

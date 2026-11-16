@@ -53,10 +53,11 @@ import otto.storage.OttoJson;
  * the board can be judged and rolled back.
  *
  * <p>In the same window as {@link WaiverBoardService}, from the evening
- * the board is due until the claim deadline, and while the waiver
- * trigger is on, it records the round's baselines once, the scored
- * board among them, as a {@link RunKind#WAIVER_BASELINES} Decision
- * Record that is never sent.
+ * the board is due until the claim deadline, it records the round's
+ * baselines once, the scored board among them, as a
+ * {@link RunKind#WAIVER_BASELINES} Decision Record that is never sent.
+ * The baselines are built whatever the waiver trigger and mute say, so
+ * every week has something to judge the board against.
  * After the games it judges every strategy in {@link BoardStrategy} on
  * what its pickups added to the user's lineup, net of the player each
  * claim drops, and stores the {@link WeeklyComparison} as the
@@ -346,6 +347,7 @@ public class BoardComparison {
      */
     private static Optional<List<Outcome.BoardPick>> picks(DecisionRecord board) {
         return switch (board.outcome()) {
+            case Outcome.SentBoard sent -> sent.picks().or(() -> checkedPicks(board));
             case Outcome.DryRun dryRun -> dryRun.picks().or(() -> checkedPicks(board));
             default -> Optional.empty();
         };
@@ -369,6 +371,8 @@ public class BoardComparison {
                 .map(DecisionRecord::outcome)
                 .map(outcome -> switch (outcome) {
                     case Outcome.Withheld withheld ->
+                            "the evidence-based board was withheld: " + withheld.reason();
+                    case Outcome.WithheldWithNotice withheld ->
                             "the evidence-based board was withheld: " + withheld.reason();
                     default -> "the evidence-based board's checked answer could not be read back";
                 })

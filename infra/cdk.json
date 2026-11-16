@@ -3,6 +3,7 @@
   "context": {
     "parameterPath": "/otto/prod",
     "timeZone": "America/Los_Angeles",
+    "sentWaiverBoard": "EVIDENCE",
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/aws-iam:minimizePolicies": true
   }

@@ -30,6 +30,13 @@ are never its fallback. The section "Bids are the model's, inside
 bounds code verifies" at the end describes what replaces them. The
 scored board keeps its bands while it is the one sent.
 
+Amended (2026-11-14, issue #128): the evidence-based board is the one
+sent. The scored board runs silently as a baseline and stays one setting
+away as the rollback. Every section before "The evidence model" now
+describes that rollback board. The section "The evidence-based board is
+the one sent" at the end says how the switch, the buttons and a
+withheld round work.
+
 The spec pins the waiver weights, the three role tags, the FAAB bands
 and the Tuesday cadence. It leaves the arithmetic behind several of
 them open. This ADR records what implementation decided.
@@ -497,7 +504,9 @@ The two switches differ in what they cost. A Mute silences the message
 and the board is still computed, which is what a Mute means everywhere
 else in this system. A trigger switched off stops the board being
 built at all - there is no Recommendation to keep, and building one
-would spend live news requests on an answer nobody will read.
+would spend live news requests on an answer nobody will read. The
+weekly comparison's baselines are the one exception: they are built
+whatever the two switches say, so every week gets a comparison.
 
 ## A board that missed its evening is never sent late (revised, #111)
 
@@ -702,8 +711,8 @@ back as the same sentence.
 The scored board above ranks free agents by a fixed 100-point sum. The
 evidence-based board replaces the sum with evidence the model weighs
 and code checks. It is built at the same evening as the scored board
-and saved as a Decision Record. It is not sent yet: the scored board
-stays the board the user receives while the new board is reviewed.
+and saved as a Decision Record. It is the board the user receives; the
+scored board is built only as a baseline.
 
 ### Every free agent is screened, and no lane has a weight
 
@@ -744,15 +753,15 @@ names, numbers, claims against their cited evidence, the voice rules
 and the dollar rule. The board adds its own checks. It may recommend
 only screened free agents, each once. It may not write a score or a
 "Cons:" list, and no opening or entry may run past 700 characters. A
-board that fails twice is recorded as withheld. The scored board is
-never put in its place.
+board that fails twice is withheld. The scored board is never put in
+its place.
 
 ### The message is the accepted compact board
 
 The message is variant A of the waiver message prototype. It holds at
-most five ranked entries. A "View all options" line points to the
-rest, and their reasoning is checked too. A holding board lists its
-speculative moves under "If you still want to make a move". The text
+most five ranked entries. A "View all options" line and button point
+to the rest, and their reasoning is checked too. A holding board lists
+its speculative moves under "If you still want to make a move". The text
 splits between entries, so each Telegram message stays under 4,096
 characters. Each entry shows the published consensus when there is
 one and Otto's bid, as described in the next section.
@@ -761,12 +770,11 @@ one and Otto's bid, as described in the next section.
 
 The run id is a hash of the league and the claim deadline. Every Check
 from the evening the board is due until the deadline finds that round's
-record and stops before reading any evidence. The usage lane parses the
-stored play-by-play and charting, so this rule also keeps that cost to
-one parse per round. When there is no player directory or no roster for
-the user, or the model cannot be reached, nothing is recorded, and the
-next Check tries again. From the fallback buffer described below, the
-round is recorded as withheld instead, with the reason.
+record and stops before reading any evidence. A board Telegram has not
+accepted yet is sent from that record, so a retry costs no model call.
+The usage lane parses the stored play-by-play and charting, so this
+rule also keeps that cost to one parse per round. When there is no player directory or no roster for
+the user, nothing is recorded, and the next Check tries again.
 
 ### The board waits for the latest week, then falls back
 
@@ -820,8 +828,11 @@ Record that is never sent:
 - **Top trending adds**: Sleeper's five most-added players as published,
   rostered ones included.
 
-When the waiver trigger is off, no baseline is built, because the
-scored board is not built either.
+The baselines are built even while the waiver trigger is off or
+`class:waiver` is muted, and are never sent, so every week gets a
+comparison. They include the scored board's top five, so the scored
+board is still ranked, and spends its live news requests, in a week
+where it is not sent.
 
 Each strategy is judged on net lineup gain: the points the user's best
 lineup would have scored that week with the pickup on the roster and
@@ -903,3 +914,54 @@ the open spots plus those drops, and stay affordable together at the
 top of every range, so one higher bid cannot break the rest of the
 plan. The message names them apart from the alternatives, which
 compete for the same roster spot.
+
+## The evidence-based board is the one sent (#128)
+
+The property `otto.sent-waiver-board` names the board that reaches the
+chat: `EVIDENCE`, the default, or `SCORED`. Both boards are built every
+round, so the switch is the rollback: with `SCORED`, the scored board
+goes out from the next Check, and the evidence-based board is still
+built and recorded as a dry run. No week of records is lost in either
+direction. `docs/deploy.md` gives the steps.
+
+The evidence-based board answers to the same two switches as the scored
+board. With the waiver trigger off, it is not built at all, so it spends
+no model call. While `class:waiver` is muted, it is built and recorded
+as a dry run, as it is while `SCORED` is sent, so the muted week can
+still be judged against its baselines. Each round is decided once: a
+round recorded as a dry run stays one, and unmuting or flipping the
+switch before the deadline never sends its board or its withheld
+notice. It goes out under the same Alert key as the scored board, so
+Done, Ignore and Mute act on it as they did on the scored board, and
+the Mute tap silences `class:waiver`.
+
+### A board that cannot be checked is withheld, and the user is told
+
+A board that fails its checks twice is never replaced by the scored
+board. The user gets a short note, written by code, that no board is
+coming this round and that claims are his to place. When the model
+cannot be reached, each Check tries again until three hours before the
+claim deadline. From then on the round is withheld and the same note
+is sent. A round's note goes out once, like a board.
+
+### The full list is a button
+
+"View all options" is an inline button under the board. A tap sends
+every ranked entry, from the list the Decision Record kept when the
+board was built. The list is therefore the one the user read, and the
+tap costs no model call. A board of five or fewer entries has no
+button.
+
+### A long board goes out in parts
+
+A board longer than one Telegram message goes out as several messages,
+split between entries, with the buttons under the last. The outbox
+records each part Telegram accepts. A retry sends only the parts that
+are still missing, so the user never receives a part twice.
+
+### Held advice goes out under the board
+
+Role-slip advice held for the board goes out under "About your roster",
+after the entries, word for word as it passed its checks. It is
+forgotten once Telegram accepts the board. Its text lives in its own
+Decision Records; the board's record keeps the board alone.
