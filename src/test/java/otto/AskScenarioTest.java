@@ -67,29 +67,22 @@ class AskScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aLineupQuestionIsAnsweredFromTheRecommendLineupTool() {
+    void aLineupQuestionIsAnsweredWithTheCheckedLineupMessage() {
         snapshotWithABenchEdge();
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmCallsToolThenPhrases(llm, "recommend_lineup", "{}", LINEUP_PHRASE);
 
         ask("lineup");
 
-        // The user gets the model's narration, not raw tool JSON.
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing(LINEUP_PHRASE)));
-
-        // Two model calls: route to the tool, then narrate its result.
-        // The numbers reach the model from Java, never from the model.
-        llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("145.0"))
-                .withRequestBody(containing("148.5"))
-                .withRequestBody(containing("+3.5"))
-                .withRequestBody(containing("Josh Jacobs"))
-                .withRequestBody(containing("James Cook"))
-                .withRequestBody(containing("\\\"bench\\\""))
-                .withRequestBody(containing("\\\"reserve\\\""))
+                .withRequestBody(containing("Here's your week 2 lineup."))
+                .withRequestBody(containing(
+                        "I'd start Josh Jacobs over James Cook, a gain of 3.5 points."))
+                .withRequestBody(containing("projects 145.0 points, and this one projects 148.5"))
+                .withRequestBody(containing("----- BENCH -----"))
+                .withRequestBody(notContaining(LINEUP_PHRASE))
                 .withRequestBody(notContaining("99.9")));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
     }
 
     @ParameterizedTest
@@ -115,13 +108,9 @@ class AskScenarioTest extends WireSeamTest {
         OutboundStubs.llmCallsToolThenPhrases(llm, "recommend_lineup", "{}", LINEUP_PHRASE);
         ask("lineup");
 
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(
-                        "\\\"swaps\\\":[{\\\"start\\\":\\\"Dallas Goedert\\\","
-                                + "\\\"sit\\\":\\\"Travis Kelce\\\""))
-                .withRequestBody(notContaining(
-                        "\\\"start\\\":\\\"Josh Jacobs\\\","
-                                + "\\\"sit\\\":\\\"James Cook\\\"")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("I'd start Dallas Goedert over Travis Kelce"))
+                .withRequestBody(notContaining("I'd start Josh Jacobs over James Cook")));
     }
 
     /**
@@ -380,7 +369,7 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Use Telegram-friendly plain text"))
                 .withRequestBody(containing("----- STARTERS -----"))
                 .withRequestBody(containing("----- BENCH -----"))
-                .withRequestBody(containing("Move to starter"))
+                .withRequestBody(containing("recommend_lineup message"))
                 .withRequestBody(containing("Never put a label in front of an explanation"))
                 .withRequestBody(notContaining("Recommended Drop"))
                 .withRequestBody(containing("YOUR ROSTER AFTER TRADE"))

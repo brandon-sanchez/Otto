@@ -1,6 +1,7 @@
 package otto.lineup;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,20 @@ public record GameWeek(Map<String, SleeperAdapter.Game> byTeam) {
             byTeam.put(game.awayTeam(), game);
         }
         return new GameWeek(Map.copyOf(byTeam));
+    }
+
+    /** Every game of the week once, in kickoff order. */
+    public List<SleeperAdapter.Game> schedule() {
+        return byTeam.values().stream()
+                .distinct()
+                .sorted(Comparator.comparing(SleeperAdapter.Game::startTime)
+                        .thenComparing(SleeperAdapter.Game::homeTeam))
+                .toList();
+    }
+
+    /** True once Sleeper marks the game final. */
+    public static boolean complete(SleeperAdapter.Game game) {
+        return COMPLETE.equals(game.status());
     }
 
     public Optional<Instant> lockFor(String team) {
@@ -51,6 +66,6 @@ public record GameWeek(Map<String, SleeperAdapter.Game> byTeam) {
         SleeperAdapter.Game game = team == null ? null : byTeam.get(team);
         return game != null
                 && !now.isBefore(game.startTime())
-                && !COMPLETE.equals(game.status());
+                && !complete(game);
     }
 }
