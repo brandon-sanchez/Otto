@@ -3,16 +3,23 @@ package otto.nflverse;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
@@ -36,9 +43,22 @@ import static otto.nflverse.FeedRows.requireColumns;
  * Every release-asset feed runs through the same flow, driven by its
  * {@link FeedSpec} in {@link Feeds#ALL}. The player-id map has no
  * release index, so it keeps its own ETag flow.
+ *
+ * Each run logs its {@link Result#summary()} at INFO, so the logs show
+ * when each feed changed and when each week arrived in full.
  */
 @Component
 public class NflverseFeedService {
+
+    private static final Logger log = LoggerFactory.getLogger(NflverseFeedService.class);
+
+    /**
+     * How much earlier than a full interval a run may fire and still be
+     * due. The schedule fires once an hour, give or take a little, and
+     * a run that lands a moment short of a full interval since the last
+     * check must not wait a whole extra interval.
+     */
+    static final Duration SCHEDULE_JITTER = Duration.ofMinutes(1);
 
     private static final Set<String> PLAYER_ID_COLUMNS = Set.of(
             "sleeper_id", "gsis_id", "pfr_id", "position");
@@ -71,7 +91,17 @@ public class NflverseFeedService {
         record Unchanged() implements Update {
         }
 
-        record Downloaded(int rows) implements Update {
+        /**
+         * @param rows the rows kept from the file
+         * @param weeksCompleted the weeks of the stored season the feed
+         *        holds in full after this download and did not before,
+         *        oldest first
+         */
+        record Downloaded(int rows, List<Integer> weeksCompleted) implements Update {
+
+            public Downloaded {
+                weeksCompleted = List.copyOf(weeksCompleted);
+            }
         }
 
         record Unavailable(String source, String reason) implements Update {
@@ -92,6 +122,31 @@ public class NflverseFeedService {
             }
             return update;
         }
+
+        /**
+         * Returns one clause per source, such as "snap counts downloaded
+         * 120 rows, week 1 now complete", joined by semicolons.
+         */
+        public String summary() {
+            List<String> clauses = new ArrayList<>();
+            feeds.forEach((id, update) -> clauses.add(
+                    id.name().toLowerCase(Locale.ROOT).replace('_', ' ') + " " + describe(update)));
+            clauses.add("player ids " + describe(playerIds));
+            return String.join("; ", clauses);
+        }
+
+        private static String describe(Update update) {
+            return switch (update) {
+                case Update.Skipped _ -> "not due";
+                case Update.Unchanged _ -> "unchanged";
+                case Update.Unavailable unavailable -> "unavailable from %s: %s"
+                        .formatted(unavailable.source(), unavailable.reason());
+                case Update.Downloaded downloaded -> "downloaded %d rows%s".formatted(
+                        downloaded.rows(), downloaded.weeksCompleted().stream()
+                                .map(week -> ", week " + week + " now complete")
+                                .collect(Collectors.joining()));
+            };
+        }
     }
 
     /**
@@ -102,7 +157,9 @@ public class NflverseFeedService {
         Instant now = clock.instant();
         Map<FeedId, Update> feeds = new LinkedHashMap<>();
         Feeds.ALL.forEach(spec -> feeds.put(spec.id(), report(update(spec, now))));
-        return new Result(feeds, report(updatePlayerIds(now)));
+        Result result = new Result(feeds, report(updatePlayerIds(now)));
+        log.info("nflverse run: {}", result.summary());
+        return result;
     }
 
     private <R, D extends NflverseFeed> Update update(FeedSpec<R, D> spec, Instant now) {
@@ -148,7 +205,8 @@ public class NflverseFeedService {
                     Coverage coverage = Coverage.of(ok.value(), spec, published)
                             .carriedForward(previous, published);
                     store.write(spec, spec.document(basis, published, now, ok.value(), coverage));
-                    yield new Update.Downloaded(ok.value().size());
+                    yield new Update.Downloaded(ok.value().size(),
+                            weeksCompleted(spec, basis.season(), previous, coverage, now));
                 }
             };
         };
@@ -162,9 +220,44 @@ public class NflverseFeedService {
     }
 
     private boolean due(Optional<? extends NflverseFeed> stored, Instant now) {
-        return stored
-                .map(feed -> Duration.between(feed.checkedAt(), now).compareTo(checkInterval) >= 0)
-                .orElse(true);
+        return stored.map(feed -> due(feed.checkedAt(), now)).orElse(true);
+    }
+
+    private boolean due(Instant checkedAt, Instant now) {
+        return Duration.between(checkedAt, now)
+                .compareTo(checkInterval.minus(SCHEDULE_JITTER)) > 0;
+    }
+
+    /**
+     * Returns the weeks up to the schedule's latest completed one that
+     * the new coverage holds in full and the previous one did not.
+     * Empty for the schedule itself, which every week is measured
+     * against, for a feed with no weeks, and without a schedule.
+     */
+    private List<Integer> weeksCompleted(FeedSpec<?, ?> spec, String season,
+            Coverage previous, Coverage current, Instant now) {
+        if (spec.id() == FeedId.SCHEDULE || spec.grain() instanceof Grain.Whole<?>) {
+            return List.of();
+        }
+        Optional<Schedule> schedule = store.schedule();
+        OptionalInt latest = schedule
+                .map(held -> held.latestCompletedWeek(season))
+                .orElse(OptionalInt.empty());
+        if (latest.isEmpty()) {
+            return List.of();
+        }
+        return IntStream.rangeClosed(1, latest.getAsInt())
+                .filter(week -> complete(schedule.get(), spec, current, season, week, now))
+                .filter(week -> previous == null
+                        || !complete(schedule.get(), spec, previous, season, week, now))
+                .boxed()
+                .toList();
+    }
+
+    private static boolean complete(Schedule schedule, FeedSpec<?, ?> spec, Coverage coverage,
+            String season, int week, Instant now) {
+        return NflverseReadiness.status(schedule, spec.grain(), spec.due(), coverage, season,
+                week, now) instanceof WeekStatus.Complete;
     }
 
     /** What the timestamp check says to do about one release asset. */
@@ -258,8 +351,7 @@ public class NflverseFeedService {
 
     private Update updatePlayerIds(Instant now) {
         Optional<PlayerIdMap> stored = store.playerIds();
-        if (stored.isPresent() && Duration.between(stored.get().checkedAt(), now)
-                .compareTo(checkInterval) < 0) {
+        if (stored.isPresent() && !due(stored.get().checkedAt(), now)) {
             return new Update.Skipped();
         }
 
@@ -281,7 +373,7 @@ public class NflverseFeedService {
                 PlayerMappings mappings = ok.value().value();
                 store.writePlayerIds(new PlayerIdMap(ok.value().etag(), now,
                         mappings.sleeperToGsis(), mappings.sleeperToPfr()));
-                yield new Update.Downloaded(mappings.retainedPlayers());
+                yield new Update.Downloaded(mappings.retainedPlayers(), List.of());
             }
         };
     }

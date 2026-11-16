@@ -75,7 +75,8 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
     }
 
     private String nflverseFeeds() {
-        return "nflverse feeds: " + OttoRuntime.bean(NflverseFeedService.class).updateIfDue();
+        return "nflverse feeds: "
+                + OttoRuntime.bean(NflverseFeedService.class).updateIfDue().summary();
     }
 
     private String defenseVersusPosition() {

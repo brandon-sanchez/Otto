@@ -14,7 +14,9 @@ import static otto.nflverse.FeedRows.requireColumns;
 final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
 
     private static final Set<String> COLUMNS = Set.of(
-            "nflverse_game_id", "week", "nflverse_play_id", "date_pulled");
+            "nflverse_game_id", "week", "nflverse_play_id", "date_pulled", "read_thrown");
+
+    private static final String NO_THROW = "0";
 
     @Override
     public FeedId id() {
@@ -56,9 +58,15 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
                 return;
             }
             plays.add(new FtnCharting.Play(gameId, row.integer("week"),
-                    row.text("nflverse_play_id"), datePulled(row.text("date_pulled"))));
+                    row.text("nflverse_play_id"), datePulled(row.text("date_pulled")),
+                    readThrown(row.text("read_thrown"))));
         });
         return plays;
+    }
+
+    private static String readThrown(String value) {
+        String code = value.trim();
+        return blankOrNa(code) ? null : code;
     }
 
     private static Instant datePulled(String value) {
@@ -76,25 +84,37 @@ final class FtnChartingFeed implements FeedSpec<FtnCharting.Play, FtnCharting> {
     }
 
     /**
-     * Until charting columns are read, a game's content is which plays
-     * were charted. A bulk re-pull moves every stamp and changes nothing
-     * here.
+     * A game's content is which plays were charted and the read each
+     * throw went to. A bulk re-pull moves every stamp and changes
+     * nothing here.
      */
     @Override
     public Object content(FtnCharting.Play play) {
-        return play.playId();
+        return new ChartedPlay(play.playId(), play.readThrown());
+    }
+
+    private record ChartedPlay(String playId, String readThrown) {
+    }
+
+    @Override
+    public int contentVersion() {
+        return 2;
     }
 
     @Override
     public FtnCharting document(Basis basis, Instant assetUpdatedAt, Instant checkedAt,
             List<FtnCharting.Play> rows, Coverage coverage) {
-        return new FtnCharting(basis.season(), assetUpdatedAt, checkedAt, coverage);
+        List<FtnCharting.Read> reads = rows.stream()
+                .filter(play -> play.readThrown() != null && !NO_THROW.equals(play.readThrown()))
+                .map(play -> new FtnCharting.Read(play.gameId(), play.playId(), play.readThrown()))
+                .toList();
+        return new FtnCharting(basis.season(), assetUpdatedAt, checkedAt, coverage, reads);
     }
 
     @Override
     public FtnCharting recheck(FtnCharting current, Basis basis, Instant checkedAt) {
         return new FtnCharting(basis.season(), current.assetUpdatedAt(), checkedAt,
-                current.coverage());
+                current.coverage(), current.reads());
     }
 
     @Override

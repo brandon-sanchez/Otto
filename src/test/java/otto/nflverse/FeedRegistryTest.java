@@ -34,6 +34,9 @@ class FeedRegistryTest {
                 FeedId.SNAP_COUNTS, "nflverse-snap-counts",
                 FeedId.WEEKLY_ROSTERS, "nflverse-weekly-rosters",
                 FeedId.DEPTH_CHARTS, "nflverse-depth-charts",
-                FeedId.FTN_CHARTING, "nflverse-ftn-charting"));
+                FeedId.FTN_CHARTING, "nflverse-ftn-charting",
+                FeedId.PLAY_BY_PLAY, "nflverse-play-by-play",
+                FeedId.EXPECTED_POINTS, "ffopportunity-expected-points",
+                FeedId.PLAYERS, "nflverse-players"));
     }
 }
