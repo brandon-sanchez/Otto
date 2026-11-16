@@ -1,6 +1,7 @@
 package otto.records;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -8,19 +9,34 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * How the run ended: one message sent, a message built for a dry run
- * and kept unsent, a message held for the next waiver board, or nothing
- * sent and why.
+ * and kept unsent, a message held for the next waiver board, nothing
+ * sent and why, or a run that never had a message to send.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
         @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
         @JsonSubTypes.Type(value = Outcome.HeldForBoard.class, name = "held-for-board"),
-        @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld")})
+        @JsonSubTypes.Type(value = Outcome.Withheld.class, name = "withheld"),
+        @JsonSubTypes.Type(value = Outcome.Silent.class, name = "silent")})
 public sealed interface Outcome {
 
     /** @param message the text the user received */
     record Sent(String message) implements Outcome {
+    }
+
+    /**
+     * One claim a waiver board recommended, as the board comparison
+     * judges it.
+     *
+     * @param drop the id of the rostered player the claim replaces,
+     *        empty when an open roster spot takes him
+     */
+    record BoardPick(String playerId, Optional<String> drop) {
+
+        public BoardPick {
+            drop = drop == null ? Optional.empty() : drop;
+        }
     }
 
     /**
@@ -29,11 +45,16 @@ public sealed interface Outcome {
      *
      * @param messages the Telegram messages it would have gone out as,
      *        in order, each inside Telegram's length limit
+     * @param picks the claims a dry-run waiver board recommended, best
+     *        first, and none when it told the user to hold; empty in a
+     *        record that keeps none, whose picks are read back from its
+     *        exchanges
      */
-    record DryRun(List<String> messages) implements Outcome {
+    record DryRun(List<String> messages, Optional<List<BoardPick>> picks) implements Outcome {
 
         public DryRun {
             messages = List.copyOf(messages);
+            picks = picks == null ? Optional.empty() : picks.map(List::copyOf);
         }
     }
 
@@ -58,5 +79,14 @@ public sealed interface Outcome {
      * @param reason why, for whoever reads the record
      */
     record Withheld(String reason) implements Outcome {
+    }
+
+    /**
+     * A run that by design has no message, such as the baseline boards
+     * kept only to judge the waiver board against.
+     *
+     * @param reason why the run was never meant to send anything
+     */
+    record Silent(String reason) implements Outcome {
     }
 }

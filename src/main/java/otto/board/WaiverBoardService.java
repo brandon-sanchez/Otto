@@ -147,11 +147,10 @@ public class WaiverBoardService {
             log.info("The waiver board waits for the model: {}", unavailable.reason());
             return Optional.empty();
         }
-        List<String> notes = data.complete() ? List.of() : List.of(data.notice());
+        LeagueBudget budget = LeagueBudget.of(league);
         Outcome outcome = switch (result) {
-            case AdviceResult.Approved<BoardAnswer> approved -> new Outcome.DryRun(
-                    BoardMessage.render(approved.answer(), screen, LeagueBudget.of(league),
-                            notes));
+            case AdviceResult.Approved<BoardAnswer> approved -> dryRun(approved.answer(),
+                    screen, budget, data.complete() ? List.of() : List.of(data.notice()));
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.Withheld(
                     "The board failed its checks twice: " + String.join(" ", rejected.failures()));
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
@@ -172,6 +171,15 @@ public class WaiverBoardService {
     private DecisionRecord.Builder boardRecord(ClaimRound round, LeagueWeek league) {
         return DecisionRecord.forRun(round.boardRunId(), RunKind.WAIVER_BOARD, round.now(),
                 userId, round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()));
+    }
+
+    private static Outcome dryRun(BoardAnswer answer, WaiverEvidence.Screen screen,
+            LeagueBudget budget, List<String> notes) {
+        List<Outcome.BoardPick> picks = answer.hold() ? List.of() : answer.picks().stream()
+                .map(entry -> new Outcome.BoardPick(entry.playerId(), entry.drop()))
+                .toList();
+        return new Outcome.DryRun(BoardMessage.render(answer, screen, budget, notes),
+                Optional.of(picks));
     }
 
     private JsonNode preferences(RoundPreference preference) {

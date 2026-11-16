@@ -232,6 +232,25 @@ class DecisionRecordStorageScenarioTest {
     }
 
     @Test
+    void anOutcomeRecordIsStoredBesideItsRunAndNeverRewritten() {
+        records.saveOutcome("owner", "league-1", "20261010T153000Z-3f9a1c2e",
+                Map.of("leadGain", 21.5));
+        records.saveOutcome("owner", "league-1", "20261010T153000Z-3f9a1c2e",
+                Map.of("leadGain", 21.5));
+
+        assertThat(s3.keys()).containsExactly(
+                "outcomes/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json");
+        assertThat(records.readOutcome("owner", "league-1", "20261010T153000Z-3f9a1c2e",
+                JsonNode.class)).hasValueSatisfying(outcome ->
+                        assertThat(outcome.path("leadGain").asDouble()).isEqualTo(21.5));
+        assertThatThrownBy(() -> records.saveOutcome("owner", "league-1",
+                "20261010T153000Z-3f9a1c2e", Map.of("leadGain", 0.0)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(records.readOutcome("owner", "league-1", "20261017T153000Z-4b5c6d7e",
+                JsonNode.class)).isEmpty();
+    }
+
+    @Test
     void aSaveThatLosesARaceToItsOwnRetryConverges() {
         DecisionRecord saved = record("owner", "league-1", "20261010T153000Z-3f9a1c2e");
         s3.loseNextPutToAnIdenticalWriter();
@@ -250,6 +269,8 @@ class DecisionRecordStorageScenarioTest {
         records.saveFirst(record("owner", "league-2", "20261011T090000Z-0b1c2d3e"));
         records.saveFirst(record("owner", "league-2", "20261018T090000Z-1c2d3e4f"));
         records.saveFirst(record("owner-2", "league-1", "20261010T153000Z-77aa88bb"));
+        records.saveOutcome("owner", "league-2", "20261011T090000Z-0b1c2d3e",
+                Map.of("judged", true));
         s3.expire("article-text/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json");
 
         records.deleteUser("owner");
@@ -258,6 +279,7 @@ class DecisionRecordStorageScenarioTest {
                 .as("no version is left to read back").isEmpty();
         assertThat(s3.versionsUnder("article-text/user=owner/"))
                 .as("no version and no delete marker an expiry left is kept").isEmpty();
+        assertThat(s3.versionsUnder("outcomes/user=owner/")).isEmpty();
         assertThat(s3.keys()).containsExactlyInAnyOrder(
                 "records/user=owner-2/league=league-1/run=20261010T153000Z-77aa88bb.json",
                 "article-text/user=owner-2/league=league-1/run=20261010T153000Z-77aa88bb.json");

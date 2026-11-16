@@ -2,6 +2,7 @@ package otto.records;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +27,11 @@ import otto.storage.OttoJson;
  * {@code records/user=<userId>/league=<leagueId>/run=<runId>.json}.
  * Everything one user owns sits under one prefix, so deleting an
  * account is one prefix per object kind and cannot miss a league.
+ *
+ * <p>What a run's advice turned out to be worth is only known after
+ * the games, so it is written later as an outcome record, under
+ * {@code outcomes/} with the run id of the record it judges. It is
+ * kept as long as the record is.
  *
  * <p>Copied article text expires sooner than the facts around it. It is
  * lifted out of the record and stored beside it under
@@ -57,6 +63,7 @@ public class DecisionRecords {
 
     private static final String RECORDS = "records";
     private static final String ARTICLE_TEXT = "article-text";
+    private static final String OUTCOMES = "outcomes";
 
     /** Ids become key segments, so nothing in one may reshape a key. */
     private static final Pattern KEY_SEGMENT = Pattern.compile("[A-Za-z0-9_-]+");
@@ -142,7 +149,26 @@ public class DecisionRecords {
     }
 
     /**
-     * Deletes every record and article text one user
+     * Stores the outcome record that judges one run, under the run's id.
+     * Like a record it is written once: the same outcome saved again
+     * converges, and a different one is refused.
+     *
+     * @throws IllegalStateException when this run already has a
+     *         different outcome record
+     */
+    public void saveOutcome(String userId, String leagueId, String runId, Object outcome) {
+        writeOnce(key(OUTCOMES, userId, leagueId, runId), outcome);
+    }
+
+    /** The outcome record that judges one run, or empty when none is stored yet. */
+    public <T> Optional<T> readOutcome(String userId, String leagueId, String runId,
+            Class<T> type) {
+        return objects.get(key(OUTCOMES, userId, leagueId, runId))
+                .map(bytes -> parse(bytes, OttoJson.MAPPER.constructType(type)));
+    }
+
+    /**
+     * Deletes every record, outcome record and article text one user
      * has, in every league, every stored version included.
      *
      * <p>The bucket holds objects under governance-mode retention, so a
@@ -156,6 +182,20 @@ public class DecisionRecords {
     public void deleteUser(String userId) {
         objects.deleteAll(userPrefix(RECORDS, userId));
         objects.deleteAll(userPrefix(ARTICLE_TEXT, userId));
+        objects.deleteAll(userPrefix(OUTCOMES, userId));
+    }
+
+    private void writeOnce(String key, Object value) {
+        byte[] bytes = json(redacted(OttoJson.MAPPER.valueToTree(value)));
+        if (objects.putIfAbsent(key, bytes)) {
+            return;
+        }
+        byte[] stored = objects.get(key).orElseThrow(() -> new IllegalStateException(
+                "Decision Record object " + key + " was refused as present but cannot be read"));
+        if (!Arrays.equals(stored, bytes)) {
+            throw new IllegalStateException("Decision Record object " + key
+                    + " already holds a different record; a run id is never rewritten");
+        }
     }
 
     private JsonNode redacted(JsonNode node) {

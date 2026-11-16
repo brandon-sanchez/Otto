@@ -52,19 +52,26 @@ public class WaiverAlertService {
     }
 
     /**
+     * Returns this Check's scored board, ranked on its first read. The
+     * Check makes one and hands it to the waiver Alert and the waiver
+     * baselines, so they rank once between them.
+     */
+    public ScoredBoard scoredBoard(LeagueWeek league, Instant now) {
+        return new ScoredBoard(scorer, league, now);
+    }
+
+    /**
      * Sends this round's waiver Alert if it is due and has not gone out
      * yet.
      *
-     * <p>Side effects: the waiver ranking's reads, the phrasing model
+     * <p>Side effects: the scored board's reads, the phrasing model
      * call, and {@link BoardDelivery}'s writes and sends.
      *
      * @return the Event recorded for a sent Alert, empty otherwise
      */
-    public Optional<Event> considerWaiverAlert(LeagueWeek league, Instant now) {
-        Optional<ClaimRound> round = ClaimRound.next(league.league(), now);
-        if (round.isEmpty()
-                || !round.get().open()
-                || delivery.alreadySent(round.get())
+    public Optional<Event> considerWaiverAlert(ClaimRound round, ScoredBoard scored) {
+        if (!round.open()
+                || delivery.alreadySent(round)
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
             return Optional.empty();
@@ -74,12 +81,11 @@ public class WaiverAlertService {
         // could not build one - or built an empty one - tries again on
         // the next minute inside the window. A board that never
         // computed is not a board that was sent.
-        return switch (scorer.rank(league, now,
-                WaiverQuery.everyPosition(WaiverQuery.ALERT_COUNT))) {
+        return switch (scored.get()) {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
-                    : send(round.get(), ok.value());
+                    : send(round, ok.value());
         };
     }
 
@@ -100,10 +106,10 @@ public class WaiverAlertService {
                 Confidence.MEDIUM,
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
-
         return delivery.deliverPhrased(round, phraser.basis(facts, recommendation),
                 () -> phraser.phrase(facts, recommendation), facts);
     }
+
 
     /** One target, as the outbound message would say it. */
     private static String headline(WaiverCandidate candidate) {

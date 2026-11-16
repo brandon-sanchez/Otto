@@ -14,9 +14,9 @@ import otto.sleeper.SleeperAdapter;
 /**
  * The league's next claim round as one Check sees it: the claim
  * deadline, when the round's waiver board is due and the latest it goes
- * out, the key its Alert is sent under, and the run id its
- * evidence-based board is recorded under. Both waiver boards and the
- * role-slip advice held for a board read the round here, so none of
+ * out, the key its Alert is sent under, and the run ids its board and
+ * baselines are recorded under. Both waiver boards, the baselines and
+ * the role-slip advice held for a board read the round here, so none of
  * them depends on another.
  *
  * @param leagueId the Sleeper league the round belongs to
@@ -37,6 +37,7 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
     public static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
 
     private static final String BOARD_RUN_PREFIX = "waiver-board-";
+    private static final String BASELINES_RUN_PREFIX = "waiver-baselines-";
 
     /**
      * Returns the league's next claim round, empty when its claim day
@@ -89,5 +90,10 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
      */
     public String boardRunId() {
         return RunIds.stable(BOARD_RUN_PREFIX, leagueId, deadline.toInstant().toString());
+    }
+
+    /** Returns the run id of the round's baselines, derived as {@link #boardRunId} is. */
+    public String baselinesRunId() {
+        return RunIds.stable(BASELINES_RUN_PREFIX, leagueId, deadline.toInstant().toString());
     }
 }
