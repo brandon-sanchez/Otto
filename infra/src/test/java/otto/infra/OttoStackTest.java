@@ -61,6 +61,22 @@ class OttoStackTest {
                 "SnapStart", Map.of("ApplyOn", "PublishedVersions")));
     }
 
+    /**
+     * The app sizes its model budgets to these timeouts: the Ask
+     * budget in {@code application.yml} to the webhook's and the Check
+     * budget to the scheduled function's, which
+     * {@code AwsEntryPointScenarioTest} pins on the app side.
+     */
+    @Test
+    void theFunctionTimeoutsAreTheOnesTheAppsBudgetsFit() {
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.WebhookHandler",
+                "Timeout", 60));
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.ScheduledHandler",
+                "Timeout", 300));
+    }
+
     @Test
     void theCheckLoopRunsOneAtATime() {
         template.hasResourceProperties("AWS::Lambda::Function", Map.of(
@@ -471,6 +487,27 @@ class OttoStackTest {
                 .allSatisfy(resource -> assertThat((List<?>) resource)
                         .as("the path itself, and the parameters under it")
                         .hasSize(2));
+    }
+
+    @Test
+    void theFallbackModelKeysAreCoveredByTheSecretsGrant() {
+        List<String> resources = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (String.valueOf(statement.get("Action")).contains("ssm:GetParameter")) {
+                    ((List<?>) statement.get("Resource"))
+                            .forEach(resource -> resources.add(String.valueOf(resource)));
+                }
+            }
+        }
+
+        assertThat(resources)
+                .as("a wildcard under the path, so otto.models.anthropic.api-key and "
+                        + "otto.models.gemini.api-key are readable without naming them")
+                .anySatisfy(resource -> assertThat(resource).contains(":parameter/otto/prod/*"));
     }
 
     @Test

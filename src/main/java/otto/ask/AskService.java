@@ -9,12 +9,13 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
+
+import otto.model.ModelChain;
 
 /**
  * Lane A: the Ask loop. Free text goes to a tool-calling agent loop
@@ -125,14 +126,14 @@ public class AskService {
 
     private static final Logger log = LoggerFactory.getLogger(AskService.class);
 
-    private final ChatClient chat;
+    private final ModelChain chain;
     private final AskTools tools;
     private final ConversationStore conversation;
     private final Clock clock;
 
-    public AskService(ChatClient.Builder builder, AskTools tools,
+    public AskService(ModelChain chain, AskTools tools,
             ConversationStore conversation, Clock clock) {
-        this.chat = builder.build();
+        this.chain = chain;
         this.tools = tools;
         this.conversation = conversation;
         this.clock = clock;
@@ -174,27 +175,25 @@ public class AskService {
      * the assistant can see.
      */
     private Outcome run(String question, Instant now) {
-        try {
-            String content = chat.prompt()
-                    .messages(prompt(question, now))
+        List<Message> messages = prompt(question, now);
+        return switch (chain.call(ModelChain.CallSite.ASK, turn -> {
+            String content = turn.timed(() -> turn.provider().chat().prompt()
+                    .messages(messages)
                     .tools(tools)
                     .call()
-                    .content();
+                    .content());
             if (content == null || content.isBlank()) {
-                log.warn("The model answered with no content");
-                return new Outcome.Failed(EMPTY_ANSWER);
+                throw new ModelChain.UnusableReply("The model answered with no content.");
             }
-            return new Outcome.Answered(content);
-        } catch (Exception e) {
-            // A wrapped interrupt must not die here: restore the flag
-            // so whatever runs this thread next still sees it.
-            if (e instanceof InterruptedException
-                    || e.getCause() instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
+            return content;
+        })) {
+            case ModelChain.Result.Answered<String> answered ->
+                    new Outcome.Answered(answered.value());
+            case ModelChain.Result.Exhausted<String> exhausted -> {
+                log.warn("Ask loop failed: {}", exhausted.reason());
+                yield new Outcome.Failed(exhausted.anyReached() ? EMPTY_ANSWER : UNREACHABLE);
             }
-            log.warn("Ask loop failed, answering with the outage reply", e);
-            return new Outcome.Failed(UNREACHABLE);
-        }
+        };
     }
 
     private List<Message> prompt(String question, Instant now) {
