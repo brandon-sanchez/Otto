@@ -52,6 +52,10 @@ import otto.storage.OttoJson;
  *
  * <p>The run id is {@link ClaimRound#boardRunId}, so every Check in the
  * window finds the round's record and builds nothing again.
+ *
+ * <p>The board follows the {@link WaiverPreference} set for its own
+ * claim round and no other, and the Decision Record keeps it beside the
+ * Settings as the run's preferences.
  */
 @Component
 public class WaiverBoardService {
@@ -64,17 +68,19 @@ public class WaiverBoardService {
     private final AdviceCheck check;
     private final RunOutcomes runs;
     private final SettingsStore settings;
+    private final WaiverPreferences preferences;
     private final String userId;
 
     public WaiverBoardService(WaiverEvidence evidence, LatestWeekData latestWeek,
             AdviceWriter writer, AdviceCheck check, RunOutcomes runs, SettingsStore settings,
-            OttoProperties properties) {
+            WaiverPreferences preferences, OttoProperties properties) {
         this.evidence = evidence;
         this.latestWeek = latestWeek;
         this.writer = writer;
         this.check = check;
         this.runs = runs;
         this.settings = settings;
+        this.preferences = preferences;
         this.userId = properties.userId();
     }
 
@@ -111,22 +117,28 @@ public class WaiverBoardService {
                     String.join("; ", data.missing()));
             return Optional.empty();
         }
-        return switch (evidence.screen(league, round.deadline(), round.now(), data)) {
+        RoundPreference preference = preferences.forRound(round)
+                .map(RoundPreference::of)
+                .orElseGet(RoundPreference::none);
+        return switch (evidence.screen(league, round.deadline(), preference, round.now(), data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
-                    Optional.of(boardRecord(round, league).outcome(new Outcome.Withheld(
-                            "The free agents could not be screened: " + unavailable.reason())));
+                    Optional.of(boardRecord(round, league)
+                            .preferences(preferences(RoundPreference.none()))
+                            .outcome(new Outcome.Withheld("The free agents could not be "
+                                    + "screened: " + unavailable.reason())));
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board waits: {}", unavailable.reason());
                 yield Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok ->
-                    write(round, league, ok.value(), data);
+                    write(round, league, ok.value(), preference, data);
         };
     }
 
     private Optional<DecisionRecord> write(ClaimRound round, LeagueWeek league,
-            WaiverEvidence.Screen screen, LatestWeekData.Report data) {
-        BoardForm form = new BoardForm(check, screen.candidates(),
+            WaiverEvidence.Screen screen, RoundPreference preference,
+            LatestWeekData.Report data) {
+        BoardForm form = new BoardForm(check, screen.candidates(), preference.focus(),
                 new BidCheck(screen.bidding().policy(), screen.user(),
                         league.league().activeRosterSpots(), screen.candidates()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
@@ -148,6 +160,7 @@ public class WaiverBoardService {
         return Optional.of(boardRecord(round, league)
                 .roster(new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
                         screen.bidding().policy().budget()))
+                .preferences(preferences(preference))
                 .candidates(screen.screened())
                 .comparisons(screen.comparisons())
                 .evidence(screen.bundle().recorded())
@@ -158,13 +171,13 @@ public class WaiverBoardService {
 
     private DecisionRecord.Builder boardRecord(ClaimRound round, LeagueWeek league) {
         return DecisionRecord.forRun(round.boardRunId(), RunKind.WAIVER_BOARD, round.now(),
-                userId, round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()))
-                .preferences(preferences());
+                userId, round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()));
     }
 
-    private JsonNode preferences() {
+    private JsonNode preferences(RoundPreference preference) {
         Map<String, Object> active = new LinkedHashMap<>();
         active.put("settings", settings.current());
+        active.put("waiverPreference", preference.stated().orElse(null));
         return OttoJson.MAPPER.valueToTree(active);
     }
 }

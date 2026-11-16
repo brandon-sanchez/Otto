@@ -43,6 +43,10 @@ public class AskService {
             He makes every roster change himself in the Sleeper app, so
             recommend and never claim to have acted.
 
+            A waiver preference is in force only while
+            manage_waiver_preferences reports it, whatever the
+            conversation said before.
+
             Use Telegram-friendly plain text. Ordinary factual answers stay
             conversational. Structured answers follow these exact contracts.
 
