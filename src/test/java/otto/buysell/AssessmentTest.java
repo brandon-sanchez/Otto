@@ -7,6 +7,7 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import otto.nflverse.DepthCharts;
 import otto.nflverse.Schedule;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,14 +93,48 @@ class AssessmentTest {
     }
 
     @Test
-    void aTeamWhoseLatestGameWasStartedByAnotherQuarterbackHasMovedToABackup() {
-        Schedule schedule = new Schedule("2026", KICKOFF, KICKOFF, null, List.of(
-                game(1, "QB1"), game(2, "QB1"), game(3, "QB2")));
+    void aOneGameFillInForTheChartedStarterIsABackup() {
+        Schedule schedule = schedule("QB1", "QB1", "QB2");
 
-        TeamContext context = TeamContext.of(schedule, "2026", Optional.empty(),
-                receiver(3, 10, 10), Optional.empty());
+        TeamContext context = TeamContext.of(schedule, Optional.of(chart("QB1")), "2026",
+                Optional.empty(), receiver(3, 10, 10), Optional.empty());
 
         assertThat(context.backupQuarterback()).isTrue();
+    }
+
+    @Test
+    void aPermanentSwitchToTheChartedStarterIsNotABackup() {
+        Schedule schedule = schedule("QB1", "QB1", "QB2", "QB2");
+
+        TeamContext context = TeamContext.of(schedule, Optional.of(chart("QB2")), "2026",
+                Optional.empty(), receiver(4, 10, 10), Optional.empty());
+
+        assertThat(context.backupQuarterback()).isFalse();
+    }
+
+    @Test
+    void withoutADepthChartNoQuarterbackCountsAsABackup() {
+        Schedule schedule = schedule("QB1", "QB1", "QB2");
+
+        TeamContext context = TeamContext.of(schedule, Optional.empty(), "2026",
+                Optional.empty(), receiver(3, 10, 10), Optional.empty());
+
+        assertThat(context.backupQuarterback()).isFalse();
+    }
+
+    private static Schedule schedule(String... starters) {
+        return new Schedule("2026", KICKOFF, KICKOFF, null, IntStream
+                .rangeClosed(1, starters.length)
+                .mapToObj(week -> game(week, starters[week - 1]))
+                .toList());
+    }
+
+    private static DepthCharts chart(String quarterbackOne) {
+        return new DepthCharts("2026", KICKOFF, KICKOFF, null, List.of(
+                new DepthCharts.Spot("QB9", "Other Starter", "NYG", "QB", 1, 1, KICKOFF, null),
+                new DepthCharts.Spot("QB8", "Dallas Backup", "DAL", "QB", 2, 2, KICKOFF, null),
+                new DepthCharts.Spot(quarterbackOne, "Dallas Starter", "DAL", "QB", 1, 1,
+                        KICKOFF, null)));
     }
 
     private static Schedule.Game game(int week, String quarterback) {

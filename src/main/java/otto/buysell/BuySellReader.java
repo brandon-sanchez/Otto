@@ -18,6 +18,7 @@ import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketPlayer;
 import otto.market.MarketValues;
+import otto.nflverse.DepthCharts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
 import otto.nflverse.Schedule;
@@ -28,9 +29,10 @@ import otto.sleeper.SourceResult;
 /**
  * Gathers what the buy-low and sell-high rules read about a league's
  * players: both seasons of ffopportunity, the schedule's quarterbacks
- * and coaches, this season's snap counts, the Player Directory's injury
- * designations, and the league format's FantasyCalc list for each
- * player's 30-day value trend and average draft position.
+ * and coaches, the newest depth charts, this season's snap counts, the
+ * Player Directory's injury designations, and the league format's
+ * FantasyCalc list for each player's 30-day value trend and average
+ * draft position.
  */
 @Component
 public class BuySellReader {
@@ -79,7 +81,8 @@ public class BuySellReader {
                             Optional.empty();
                 };
         return new SourceResult.Ok<>(new Board(seasons.get(), ids.get(),
-                nflverse.schedule(), snapShares(seasons.get().season()),
+                nflverse.schedule(), nflverse.depthCharts(),
+                snapShares(seasons.get().season()),
                 directory.read().map(PlayerDirectory::players).orElse(Map.of()), market));
     }
 
@@ -107,16 +110,18 @@ public class BuySellReader {
         private final SeasonRecords seasons;
         private final PlayerIdMap ids;
         private final Optional<Schedule> schedule;
+        private final Optional<DepthCharts> depthCharts;
         private final Map<String, List<Double>> snaps;
         private final Map<String, DirectoryPlayer> players;
         private final Optional<Market> market;
 
         private Board(SeasonRecords seasons, PlayerIdMap ids, Optional<Schedule> schedule,
-                Map<String, List<Double>> snaps, Map<String, DirectoryPlayer> players,
-                Optional<Market> market) {
+                Optional<DepthCharts> depthCharts, Map<String, List<Double>> snaps,
+                Map<String, DirectoryPlayer> players, Optional<Market> market) {
             this.seasons = seasons;
             this.ids = ids;
             this.schedule = schedule;
+            this.depthCharts = depthCharts;
             this.snaps = snaps;
             this.players = players;
             this.market = market;
@@ -144,8 +149,8 @@ public class BuySellReader {
             Optional<PlayerSeason> last = seasons.fullLastSeason(season.gsisId());
             Optional<MarketPlayer> row = market.flatMap(list -> list.day().entry(sleeperId));
             TeamContext context = schedule
-                    .map(games -> TeamContext.of(games, seasons.season(), seasons.lastSeason(),
-                            season, last))
+                    .map(games -> TeamContext.of(games, depthCharts, seasons.season(),
+                            seasons.lastSeason(), season, last))
                     .orElse(TeamContext.UNKNOWN);
             return new Assessment.Subject(season, last,
                     seasons.lastSeasonFinish(season.gsisId()),

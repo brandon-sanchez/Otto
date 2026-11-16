@@ -59,6 +59,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       on price alone.
  *   <li>Jaxon Smith-Njigba, on the user's team: 12.5 points a game above
  *       his xFP of 22.2. A sell-high, and his value is up 30%.
+ *   <li>Colston Loveland: xFP down 31%, a role decline. Chicago's week 3
+ *       starter was not its week 1 starter; whether that also rules him
+ *       out turns on Chicago's newest depth chart, because a new QB1 is
+ *       the team's starter, not a backup.
  * </ul>
  */
 class BuyLowSellHighScenarioTest extends WireSeamTest {
@@ -73,6 +77,7 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
     private static final String SUTTON = "5045";
     private static final String MCBRIDE = "8130";
     private static final String SMITH_NJIGBA = "9488";
+    private static final String LOVELAND = "12517";
 
     private static final String NARRATION = "Here are your buy-lows and sell-highs.";
 
@@ -92,11 +97,16 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
     private OttoProperties properties;
 
     private void theThirdWeekIsOnDisk(String directory) {
+        theThirdWeekIsOnDisk(directory, "nflverse/depth-charts-2026.csv");
+    }
+
+    private void theThirdWeekIsOnDisk(String directory, String depthCharts) {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH, directory, "players-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, "sleeper/rosters-buy-sell.json",
                 "rosters-v1");
         NflverseStubs.healthy(nflverse);
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.DEPTH_2026_PATH, depthCharts);
         NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH,
                 "nflverse/games-buy-sell.csv");
         NflverseStubs.stubCsv(nflverse, NflverseStubs.EXPECTED_POINTS_2026_PATH,
@@ -288,6 +298,40 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         assertThat(evidence().get("buysell-" + PICKENS))
                 .containsEntry("call", "neither a buy-low nor a sell-high")
                 .containsEntry("ruledOutAsBuyLow", "he is listed as Questionable");
+    }
+
+    @Test
+    void aPermanentSwitchToTheChartedStarterIsNotABackupQuarterback() {
+        theThirdWeekIsOnDisk("sleeper/players-nfl-buy-sell.json",
+                "nflverse/depth-charts-buy-sell-new-starter.csv");
+        String message = "Colston Loveland is a role decline, not a buy-low: his xFP a game "
+                + "is down 31% from last season.";
+        OutboundStubs.llmCallsToolThenPhrases(llm, TOOL, "{\"player\":\"Colston Loveland\"}",
+                NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(message, LOVELAND));
+
+        ask("is Colston Loveland a buy-low?");
+
+        assertThat(evidence().get("buysell-" + LOVELAND))
+                .containsEntry("call", "role decline")
+                .doesNotContainKey("ruledOutAsBuyLow");
+    }
+
+    @Test
+    void aOneGameFillInForTheChartedStarterIsABackupQuarterback() {
+        theThirdWeekIsOnDisk("sleeper/players-nfl-buy-sell.json",
+                "nflverse/depth-charts-buy-sell-fill-in.csv");
+        String message = "Colston Loveland is not a buy-low while Chicago starts a backup "
+                + "quarterback.";
+        OutboundStubs.llmCallsToolThenPhrases(llm, TOOL, "{\"player\":\"Colston Loveland\"}",
+                NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(message, LOVELAND));
+
+        ask("is Colston Loveland a buy-low?");
+
+        assertThat(evidence().get("buysell-" + LOVELAND))
+                .containsEntry("ruledOutAsBuyLow",
+                        "his team started a backup quarterback in its latest game");
     }
 
     @Test
