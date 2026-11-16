@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.stereotype.Component;
@@ -20,8 +21,8 @@ import otto.directory.PlayerLookup;
  * The chat side of the Settings document and the mute list. There is no
  * settings screen by design, so this is the only way the user shapes
  * how loud the assistant is: which triggers fire, how big a point edge
- * is worth a message, where the Notable Player line sits, and what is
- * silenced.
+ * is worth a message, where the Notable Player line sits, the most he
+ * will bid on one waiver claim, and what is silenced.
  *
  * Settings and mutes answer through one view because the user thinks of
  * them as one question - "what will you tell me about?" - and the spec
@@ -30,13 +31,16 @@ import otto.directory.PlayerLookup;
 @Component
 public class SettingsService {
 
-    /** The setting name for the edge threshold, as the chat spells it. */
     private static final String EDGE_THRESHOLD = "edge_threshold";
 
     /** The prefix of a Notable Player cutoff name: notable_qb and kin. */
     private static final String NOTABLE = "notable_";
 
-    /** The quiet-hours field exists in v1 and stays empty. */
+    private static final String MAX_BID = "max_bid";
+
+    private static final Set<String> NO_LIMIT = Set.of("none", "off", "no_limit", "clear");
+
+    /** The quiet-hours field, which always stays empty. */
     private static final String QUIET_HOURS = "quiet_hours";
 
     private static final String QUIET_HOURS_REFUSAL =
@@ -59,6 +63,8 @@ public class SettingsService {
      *
      * @param outcome what the requested action did, in one line
      * @param triggers each Alert trigger and whether it is on
+     * @param maxBid the most the user will bid on one waiver claim, as
+     *        {@code $N}, or {@code none}
      * @param muted the mute list in compact form
      */
     public record View(
@@ -67,6 +73,7 @@ public class SettingsService {
             @JsonProperty("edge_threshold") String edgeThreshold,
             @JsonProperty("notable_player_cutoffs") Map<String, Integer> notablePlayerCutoffs,
             @JsonProperty("quiet_hours") String quietHours,
+            @JsonProperty("max_bid") String maxBid,
             List<String> muted) {
     }
 
@@ -103,6 +110,9 @@ public class SettingsService {
         }
         if (setting.startsWith(NOTABLE)) {
             return setNotableCutoff(setting, value);
+        }
+        if (MAX_BID.equals(setting)) {
+            return setMaxBid(value);
         }
         return ToolAnswer.unavailable(
                 "I have no setting called %s. I keep %s.".formatted(setting, settingNames()));
@@ -147,6 +157,22 @@ public class SettingsService {
         store.change(settings -> settings.withNotablePlayerCutoff(position, rank.get()));
         return ToolAnswer.of(view("a %s inside the top %d now counts as notable"
                 .formatted(position, rank.get())));
+    }
+
+    private ToolAnswer<View> setMaxBid(String value) {
+        if (NO_LIMIT.contains(normalize(value))) {
+            store.change(settings -> settings.withMaxBid(null));
+            return ToolAnswer.of(view("there is no limit on one waiver bid now"));
+        }
+        Optional<Integer> dollars = dollars(value);
+        if (dollars.isEmpty()) {
+            return ToolAnswer.unavailable(
+                    "the bid limit is a whole number of dollars, or none; I cannot read %s"
+                            .formatted(value));
+        }
+        store.change(settings -> settings.withMaxBid(dollars.get()));
+        return ToolAnswer.of(view("no waiver bid will go above $%d now"
+                .formatted(dollars.get())));
     }
 
     // Mutes
@@ -230,7 +256,8 @@ public class SettingsService {
             cutoffs.put(cutoffName(position), settings.notableCutoff(position));
         }
         return new View(outcome, triggers, format(settings.edgeThreshold()),
-                cutoffs, settings.quietHours(), muteList());
+                cutoffs, settings.quietHours(),
+                settings.bidLimit().map(limit -> "$" + limit).orElse("none"), muteList());
     }
 
     /**
@@ -261,8 +288,8 @@ public class SettingsService {
     }
 
     private String settingNames() {
-        return "%s, %s, %s and %s".formatted(triggerNames(), EDGE_THRESHOLD,
-                String.join(", ", notableNames()), QUIET_HOURS);
+        return "%s, %s, %s, %s and %s".formatted(triggerNames(), EDGE_THRESHOLD,
+                String.join(", ", notableNames()), MAX_BID, QUIET_HOURS);
     }
 
     private static String triggerNames() {
@@ -315,6 +342,18 @@ public class SettingsService {
         try {
             int rank = Integer.parseInt(value.trim());
             return rank >= 1 ? Optional.of(rank) : Optional.empty();
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<Integer> dollars(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            int dollars = Integer.parseInt(value.trim().replaceFirst("^\\$", ""));
+            return dollars >= 0 ? Optional.of(dollars) : Optional.empty();
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
