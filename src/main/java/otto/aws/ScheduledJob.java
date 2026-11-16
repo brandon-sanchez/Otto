@@ -3,13 +3,13 @@ package otto.aws;
 import java.util.Arrays;
 
 /**
- * The four scheduled jobs, named the way an EventBridge schedule
+ * The scheduled jobs, named the way an EventBridge schedule
  * names them.
  *
  * <p>The stack spells the same names in its schedule payloads and
  * cannot import them: the deployable must not carry the CDK libraries,
  * so the two builds are separate. Each side pins its own spelling in a
- * test - {@code OttoStackTest.thereAreFourSchedules} for the payloads,
+ * test - {@code OttoStackTest.thereAreFiveSchedules} for the payloads,
  * {@code AwsEntryPointScenarioTest.everyScheduleNamesAJobTheBuildHas}
  * for these - so a rename that reaches only one side fails a build
  * rather than a schedule.
@@ -19,7 +19,8 @@ public enum ScheduledJob {
     CHECK("check"),
     NFLVERSE_FEEDS("nflverse-feeds"),
     DEFENSE_VERSUS_POSITION("defense-versus-position"),
-    RESEARCH("research");
+    RESEARCH("research"),
+    TEAM_REPORTS("team-reports");
 
     private final String jobName;
 

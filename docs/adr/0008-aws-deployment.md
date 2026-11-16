@@ -105,6 +105,13 @@ feed the feed jobs rewrote is read on the next read. A feed still in
 the bundle is read from it once, written out as its own object and
 dropped from the bundle, so the move needed no manual step.
 
+The team-reports feed state is the other exception, an object of its
+own under `team-reports/`. The team-reports job rewrites it every five
+minutes, and in the bundle each rewrite cost every Check after it a
+full bundle read in place of a 304. It is too big for DynamoDB's
+400 KB item limit to be safe: each of the 32 teams keeps up to 100
+seen post keys.
+
 Two entry points write that object: the Check and the webhook both
 append to the Event Log. The write therefore carries the ETag the run
 read, S3 refuses a write whose ETag has moved, and the backend re-reads

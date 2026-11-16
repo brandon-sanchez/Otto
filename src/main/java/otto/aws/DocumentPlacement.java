@@ -6,10 +6,12 @@ import java.util.Set;
  * Which store a document belongs in: an S3 object of its own, the S3
  * bundle, or DynamoDB.
  *
- * <p>{@link #FEED} is the nflverse feeds. Play-by-play and FTN
- * charting run to megabytes a season, so keeping the feeds out of the
- * bundle every Check reads means a feed is fetched only by the code
- * that reads it.
+ * <p>{@link #FEED} is the nflverse feeds and the team-reports state.
+ * Play-by-play and FTN charting run to megabytes a season, so keeping
+ * the feeds out of the bundle every Check reads means a feed is fetched
+ * only by the code that reads it. The team-reports state is rewritten
+ * every few minutes; in the bundle, each rewrite would cost every Check
+ * after it a full bundle read in place of a 304.
  *
  * <p>{@link #SMALL} is the named list, and everything else is big and
  * goes to the {@link #BUNDLE}. That way round rather than the other
@@ -42,6 +44,8 @@ public enum DocumentPlacement {
 
     private static final String FEED_NAME_PREFIX = "nflverse-";
 
+    private static final String TEAM_REPORTS = "team-reports";
+
     private static final Set<String> SMALL_NAMES = Set.of(
             "settings",
             "watchlist",
@@ -58,12 +62,17 @@ public enum DocumentPlacement {
 
     /** Returns where the document with this name is stored. */
     public static DocumentPlacement of(String name) {
-        if (name.startsWith(FEED_NAME_PREFIX)) {
+        if (name.startsWith(FEED_NAME_PREFIX) || name.equals(TEAM_REPORTS)) {
             return FEED;
         }
         if (SMALL_NAMES.contains(name) || SMALL_PREFIXES.stream().anyMatch(name::startsWith)) {
             return SMALL;
         }
         return BUNDLE;
+    }
+
+    /** True for the team-reports state, which is a feed under its own key prefix. */
+    static boolean isTeamReports(String name) {
+        return name.equals(TEAM_REPORTS);
     }
 }
