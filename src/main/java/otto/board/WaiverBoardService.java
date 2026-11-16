@@ -73,15 +73,18 @@ import otto.storage.OttoJson;
 @Component
 public class WaiverBoardService {
 
+    private static final String PLACE_CLAIMS_YOURSELF =
+            "If you want to make claims, place them yourself in Sleeper.";
+
     /** What the user reads in a round whose board failed its checks twice. */
-    static final String FAILED_CHECKS_NOTICE = "No waiver board this round: I could not get "
-            + "one past my checks before the claim deadline, and I never send unchecked picks "
-            + "in its place. Place any claims yourself in Sleeper.";
+    static final String FAILED_CHECKS_NOTICE = "I don't have a waiver board for you this "
+            + "round. I couldn't get one past my fact checks before the claim deadline, and I "
+            + "won't send you picks I haven't checked. " + PLACE_CLAIMS_YOURSELF;
 
     /** What the user reads in a round whose board the model could not be reached to write. */
-    static final String MODEL_UNAVAILABLE_NOTICE = "No waiver board this round: I could not "
-            + "reach the model that writes it before the claim deadline, and I never send "
-            + "unchecked picks in its place. Place any claims yourself in Sleeper.";
+    static final String MODEL_UNAVAILABLE_NOTICE = "I don't have a waiver board for you this "
+            + "round. I couldn't reach the model that writes it before the claim deadline, and "
+            + "I won't send you picks I haven't checked. " + PLACE_CLAIMS_YOURSELF;
 
     private static final Logger log = LoggerFactory.getLogger(WaiverBoardService.class);
 
@@ -231,9 +234,9 @@ public class WaiverBoardService {
      * instead of nothing at all.
      */
     private DecisionRecord unscreenable(ClaimRound round, LeagueWeek league, String reason) {
-        String notice = "No waiver board this round: I could not screen the free agents "
-                + "before the claim deadline, because " + reason
-                + ". Place any claims yourself in Sleeper.";
+        String notice = "I don't have a waiver board for you this round. I couldn't look "
+                + "through the free agents before the claim deadline because " + reason + ". "
+                + PLACE_CLAIMS_YOURSELF;
         return boardRecord(round, league)
                 .preferences(preferences(RoundPreference.none()))
                 .outcome(new Outcome.WithheldWithNotice(

@@ -63,20 +63,20 @@ sealed interface BidPolicy {
     static BidPolicy of(SleeperAdapter.League league, RosterSnapshot user, Settings settings) {
         Optional<Boolean> faab = league.rules().faab();
         if (faab.isEmpty()) {
-            return new Withheld("Sleeper did not say whether this league bids FAAB");
+            return new Withheld("Sleeper didn't say whether this league uses FAAB bidding");
         }
         if (!faab.get()) {
             return new NoBids();
         }
         if (league.waiverBudget().isEmpty()) {
-            return new Withheld("the league's FAAB budget could not be read");
+            return new Withheld("I couldn't read the league's FAAB budget");
         }
         if (league.rules().minimumBid().isEmpty()) {
-            return new Withheld("the league's minimum bid could not be read");
+            return new Withheld("I couldn't read the league's minimum bid");
         }
         int remaining = league.waiverBudget().get() - user.waiverBudgetUsed();
         if (remaining < 0) {
-            return new Withheld("Sleeper reports more FAAB spent than the league budget");
+            return new Withheld("Sleeper shows more FAAB spent than the league's budget");
         }
         return new Verified(remaining, league.rules().minimumBid().get(), settings.bidLimit());
     }

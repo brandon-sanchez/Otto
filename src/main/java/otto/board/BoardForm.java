@@ -17,6 +17,7 @@ import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
 import otto.advice.EvidenceBundle;
+import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.directory.DirectoryPlayer;
 import otto.storage.OttoJson;
@@ -64,12 +65,15 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             to hold and save FAAB, and list any reasonable speculative moves under
             "optional". Otherwise "optional" is empty.
 
-            Write the opening and each reasoning in two or three short sentences of
-            plain text, at most 700 characters each, with recent usage, role, news and
-            roster fit. Introduce every player by full name before using a surname
-            alone. Never write a score, a confidence label such as High or Medium, or a
-            "Cons:" list; when something is uncertain, say exactly what is uncertain.
-            Never say a player "locks".
+            Write the opening and each reasoning in two to four sentences of plain
+            text, at most 700 characters each, that tell the user why the player is
+            worth a claim through his recent usage, role, news and roster fit.
+            Introduce every player by full name before using a surname alone. Never
+            write a score, a confidence label such as High or Medium, or a "Cons:"
+            list; when something is uncertain, say exactly what is uncertain. Never say
+            a player "locks".
+
+            """ + FriendVoice.RULE + """
 
             Bids follow the "faab" evidence. When it says bids are allowed, give every
             entry a "bid" in whole dollars with low <= target <= high, inside its

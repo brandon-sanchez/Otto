@@ -117,11 +117,12 @@ public class WatchlistDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "%s is a free agent again: %s dropped him".formatted(player, owner),
+                "%s dropped %s, so he's a free agent again".formatted(owner, player),
                 Confidence.MEDIUM,
                 List.of(
-                        "%s is on your watchlist and nobody rosters him now".formatted(player),
-                        "A claim reaches him before the rest of the league notices"),
+                        "%s is on your watchlist, and nobody rosters him now".formatted(player),
+                        "If you claim him now, you get to him before the rest of the league "
+                                + "notices"),
                 List.of("A manager who drops a player has usually seen his role shrink"));
     }
 
@@ -130,14 +131,14 @@ public class WatchlistDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "%s added %s: your watchlist plan for him is over".formatted(owner, player),
+                "%s added %s, so your watchlist plan for him is over".formatted(owner, player),
                 Confidence.HIGH,
                 List.of(
-                        "%s is on your watchlist and is now rostered by %s".formatted(
+                        "%s was on your watchlist, and %s rosters him now".formatted(
                                 player, owner),
-                        "A trade is the only way to reach him while %s holds him"
+                        "While %s holds him, a trade is the only way to get him"
                                 .formatted(owner)),
-                List.of("He reaches waivers again if %s drops him".formatted(owner)));
+                List.of("He goes back on waivers if %s drops him".formatted(owner)));
     }
 
     private Recommendation trending(String playerId, String player, Map<String, String> facts) {
@@ -147,14 +148,14 @@ public class WatchlistDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "%s is trending up hard: %s adds across Sleeper in %s hours".formatted(
-                        player, adds, hours),
+                "%s is getting picked up fast, with %s adds across Sleeper in the last %s hours"
+                        .formatted(player, adds, hours),
                 Confidence.MEDIUM,
                 List.of(
-                        "%s is on your watchlist and just entered Sleeper's top %s adds"
+                        "%s is on your watchlist and just made Sleeper's top %s adds"
                                 .formatted(player, limit),
                         "Managers everywhere are claiming him, so he may not last"),
-                List.of("An add count measures attention, not production"));
+                List.of("Adds show how much attention he's getting, not how he's producing"));
     }
 
     private Recommendation projectionMoved(String playerId, String player,
@@ -166,13 +167,13 @@ public class WatchlistDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "%s now projects %s points in %s, from %s (%s)".formatted(
-                        player, now, week, was, move),
+                "%s now projects %s points in %s, a move of %s from %s".formatted(
+                        player, now, week, move, was),
                 Confidence.MEDIUM,
                 List.of(
-                        "%s is on your watchlist and his %s projection moved %s points"
+                        "%s is on your watchlist, and his %s projection moved %s points"
                                 .formatted(player, week, move),
-                        "The number is priced in your league's own scoring"),
+                        "That number uses your league's own scoring"),
                 List.of("A projection is an estimate and can move again before kickoff"));
     }
 

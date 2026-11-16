@@ -146,9 +146,9 @@ public class AlertActions {
 
     private String ackText(String action) {
         return switch (action) {
-            case "done" -> "Got it. I will confirm once I see the problem is gone.";
-            case "ignore" -> "Understood. I will drop this recommendation.";
-            case "mute" -> "Muted. I will stay quiet about this until you unmute it.";
+            case "done" -> "Got it. I'll let you know once I see the problem is gone.";
+            case "ignore" -> "Got it, I'll drop this one.";
+            case "mute" -> "Muted. I'll stay quiet about this until you unmute it.";
             default -> "Got it.";
         };
     }

@@ -170,9 +170,9 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", containing(MISSING_GAME))));
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\nWeek 1's numbers are not all in: "
-                        + MISSING_GAME + ".")
-                .contains("This board is based on the week 1 numbers that have arrived, "
+                .startsWith("Your waiver options\n\nWeek 1's numbers aren't all in yet, "
+                        + "because " + MISSING_GAME + ".")
+                .contains("So this board uses the week 1 numbers that have arrived, "
                         + "this week's projections and the latest news")
                 .contains(OPENING));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
@@ -224,9 +224,9 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(TRENDING_ONLY))
                 .withRequestBody(containing("never present it as usage")));
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .contains("Any pickup only trending adds support is marked")
+                .contains("I've marked any pickup who is on it only because he's trending in adds")
                 .contains("Wide Receiver Three · WR")
-                .contains("Wide Receiver Three · WR, NE\nTrending, but this week's usage "
+                .contains("Wide Receiver Three · WR, NE\nHe's trending, but this week's usage "
                         + "numbers aren't in yet."));
     }
 

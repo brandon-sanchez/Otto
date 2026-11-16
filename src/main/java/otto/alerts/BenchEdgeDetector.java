@@ -93,13 +93,14 @@ public class BenchEdgeDetector {
         Recommendation recommendation = new Recommendation(
                 out,
                 outName,
-                "Start %s over %s (+%s projected points)".formatted(inName, outName, edgeText),
+                "Start %s over %s for %s more projected points".formatted(inName, outName,
+                        edgeText),
                 Confidence.MEDIUM,
-                List.of("%s projects %s points; %s projects %s".formatted(
+                List.of("%s projects %s points and %s projects %s".formatted(
                                 inName, inPoints, outName, outPoints),
-                        "The optimal legal lineup makes this swap in the %s slot"
+                        "Your best legal lineup makes this swap in the %s slot"
                                 .formatted(slotName)),
-                List.of("Projections are estimates; a %s-point edge can flip on game day"
+                List.of("Projections are estimates, so a %s-point edge can flip on game day"
                         .formatted(edgeText)));
 
         Map<String, String> facts = new HashMap<>();

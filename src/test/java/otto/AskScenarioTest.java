@@ -362,7 +362,7 @@ class AskScenarioTest extends WireSeamTest {
         // Short by default; "why" and a short "more" open the answer up.
         // A long question that merely says "more" is a fresh question.
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("2 to 5 lines"))
+                .withRequestBody(containing("a few natural sentences"))
                 .withRequestBody(notContaining("Give the full reasoning")));
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Give the full reasoning")));
@@ -381,7 +381,8 @@ class AskScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("----- STARTERS -----"))
                 .withRequestBody(containing("----- BENCH -----"))
                 .withRequestBody(containing("Move to starter"))
-                .withRequestBody(containing("Recommended Drop"))
+                .withRequestBody(containing("Never put a label in front of an explanation"))
+                .withRequestBody(notContaining("Recommended Drop"))
                 .withRequestBody(containing("YOUR ROSTER AFTER TRADE"))
                 .withRequestBody(containing("withhold the verdict")));
     }
@@ -403,7 +404,7 @@ class AskScenarioTest extends WireSeamTest {
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("ask-during-outage")));
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("cannot reach")));
+                .withRequestBody(containing("can't reach")));
     }
 
     @Test
@@ -415,7 +416,7 @@ class AskScenarioTest extends WireSeamTest {
         ask("lineup");
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing("cannot reach")));
+                .withRequestBody(containing("can't reach")));
     }
 
     @Test

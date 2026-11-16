@@ -182,7 +182,7 @@ class AlertScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("IR reminder"))
+                .withRequestBody(containing("can still come off IR before lock"))
                 .withRequestBody(containing("Josh Jacobs")));
     }
 

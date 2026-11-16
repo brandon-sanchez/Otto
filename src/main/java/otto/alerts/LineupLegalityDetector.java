@@ -28,6 +28,7 @@ import otto.snapshot.RosterSnapshot;
 public class LineupLegalityDetector {
 
     private static final String EMPTY_STARTER = "0";
+    private static final String NO_REPLACEMENT = "none on the bench";
 
     public List<AlertCandidate> detect(RosterSnapshot roster, WeekFacts week) {
         if (week.weekKey().isEmpty() || week.startingSlots().isEmpty()) {
@@ -64,10 +65,9 @@ public class LineupLegalityDetector {
         Recommendation recommendation = new Recommendation(
                 null,
                 "your %s slot".formatted(slot.name()),
-                "Fill the empty %s slot before lock".formatted(slot.name()),
+                "Fill your empty %s slot before lock".formatted(slot.name()),
                 Confidence.HIGH,
-                List.of("An empty slot always scores zero",
-                        "Best available fill: " + replacement),
+                List.of("An empty slot always scores zero", bestFill(replacement)),
                 List.of());
         return new AlertCandidate(
                 AlertCandidate.Source.LEGALITY,
@@ -85,11 +85,12 @@ public class LineupLegalityDetector {
         Recommendation recommendation = new Recommendation(
                 playerId,
                 player,
-                "Replace %s in the %s slot: he is %s and cannot play"
+                "Replace %s in your %s slot, because he's %s and can't play"
                         .formatted(player, slot.name(), health),
                 Confidence.HIGH,
-                List.of("%s is %s, so this slot scores zero as set".formatted(player, health),
-                        "Best available fill: " + replacement),
+                List.of("%s is %s, so this slot scores zero as it's set".formatted(player,
+                                health),
+                        bestFill(replacement)),
                 List.of());
         return new AlertCandidate(
                 AlertCandidate.Source.LEGALITY,
@@ -111,11 +112,10 @@ public class LineupLegalityDetector {
         Recommendation recommendation = new Recommendation(
                 playerId,
                 player,
-                "Replace %s in the %s slot: he is on bye this week"
+                "Replace %s in your %s slot, because he's on bye this week"
                         .formatted(player, slot.name()),
                 Confidence.HIGH,
-                List.of("A starter on bye scores zero",
-                        "Best available fill: " + replacement),
+                List.of("A starter on bye scores zero", bestFill(replacement)),
                 List.of());
         return new AlertCandidate(
                 AlertCandidate.Source.LEGALITY,
@@ -165,6 +165,11 @@ public class LineupLegalityDetector {
                 .map(playerId -> "%s (%s)".formatted(
                         roster.playerNames().getOrDefault(playerId, playerId),
                         projectionDisplay(roster, week, playerId)))
-                .orElse("none on the bench");
+                .orElse(NO_REPLACEMENT);
+    }
+
+    private static String bestFill(String replacement) {
+        return replacement.equals(NO_REPLACEMENT) ? "Nobody on your bench can fill it"
+                : "Your best fill from the bench is " + replacement;
     }
 }

@@ -43,7 +43,7 @@ public class TelegramWebhook {
     private static final String VIEW_ALL = "all";
 
     private static final String COULD_NOT_SEND_ALL =
-            "I could not send the full list. Tap again in a minute.";
+            "I couldn't send the full list. Tap the button again in a minute.";
 
     private final String webhookSecret;
     private final String chatId;
@@ -111,10 +111,10 @@ public class TelegramWebhook {
     private String refusalFor(JsonNode callback) {
         if (callback.path("message").path("chat").path("id").asText("").isEmpty()) {
             log.warn("Tap dropped: it names no chat, so the alert it acts on is too old");
-            return "That alert is too old to act on. Ask me instead.";
+            return "That alert is too old to act on, so ask me about it instead.";
         }
         log.warn("Tap dropped: it is not from the chat the assistant serves");
-        return "I do not answer this chat.";
+        return "I don't answer this chat.";
     }
 
     /**
@@ -145,7 +145,7 @@ public class TelegramWebhook {
     private void answerTap(JsonNode callback) {
         Matcher tap = TAP.matcher(callback.path("data").asText(""));
         if (!tap.matches()) {
-            acknowledge(callback, "I do not recognize that button.");
+            acknowledge(callback, "I don't recognize that button.");
             return;
         }
         long alertId = Long.parseLong(tap.group(2));

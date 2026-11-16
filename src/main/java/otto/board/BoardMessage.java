@@ -11,15 +11,15 @@ import otto.directory.DirectoryPlayer;
 /**
  * Lays out a checked {@link BoardAnswer} as the accepted compact board:
  * a heading, the opening, at most {@link #SHOWN} ranked entries and a
- * "View all options" line for the rest. A holding board opens with the
- * hold and lists any optional moves under "If you still want to make a
- * move". Each entry shows the published consensus and Otto's bid when
- * there are any, and the claims meant to land together are named apart
- * from the alternatives. When bids are withheld the board says why
- * under the opening. An entry outside the positions the user asked to
- * focus on carries its reason under "Outside your focus", and one only
- * trending adds support on a fallback board carries {@link #TRENDING_LABEL}
- * under its heading. The text is
+ * line pointing to the View all options button for the rest. A holding
+ * board opens with the hold and lists any optional moves under "If you
+ * still want to make a move". Each entry shows the published consensus
+ * and Otto's bid when there are any, and the claims meant to land
+ * together are named apart from the alternatives. When bids are withheld
+ * the board says why under the opening. An entry outside the positions
+ * the user asked to focus on carries its reason after {@link
+ * #OUTSIDE_FOCUS}, and one only trending adds support on a fallback
+ * board carries {@link #TRENDING_LABEL} under its heading. The text is
  * split between entries into Telegram messages that each stay under
  * Telegram's limit. The full list behind "View all options" and the
  * advice held for the board under "About your roster" are laid out here
@@ -36,14 +36,12 @@ final class BoardMessage {
     static final String HEADING = "Your waiver options";
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
-    static final String OUTSIDE_FOCUS = "Outside your focus: ";
+    static final String OUTSIDE_FOCUS = "He isn't at a position you asked me to focus on. ";
     static final String ALL_HEADING = "All your waiver options";
     static final String ABOUT_YOUR_ROSTER = "About your roster";
 
     /** The line under a trending-only entry's heading, from {@link WaiverEvidence#TRENDING_ONLY}. */
-    static final String TRENDING_LABEL =
-            Character.toUpperCase(WaiverEvidence.TRENDING_ONLY.charAt(0))
-                    + WaiverEvidence.TRENDING_ONLY.substring(1) + ".";
+    static final String TRENDING_LABEL = "He's " + WaiverEvidence.TRENDING_ONLY + ".";
 
     private static final String BREAK = "\n\n";
 
@@ -65,7 +63,8 @@ final class BoardMessage {
         List<String> blocks = new ArrayList<>();
         List<String> opening = new ArrayList<>(notes);
         if (screen.bidding().policy() instanceof BidPolicy.Withheld withheld) {
-            opening.add("No dollar bids this round: " + withheld.reason() + ".");
+            opening.add("I'm leaving out dollar bids this round because " + withheld.reason()
+                    + ".");
         }
         opening.add(answer.opening().strip());
         blocks.add(HEADING + BREAK + String.join(BREAK, opening));
@@ -79,7 +78,7 @@ final class BoardMessage {
         together(answer, screen).ifPresent(blocks::add);
         if (entries.size() > SHOWN) {
             int more = entries.size() - SHOWN;
-            blocks.add("%s: %d more player%s on the full board.".formatted(VIEW_ALL, more,
+            blocks.add("Tap %s to see %d more player%s.".formatted(VIEW_ALL, more,
                     more == 1 ? "" : "s"));
         }
         return pack(blocks);
@@ -147,8 +146,9 @@ final class BoardMessage {
         Optional.ofNullable(screen.bidding().consensus().get(entry.playerId()))
                 .flatMap(consensus -> consensus.line(leagueBudget))
                 .ifPresent(lines::add);
-        entry.bid().ifPresent(bid -> lines.add("Otto: bid $%d · Suggested range $%d–$%d."
-                .formatted((int) bid.target(), (int) bid.low(), (int) bid.high())));
+        entry.bid().ifPresent(bid -> lines.add(
+                "I'd bid $%d. Anything from $%d to $%d makes sense.".formatted(
+                        (int) bid.target(), (int) bid.low(), (int) bid.high())));
         lines.addAll(modelLines(entry));
         entry.drop().ifPresent(drop -> lines.add("Drop %s to make room.".formatted(
                 screen.user().playerNames().getOrDefault(drop, drop))));
@@ -188,15 +188,14 @@ final class BoardMessage {
         String names = together.stream()
                 .map(entry -> screen.candidates().get(entry.playerId()).fullName())
                 .collect(Collectors.joining(" and "));
-        StringBuilder text = new StringBuilder("Claim together: " + names);
+        StringBuilder text = new StringBuilder("Put in claims for %s together.".formatted(names));
         if (screen.bidding().policy() instanceof BidPolicy.Verified verified) {
             int highs = together.stream()
                     .mapToInt(entry -> entry.bid().map(bid -> (int) bid.high()).orElse(0))
                     .sum();
-            text.append(", $%d at the top of every range, within the $%d you have left"
-                    .formatted(highs, verified.remaining()));
+            text.append(" At the top of every range that's $%d, which fits in the $%d you "
+                    .formatted(highs, verified.remaining()) + "have left.");
         }
-        text.append('.');
         if (answer.picks().stream().limit(SHOWN).count() > together.size()) {
             text.append(" The other picks are alternatives for the same roster spot.");
         }

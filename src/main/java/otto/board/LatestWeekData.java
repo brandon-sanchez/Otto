@@ -91,12 +91,12 @@ public class LatestWeekData {
                     : week.getAsInt() == 1 ? "the week 1 numbers that have arrived"
                     : "the week %d numbers that have arrived, the weeks before it"
                             .formatted(week.getAsInt());
-            String opening = week.isEmpty() ? "The latest week's numbers cannot be confirmed"
-                    : "Week %d's numbers are not all in".formatted(week.getAsInt());
-            return ("%s: %s. This board is based on %s, this week's projections and the "
-                    + "latest news. Any pickup only trending adds support is marked: he is "
-                    + WaiverEvidence.TRENDING_ONLY + ".")
-                    .formatted(opening, String.join("; ", missing), basis);
+            String opening = week.isEmpty() ? "I can't confirm the latest week's numbers yet"
+                    : "Week %d's numbers aren't all in yet".formatted(week.getAsInt());
+            return ("%s, because %s. So this board uses %s, this week's projections and the "
+                    + "latest news, and I've marked any pickup who is on it only because "
+                    + "he's trending in adds.")
+                    .formatted(opening, String.join(", and ", missing), basis);
         }
     }
 
