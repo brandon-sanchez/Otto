@@ -56,21 +56,23 @@ public record MarketQuote(
     }
 
     /**
-     * A keeper league's blend for one player. A keeper costs his team the
-     * player it could have taken with that keeper spot, so the keeper
-     * line is the dynasty value of the best rostered player who falls
-     * outside every team's likely keepers: what a keeper spot gives up.
+     * A keeper league's blend for one player. The keeper line is the
+     * dynasty value of the best rostered player who falls outside every
+     * team's likely keepers: what a keeper spot gives up when keepers
+     * cost nothing else.
      *
      * @param keeperLimit the most players a team may keep, empty when the
      *        league does not say, in which case nobody is a likely keeper
-     * @param likely true when he is one of his team's most valuable
-     *        players by dynasty value, inside the keeper limit, and worth
-     *        more than keeping him costs
+     * @param likely true when he is one of his team's likely keepers:
+     *        its players worth more by dynasty value than keeping them
+     *        costs, the most valuable first, up to the keeper limit
      * @param dynastyValue his dynasty value, empty when neither source
      *        prices him
      * @param dynastySource where {@code dynastyValue} comes from
      * @param bonus his dynasty value minus his cost from
      *        {@link KeeperCosts}, 0 when he is not a likely keeper
+     * @param cost what keeping him costs next season, empty when nobody
+     *        is counted as a likely keeper or no source prices him
      */
     public record Keeper(
             Optional<Integer> keeperLimit,
@@ -79,6 +81,7 @@ public record MarketQuote(
             Optional<Integer> dynastyValue,
             Optional<Source> dynastySource,
             int keeperLine,
-            int bonus) {
+            int bonus,
+            Optional<KeeperCost> cost) {
     }
 }

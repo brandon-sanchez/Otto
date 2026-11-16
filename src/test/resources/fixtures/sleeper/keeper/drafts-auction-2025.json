@@ -1,0 +1,30 @@
+[
+  {
+    "type": "auction",
+    "status": "complete",
+    "start_time": 1756000000000,
+    "sport": "nfl",
+    "settings": {
+      "teams": 12,
+      "rounds": 16,
+      "pick_timer": 90,
+      "slots_qb": 1,
+      "slots_rb": 2,
+      "slots_wr": 2,
+      "slots_te": 1,
+      "slots_flex": 2,
+      "slots_super_flex": 1,
+      "slots_bn": 7,
+      "budget": 200
+    },
+    "season_type": "regular",
+    "season": "2025",
+    "metadata": {
+      "scoring_type": "ppr",
+      "name": "Keeper Fixture League"
+    },
+    "league_id": "1250031856205725696",
+    "last_picked": 1756003600000,
+    "draft_id": "1250031856205725697"
+  }
+]

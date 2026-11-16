@@ -212,7 +212,9 @@ public class TradeMarket {
                 .filter(MarketQuote.Keeper::likely)
                 .map(keeper -> List.of(("He's a likely keeper, so his %d redraft value carries "
                         + "a %d keeper bonus on top").formatted(keeper.redraftValue(),
-                        keeper.bonus())))
+                        keeper.bonus())
+                        + keeper.cost().map(cost -> ". " + cost.cost() + " " + cost.rule())
+                                .orElse("")))
                 .orElse(List.of());
     }
 

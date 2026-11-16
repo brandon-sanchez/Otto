@@ -20,6 +20,8 @@ import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.directory.PlayerLookup;
 import otto.market.DraftPick;
+import otto.market.KeeperCost;
+import otto.market.KeeperCosts;
 import otto.market.MarketQuote;
 import otto.market.MarketValuation;
 import otto.records.DecisionRecord;
@@ -59,7 +61,9 @@ public class MarketValueAnswers {
             value has moved. Write a rank on the list as "35th on the list" or "12th among
             WRs", never with the word "overall". When "staleness" is present, say how old
             the list is. When "fallback" is present, say the value is DynastyProcess's and
-            why. In a keeper league, say whether he is a likely keeper and what that adds.
+            why. In a keeper league, say whether he is a likely keeper, what keeping him
+            costs and what that adds, and say plainly what "keeperRule" says about where
+            the rule comes from. When "askForKeeperRule" is present, end with that question.
             Mention his age, roster share or trade share only when they help explain the
             value. Never write a confidence label such as High or Medium. Stay under
             "maxLength" characters. There is no lineup move, so "move" is null.
@@ -87,6 +91,7 @@ public class MarketValueAnswers {
     private final UserWeekLoader loader;
     private final PlayerLookup players;
     private final MarketValuation valuation;
+    private final KeeperCosts keeperCosts;
     private final AdviceWriter writer;
     private final AdviceForm<AdviceAnswer> form;
     private final DecisionRecords records;
@@ -94,11 +99,13 @@ public class MarketValueAnswers {
     private final Clock clock;
 
     public MarketValueAnswers(UserWeekLoader loader, PlayerLookup players,
-            MarketValuation valuation, AdviceWriter writer, AdviceCheck check,
-            DecisionRecords records, OttoProperties properties, Clock clock) {
+            MarketValuation valuation, KeeperCosts keeperCosts, AdviceWriter writer,
+            AdviceCheck check, DecisionRecords records, OttoProperties properties,
+            Clock clock) {
         this.loader = loader;
         this.players = players;
         this.valuation = valuation;
+        this.keeperCosts = keeperCosts;
         this.writer = writer;
         this.form = new AdviceForm<>() {
             @Override
@@ -132,7 +139,9 @@ public class MarketValueAnswers {
      *
      * <p>Side effects: the market reads (at most one request a day to
      * each source for each format), up to two model calls, and one
-     * Decision Record write.
+     * Decision Record write. In a keeper league it reads the league's
+     * drafts, and a sent answer that asks for the league's keeper rule
+     * records that it asked.
      *
      * @param reference a player's name or Sleeper id, or a pick such as
      *        "2027 1st"
@@ -174,6 +183,13 @@ public class MarketValueAnswers {
                     new Outcome.WithheldWithNotice(unavailable.reason(), MODEL_UNAVAILABLE);
         };
         recordBestEffort(priced, bundle, result, outcome, now);
+        boolean askedForKeeperRule = priced.quote().keeper()
+                .flatMap(MarketQuote.Keeper::cost)
+                .flatMap(KeeperCost::question)
+                .isPresent();
+        if (outcome instanceof Outcome.Sent && askedForKeeperRule) {
+            keeperCosts.asked(priced.league().leagueId());
+        }
         String source = priced.quote().source().label();
         return switch (outcome) {
             case Outcome.Sent sent -> ToolAnswer.of(new Reply(sent.message(), source));

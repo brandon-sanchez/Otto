@@ -34,10 +34,11 @@ Each day's FantasyCalc list is kept in a ring of 31 daily slots for each format.
 ## Valuation rules
 
 - The redraft list already prices injuries, and the dynasty list already prices age. Otto applies neither again.
-- A keeper league values a likely keeper at his redraft value plus a keeper bonus. Everyone else gets his redraft value alone.
-  - A likely keeper is one of his team's most valuable players by dynasty value, inside the league's keeper limit, and worth more than the keeper line.
-  - Sleeper doesn't publish a keeper's cost, so the cost is what a keeper spot gives up: the keeper line, the dynasty value of the best rostered player who falls outside every team's likely keepers.
-  - The bonus is the player's dynasty value minus the keeper line.
+- A keeper league values a likely keeper at his redraft value plus a keeper bonus: his dynasty value minus what keeping him costs next season. Everyone else gets his redraft value alone.
+  - A team's likely keepers are its players worth most above what keeping them costs, those worth more than the cost, up to the league's keeper limit.
+  - Sleeper records each draft's picks, with the round, the auction price and whether the pick was a keeper, but never the league's keeper rule, which commissioners enforce by hand. Otto follows `previous_league_id` back through the league's finished drafts. A player costs what the rule makes of his round or price in the latest finished draft: this season's in season, last season's before the draft. A player nobody drafted costs the last round, or $1. Years kept count the drafts in a row that kept him.
+  - The owner sets the rule in chat (`manage_keeper_rule`): the same round or price, some rounds earlier per year kept, one fixed round, free, plus some dollars, or plus a percent, with an optional minimum cost, undrafted cost and year limit. It's stored per league. Until he does, Otto proposes the rule two seasons of drafts follow, or else assumes the round drafted, says so in its answers, and asks once.
+  - A pick costs the dynasty value of the player the market ranks at the middle of that round. Auction dollars cost the drafted players' combined dynasty value over every team's budget, per dollar. A free keeper, or a league with no finished draft, costs the keeper line: the dynasty value of the best rostered player who falls outside every team's likely keepers, what a keeper spot gives up.
 - TE premium isn't in either source. Otto's scoring-based rest-of-season math (ADR-0008) covers it.
 
 ## Checked answers
@@ -47,4 +48,4 @@ A chat question about a player's worth goes to the `get_market_value` tool. Code
 ## Consequences
 
 - If FantasyCalc disappears or blocks Otto, dynasty values still come from DynastyProcess, but redraft leagues lose market values.
-- Keeper bonuses depend on the keeper line as defined above. A league whose keepers cost draft rounds may want the real cost. Sleeper doesn't expose it, so `KeeperCosts` is the one place a real source plugs in; `KeeperLineCosts` prices every keeper at the keeper line.
+- Keeper bonuses depend on the rule in force. An unconfirmed rule is a guess, so answers say where the rule came from. `KeeperCosts` is the one place keeper pricing plugs in.

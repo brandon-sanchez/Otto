@@ -781,7 +781,7 @@ public class SleeperAdapter {
         });
     }
 
-    private SourceResult<JsonNode> fetch(String path) {
+    SourceResult<JsonNode> fetch(String path) {
         Instant now = clock.instant();
         Optional<JsonNode> cached = cache.fresh(path, maxAge, now);
         if (cached.isPresent()) {

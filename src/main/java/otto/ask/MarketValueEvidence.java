@@ -13,6 +13,7 @@ import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
 import otto.market.DraftPick;
+import otto.market.KeeperCost;
 import otto.market.MarketPlayer;
 import otto.market.MarketQuote;
 import otto.market.MarketValues;
@@ -68,8 +69,10 @@ final class MarketValueEvidence {
         quote.keeper().ifPresent(keeper -> items.add(keeper(subject, keeper, now)));
         List<BundlePlayer> players = pick.isPresent() ? List.of()
                 : List.of(new BundlePlayer(quote.id(), quote.name(), Optional.empty()));
+        Optional<Integer> auctionBudget = quote.keeper().flatMap(MarketQuote.Keeper::cost)
+                .flatMap(KeeperCost::budget);
         return new EvidenceBundle(TASK.formatted(quote.name(), quote.league()), items, players,
-                List.of(), true, Optional.empty(), MAX_LENGTH, Optional.empty(), List.of(),
+                List.of(), true, Optional.empty(), MAX_LENGTH, auctionBudget, List.of(),
                 List.of());
     }
 
@@ -143,14 +146,22 @@ final class MarketValueEvidence {
                 () -> facts.put("keeperLimit", "the league does not say how many players a "
                         + "team may keep, so nobody is counted as a likely keeper"));
         facts.put("likelyKeeper", keeper.likely() ? "yes" : "no");
+        keeper.cost().ifPresent(cost -> {
+            facts.put("keeperCost", String.valueOf(cost.value()));
+            facts.put("whatKeepingHimCosts", cost.cost());
+            facts.put("keeperRule", cost.rule());
+            cost.question().ifPresent(question -> facts.put("askForKeeperRule", question));
+        });
         if (keeper.likely()) {
             facts.put("keeperLine", String.valueOf(keeper.keeperLine()));
             facts.put("keeperBonus", String.valueOf(keeper.bonus()));
-            facts.put("meaning", "He is one of his team's most valuable keepers, so his value "
-                    + "is his redraft value plus his dynasty value above the keeper line, the "
-                    + "dynasty value of the best player no team is likely to keep.");
+            facts.put("meaning", "He is one of his team's likely keepers, so his value is his "
+                    + "redraft value plus his keeper bonus: his dynasty value minus keeperCost, "
+                    + "the dynasty value of the pick, dollars or keeper spot keeping him uses "
+                    + "up.");
         } else {
-            facts.put("meaning", "He is not a likely keeper, so his value is his redraft "
+            facts.put("meaning", "He is not one of his team's likely keepers, the players "
+                    + "worth most above what keeping them costs, so his value is his redraft "
                     + "value alone.");
         }
         return item("market-keeper-" + subject, "Otto's keeper blend", now, facts);
