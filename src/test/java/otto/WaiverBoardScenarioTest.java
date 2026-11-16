@@ -58,6 +58,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     private static final ZoneId LOS_ANGELES = ZoneId.of("America/Los_Angeles");
     private static final Instant TUESDAY_EVENING = ZonedDateTime.of(2026, 9, 15, 18, 0, 0, 0,
             LOS_ANGELES).toInstant();
+    private static final Instant FALLBACK = ZonedDateTime.of(2026, 9, 15, 21, 0, 0, 0,
+            LOS_ANGELES).toInstant();
 
     private static final String BOARD_REQUEST = OutboundStubs.WAIVER_BOARD_REQUEST;
     private static final String SCORED_BOARD = "Five waiver targets for Wednesday.";
@@ -297,7 +299,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aModelThatCannotBeReachedIsTriedAgainOnTheNextCheck() {
+    void aModelThatCannotBeReachedIsTriedAgainUntilTheBufferThenTheRoundIsWithheld() {
         aWaiverWeekOnDisk();
         OutboundStubs.llmRefuses(llm);
         clock.set(TUESDAY_EVENING);
@@ -305,14 +307,10 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         assertThat(boardRecords()).isEmpty();
 
-        llm.resetAll();
-        OutboundStubs.llmPhrases(llm, SCORED_BOARD);
-        OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST,
-                board(false, OPENING, List.of(IRVING), List.of()));
-        clock.set(TUESDAY_EVENING.plus(Duration.ofMinutes(1)));
+        clock.set(FALLBACK);
         checkRunner.runCheck();
 
-        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.DryRun.class);
+        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
     }
 
     @Test
@@ -343,7 +341,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aRoundThatCannotBeScreenedRecordsNothingAndAsksNoModel() throws IOException {
+    void aRoundThatCannotBeScreenedWaitsThenRecordsWhatIsMissingInsideTheBuffer()
+            throws IOException {
         aWaiverWeekOnDisk();
         Files.delete(Path.of(properties.storageDir(), HexFormat.of()
                 .formatHex("player-directory".getBytes(StandardCharsets.UTF_8)) + ".json"));
@@ -351,10 +350,16 @@ class WaiverBoardScenarioTest extends WireSeamTest {
                 .willReturn(aResponse().withStatus(500)));
         clock.set(TUESDAY_EVENING);
         checkRunner.runCheck();
-        clock.set(TUESDAY_EVENING.plus(Duration.ofMinutes(1)));
-        checkRunner.runCheck();
 
         assertThat(boardRecords()).isEmpty();
+
+        clock.set(FALLBACK);
+        checkRunner.runCheck();
+        checkRunner.runCheck();
+
+        assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+        assertThat(((Outcome.Withheld) onlyBoardRecord().outcome()).reason())
+                .contains("there is no player directory yet");
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(BOARD_REQUEST)));
     }

@@ -16,8 +16,10 @@ import otto.directory.DirectoryPlayer;
  * move". Each entry shows the published consensus and Otto's bid when
  * there are any, and the claims meant to land together are named apart
  * from the alternatives. When bids are withheld the board says why
- * under the opening. The text is split between entries into Telegram
- * messages that each stay under Telegram's limit.
+ * under the opening. An entry only trending adds support on a fallback
+ * board carries {@link #TRENDING_LABEL} under its heading. The text is
+ * split between entries into Telegram messages that each stay under
+ * Telegram's limit.
  */
 final class BoardMessage {
 
@@ -31,6 +33,11 @@ final class BoardMessage {
     static final String STILL_A_MOVE = "If you still want to make a move";
     static final String VIEW_ALL = "View all options";
 
+    /** The line under a trending-only entry's heading, from {@link WaiverEvidence#TRENDING_ONLY}. */
+    static final String TRENDING_LABEL =
+            Character.toUpperCase(WaiverEvidence.TRENDING_ONLY.charAt(0))
+                    + WaiverEvidence.TRENDING_ONLY.substring(1) + ".";
+
     private static final String BREAK = "\n\n";
 
     private BoardMessage() {
@@ -42,11 +49,14 @@ final class BoardMessage {
      *
      * @param leagueBudget the budget each team starts with, which the
      *        published consensus is converted to
+     * @param notes text written by code rather than the model, such as
+     *        which data is missing, placed between the heading and the
+     *        model's opening; empty for none
      */
     static List<String> render(BoardAnswer answer, WaiverEvidence.Screen screen,
-            LeagueBudget leagueBudget) {
+            LeagueBudget leagueBudget, List<String> notes) {
         List<String> blocks = new ArrayList<>();
-        List<String> opening = new ArrayList<>();
+        List<String> opening = new ArrayList<>(notes);
         if (screen.bidding().policy() instanceof BidPolicy.Withheld withheld) {
             opening.add("No dollar bids this round: " + withheld.reason() + ".");
         }
@@ -87,6 +97,9 @@ final class BoardMessage {
             LeagueBudget leagueBudget) {
         List<String> lines = new ArrayList<>();
         lines.add(heading(entry, screen.candidates()));
+        if (screen.trendingOnly().contains(entry.playerId())) {
+            lines.add(TRENDING_LABEL);
+        }
         Optional.ofNullable(screen.bidding().consensus().get(entry.playerId()))
                 .flatMap(consensus -> consensus.line(leagueBudget))
                 .ifPresent(lines::add);

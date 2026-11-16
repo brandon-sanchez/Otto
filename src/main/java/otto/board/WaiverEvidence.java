@@ -62,6 +62,12 @@ public class WaiverEvidence {
     /** Room for an entry's heading and the break before it, in characters. */
     private static final int HEADING_ALLOWANCE = 100;
 
+    /**
+     * The label on a fallback candidate whom only popularity lanes name,
+     * in his evidence, his Decision Record reason and his board entry.
+     */
+    static final String TRENDING_ONLY = "trending, but this week's usage numbers aren't in yet";
+
     private static final String TASK = "Rank this week's waiver candidates against the user's "
             + "roster needs and write the waiver board.";
 
@@ -90,19 +96,29 @@ public class WaiverEvidence {
      *        Record
      * @param bidding the bid bounds and each candidate's published
      *        suggestions
+     * @param trendingOnly the candidates only popularity lanes name while
+     *        a required feed lacks the latest week, by player id; each is
+     *        labelled {@link #TRENDING_ONLY}
      */
     public record Screen(EvidenceBundle bundle, Map<String, DirectoryPlayer> candidates,
             List<Candidate> screened, JsonNode comparisons, RosterSnapshot user,
-            FaabEvidence.Bidding bidding) {
+            FaabEvidence.Bidding bidding, Set<String> trendingOnly) {
 
         public Screen {
             candidates = Collections.unmodifiableMap(new LinkedHashMap<>(candidates));
             screened = List.copyOf(screened);
+            trendingOnly = Set.copyOf(trendingOnly);
         }
     }
 
     /**
      * Screens the league's free agents for the claim deadline given.
+     *
+     * <p>The latest week's gaps join the board's missing data. While a
+     * required feed lacks the week, a free agent only popularity lanes
+     * name stays in the pool labelled {@link #TRENDING_ONLY}, so the
+     * model and the user can tell attention from usage that has not
+     * arrived.
      *
      * <p>Side effects: every lane's reads, and the roster needs' read
      * and store of completed weeks.
@@ -112,7 +128,7 @@ public class WaiverEvidence {
      *         known to be a free agent
      */
     public SourceResult<Screen> screen(LeagueWeek league, ZonedDateTime deadline,
-            Instant now) {
+            Instant now, LatestWeekData.Report latestWeek) {
         Optional<PlayerDirectory> players = directory.read();
         if (players.isEmpty()) {
             return new SourceResult.Unavailable<>("waivers",
@@ -131,17 +147,19 @@ public class WaiverEvidence {
         List<LaneRead> reads = lanes.stream()
                 .map(lane -> new LaneRead(lane, lane.read(inputs)))
                 .toList();
-        Pool pool = pool(freeAgents, reads);
+        Pool pool = pool(freeAgents, reads, latestWeek);
         Map<String, List<String>> reasons = pool.reasons();
+        Set<String> trendingOnly = pool.trendingOnly();
         Map<String, DirectoryPlayer> candidates = pool.candidates();
         List<Candidate> screened = freeAgents.stream()
-                .map(player -> screened(player, reasons.get(player.playerId())))
+                .map(player -> screened(player, reasons.get(player.playerId()),
+                        trendingOnly.contains(player.playerId())))
                 .toList();
 
         SourceResult<RosterNeeds> rosterNeeds = needs.assess(league);
         FaabEvidence.Bidding bidding = faab.read(league, user.get(), players.get().players(),
                 candidates.values(), now);
-        List<String> gaps = new ArrayList<>();
+        List<String> gaps = new ArrayList<>(latestWeek.gaps());
         reads.forEach(read -> gaps.addAll(read.read().gaps()));
         gaps.addAll(bidding.gaps());
         if (rosterNeeds instanceof SourceResult.Unavailable<RosterNeeds> down) {
@@ -156,7 +174,8 @@ public class WaiverEvidence {
         evidence.add(rosterItem(league, user.get(), now));
         evidence.addAll(bidding.league());
         for (DirectoryPlayer player : candidates.values()) {
-            evidence.add(candidateItem(player, reasons.get(player.playerId()), now));
+            evidence.add(candidateItem(player, reasons.get(player.playerId()),
+                    trendingOnly.contains(player.playerId()), now));
             reads.forEach(read -> evidence.addAll(read.read().evidence(player)));
             evidence.add(bidding.candidates().get(player.playerId()));
         }
@@ -167,11 +186,12 @@ public class WaiverEvidence {
                 List.of(), List.of());
         Map<String, Object> comparisons = new LinkedHashMap<>();
         comparisons.put("lanes", pool.picksByLane());
+        comparisons.put("latestWeek", latestWeek);
         comparisons.put("rosterNeeds", rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok
                 ? ok.value() : null);
         comparisons.put("bidPolicy", bidding.policy().toString());
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
-                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding));
+                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding, trendingOnly));
     }
 
     /** One lane and what it read for this board. */
@@ -185,34 +205,48 @@ public class WaiverEvidence {
      * @param candidates the picked free agents, by player id, in the order first picked
      * @param reasons each picked player's reasons, one per lane that picked him
      * @param picksByLane each lane's picks and reasons, by {@link EvidenceLane#name}
+     * @param trendingOnly the picked players only popularity lanes name
+     *        while the latest week is incomplete
      */
     private record Pool(Map<String, DirectoryPlayer> candidates,
-            Map<String, List<String>> reasons, Map<String, Map<String, String>> picksByLane) {
+            Map<String, List<String>> reasons, Map<String, Map<String, String>> picksByLane,
+            Set<String> trendingOnly) {
     }
 
-    private static Pool pool(List<DirectoryPlayer> freeAgents, List<LaneRead> reads) {
+    private static Pool pool(List<DirectoryPlayer> freeAgents, List<LaneRead> reads,
+            LatestWeekData.Report latestWeek) {
         Map<String, List<String>> reasons = new LinkedHashMap<>();
         Map<String, Map<String, String>> picksByLane = new LinkedHashMap<>();
+        Set<String> backedByFootball = new LinkedHashSet<>();
         for (LaneRead read : reads) {
             Map<String, String> picks = read.read().shortlist(freeAgents);
             picksByLane.put(read.lane().name(), picks);
             picks.forEach((playerId, reason) ->
                     reasons.computeIfAbsent(playerId, id -> new ArrayList<>()).add(reason));
+            if (!read.lane().popularity()) {
+                backedByFootball.addAll(picks.keySet());
+            }
         }
+        Set<String> trendingOnly = latestWeek.complete() ? Set.of()
+                : reasons.keySet().stream()
+                        .filter(playerId -> !backedByFootball.contains(playerId))
+                        .collect(Collectors.toSet());
         Map<String, DirectoryPlayer> byId = freeAgents.stream()
                 .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player));
         Map<String, DirectoryPlayer> candidates = new LinkedHashMap<>();
         reasons.keySet().forEach(playerId -> candidates.put(playerId, byId.get(playerId)));
-        return new Pool(candidates, reasons, picksByLane);
+        return new Pool(candidates, reasons, picksByLane, trendingOnly);
     }
 
-    private static Candidate screened(DirectoryPlayer player, List<String> reasons) {
+    private static Candidate screened(DirectoryPlayer player, List<String> reasons,
+            boolean trendingOnly) {
         if (reasons == null) {
             return new Candidate(player.playerId(), player.fullName(), false,
                     "no lane named him among the free agents worth a look");
         }
+        String named = String.join("; ", reasons);
         return new Candidate(player.playerId(), player.fullName(), true,
-                String.join("; ", reasons));
+                trendingOnly ? TRENDING_ONLY + ": " + named : named);
     }
 
     /**
@@ -339,13 +373,17 @@ public class WaiverEvidence {
     }
 
     private static EvidenceItem candidateItem(DirectoryPlayer player, List<String> reasons,
-            Instant now) {
+            boolean trendingOnly, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("fullName", player.fullName());
         facts.put("position", player.position());
         facts.put("nflTeam", player.team());
         facts.put("designation", designation(player.health()));
         facts.put("whyOnTheBoard", String.join("; ", reasons));
+        if (trendingOnly) {
+            facts.put("usageThisWeek", TRENDING_ONLY + ": only trending adds name him, and "
+                    + "they measure attention, never usage");
+        }
         return new EvidenceItem("candidate-" + player.playerId(), "sleeper:players",
                 Optional.empty(), now, "a free agent the user may claim", facts);
     }
