@@ -184,7 +184,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
         assertThat(record.evidence()).anySatisfy(evidence ->
                 assertThat(evidence.id()).isEqualTo("league"));
         assertThat(record.exchanges().getFirst().request().toString())
-                .contains("taxi", "cannot verify");
+                .contains("moving him to the taxi squad would leave his slot empty");
     }
 
     @Test
