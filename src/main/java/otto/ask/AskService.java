@@ -100,7 +100,8 @@ public class AskService {
             Standings use ----- STANDINGS ----- and include the full league in seed
             order, marking the user's team with "<-- You". Lists of settings and
             watchlist entries use labeled headings. A team usage answer shows the
-            tool's table line for line and adds at most two lines. A single setting
+            tool's table line for line and adds at most two lines. A ceiling answer
+            sends the tool's message word for word and adds nothing. A single setting
             change stays conversational. Never use a Markdown table.
             """;
 
