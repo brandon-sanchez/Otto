@@ -14,9 +14,12 @@ import java.util.Optional;
  * @param value what the league's format makes him worth: redraft value
  *        in redraft, dynasty value in dynasty, and in keeper his
  *        redraft value plus {@link Keeper#bonus()} when he is a likely
- *        keeper
+ *        keeper, his redraft value counting 0 when the redraft list
+ *        leaves him out
  * @param source the source {@code value} comes from; in keeper, the
- *        source of the redraft value
+ *        source of the redraft value, or of his dynasty value when the
+ *        redraft list leaves him out and only keeping him is worth
+ *        anything
  * @param asOf the day that source's list was read
  * @param ageDays how many days old that list is, 0 for today's
  * @param listing his row on FantasyCalc's list for this format, with its

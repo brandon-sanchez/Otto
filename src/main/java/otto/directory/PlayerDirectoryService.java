@@ -163,7 +163,9 @@ public class PlayerDirectoryService {
                     PlayerHealth.from(
                             player.path("status").asText(null),
                             player.path("injury_status").asText(null)),
-                    yearsInLeague(player.path("years_exp"))));
+                    yearsInLeague(player.path("years_exp")),
+                    Optional.ofNullable(player.path("injury_body_part").asText(null))
+                            .filter(part -> !part.isBlank())));
         });
         return players;
     }

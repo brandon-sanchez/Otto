@@ -147,11 +147,16 @@ public class MarketValuation {
                 ? Optional.of(new Keepers(league, rosters, new DynastyValues(formats.get(1), now)))
                 : Optional.empty();
         return fantasyCalcList(formats.getFirst(), now).flatMap(listing -> {
-            players.forEach(id -> listing.values().entry(id).ifPresent(row -> {
-                priced.put(id, row.value() + keepers
-                        .map(blend -> blend.blend(id, row.value()).bonus()).orElse(0));
-                row.age().ifPresent(age -> ages.put(id, age));
-            }));
+            players.forEach(id -> {
+                Optional<MarketPlayer> row = listing.values().entry(id);
+                row.flatMap(MarketPlayer::age).ifPresent(age -> ages.put(id, age));
+                int redraft = row.map(MarketPlayer::value).orElse(0);
+                int value = redraft + keepers.map(blend -> blend.blend(id, redraft).bonus())
+                        .orElse(0);
+                if (row.isPresent() || value > 0) {
+                    priced.put(id, value);
+                }
+            });
             return new SourceResult.Ok<>(new LeagueValues(described, priced, ages));
         });
     }
@@ -203,16 +208,29 @@ public class MarketValuation {
         }
         return fantasyCalcList(redraft, now).flatMap(listing -> {
             Optional<MarketPlayer> row = listing.values().entry(player.id());
+            Keepers keepers = new Keepers(league, rosters, new DynastyValues(dynasty, now));
             if (row.isEmpty()) {
-                return unavailable("%s is not on FantasyCalc's %s list"
-                        .formatted(player.name(), redraft.describe()));
+                return offTheRedraftList(listing, redraft, described, player,
+                        keepers.blend(player.id(), 0));
             }
-            MarketQuote.Keeper blend = new Keepers(league, rosters,
-                    new DynastyValues(dynasty, now)).blend(player.id(), row.get().value());
+            MarketQuote.Keeper blend = keepers.blend(player.id(), row.get().value());
             return new SourceResult.Ok<>(fromFantasyCalc(redraft, listing, row.get(),
                     player.name(), described,
                     row.get().value() + blend.bonus(), Optional.of(blend)));
         });
+    }
+
+    private static SourceResult<MarketQuote> offTheRedraftList(
+            MarketValues.Listing<MarketDay> listing, MarketFormat redraft, String described,
+            Subject.Player player, MarketQuote.Keeper blend) {
+        if (blend.bonus() <= 0) {
+            return unavailable("%s is not on FantasyCalc's %s list and isn't a likely keeper"
+                    .formatted(player.name(), redraft.describe()));
+        }
+        return new SourceResult.Ok<>(new MarketQuote(player.id(), player.name(), described,
+                blend.bonus(), blend.dynastySource().orElse(MarketQuote.Source.FANTASY_CALC),
+                listing.day(), listing.ageDays(), Optional.empty(), Optional.empty(),
+                Optional.of(blend)));
     }
 
     private SourceResult<MarketValues.Listing<MarketDay>> fantasyCalcList(MarketFormat format,

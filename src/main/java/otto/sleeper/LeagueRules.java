@@ -39,6 +39,12 @@ import static otto.sleeper.SleeperAdapter.integer;
  *        empty for a league on custom daily waivers
  * @param waiverClearDays how many days a dropped player stays on waivers
  * @param teams how many teams the league holds, from {@code num_teams}
+ * @param draftRounds how many rounds each future rookie draft runs,
+ *        from {@code draft_rounds}: the rounds Sleeper issues each team
+ *        a pick in and lists in {@code traded_picks}. It is not the
+ *        startup draft's length, which the draft document holds.
+ * @param playoffRounds how long each playoff round lasts, from
+ *        {@code playoff_round_type}
  */
 public record LeagueRules(
         Optional<LeagueFormat> format,
@@ -49,7 +55,9 @@ public record LeagueRules(
         Optional<Integer> waiverClearDays,
         Reserve reserve,
         Taxi taxi,
-        Optional<Integer> teams) {
+        Optional<Integer> teams,
+        Optional<Integer> draftRounds,
+        Optional<PlayoffRounds> playoffRounds) {
 
     /**
      * Sleeper publishes no league timezone. Its weekly waiver run starts
@@ -74,6 +82,16 @@ public record LeagueRules(
 
     public enum LeagueFormat {
         REDRAFT, KEEPER, DYNASTY
+    }
+
+    /** How many NFL weeks each playoff round takes, as Sleeper numbers the choice. */
+    public enum PlayoffRounds {
+        /** Every round is one week: Sleeper's 0 and its default. */
+        ONE_WEEK,
+        /** Every round is one week but the final, which is two: Sleeper's 1. */
+        TWO_WEEK_FINAL,
+        /** Every round is two weeks: Sleeper's 2. */
+        TWO_WEEKS
     }
 
     /** The injury designations a league may separately allow onto IR. */
@@ -171,7 +189,14 @@ public record LeagueRules(
                         count(settings.path("taxi_years")),
                         flag(settings.path("taxi_allow_vets")),
                         count(settings.path("taxi_deadline"))),
-                count(settings.path("num_teams")).filter(teams -> teams > 0));
+                count(settings.path("num_teams")).filter(teams -> teams > 0),
+                count(settings.path("draft_rounds")).filter(rounds -> rounds > 0),
+                integer(settings.path("playoff_round_type")).flatMap(type -> switch (type) {
+                    case 0 -> Optional.of(PlayoffRounds.ONE_WEEK);
+                    case 1 -> Optional.of(PlayoffRounds.TWO_WEEK_FINAL);
+                    case 2 -> Optional.of(PlayoffRounds.TWO_WEEKS);
+                    default -> Optional.empty();
+                }));
     }
 
     /**

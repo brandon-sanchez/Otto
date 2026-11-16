@@ -60,6 +60,7 @@ public class AskTools {
     private final TeamDirectionAnswers directions;
     private final TradeIdeas tradeIdeas;
     private final PlayerStatsAnswers playerStats;
+    private final InjuredBuyLow injuredBuyLow;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, LineupAnswers lineups,
@@ -70,7 +71,8 @@ public class AskTools {
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
             MarketValueAnswers marketValues, KeeperRuleChat keeperRules,
             TeamWeaknesses weaknesses, BuyLowSellHigh buySell, TeamDirectionAnswers directions,
-            TradeIdeas tradeIdeas, PlayerStatsAnswers playerStats, Clock clock) {
+            TradeIdeas tradeIdeas, PlayerStatsAnswers playerStats, InjuredBuyLow injuredBuyLow,
+            Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.lineups = lineups;
@@ -93,6 +95,7 @@ public class AskTools {
         this.directions = directions;
         this.tradeIdeas = tradeIdeas;
         this.playerStats = playerStats;
+        this.injuredBuyLow = injuredBuyLow;
         this.clock = clock;
     }
 
@@ -580,6 +583,24 @@ public class AskTools {
                         checked.delivery()), BuyLowSellHigh.Answer::message))
                 .orElseGet(() -> ToolAnswer.unavailable(
                         "side must be buy, sell or both, not \"%s\"".formatted(side)));
+    }
+
+    @Tool(name = "judge_injured_player", description = """
+            Whether to trade for one injured player while he is hurt:
+            his return timeline exactly as cited news gives it, the games
+            he likely plays after he returns before the league's playoffs
+            end, what he is worth in this league's format (redraft,
+            keeper or dynasty), and why the timing suits both teams.
+            Its message is already written and fact-checked: send it
+            exactly as it is, adding nothing. Call this for "should I buy
+            <player> while he's hurt?" and "is <injured player> worth
+            trading for?".""")
+    public ToolAnswer<InjuredBuyLow.Answer> judgeInjuredPlayer(
+            @ToolParam(description = "The injured player, by name or Sleeper player id")
+            String player, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(injuredBuyLow.answer(player, clock.instant(), checked.delivery()),
+                InjuredBuyLow.Answer::message);
     }
 
     @Tool(name = "manage_keeper_rule", description = """

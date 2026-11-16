@@ -76,10 +76,14 @@ public class TradeIdeas {
             him ("yourEdge", and "yourLineup" when it adds something) and why the other
             manager would say yes, drawn from the "why" facts and "partnerDirection". When
             a player in the offer has a buy-low or sell-high item, say so in a clause and
-            why. Keep each player with the offer and manager the evidence puts him in.
-            When "found" says only some offers fit, say so in one sentence. Never claim to
-            send or accept a trade. Never write a confidence label such as High or Medium.
-            Stay under "maxLength" characters.
+            why. When a player in the offer has an "injury-" item, say what he is worth
+            while hurt from its "worth", give his timeline exactly as its "timeline" states
+            it, naming who reported it, and say why the timing suits both sides from its
+            "timing". Never give a return date the item doesn't state. Keep each player
+            with the offer and manager the evidence puts him in. When "found" says only
+            some offers fit, say so in one sentence. Never claim to send or accept a trade.
+            Never write a confidence label such as High or Medium. Stay under "maxLength"
+            characters.
 
             Answer with only this JSON object:
             {

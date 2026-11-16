@@ -30,6 +30,8 @@ import otto.team.TeamDirection;
 import otto.team.TeamDirections;
 import otto.team.TeamProfile;
 import otto.team.TeamProfiler;
+import otto.trade.InjuredValue;
+import otto.trade.InjuredValues;
 import otto.trade.LeaguePicks;
 import otto.trade.TradeEvaluator;
 import otto.trade.TradePiece;
@@ -72,10 +74,12 @@ public class TradeOffers {
     private final MarketValuation valuation;
     private final BuySellReader buySell;
     private final PlayerDirectoryStore directory;
+    private final InjuredValues injuredValues;
 
     public TradeOffers(TradeEvaluator evaluator, TeamProfiler profiler,
             TeamDirections directions, ManagerActivity activity, LeaguePicks picks,
-            MarketValuation valuation, BuySellReader buySell, PlayerDirectoryStore directory) {
+            MarketValuation valuation, BuySellReader buySell, PlayerDirectoryStore directory,
+            InjuredValues injuredValues) {
         this.evaluator = evaluator;
         this.profiler = profiler;
         this.directions = directions;
@@ -84,6 +88,7 @@ public class TradeOffers {
         this.valuation = valuation;
         this.buySell = buySell;
         this.directory = directory;
+        this.injuredValues = injuredValues;
     }
 
     /**
@@ -200,7 +205,25 @@ public class TradeOffers {
                 .filter(format -> format != LeagueRules.LeagueFormat.REDRAFT).isPresent();
         return new OfferSearch.League(user, unfitted, perGame, market,
                 longTerm ? picks.priced(league, now) : Map.of(), players,
-                calls(league, mine, now), longTerm);
+                calls(league, mine, now), injuredWorthBuying(league, basis, now), longTerm);
+    }
+
+    private Map<String, InjuredValue> injuredWorthBuying(LeagueWeek league,
+            TradeEvaluator.Basis basis, Instant now) {
+        Map<String, InjuredValue> worth = new HashMap<>();
+        for (RosterSnapshot roster : league.rosters()) {
+            if (roster.userRoster()) {
+                continue;
+            }
+            roster.players().stream()
+                    .flatMap(playerId -> Optional.ofNullable(basis.injured().get(playerId))
+                            .stream())
+                    .flatMap(player -> injuredValues.value(league, player, Optional.of(roster),
+                            now).stream())
+                    .filter(InjuredValue::worthBuying)
+                    .forEach(value -> worth.put(value.player().playerId(), value));
+        }
+        return worth;
     }
 
     /**
