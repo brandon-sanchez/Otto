@@ -23,5 +23,7 @@ public enum RunKind {
     /** A chat answer about buy-low and sell-high players. */
     BUY_LOW_SELL_HIGH,
     /** Every team in the league labelled contending, in the middle or rebuilding. */
-    TEAM_DIRECTIONS
+    TEAM_DIRECTIONS,
+    /** Named trade offers, suggested in chat when the user asks. */
+    TRADE_IDEAS
 }

@@ -43,18 +43,31 @@ final class BuySellEvidence {
     }
 
     static EvidenceBundle bundle(String task, List<Judged> judged, Instant now) {
-        List<EvidenceItem> items = new ArrayList<>();
-        items.add(terms(now));
-        for (Judged player : judged) {
-            items.add(player(player, now));
-            player.assessment().market().ifPresent(move -> items.add(market(player, move, now)));
-        }
+        List<EvidenceItem> items = items(judged, now);
         List<BundlePlayer> players = judged.stream()
                 .map(player -> new BundlePlayer(player.playerId(), player.name(),
                         Optional.empty()))
                 .toList();
         return new EvidenceBundle(task, items, players, List.of(), true, Optional.empty(),
                 MAX_LENGTH, Optional.empty(), List.of(), List.of());
+    }
+
+    /**
+     * Returns the items that state each judged player's call and any
+     * market move behind it, after the definitions they use; empty when
+     * no player is judged.
+     */
+    static List<EvidenceItem> items(List<Judged> judged, Instant now) {
+        List<EvidenceItem> items = new ArrayList<>();
+        if (judged.isEmpty()) {
+            return items;
+        }
+        items.add(terms(now));
+        for (Judged player : judged) {
+            items.add(player(player, now));
+            player.assessment().market().ifPresent(move -> items.add(market(player, move, now)));
+        }
+        return items;
     }
 
     private static EvidenceItem terms(Instant now) {

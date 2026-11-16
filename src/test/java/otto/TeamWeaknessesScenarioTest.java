@@ -73,8 +73,7 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
             Your lineup's big weeks rank 1st of 4, and Justin Jefferson has the best chance             of a boom week among your starters at 41%.
 
             Claim RB Depth 11 off waivers. He averages 13.0 points a game and would be 2nd \
-            among your RBs. You could also trade Tyler Lockett or Jalen Reagor to \
-            GridironGoblin, who is deeper than you at RB and thin at WR.
+            among your RBs.
 
             Free data carries no injury return dates, so I can't say when Josh Jacobs will \
             be back.""";
@@ -95,18 +94,23 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
     private OttoProperties properties;
 
     private void leagueInWeek(String leagueFixture, String stateFixture, int week) {
+        leagueInWeek(leagueFixture, "sleeper/rosters-team.json", "sleeper/projections-team.json",
+                stateFixture, week);
+    }
+
+    private void leagueInWeek(String leagueFixture, String rostersFixture,
+            String projectionsFixture, String stateFixture, int week) {
         clock.set(WEEK_12);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-team.json", "players-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture, "league-v1");
-        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
-                "sleeper/rosters-team.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, rostersFixture, "rosters-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.USERS_PATH,
                 "sleeper/users-league.json", "users-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH, stateFixture, "state-v1");
         for (int remaining = week; remaining <= 14; remaining++) {
             SleeperStubs.stubJson(sleeper, "/v1/projections/nfl/regular/2026/" + remaining,
-                    "sleeper/projections-team.json", "projections-w" + remaining);
+                    projectionsFixture, "projections-w" + remaining);
             SleeperStubs.stubJson(sleeper, "/scores/nfl/regular/2026/" + remaining,
                     "sleeper/scores-trade-w" + remaining + ".json", "scores-w" + remaining);
         }
@@ -149,7 +153,7 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
     }
 
     private static String checkedAnswer() {
-        return answer(CHECKED, "5850", "6794", "92011", "4029", "6768");
+        return answer(CHECKED, "5850", "6794", "92011");
     }
 
     private List<DecisionRecord> weaknessRecords() {
@@ -228,10 +232,6 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
                 .containsEntry("starterRank", "1st of 4")
                 .containsEntry("marketShape", "by FantasyCalc position rank: 2 WR1, 2 WR2, "
                         + "0 WR3, 0 below WR3, 2 not on the list");
-        assertThat(evidence.get("suggestion-2"))
-                .containsEntry("move", "trade from your WR surplus for help at RB")
-                .containsEntry("give", "Tyler Lockett or Jalen Reagor, beyond the 4 WR spots")
-                .containsEntry("partners", "GridironGoblin");
         assertThat(evidence.get("limits").get("limit2")).contains("route participation");
         assertThat(evidence.get("ceiling"))
                 .containsEntry("boomStarters",
@@ -239,6 +239,28 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
                 .containsEntry("boomRank", "1st of 4")
                 .containsEntry("bestBoom", "Justin Jefferson has the best chance of a boom "
                         + "week among your starters, 41%");
+    }
+
+    @Test
+    void tradeSuggestionsAreNamedOffersBesideTheWaiverMove() {
+        leagueInWeek("sleeper/league-in-season.json", "sleeper/rosters-offers.json",
+                "sleeper/projections-trade.json", "sleeper/state-nfl-week12.json", 12);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer("Your running backs are thin."));
+
+        ask("how can I improve my team?");
+
+        Map<String, Map<String, String>> evidence = evidence();
+        assertThat(evidence.get("suggestion-1")).containsKey("move")
+                .doesNotContainKey("sendTo");
+        assertThat(evidence.get("suggestion-2"))
+                .containsEntry("sendTo", "GridironGoblin")
+                .containsEntry("youGet", "Saquon Barkley")
+                .containsEntry("youGive", "Dallas Goedert and Justin Jefferson")
+                .containsEntry("shape", "a 2-for-1: two of yours for one better player, to "
+                        + "upgrade your RB starters");
+        assertThat(evidence).containsKey("suggestion-3").doesNotContainKey("suggestion-4");
     }
 
     @Test

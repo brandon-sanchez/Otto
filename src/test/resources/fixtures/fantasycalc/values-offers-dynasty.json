@@ -1,0 +1,600 @@
+[
+ {
+  "player": {
+   "name": "Justin Jefferson",
+   "sleeperId": "6794",
+   "position": "WR",
+   "maybeTeam": "MIN",
+   "maybeAge": 26.0
+  },
+  "value": 8600,
+  "overallRank": 1,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "Saquon Barkley",
+   "sleeperId": "4866",
+   "position": "RB",
+   "maybeTeam": "PHI",
+   "maybeAge": 26.0
+  },
+  "value": 8200,
+  "overallRank": 2,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "Christian McCaffrey",
+   "sleeperId": "4034",
+   "position": "RB",
+   "maybeTeam": "SF",
+   "maybeAge": 26.0
+  },
+  "value": 7800,
+  "overallRank": 3,
+  "positionRank": 2
+ },
+ {
+  "player": {
+   "name": "CeeDee Lamb",
+   "sleeperId": "6786",
+   "position": "WR",
+   "maybeTeam": "DAL",
+   "maybeAge": 26.0
+  },
+  "value": 7400,
+  "overallRank": 4,
+  "positionRank": 2
+ },
+ {
+  "player": {
+   "name": "Patrick Mahomes",
+   "sleeperId": "4046",
+   "position": "QB",
+   "maybeTeam": "KC",
+   "maybeAge": 26.0
+  },
+  "value": 7000,
+  "overallRank": 5,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "QB Depth 05",
+   "sleeperId": "91005",
+   "position": "QB",
+   "maybeTeam": "ATL",
+   "maybeAge": 26.0
+  },
+  "value": 6000,
+  "overallRank": 6,
+  "positionRank": 2
+ },
+ {
+  "player": {
+   "name": "WR Depth 05",
+   "sleeperId": "93005",
+   "position": "WR",
+   "maybeTeam": "NYJ",
+   "maybeAge": 26.0
+  },
+  "value": 5600,
+  "overallRank": 7,
+  "positionRank": 3
+ },
+ {
+  "player": {
+   "name": "RB Depth 08",
+   "sleeperId": "92008",
+   "position": "RB",
+   "maybeTeam": "NYJ",
+   "maybeAge": 26.0
+  },
+  "value": 5200,
+  "overallRank": 8,
+  "positionRank": 3
+ },
+ {
+  "player": {
+   "name": "Garrett Wilson",
+   "sleeperId": "8112",
+   "position": "WR",
+   "maybeTeam": "NYJ",
+   "maybeAge": 26.0
+  },
+  "value": 5000,
+  "overallRank": 9,
+  "positionRank": 4
+ },
+ {
+  "player": {
+   "name": "TE Depth 06",
+   "sleeperId": "94006",
+   "position": "TE",
+   "maybeTeam": "WAS",
+   "maybeAge": 26.0
+  },
+  "value": 5000,
+  "overallRank": 10,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "WR Depth 04",
+   "sleeperId": "93004",
+   "position": "WR",
+   "maybeTeam": "NYG",
+   "maybeAge": 26.0
+  },
+  "value": 4600,
+  "overallRank": 11,
+  "positionRank": 5
+ },
+ {
+  "player": {
+   "name": "Mike Evans",
+   "sleeperId": "2216",
+   "position": "WR",
+   "maybeTeam": "TB",
+   "maybeAge": 26.0
+  },
+  "value": 4300,
+  "overallRank": 12,
+  "positionRank": 6
+ },
+ {
+  "player": {
+   "name": "WR Depth 09",
+   "sleeperId": "93009",
+   "position": "WR",
+   "maybeTeam": "PHI",
+   "maybeAge": 26.0
+  },
+  "value": 4300,
+  "overallRank": 13,
+  "positionRank": 7
+ },
+ {
+  "player": {
+   "name": "RB Depth 10",
+   "sleeperId": "92010",
+   "position": "RB",
+   "maybeTeam": "BUF",
+   "maybeAge": 26.0
+  },
+  "value": 4200,
+  "overallRank": 14,
+  "positionRank": 4
+ },
+ {
+  "player": {
+   "name": "WR Depth 06",
+   "sleeperId": "93006",
+   "position": "WR",
+   "maybeTeam": "NE",
+   "maybeAge": 26.0
+  },
+  "value": 4000,
+  "overallRank": 15,
+  "positionRank": 8
+ },
+ {
+  "player": {
+   "name": "WR Depth 17",
+   "sleeperId": "93017",
+   "position": "WR",
+   "maybeTeam": "GB",
+   "maybeAge": 26.0
+  },
+  "value": 3900,
+  "overallRank": 16,
+  "positionRank": 9
+ },
+ {
+  "player": {
+   "name": "Travis Kelce",
+   "sleeperId": "1466",
+   "position": "TE",
+   "maybeTeam": "KC",
+   "maybeAge": 26.0
+  },
+  "value": 3800,
+  "overallRank": 17,
+  "positionRank": 2
+ },
+ {
+  "player": {
+   "name": "WR Depth 07",
+   "sleeperId": "93007",
+   "position": "WR",
+   "maybeTeam": "BUF",
+   "maybeAge": 26.0
+  },
+  "value": 3800,
+  "overallRank": 18,
+  "positionRank": 10
+ },
+ {
+  "player": {
+   "name": "TE Depth 10",
+   "sleeperId": "94010",
+   "position": "TE",
+   "maybeTeam": "BAL",
+   "maybeAge": 26.0
+  },
+  "value": 3700,
+  "overallRank": 19,
+  "positionRank": 3
+ },
+ {
+  "player": {
+   "name": "James Cook",
+   "sleeperId": "8138",
+   "position": "RB",
+   "maybeTeam": "BUF",
+   "maybeAge": 26.0
+  },
+  "value": 3600,
+  "overallRank": 20,
+  "positionRank": 5
+ },
+ {
+  "player": {
+   "name": "Jordan Love",
+   "sleeperId": "8135",
+   "position": "QB",
+   "maybeTeam": "GB",
+   "maybeAge": 26.0
+  },
+  "value": 3500,
+  "overallRank": 21,
+  "positionRank": 3
+ },
+ {
+  "player": {
+   "name": "RB Depth 06",
+   "sleeperId": "92006",
+   "position": "RB",
+   "maybeTeam": "DAL",
+   "maybeAge": 26.0
+  },
+  "value": 3400,
+  "overallRank": 22,
+  "positionRank": 6
+ },
+ {
+  "player": {
+   "name": "QB Depth 07",
+   "sleeperId": "91007",
+   "position": "QB",
+   "maybeTeam": "DAL",
+   "maybeAge": 26.0
+  },
+  "value": 3300,
+  "overallRank": 23,
+  "positionRank": 4
+ },
+ {
+  "player": {
+   "name": "WR Depth 08",
+   "sleeperId": "93008",
+   "position": "WR",
+   "maybeTeam": "MIA",
+   "maybeAge": 26.0
+  },
+  "value": 3200,
+  "overallRank": 24,
+  "positionRank": 11
+ },
+ {
+  "player": {
+   "name": "RB Depth 07",
+   "sleeperId": "92007",
+   "position": "RB",
+   "maybeTeam": "NYG",
+   "maybeAge": 26.0
+  },
+  "value": 3100,
+  "overallRank": 25,
+  "positionRank": 7
+ },
+ {
+  "player": {
+   "name": "RB Depth 15",
+   "sleeperId": "92015",
+   "position": "RB",
+   "maybeTeam": "NO",
+   "maybeAge": 26.0
+  },
+  "value": 3000,
+  "overallRank": 26,
+  "positionRank": 8
+ },
+ {
+  "player": {
+   "name": "QB Depth 08",
+   "sleeperId": "91008",
+   "position": "QB",
+   "maybeTeam": "NYG",
+   "maybeAge": 26.0
+  },
+  "value": 2900,
+  "overallRank": 27,
+  "positionRank": 5
+ },
+ {
+  "player": {
+   "name": "WR Depth 10",
+   "sleeperId": "93010",
+   "position": "WR",
+   "maybeTeam": "WAS",
+   "maybeAge": 26.0
+  },
+  "value": 2900,
+  "overallRank": 28,
+  "positionRank": 12
+ },
+ {
+  "player": {
+   "name": "Jalen Reagor",
+   "sleeperId": "6768",
+   "position": "WR",
+   "maybeTeam": "MIN",
+   "maybeAge": 26.0
+  },
+  "value": 2800,
+  "overallRank": 29,
+  "positionRank": 13
+ },
+ {
+  "player": {
+   "name": "QB Depth 09",
+   "sleeperId": "91009",
+   "position": "QB",
+   "maybeTeam": "NYJ",
+   "maybeAge": 26.0
+  },
+  "value": 2700,
+  "overallRank": 30,
+  "positionRank": 6
+ },
+ {
+  "player": {
+   "name": "RB Depth 19",
+   "sleeperId": "92019",
+   "position": "RB",
+   "maybeTeam": "SEA",
+   "maybeAge": 26.0
+  },
+  "value": 2600,
+  "overallRank": 31,
+  "positionRank": 9
+ },
+ {
+  "player": {
+   "name": "WR Depth 12",
+   "sleeperId": "93012",
+   "position": "WR",
+   "maybeTeam": "NO",
+   "maybeAge": 26.0
+  },
+  "value": 2600,
+  "overallRank": 32,
+  "positionRank": 14
+ },
+ {
+  "player": {
+   "name": "TE Depth 03",
+   "sleeperId": "94003",
+   "position": "TE",
+   "maybeTeam": "BUF",
+   "maybeAge": 26.0
+  },
+  "value": 2600,
+  "overallRank": 33,
+  "positionRank": 4
+ },
+ {
+  "player": {
+   "name": "RB Depth 09",
+   "sleeperId": "92009",
+   "position": "RB",
+   "maybeTeam": "NE",
+   "maybeAge": 26.0
+  },
+  "value": 2500,
+  "overallRank": 34,
+  "positionRank": 10
+ },
+ {
+  "player": {
+   "name": "QB Depth 11",
+   "sleeperId": "91011",
+   "position": "QB",
+   "maybeTeam": "BUF",
+   "maybeAge": 26.0
+  },
+  "value": 2400,
+  "overallRank": 35,
+  "positionRank": 7
+ },
+ {
+  "player": {
+   "name": "TE Depth 04",
+   "sleeperId": "94004",
+   "position": "TE",
+   "maybeTeam": "MIA",
+   "maybeAge": 26.0
+  },
+  "value": 2400,
+  "overallRank": 36,
+  "positionRank": 5
+ },
+ {
+  "player": {
+   "name": "TE Depth 05",
+   "sleeperId": "94005",
+   "position": "TE",
+   "maybeTeam": "PHI",
+   "maybeAge": 26.0
+  },
+  "value": 2200,
+  "overallRank": 37,
+  "positionRank": 6
+ },
+ {
+  "player": {
+   "name": "RB Depth 12",
+   "sleeperId": "92012",
+   "position": "RB",
+   "maybeTeam": "PHI",
+   "maybeAge": 26.0
+  },
+  "value": 1900,
+  "overallRank": 38,
+  "positionRank": 11
+ },
+ {
+  "player": {
+   "name": "RB Depth 13",
+   "sleeperId": "92013",
+   "position": "RB",
+   "maybeTeam": "WAS",
+   "maybeAge": 26.0
+  },
+  "value": 1700,
+  "overallRank": 39,
+  "positionRank": 12
+ },
+ {
+  "player": {
+   "name": "RB Depth 14",
+   "sleeperId": "92014",
+   "position": "RB",
+   "maybeTeam": "TB",
+   "maybeAge": 26.0
+  },
+  "value": 1600,
+  "overallRank": 40,
+  "positionRank": 13
+ },
+ {
+  "player": {
+   "name": "Tyler Lockett",
+   "sleeperId": "4029",
+   "position": "WR",
+   "maybeTeam": "SEA",
+   "maybeAge": 26.0
+  },
+  "value": 1500,
+  "overallRank": 41,
+  "positionRank": 15
+ },
+ {
+  "player": {
+   "name": "QB Depth 20",
+   "sleeperId": "91020",
+   "position": "QB",
+   "maybeTeam": "SEA",
+   "maybeAge": 26.0
+  },
+  "value": 1200,
+  "overallRank": 42,
+  "positionRank": 8
+ },
+ {
+  "player": {
+   "name": "Dallas Goedert",
+   "sleeperId": "6813",
+   "position": "TE",
+   "maybeTeam": "PHI",
+   "maybeAge": 26.0
+  },
+  "value": 900,
+  "overallRank": 43,
+  "positionRank": 7
+ },
+ {
+  "player": {
+   "name": "RB Depth 26",
+   "sleeperId": "92026",
+   "position": "RB",
+   "maybeTeam": "DAL",
+   "maybeAge": 26.0
+  },
+  "value": 100,
+  "overallRank": 44,
+  "positionRank": 14
+ },
+ {
+  "player": {
+   "name": "2027 1st (Early)",
+   "sleeperId": "FP_2027_1st_Early",
+   "position": "PICK"
+  },
+  "value": 4600,
+  "overallRank": 101,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "2027 1st (Mid)",
+   "sleeperId": "FP_2027_1st_Mid",
+   "position": "PICK"
+  },
+  "value": 3900,
+  "overallRank": 102,
+  "positionRank": 2
+ },
+ {
+  "player": {
+   "name": "2027 1st (Late)",
+   "sleeperId": "FP_2027_1st_Late",
+   "position": "PICK"
+  },
+  "value": 3300,
+  "overallRank": 103,
+  "positionRank": 3
+ },
+ {
+  "player": {
+   "name": "2027 1st",
+   "sleeperId": "FP_2027_1st",
+   "position": "PICK"
+  },
+  "value": 3900,
+  "overallRank": 104,
+  "positionRank": 4
+ },
+ {
+  "player": {
+   "name": "2027 2nd",
+   "sleeperId": "FP_2027_2nd",
+   "position": "PICK"
+  },
+  "value": 1500,
+  "overallRank": 105,
+  "positionRank": 5
+ },
+ {
+  "player": {
+   "name": "2028 1st",
+   "sleeperId": "FP_2028_1st",
+   "position": "PICK"
+  },
+  "value": 3400,
+  "overallRank": 106,
+  "positionRank": 6
+ },
+ {
+  "player": {
+   "name": "2028 2nd",
+   "sleeperId": "FP_2028_2nd",
+   "position": "PICK"
+  },
+  "value": 1300,
+  "overallRank": 107,
+  "positionRank": 7
+ }
+]

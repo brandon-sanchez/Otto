@@ -32,6 +32,8 @@ import otto.directory.PlayerHealth;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketValues;
+import otto.offers.Offer;
+import otto.offers.TradeOffers;
 import otto.records.DecisionRecord;
 import otto.records.Outcome;
 import otto.records.RunIds;
@@ -47,6 +49,7 @@ import otto.team.RatedPlayer;
 import otto.team.TeamDirections;
 import otto.team.TeamProfile;
 import otto.team.TeamProfiler;
+import otto.team.WaiverSuggestion;
 import otto.team.WeaknessSuggestions;
 import otto.trade.RestOfSeason;
 import otto.trade.RestOfSeasonProjections;
@@ -90,9 +93,11 @@ public class TeamWeaknesses {
                and for a surplus how many startable players it has for how many spots. Use
                the market shape when it adds something, such as no WR1.
             3. One sentence on the lineup's ceiling from "ceiling".
-            4. Each suggestion in the "suggestion-" items, in order, with its reason. Offer
-               none that the evidence lacks. When "trade-deadline" is present, say trades
-               are closed and point to waivers.
+            4. Each suggestion in the "suggestion-" items, in order, with its reason. For a
+               trade, say which manager to send it to ("sendTo"), what he gives and gets,
+               and why the other manager would say yes from its "why" facts. Offer none
+               that the evidence lacks. When "trade-deadline" is present, say trades are
+               closed and point to waivers.
             When "direction" has a "question", end the message by asking it.
             When "limits" is present, say each limit plainly in one sentence where it
             matters. Never write a confidence label such as High or Medium. Stay under
@@ -124,6 +129,7 @@ public class TeamWeaknesses {
     private final PlayerDirectoryStore directory;
     private final MarketValues market;
     private final TeamDirections directions;
+    private final TradeOffers offers;
     private final AdviceWriter writer;
     private final RunOutcomes runs;
     private final AdviceForm<AdviceAnswer> form;
@@ -131,14 +137,15 @@ public class TeamWeaknesses {
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, PlayerDirectoryStore directory, MarketValues market,
-            TeamDirections directions, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            OttoProperties properties) {
+            TeamDirections directions, TradeOffers offers, AdviceWriter writer,
+            AdviceCheck check, RunOutcomes runs, OttoProperties properties) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
         this.directory = directory;
         this.market = market;
         this.directions = directions;
+        this.offers = offers;
         this.writer = writer;
         this.runs = runs;
         this.userId = properties.userId();
@@ -227,9 +234,10 @@ public class TeamWeaknesses {
         LeagueProfile profile = profiler.profile(league, perGame);
         TeamProfile user = profile.user().orElseThrow();
         Optional<Integer> deadline = passedDeadline(league);
+        List<WaiverSuggestion> waivers = WeaknessSuggestions.of(profile,
+                rated(freeAgents, perGame, league));
         TeamWeaknessEvidence.Facts facts = new TeamWeaknessEvidence.Facts(name, profile, user,
-                WeaknessSuggestions.of(profile, rated(freeAgents, perGame, league),
-                        deadline.isEmpty()),
+                waivers, deadline.isEmpty() ? trades(league, waivers.size(), now) : List.of(),
                 market(league, now), sidelined(mine, user), season.weeks(),
                 deadline, limits(mine, user), everyLeague, direction(league, now));
         EvidenceBundle bundle = TeamWeaknessEvidence.bundle(facts, MAX_LENGTH, now);
@@ -239,6 +247,23 @@ public class TeamWeaknesses {
             case Outcome.Sent sent -> ToolAnswer.of(new Answer(name, sent.message()));
             case Outcome.HandedToChat handed -> ToolAnswer.of(new Answer(name, handed.message()));
             default -> ToolAnswer.unavailable(withheld(result));
+        };
+    }
+
+    /**
+     * The best trade offers that fit beside the waiver moves, up to
+     * {@link WeaknessSuggestions#MOST} suggestions in all. A league the
+     * offer search can't price gets waiver moves alone.
+     */
+    private List<Offer> trades(LeagueWeek league, int waivers, Instant now) {
+        int room = WeaknessSuggestions.MOST - waivers;
+        if (room < 1) {
+            return List.of();
+        }
+        return switch (offers.find(league, new TradeOffers.Request(room, 0, Optional.empty()),
+                now)) {
+            case SourceResult.Ok<TradeOffers.Ideas> ideas -> ideas.value().offers();
+            case SourceResult.Unavailable<TradeOffers.Ideas> _ -> List.of();
         };
     }
 

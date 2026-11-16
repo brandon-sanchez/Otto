@@ -1,0 +1,150 @@
+[
+ {
+  "player": {
+   "name": "RB Depth 06",
+   "sleeperId": "92006",
+   "position": "RB",
+   "maybeTeam": "DAL",
+   "maybeAge": 28.0,
+   "maybeYoe": 4
+  },
+  "value": 6000,
+  "overallRank": 1,
+  "positionRank": 1,
+  "trend30Day": 0,
+  "redraftValue": 6000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "RB Depth 10",
+   "sleeperId": "92010",
+   "position": "RB",
+   "maybeTeam": "BUF",
+   "maybeAge": 24.1,
+   "maybeYoe": 4
+  },
+  "value": 5000,
+  "overallRank": 2,
+  "positionRank": 2,
+  "trend30Day": 0,
+  "redraftValue": 5000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "Saquon Barkley",
+   "sleeperId": "4866",
+   "position": "RB",
+   "maybeTeam": "PHI",
+   "maybeAge": 29.8,
+   "maybeYoe": 4
+  },
+  "value": 4000,
+  "overallRank": 3,
+  "positionRank": 3,
+  "trend30Day": 0,
+  "redraftValue": 4000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "WR Depth 07",
+   "sleeperId": "93007",
+   "position": "WR",
+   "maybeTeam": "BUF",
+   "maybeAge": 23.7,
+   "maybeYoe": 4
+  },
+  "value": 4000,
+  "overallRank": 4,
+  "positionRank": 4,
+  "trend30Day": 0,
+  "redraftValue": 4000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "WR Depth 04",
+   "sleeperId": "93004",
+   "position": "WR",
+   "maybeTeam": "NYG",
+   "maybeAge": 26.0,
+   "maybeYoe": 4
+  },
+  "value": 4000,
+  "overallRank": 5,
+  "positionRank": 5,
+  "trend30Day": 0,
+  "redraftValue": 4000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "WR Depth 05",
+   "sleeperId": "93005",
+   "position": "WR",
+   "maybeTeam": "NYJ",
+   "maybeAge": 30.5,
+   "maybeYoe": 4
+  },
+  "value": 2000,
+  "overallRank": 6,
+  "positionRank": 6,
+  "trend30Day": 0,
+  "redraftValue": 2000,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "Patrick Mahomes",
+   "sleeperId": "4046",
+   "position": "QB",
+   "maybeTeam": "KC",
+   "maybeAge": 31.2,
+   "maybeYoe": 4
+  },
+  "value": 600,
+  "overallRank": 7,
+  "positionRank": 7,
+  "trend30Day": 0,
+  "redraftValue": 600,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "Justin Jefferson",
+   "sleeperId": "6794",
+   "position": "WR",
+   "maybeTeam": "MIN",
+   "maybeAge": 27.4,
+   "maybeYoe": 4
+  },
+  "value": 400,
+  "overallRank": 8,
+  "positionRank": 8,
+  "trend30Day": 0,
+  "redraftValue": 400,
+  "maybeTier": 3
+ },
+ {
+  "player": {
+   "name": "2027 1st",
+   "sleeperId": "FP_2027_1",
+   "position": "PICK"
+  },
+  "value": 3000,
+  "overallRank": 150,
+  "positionRank": 1
+ },
+ {
+  "player": {
+   "name": "2027 2nd",
+   "sleeperId": "FP_2027_2",
+   "position": "PICK"
+  },
+  "value": 1000,
+  "overallRank": 150,
+  "positionRank": 1
+ }
+]

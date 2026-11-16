@@ -58,6 +58,7 @@ public class AskTools {
     private final TeamWeaknesses weaknesses;
     private final BuyLowSellHigh buySell;
     private final TeamDirectionAnswers directions;
+    private final TradeIdeas tradeIdeas;
     private final PlayerStatsAnswers playerStats;
     private final Clock clock;
 
@@ -69,7 +70,7 @@ public class AskTools {
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
             MarketValueAnswers marketValues, KeeperRuleChat keeperRules,
             TeamWeaknesses weaknesses, BuyLowSellHigh buySell, TeamDirectionAnswers directions,
-            PlayerStatsAnswers playerStats, Clock clock) {
+            TradeIdeas tradeIdeas, PlayerStatsAnswers playerStats, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.lineups = lineups;
@@ -90,6 +91,7 @@ public class AskTools {
         this.weaknesses = weaknesses;
         this.buySell = buySell;
         this.directions = directions;
+        this.tradeIdeas = tradeIdeas;
         this.playerStats = playerStats;
         this.clock = clock;
     }
@@ -470,6 +472,37 @@ public class AskTools {
                 yield trades.evaluate(ok.value(), matches.getFirst(), gets, gives);
             }
         };
+    }
+
+    @Tool(name = "suggest_trades", description = """
+            Named trade offers for the user: for each, which manager to
+            send it to, what he gives, what he gets, and why the other
+            manager would plausibly say yes, each priced the way
+            evaluate_trade prices it, already written and fact-checked.
+            Send its message word for word. Call this only when he asks,
+            for "what trades should I make", "show me 5 trades" or "find
+            me a 3-for-2". When he asks for more ideas, call it with shown
+            set to how many he has seen, and with count only when he said
+            how many; without a count it says to ask him how many more he
+            wants, so ask him that. Otto never sends or accepts a trade.""")
+    public ToolAnswer<TradeIdeas.Answer> suggestTrades(
+            @ToolParam(required = false, description = """
+                    How many trade ideas he asked for. Leave it out for
+                    three, or when he asked for more without a number.""")
+            Integer count,
+            @ToolParam(required = false, description = """
+                    How many trade ideas he has already seen in this
+                    conversation, when he asks for more. Leave it out
+                    otherwise.""")
+            Integer shown,
+            @ToolParam(required = false, description = """
+                    The shape he asked for, as how many he gives for how
+                    many he gets, such as 3-for-2. Leave it out when he
+                    named none.""")
+            String shape, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(tradeIdeas.answer(count, shown, shape, clock.instant(),
+                checked.delivery()), TradeIdeas.Answer::message);
     }
 
     @Tool(name = "review_habits", description = """

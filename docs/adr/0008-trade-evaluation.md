@@ -1,7 +1,8 @@
 # ADR-0008: Trade evaluation
 
 Status: accepted (2026-08-09, issue #18); amended 2026-11-16 (issue #222) for
-league shape, market values and draft picks
+league shape, market values and draft picks, and 2026-11-16 (issue #226) for
+trade ideas
 
 The spec pins the valuation formula, the verdict bands and the leverage
 note. It leaves the shape of each open: what "rest of season" reads
@@ -171,6 +172,48 @@ Both measures are banded by the same rule (`VerdictBand`), so they can
 be read side by side. When the deciding measure is missing, for example
 because FantasyCalc has never answered for this format, the other one
 decides and the answer says so.
+
+## Trade ideas use the same two measures
+
+`suggest_trades` and the trade moves in the weaknesses answer name
+offers: who to send one to, what the user gives, what he gets and why
+the other manager would say yes. They don't grow a second valuation.
+Every offer is priced by `TradeEvaluator.price`, the same arithmetic
+`evaluate_trade` runs, against the same two-team basis, so asking
+`evaluate_trade` about a suggested offer gives the same verdict, gap
+and numbers. A search that priced offers its own way would sooner or
+later suggest a trade the evaluator then calls a loss.
+
+The search (`TradeOffers`) uses a quick estimate built from the same
+parts, a player's points above Replacement Level times his scarcity
+and his market value, only to choose which trades to price in full. The
+full price decides:
+
+- The user wins on the measure that decides his league. Where the
+  market decides (dynasty and keeper), the win is at most a slight edge,
+  because a clear edge at market value is a deal the partner weighs and
+  turns down. In redraft the fit decides and the partner weighs the
+  market, so the user's fit gain is not capped; the market keeps the
+  offer fair to the partner instead.
+- The partner would plausibly accept (`Acceptance`): a fair market price
+  for him scores two points, and one point each when the trade helps his
+  starting lineup, fills a thin position or spends a surplus of his,
+  suits his direction (a contender gaining points, a rebuilding team
+  gaining a pick), or he has traded this season. A manager who has made
+  no move all season loses a point. Three points make a plausible yes.
+- Every piece is held by the team giving it.
+
+The default shapes follow the user's need: two of his pieces for one
+starter at a position whose starters rank in the league's bottom third,
+and one of his pieces for two at a position whose depth does. Any shape
+he asks for is built, with no cap on pieces, and in dynasty and keeper
+leagues his and the partner's draft picks are pieces like players.
+Buy-low players on other teams come first as targets and sell-high
+players on his team come first as chips. No player is held back.
+
+After the trade deadline there are no offers. `suggest_trades` answers
+with the weaknesses read, which says trades are closed and points to
+waivers. Otto never sends or accepts a trade on Sleeper.
 
 ## The verdict is the user's, and only the user's
 

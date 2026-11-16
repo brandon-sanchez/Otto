@@ -11,13 +11,10 @@ import java.util.OptionalInt;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.ask.LeagueWeek;
-import otto.check.SeasonWeek;
 import otto.market.DraftPick;
 import otto.market.MarketQuote;
 import otto.market.MarketValuation;
-import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
 
@@ -32,13 +29,12 @@ import otto.snapshot.RosterSnapshot;
 public class TradeMarket {
 
     private final MarketValuation valuation;
-    private final SleeperAdapter sleeper;
+    private final LeaguePicks picks;
     private final Clock clock;
 
-    TradeMarket(MarketValuation valuation, SleeperAdapter sleeper, OttoProperties properties,
-            Clock clock) {
+    TradeMarket(MarketValuation valuation, LeaguePicks picks, Clock clock) {
         this.valuation = valuation;
-        this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
+        this.picks = picks;
         this.clock = clock;
     }
 
@@ -93,8 +89,8 @@ public class TradeMarket {
         Instant now = clock.instant();
         boolean picksNamed = names(incoming) || names(outgoing);
         List<String> pickNotes = new ArrayList<>();
-        HeldPicks held = HeldPicks.of(picksNamed ? tradedPicks(pickNotes) : List.of(),
-                leagueWeek.rosters(), nextDraft(leagueWeek));
+        HeldPicks held = picksNamed ? picks.held(leagueWeek, pickNotes)
+                : HeldPicks.of(List.of(), leagueWeek.rosters(), OptionalInt.empty());
         Side gets = side(leagueWeek, held, partner, incoming, now);
         Side gives = side(leagueWeek, held, mine, outgoing, now);
         pickNotes.addAll(gets.pickNotes());
@@ -182,16 +178,8 @@ public class TradeMarket {
                     false);
         }
         HeldPicks.Held pick = held.resolve(named.get(), giver);
-        SourceResult<MarketQuote> quote = valuation.quote(leagueWeek.league(),
-                leagueWeek.rosters(), new MarketValuation.Subject.Pick(pick.pick()), now);
-        if (quote instanceof SourceResult.Unavailable<MarketQuote> && pick.pick().slot()
-                .isPresent()) {
-            DraftPick anywhere = new DraftPick(pick.pick().year(), pick.pick().round(),
-                    Optional.empty());
-            quote = valuation.quote(leagueWeek.league(), leagueWeek.rosters(),
-                    new MarketValuation.Subject.Pick(anywhere), now);
-        }
-        Priced priced = quoted(pick.pick().describe(), "draft pick", quote);
+        Priced priced = quoted(pick.pick().describe(), "draft pick",
+                picks.quote(leagueWeek, pick.pick(), now));
         return new Priced(priced.asset(), priced.quote(), pick.notes(), !pick.held());
     }
 
@@ -216,25 +204,6 @@ public class TradeMarket {
                         + keeper.cost().map(cost -> ". " + cost.cost() + " " + cost.rule())
                                 .orElse("")))
                 .orElse(List.of());
-    }
-
-    private List<SleeperAdapter.TradedPick> tradedPicks(List<String> notes) {
-        return switch (sleeper.tradedPicks()) {
-            case SourceResult.Ok<List<SleeperAdapter.TradedPick>> ok -> ok.value();
-            case SourceResult.Unavailable<List<SleeperAdapter.TradedPick>> none -> {
-                notes.add("I couldn't read from Sleeper which picks have changed hands, so I "
-                        + "assumed each team still holds its own");
-                yield List.of();
-            }
-        };
-    }
-
-    private static OptionalInt nextDraft(LeagueWeek leagueWeek) {
-        return leagueWeek.week().seasonWeek()
-                .map(SeasonWeek::season)
-                .filter(season -> season.matches("\\d{4}"))
-                .map(season -> OptionalInt.of(Integer.parseInt(season) + 1))
-                .orElse(OptionalInt.empty());
     }
 
     private static boolean names(List<TradePiece> pieces) {

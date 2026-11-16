@@ -17,12 +17,13 @@ import otto.advice.Ordinal;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketPlayer;
+import otto.offers.Offer;
 import otto.team.LeagueProfile;
 import otto.team.PositionProfile;
 import otto.team.RatedPlayer;
-import otto.team.Suggestion;
 import otto.team.TeamDirection;
 import otto.team.TeamProfile;
+import otto.team.WaiverSuggestion;
 
 /**
  * Writes the evidence bundle the weaknesses answer is explained from.
@@ -59,6 +60,9 @@ final class TeamWeaknessEvidence {
      * Everything the bundle is written from.
      *
      * @param user the user's team, which is in {@code league}
+     * @param waivers the waiver moves, suggested first
+     * @param trades the trade offers suggested after them; empty once the
+     *        trade deadline has passed
      * @param sidelined the user's IR and taxi players left out of the
      *        profile because he cannot activate them now
      * @param weeks the remaining weeks the per-game averages cover
@@ -69,7 +73,7 @@ final class TeamWeaknessEvidence {
      * @param direction empty when there was nothing to measure it by
      */
     record Facts(String leagueName, LeagueProfile league, TeamProfile user,
-            List<Suggestion> suggestions, Optional<Market> market,
+            List<WaiverSuggestion> waivers, List<Offer> trades, Optional<Market> market,
             List<BundlePlayer> sidelined, List<Integer> weeks,
             Optional<Integer> tradeDeadline, List<String> limits, boolean everyLeague,
             Optional<Direction> direction) {
@@ -95,13 +99,20 @@ final class TeamWeaknessEvidence {
                         + "squad and cannot be activated now, so he is left out")
                         .formatted(player.fullName())))));
         facts.market().ifPresent(market -> Stream.concat(players(facts.user()),
-                        suggestedPlayers(facts.suggestions()))
+                        facts.waivers().stream().map(WaiverSuggestion::add))
                 .forEach(player -> market.day().entry(player.playerId()).ifPresent(row ->
                         evidence.add(marketItem(player, row, market, now)))));
         evidence.add(item("ceiling", now, ceiling(facts)));
-        for (int index = 0; index < facts.suggestions().size(); index++) {
+        for (int index = 0; index < facts.waivers().size(); index++) {
             evidence.add(item("suggestion-" + (index + 1), now,
-                    suggestion(facts.suggestions().get(index))));
+                    waiver(facts.waivers().get(index))));
+        }
+        for (int index = 0; index < facts.trades().size(); index++) {
+            String id = "suggestion-" + (facts.waivers().size() + index + 1);
+            TradeIdeaEvidence.offerItems(id, facts.trades().get(index), now).stream()
+                    .filter(item -> evidence.stream()
+                            .noneMatch(known -> known.id().equals(item.id())))
+                    .forEach(evidence::add);
         }
         facts.tradeDeadline().ifPresent(week -> evidence.add(item("trade-deadline", now,
                 Map.of("tradeDeadline", ("the trade deadline passed after week %d, so trades "
@@ -113,11 +124,14 @@ final class TeamWeaknessEvidence {
             }
             evidence.add(item("limits", now, limits));
         }
-        List<BundlePlayer> players = Stream.concat(Stream.concat(players(facts.user()),
-                        suggestedPlayers(facts.suggestions()))
-                        .map(player -> new BundlePlayer(player.playerId(), player.name(),
-                                Optional.empty())),
-                        facts.sidelined().stream())
+        List<BundlePlayer> players = Stream.of(
+                        Stream.concat(players(facts.user()),
+                                        facts.waivers().stream().map(WaiverSuggestion::add))
+                                .map(player -> new BundlePlayer(player.playerId(),
+                                        player.name(), Optional.empty())),
+                        facts.sidelined().stream(),
+                        TradeIdeaEvidence.players(facts.trades()).stream())
+                .flatMap(stream -> stream)
                 .distinct()
                 .toList();
         return new EvidenceBundle(
@@ -222,34 +236,16 @@ final class TeamWeaknessEvidence {
         return ceiling;
     }
 
-    private static Map<String, String> suggestion(Suggestion suggestion) {
+    private static Map<String, String> waiver(WaiverSuggestion waiver) {
+        String position = waiver.need().position();
         Map<String, String> facts = new LinkedHashMap<>();
-        switch (suggestion) {
-            case Suggestion.Waiver waiver -> {
-                String position = waiver.need().position();
-                facts.put("move", "claim %s off waivers".formatted(waiver.add().name()));
-                facts.put("player", waiver.add().name());
-                facts.put("average", "%s points a game over the rest of the season"
-                        .formatted(decimal(waiver.add().perGame())));
-                facts.put(Ordinal.RANK_FACT, "%s among your %ss if you add him"
-                        .formatted(Ordinal.of(waiver.place()), position));
-                facts.put("reason", "your %s position is thin".formatted(position));
-            }
-            case Suggestion.Trade trade -> {
-                String surplus = trade.surplus().position();
-                String need = trade.need().position();
-                facts.put("move", "trade from your %s surplus for help at %s"
-                        .formatted(surplus, need));
-                facts.put("give", "%s, beyond the %d %s spots".formatted(
-                        trade.give().stream().map(RatedPlayer::name)
-                                .collect(Collectors.joining(" or ")),
-                        trade.surplus().spots(), surplus));
-                facts.put("partners", String.join(", ", trade.partners()));
-                facts.put("reason", "%s %s deeper than you at %s and thin at %s".formatted(
-                        String.join(" and ", trade.partners()),
-                        trade.partners().size() == 1 ? "is" : "are", need, surplus));
-            }
-        }
+        facts.put("move", "claim %s off waivers".formatted(waiver.add().name()));
+        facts.put("player", waiver.add().name());
+        facts.put("average", "%s points a game over the rest of the season"
+                .formatted(decimal(waiver.add().perGame())));
+        facts.put(Ordinal.RANK_FACT, "%s among your %ss if you add him"
+                .formatted(Ordinal.of(waiver.place()), position));
+        facts.put("reason", "your %s position is thin".formatted(position));
         return facts;
     }
 
@@ -257,13 +253,6 @@ final class TeamWeaknessEvidence {
         return LeagueProfile.POSITIONS.stream()
                 .flatMap(position -> user.at(position).stream())
                 .flatMap(profile -> profile.players().stream());
-    }
-
-    private static Stream<RatedPlayer> suggestedPlayers(List<Suggestion> suggestions) {
-        return suggestions.stream().flatMap(suggestion -> switch (suggestion) {
-            case Suggestion.Waiver waiver -> Stream.of(waiver.add());
-            case Suggestion.Trade trade -> trade.give().stream();
-        });
     }
 
     /**
