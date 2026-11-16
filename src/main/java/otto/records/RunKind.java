@@ -15,5 +15,7 @@ public enum RunKind {
     /** The answer to the user asking about his management habits. */
     HABITS,
     /** A chat answer about what one player or draft pick is worth on the trade market. */
-    MARKET_VALUE
+    MARKET_VALUE,
+    /** The user's team read position by position, when he asks about its weaknesses. */
+    TEAM_WEAKNESSES
 }
