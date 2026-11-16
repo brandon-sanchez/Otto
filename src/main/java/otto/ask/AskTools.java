@@ -49,6 +49,7 @@ public class AskTools {
     private final HabitService habits;
     private final MarketValueAnswers marketValues;
     private final TeamWeaknesses weaknesses;
+    private final BuyLowSellHigh buySell;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
@@ -56,7 +57,8 @@ public class AskTools {
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
-            MarketValueAnswers marketValues, TeamWeaknesses weaknesses, Clock clock) {
+            MarketValueAnswers marketValues, TeamWeaknesses weaknesses,
+            BuyLowSellHigh buySell, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -73,6 +75,7 @@ public class AskTools {
         this.habits = habits;
         this.marketValues = marketValues;
         this.weaknesses = weaknesses;
+        this.buySell = buySell;
         this.clock = clock;
     }
 
@@ -456,6 +459,37 @@ public class AskTools {
             String subject, ToolContext context) {
         return CheckedAnswers.of(context).offer(marketValues.answer(subject),
                 MarketValueAnswers.Reply::message);
+    }
+
+    @Tool(name = "find_buy_low_sell_high", description = """
+            Buy-low and sell-high players, judged from usage: a buy-low
+            is a proven player whose usage held while his points slumped
+            or whose market value fell while his usage held; a sell-high
+            is scoring far above what his usage is worth. Without a
+            player it looks for buy-lows on the other managers' teams and
+            sell-highs on the user's team. Its message is already written
+            and fact-checked: send it exactly as it is, adding nothing.
+            Call this for "who should I buy low?", "is anyone on my team
+            a sell-high?" and "should I sell <player>?".""")
+    public ToolAnswer<BuyLowSellHigh.Answer> findBuyLowSellHigh(
+            @ToolParam(required = false, description = """
+                    One player to judge, by name or Sleeper player id. Leave
+                    it out to look across the league.""")
+            String player,
+            @ToolParam(required = false, description = """
+                    buy for buy-lows only, sell for sell-highs only, or both.
+                    Leave it out for both. Ignored when a player is named.""")
+            String side, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        if (player != null && !player.isBlank()) {
+            return checked.offer(buySell.player(player, clock.instant(), checked.delivery()),
+                    BuyLowSellHigh.Answer::message);
+        }
+        return BuyLowSellHigh.Side.parse(side)
+                .map(parsed -> checked.offer(buySell.scan(parsed, clock.instant(),
+                        checked.delivery()), BuyLowSellHigh.Answer::message))
+                .orElseGet(() -> ToolAnswer.unavailable(
+                        "side must be buy, sell or both, not \"%s\"".formatted(side)));
     }
 
     @Tool(name = "get_team_weaknesses", description = """

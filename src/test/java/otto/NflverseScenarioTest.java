@@ -78,7 +78,8 @@ class NflverseScenarioTest extends WireSeamTest {
         assertThat(schedule.rows()).filteredOn(game -> game.gameId().equals("2026_01_SF_LA"))
                 .singleElement()
                 .isEqualTo(new Schedule.Game("2026_01_SF_LA", "2026", 1,
-                        Instant.parse("2026-09-11T00:35:00Z"), "LAR", "SF", true));
+                        Instant.parse("2026-09-11T00:35:00Z"), "LAR", "SF", true,
+                        "00-0026498", "00-0037834", "Sean McVay", "Kyle Shanahan"));
         assertThat(schedule.rows()).filteredOn(game -> game.gameId().equals("2026_04_NE_BUF"))
                 .singleElement()
                 .extracting(Schedule.Game::finished).isEqualTo(false);

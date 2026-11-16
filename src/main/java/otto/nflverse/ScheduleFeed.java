@@ -26,7 +26,8 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
 
     private static final Set<String> COLUMNS = Set.of(
             "game_id", "season", "game_type", "week", "gameday", "gametime",
-            "away_team", "home_team", "result");
+            "away_team", "home_team", "result", "away_qb_id", "home_qb_id", "away_coach",
+            "home_coach");
 
     @Override
     public FeedId id() {
@@ -82,9 +83,17 @@ final class ScheduleFeed implements FeedSpec<Schedule.Game, Schedule> {
                     kickoff(row.text("gameday"), row.text("gametime")),
                     NflTeams.normalize(row.text("home_team")),
                     NflTeams.normalize(row.text("away_team")),
-                    !blankOrNa(row.text("result"))));
+                    !blankOrNa(row.text("result")),
+                    named(row.text("home_qb_id")),
+                    named(row.text("away_qb_id")),
+                    named(row.text("home_coach")),
+                    named(row.text("away_coach"))));
         });
         return games;
+    }
+
+    private static String named(String value) {
+        return blankOrNa(value) ? null : value;
     }
 
     /**

@@ -1,0 +1,389 @@
+{
+  "4046": {
+    "player_id": "4046",
+    "first_name": "Patrick",
+    "last_name": "Mahomes",
+    "full_name": "Patrick Mahomes",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 15,
+    "age": 30
+  },
+  "4034": {
+    "player_id": "4034",
+    "first_name": "Christian",
+    "last_name": "McCaffrey",
+    "full_name": "Christian McCaffrey",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "SF",
+    "status": "Active",
+    "injury_status": null,
+    "number": 23,
+    "age": 30
+  },
+  "6794": {
+    "player_id": "6794",
+    "first_name": "Justin",
+    "last_name": "Jefferson",
+    "full_name": "Justin Jefferson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": null,
+    "number": 18,
+    "age": 27
+  },
+  "1466": {
+    "player_id": "1466",
+    "first_name": "Travis",
+    "last_name": "Kelce",
+    "full_name": "Travis Kelce",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 87,
+    "age": 36
+  },
+  "4866": {
+    "player_id": "4866",
+    "first_name": "Saquon",
+    "last_name": "Barkley",
+    "full_name": "Saquon Barkley",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 26,
+    "age": 29
+  },
+  "8135": {
+    "player_id": "8135",
+    "first_name": "Jordan",
+    "last_name": "Love",
+    "full_name": "Jordan Love",
+    "position": "QB",
+    "fantasy_positions": [
+      "QB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": "Probable",
+    "number": 10,
+    "age": 27
+  },
+  "2216": {
+    "player_id": "2216",
+    "first_name": "Mike",
+    "last_name": "Evans",
+    "full_name": "Mike Evans",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "TB",
+    "status": "Active",
+    "injury_status": "Sus",
+    "number": 13,
+    "age": 33
+  },
+  "5859": {
+    "player_id": "5859",
+    "first_name": "Darrell",
+    "last_name": "Henderson",
+    "full_name": "Darrell Henderson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "LAR",
+    "status": "Physically Unable to Perform",
+    "injury_status": null,
+    "number": 27,
+    "age": 29
+  },
+  "4199": {
+    "player_id": "4199",
+    "first_name": "Aaron",
+    "last_name": "Jones",
+    "full_name": "Aaron Jones",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": null,
+    "status": "Inactive",
+    "injury_status": null,
+    "number": 33,
+    "age": 31
+  },
+  "4029": {
+    "player_id": "4029",
+    "first_name": "Tyler",
+    "last_name": "Lockett",
+    "full_name": "Tyler Lockett",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SEA",
+    "status": "Injured Reserve",
+    "injury_status": "Questionable",
+    "number": 16,
+    "age": 33
+  },
+  "6768": {
+    "player_id": "6768",
+    "first_name": "Jalen",
+    "last_name": "Reagor",
+    "full_name": "Jalen Reagor",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "MIN",
+    "status": "Active",
+    "injury_status": "Emergency",
+    "number": 18,
+    "age": 27
+  },
+  "3678": {
+    "player_id": "3678",
+    "first_name": "Harrison",
+    "last_name": "Butker",
+    "full_name": "Harrison Butker",
+    "position": "K",
+    "fantasy_positions": [
+      "K"
+    ],
+    "team": "KC",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 31
+  },
+  "KC": {
+    "player_id": "KC",
+    "first_name": "Kansas City",
+    "last_name": "Chiefs",
+    "position": "DEF",
+    "fantasy_positions": [
+      "DEF"
+    ],
+    "team": "KC",
+    "status": null,
+    "injury_status": null
+  },
+  "9509": {
+    "player_id": "9509",
+    "first_name": "Bijan",
+    "last_name": "Robinson",
+    "full_name": "Bijan Robinson",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "ATL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 7,
+    "age": 24
+  },
+  "6786": {
+    "player_id": "6786",
+    "first_name": "CeeDee",
+    "last_name": "Lamb",
+    "full_name": "CeeDee Lamb",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 27
+  },
+  "8112": {
+    "player_id": "8112",
+    "first_name": "Garrett",
+    "last_name": "Wilson",
+    "full_name": "Garrett Wilson",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": null,
+    "number": 5,
+    "age": 26
+  },
+  "8138": {
+    "player_id": "8138",
+    "first_name": "James",
+    "last_name": "Cook",
+    "full_name": "James Cook",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": null,
+    "number": 4,
+    "age": 27
+  },
+  "5850": {
+    "player_id": "5850",
+    "first_name": "Josh",
+    "last_name": "Jacobs",
+    "full_name": "Josh Jacobs",
+    "position": "RB",
+    "fantasy_positions": [
+      "RB"
+    ],
+    "team": "GB",
+    "status": "Active",
+    "injury_status": null,
+    "number": 8,
+    "age": 28
+  },
+  "6813": {
+    "player_id": "6813",
+    "first_name": "Dallas",
+    "last_name": "Goedert",
+    "full_name": "Dallas Goedert",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "PHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 88,
+    "age": 31
+  },
+  "9493": {
+    "player_id": "9493",
+    "first_name": "Puka",
+    "last_name": "Nacua",
+    "full_name": "Puka Nacua",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "LAR",
+    "status": "Active",
+    "injury_status": null,
+    "number": 12,
+    "age": 25
+  },
+  "8137": {
+    "player_id": "8137",
+    "first_name": "George",
+    "last_name": "Pickens",
+    "full_name": "George Pickens",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DAL",
+    "status": "Active",
+    "injury_status": "Questionable",
+    "number": 3,
+    "age": 25
+  },
+  "8148": {
+    "player_id": "8148",
+    "first_name": "Jameson",
+    "last_name": "Williams",
+    "full_name": "Jameson Williams",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DET",
+    "status": "Active",
+    "injury_status": null,
+    "number": 1,
+    "age": 25
+  },
+  "5045": {
+    "player_id": "5045",
+    "first_name": "Courtland",
+    "last_name": "Sutton",
+    "full_name": "Courtland Sutton",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "DEN",
+    "status": "Active",
+    "injury_status": null,
+    "number": 14,
+    "age": 25
+  },
+  "12517": {
+    "player_id": "12517",
+    "first_name": "Colston",
+    "last_name": "Loveland",
+    "full_name": "Colston Loveland",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "CHI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 18,
+    "age": 25
+  },
+  "8130": {
+    "player_id": "8130",
+    "first_name": "Trey",
+    "last_name": "McBride",
+    "full_name": "Trey McBride",
+    "position": "TE",
+    "fantasy_positions": [
+      "TE"
+    ],
+    "team": "ARI",
+    "status": "Active",
+    "injury_status": null,
+    "number": 85,
+    "age": 25
+  },
+  "9488": {
+    "player_id": "9488",
+    "first_name": "Jaxon",
+    "last_name": "Smith-Njigba",
+    "full_name": "Jaxon Smith-Njigba",
+    "position": "WR",
+    "fantasy_positions": [
+      "WR"
+    ],
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": null,
+    "number": 11,
+    "age": 25
+  }
+}

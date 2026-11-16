@@ -353,6 +353,8 @@ class NflverseFreshnessScenarioTest extends WireSeamTest {
                         "ATL", "GB", "LAC", "BUF", "ARI", "SF", "PHI", "CHI")
                         .<Unit>map(team -> new Unit.TeamWeek(3, team))
                         .toList(), List.of())),
+                Map.entry(FeedId.EXPECTED_POINTS_LAST_SEASON, new WeekStatus.Unknown(
+                        "EXPECTED_POINTS_LAST_SEASON holds the 2025 season, not 2026")),
                 Map.entry(FeedId.PLAYERS,
                         new WeekStatus.Unknown("the file has no weeks, so no week is owed by it")));
     }

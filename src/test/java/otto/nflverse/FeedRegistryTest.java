@@ -44,6 +44,8 @@ class FeedRegistryTest {
                 Map.entry(FeedId.NGS_RUSHING, "nflverse-ngs-rushing"),
                 Map.entry(FeedId.PLAY_BY_PLAY, "nflverse-play-by-play"),
                 Map.entry(FeedId.EXPECTED_POINTS, "ffopportunity-expected-points"),
+                Map.entry(FeedId.EXPECTED_POINTS_LAST_SEASON,
+                        "ffopportunity-expected-points-last-season"),
                 Map.entry(FeedId.PLAYERS, "nflverse-players")));
     }
 }

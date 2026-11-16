@@ -27,13 +27,19 @@ final class Feeds {
     static final NextGenStatsFeed NGS_RECEIVING = new NextGenStatsFeed(NextGenStats.Kind.RECEIVING);
     static final NextGenStatsFeed NGS_RUSHING = new NextGenStatsFeed(NextGenStats.Kind.RUSHING);
     static final PlayByPlayFeed PLAY_BY_PLAY = new PlayByPlayFeed();
-    static final ExpectedPointsFeed EXPECTED_POINTS = new ExpectedPointsFeed();
+    static final ExpectedPointsFeed EXPECTED_POINTS = new ExpectedPointsFeed(
+            FeedId.EXPECTED_POINTS, "ffopportunity-expected-points",
+            FeedSpec.SeasonRule.LAST_PLAYED);
+    static final ExpectedPointsFeed EXPECTED_POINTS_LAST_SEASON = new ExpectedPointsFeed(
+            FeedId.EXPECTED_POINTS_LAST_SEASON, "ffopportunity-expected-points-last-season",
+            FeedSpec.SeasonRule.PREVIOUS);
     static final PlayersFeed PLAYERS = new PlayersFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
             SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
             PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS, PBP_PARTICIPATION,
-            NGS_PASSING, NGS_RECEIVING, NGS_RUSHING, PLAY_BY_PLAY, EXPECTED_POINTS, PLAYERS);
+            NGS_PASSING, NGS_RECEIVING, NGS_RUSHING, PLAY_BY_PLAY, EXPECTED_POINTS,
+            EXPECTED_POINTS_LAST_SEASON, PLAYERS);
 
     private Feeds() {
     }
