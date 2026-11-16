@@ -40,9 +40,11 @@ import otto.records.RunOutcomes;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
 import otto.storage.OttoJson;
+import otto.team.LeagueDirections;
 import otto.team.LeagueProfile;
 import otto.team.PositionProfile;
 import otto.team.RatedPlayer;
+import otto.team.TeamDirections;
 import otto.team.TeamProfile;
 import otto.team.TeamProfiler;
 import otto.team.WeaknessSuggestions;
@@ -80,7 +82,8 @@ public class TeamWeaknesses {
 
             Write plain text in four parts, with a blank line between parts:
             1. Two or three sentences that sum up the team: where it is strong and where it
-               is thin. When "leagues" is present, open by saying it.
+               is thin, and its direction from "direction" with that item's reason. When
+               "leagues" is present, open by saying it.
             2. One short paragraph for each position in "position-" items, in the order
                QB, RB, WR, TE. Say whether it is strong, thin, in surplus or in the middle,
                with the numbers behind that: the starter and depth ranks as "4th of 4",
@@ -90,6 +93,7 @@ public class TeamWeaknesses {
             4. Each suggestion in the "suggestion-" items, in order, with its reason. Offer
                none that the evidence lacks. When "trade-deadline" is present, say trades
                are closed and point to waivers.
+            When "direction" has a "question", end the message by asking it.
             When "limits" is present, say each limit plainly in one sentence where it
             matters. Never write a confidence label such as High or Medium. Stay under
             "maxLength" characters.
@@ -119,6 +123,7 @@ public class TeamWeaknesses {
     private final TeamProfiler profiler;
     private final PlayerDirectoryStore directory;
     private final MarketValues market;
+    private final TeamDirections directions;
     private final AdviceWriter writer;
     private final RunOutcomes runs;
     private final AdviceForm<AdviceAnswer> form;
@@ -126,13 +131,14 @@ public class TeamWeaknesses {
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, PlayerDirectoryStore directory, MarketValues market,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
+            TeamDirections directions, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
             OttoProperties properties) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
         this.directory = directory;
         this.market = market;
+        this.directions = directions;
         this.writer = writer;
         this.runs = runs;
         this.userId = properties.userId();
@@ -165,8 +171,8 @@ public class TeamWeaknesses {
      * Profiles the user's team against the league and has the model
      * explain it.
      *
-     * <p>Side effects: the rest-of-season projection reads, at most one
-     * FantasyCalc request a day, one or two model calls, and one
+     * <p>Side effects: the rest-of-season projection reads, the market
+     * value reads for every roster, one or two model calls, and one
      * Decision Record of kind {@link RunKind#TEAM_WEAKNESSES} whatever the
      * outcome.
      *
@@ -225,7 +231,7 @@ public class TeamWeaknesses {
                 WeaknessSuggestions.of(profile, rated(freeAgents, perGame, league),
                         deadline.isEmpty()),
                 market(league, now), sidelined(mine, user), season.weeks(),
-                deadline, limits(mine, user), everyLeague);
+                deadline, limits(mine, user), everyLeague, direction(league, now));
         EvidenceBundle bundle = TeamWeaknessEvidence.bundle(facts, MAX_LENGTH, now);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
         Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
@@ -292,6 +298,14 @@ public class TeamWeaknesses {
                     case SourceResult.Unavailable<MarketValues.Listing<MarketDay>> none ->
                         Optional.empty();
                 });
+    }
+
+    private Optional<TeamWeaknessEvidence.Direction> direction(LeagueWeek league, Instant now) {
+        return switch (directions.read(league, now)) {
+            case SourceResult.Ok<LeagueDirections> read -> read.value().user()
+                    .map(user -> new TeamWeaknessEvidence.Direction(user, read.value().market()));
+            case SourceResult.Unavailable<LeagueDirections> _ -> Optional.empty();
+        };
     }
 
     /**

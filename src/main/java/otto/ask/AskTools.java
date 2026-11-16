@@ -52,6 +52,7 @@ public class AskTools {
     private final KeeperRuleChat keeperRules;
     private final TeamWeaknesses weaknesses;
     private final BuyLowSellHigh buySell;
+    private final TeamDirectionAnswers directions;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
@@ -60,7 +61,8 @@ public class AskTools {
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
             MarketValueAnswers marketValues, KeeperRuleChat keeperRules,
-            TeamWeaknesses weaknesses, BuyLowSellHigh buySell, Clock clock) {
+            TeamWeaknesses weaknesses, BuyLowSellHigh buySell, TeamDirectionAnswers directions,
+            Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -79,6 +81,7 @@ public class AskTools {
         this.keeperRules = keeperRules;
         this.weaknesses = weaknesses;
         this.buySell = buySell;
+        this.directions = directions;
         this.clock = clock;
     }
 
@@ -539,8 +542,9 @@ public class AskTools {
     @Tool(name = "get_team_weaknesses", description = """
             Where the user's team is strong, thin or in surplus, position
             by position against every team in his league, bench and depth
-            included, with how high its big weeks reach and up to three
-            waiver or trade moves, already written and fact-checked. Send
+            included, with his team's direction, how high its big weeks
+            reach and up to three waiver or trade moves, already written
+            and fact-checked. Send
             its message word for word. Call this only when he asks, for
             "what are my team's weaknesses", "how can I improve my team"
             and "where is my roster thin".""")
@@ -553,6 +557,41 @@ public class AskTools {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return checked.offer(weaknesses.answer(league, clock.instant(), checked.delivery()),
                 TeamWeaknesses.Answer::message);
+    }
+
+    @Tool(name = "get_team_directions", description = """
+            Every team in the user's league labelled contending, in the
+            middle or rebuilding, his own included, each with a one-line
+            reason from its market value, record and points, already
+            written and fact-checked. Send its message word for word.
+            Call this for "who's contending in my league?", "who is
+            rebuilding?" and "who's buying and who's selling?".""")
+    public ToolAnswer<TeamDirectionAnswers.Answer> getTeamDirections(ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(directions.answer(clock.instant(), checked.delivery()),
+                TeamDirectionAnswers.Answer::message);
+    }
+
+    @Tool(name = "manage_team_direction", description = """
+            The direction the user gives his own team: contending, middle
+            or rebuilding. Otto uses his choice in place of the label it
+            measures until he changes or clears it. In a dynasty league
+            Otto never treats him as rebuilding until he says so. Call
+            this with set when he says which way his team is headed,
+            such as "we're rebuilding" or "yes, I'm rebuilding", and
+            with clear when he asks Otto to judge it again itself.""")
+    public ToolAnswer<TeamDirectionAnswers.Changed> manageTeamDirection(
+            @ToolParam(description = "set or clear")
+            String action,
+            @ToolParam(required = false, description = """
+                    contending, middle or rebuilding. Needed to set.""")
+            String direction) {
+        return switch (loader.league()) {
+            case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
+                unavailable(unavailable);
+            case SourceResult.Ok<SleeperAdapter.League> ok ->
+                directions.change(ok.value(), action, direction);
+        };
     }
 
     @Tool(name = "manage_watchlist", description = """

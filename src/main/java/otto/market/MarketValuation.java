@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -82,6 +84,78 @@ public class MarketValuation {
         };
     }
 
+    /**
+     * Every rostered player's market value in one league's format, read
+     * once for the whole league.
+     *
+     * @param league the league's format in a manager's words, such as
+     *        "12-team Superflex PPR keeper"
+     * @param values each priced player's value by Sleeper id, the same
+     *        value {@link #quote} gives him; a player no source prices is
+     *        left out
+     * @param ages each player's age in years by Sleeper id, from
+     *        FantasyCalc's list; left out where the list gives none
+     */
+    public record LeagueValues(String league, Map<String, Integer> values,
+            Map<String, Double> ages) {
+
+        public LeagueValues {
+            values = Map.copyOf(values);
+            ages = Map.copyOf(ages);
+        }
+    }
+
+    /**
+     * Prices every player on every roster, IR and taxi included, in the
+     * league's format.
+     *
+     * <p>Side effects: at most one request a day to each source for each
+     * format the league needs, through {@link MarketValues}; in a keeper
+     * league, the league's past drafts and stored keeper rule.
+     *
+     * @return the values, or unavailable with the reason in plain words
+     *         when no source answers for the league's format
+     */
+    public SourceResult<LeagueValues> rostered(SleeperAdapter.League league,
+            List<RosterSnapshot> rosters, Instant now) {
+        List<MarketFormat> formats = MarketFormat.neededBy(league);
+        if (formats.isEmpty()) {
+            return unavailable("the league's settings do not say its format or how many teams "
+                    + "it has, and market values depend on both");
+        }
+        LeagueRules.LeagueFormat format = league.rules().format().orElseThrow();
+        String described = describe(formats.getFirst(), format);
+        List<String> players = rosters.stream()
+                .flatMap(roster -> everyPlayer(roster).stream())
+                .distinct()
+                .toList();
+        Map<String, Integer> priced = new HashMap<>();
+        Map<String, Double> ages = new HashMap<>();
+        if (format == LeagueRules.LeagueFormat.DYNASTY) {
+            DynastyValues dynasty = new DynastyValues(formats.getFirst(), now);
+            if (!dynasty.answered()) {
+                return unavailable("neither FantasyCalc nor DynastyProcess has answered for a "
+                        + formats.getFirst().describe() + " league");
+            }
+            players.forEach(id -> {
+                dynasty.of(id).ifPresent(valued -> priced.put(id, valued.value()));
+                dynasty.age(id).ifPresent(age -> ages.put(id, age));
+            });
+            return new SourceResult.Ok<>(new LeagueValues(described, priced, ages));
+        }
+        Optional<Keepers> keepers = format == LeagueRules.LeagueFormat.KEEPER
+                ? Optional.of(new Keepers(league, rosters, new DynastyValues(formats.get(1), now)))
+                : Optional.empty();
+        return fantasyCalcList(formats.getFirst(), now).flatMap(listing -> {
+            players.forEach(id -> listing.values().entry(id).ifPresent(row -> {
+                priced.put(id, row.value() + keepers
+                        .map(blend -> blend.blend(id, row.value()).bonus()).orElse(0));
+                row.age().ifPresent(age -> ages.put(id, age));
+            }));
+            return new SourceResult.Ok<>(new LeagueValues(described, priced, ages));
+        });
+    }
+
     private SourceResult<MarketQuote> redraft(MarketFormat format, String described,
             Subject subject, Instant now) {
         return fantasyCalcList(format, now).flatMap(listing -> listed(listing, subject)
@@ -133,9 +207,8 @@ public class MarketValuation {
                 return unavailable("%s is not on FantasyCalc's %s list"
                         .formatted(player.name(), redraft.describe()));
             }
-            DynastyValues dynastyValues = new DynastyValues(dynasty, now);
-            MarketQuote.Keeper blend = blend(league, rosters, player.id(), row.get().value(),
-                    dynastyValues);
+            MarketQuote.Keeper blend = new Keepers(league, rosters,
+                    new DynastyValues(dynasty, now)).blend(player.id(), row.get().value());
             return new SourceResult.Ok<>(fromFantasyCalc(redraft, listing, row.get(),
                     player.name(), described,
                     row.get().value() + blend.bonus(), Optional.of(blend)));
@@ -152,38 +225,68 @@ public class MarketValuation {
         };
     }
 
-    private MarketQuote.Keeper blend(SleeperAdapter.League league,
-            List<RosterSnapshot> rosters, String playerId, int redraftValue,
-            DynastyValues dynasty) {
-        Optional<Integer> keeperLimit = league.rules().keeperLimit();
-        Optional<Valued> own = dynasty.of(playerId);
-        Optional<Integer> ownValue = own.map(Valued::value);
-        Optional<MarketQuote.Source> ownSource = own.map(Valued::source);
-        if (keeperLimit.isEmpty() || keeperLimit.get() < 1 || own.isEmpty()) {
-            return new MarketQuote.Keeper(keeperLimit, false, redraftValue, ownValue, ownSource,
-                    0, 0, Optional.empty());
+    /**
+     * One keeper league's blend, priced once and asked about each player:
+     * the keeper line, what keeping costs and every team's likely keepers.
+     */
+    private final class Keepers {
+
+        private final SleeperAdapter.League league;
+        private final List<RosterSnapshot> rosters;
+        private final DynastyValues dynasty;
+        private final Optional<Integer> keeperLimit;
+        private Prices prices;
+
+        private record Prices(int line, KeeperScale scale, KeeperCosts.Pricing pricing,
+                Set<String> likely) {
         }
-        int limit = keeperLimit.get();
-        List<Integer> rostered = rosters.stream()
-                .flatMap(roster -> everyPlayer(roster).stream())
-                .map(dynasty::of)
-                .flatMap(Optional::stream)
-                .map(Valued::value)
-                .sorted(Comparator.reverseOrder())
-                .toList();
-        int keepers = rosters.size() * limit;
-        int line = rostered.size() > keepers ? rostered.get(keepers) : 0;
-        KeeperScale scale = new KeeperScale(line, dynasty.ranked());
-        KeeperCosts.Pricing pricing = keeperCosts.pricing(league);
-        KeeperCost cost = pricing.costOf(playerId, scale);
-        boolean likely = rosters.stream()
-                .filter(roster -> everyPlayer(roster).contains(playerId))
-                .findFirst()
-                .map(roster -> likelyKeepers(roster, limit, dynasty, pricing, scale)
-                        .contains(playerId))
-                .orElse(false);
-        return new MarketQuote.Keeper(keeperLimit, likely, redraftValue, ownValue, ownSource,
-                line, likely ? ownValue.get() - cost.value() : 0, Optional.of(cost));
+
+        Keepers(SleeperAdapter.League league, List<RosterSnapshot> rosters,
+                DynastyValues dynasty) {
+            this.league = league;
+            this.rosters = rosters;
+            this.dynasty = dynasty;
+            this.keeperLimit = league.rules().keeperLimit();
+        }
+
+        MarketQuote.Keeper blend(String playerId, int redraftValue) {
+            Optional<Valued> own = dynasty.of(playerId);
+            Optional<Integer> ownValue = own.map(Valued::value);
+            Optional<MarketQuote.Source> ownSource = own.map(Valued::source);
+            if (keeperLimit.isEmpty() || keeperLimit.get() < 1 || own.isEmpty()) {
+                return new MarketQuote.Keeper(keeperLimit, false, redraftValue, ownValue,
+                        ownSource, 0, 0, Optional.empty());
+            }
+            Prices priced = prices();
+            KeeperCost cost = priced.pricing().costOf(playerId, priced.scale());
+            boolean likely = priced.likely().contains(playerId);
+            return new MarketQuote.Keeper(keeperLimit, likely, redraftValue, ownValue,
+                    ownSource, priced.line(), likely ? ownValue.get() - cost.value() : 0,
+                    Optional.of(cost));
+        }
+
+        private Prices prices() {
+            if (prices == null) {
+                int limit = keeperLimit.orElseThrow();
+                List<Integer> rostered = rosters.stream()
+                        .flatMap(roster -> everyPlayer(roster).stream())
+                        .map(dynasty::of)
+                        .flatMap(Optional::stream)
+                        .map(Valued::value)
+                        .sorted(Comparator.reverseOrder())
+                        .toList();
+                int keepers = rosters.size() * limit;
+                int line = rostered.size() > keepers ? rostered.get(keepers) : 0;
+                KeeperScale scale = new KeeperScale(line, dynasty.ranked());
+                KeeperCosts.Pricing pricing = keeperCosts.pricing(league);
+                Set<String> likely = rosters.stream()
+                        .flatMap(roster -> likelyKeepers(roster, limit, dynasty, pricing, scale)
+                                .stream())
+                        .collect(Collectors.toUnmodifiableSet());
+                prices = new Prices(line, scale, pricing, likely);
+            }
+            return prices;
+        }
     }
 
     private static List<String> likelyKeepers(RosterSnapshot roster, int limit,
@@ -231,6 +334,14 @@ public class MarketValuation {
 
         Optional<Valued> of(String playerId) {
             return known.computeIfAbsent(playerId, this::read);
+        }
+
+        boolean answered() {
+            return fantasyCalc.isPresent() || dynastyProcess.isPresent();
+        }
+
+        Optional<Double> age(String playerId) {
+            return fantasyCalc.flatMap(list -> list.entry(playerId)).flatMap(MarketPlayer::age);
         }
 
         List<Integer> ranked() {
