@@ -3,7 +3,9 @@ package otto.nflverse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 
 /**
@@ -20,6 +22,19 @@ public record Players(
         Instant checkedAt,
         Coverage coverage,
         List<Player> rows) implements NflverseFeed {
+
+    /**
+     * Returns every player the register gives a PFR id, by that id. This
+     * is the one join from a PFR file's rows to a player; when two rows
+     * share a PFR id the first listed wins.
+     */
+    public Map<String, Player> byPfrId() {
+        Map<String, Player> byPfr = new LinkedHashMap<>();
+        rows.stream()
+                .filter(player -> player.pfrId() != null && player.gsisId() != null)
+                .forEach(player -> byPfr.putIfAbsent(player.pfrId(), player));
+        return byPfr;
+    }
 
     /**
      * One player.

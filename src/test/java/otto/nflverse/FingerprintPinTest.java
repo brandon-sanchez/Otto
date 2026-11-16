@@ -56,15 +56,22 @@ class FingerprintPinTest {
 
     @Test
     void ftnChartingContent() {
-        pin(Feeds.FTN_CHARTING, 2, -120343720081376180L,
-                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT, "1"));
+        pin(Feeds.FTN_CHARTING, 3, 2831588049196977552L,
+                new FtnCharting.Play("2026_01_SF_LA", 1, "40", PULLED_AT, "1", 1, 5));
     }
 
     @Test
     void playByPlayContent() {
-        pin(Feeds.PLAY_BY_PLAY, 1, -3036200583563890729L,
+        pin(Feeds.PLAY_BY_PLAY, 4, -3036200583563890729L,
                 new PlayByPlay.Opportunity("2026_01_SF_LA", "40", 1, "SF", "LAR",
                         PlayByPlay.Kind.TARGET, "00-0041021", 14, 9));
+    }
+
+    @Test
+    void playByPlayDropbackContent() {
+        pin(Feeds.PLAY_BY_PLAY, 4, 5281079645388531200L,
+                new PlayByPlay.Dropback("2026_01_SF_LA", "40", 1, "SF", "LAR", "00-0036389",
+                        false));
     }
 
     @Test
@@ -79,6 +86,26 @@ class FingerprintPinTest {
         pin(Feeds.PLAYERS, 1, 4702601717725977452L,
                 new Players.Player("00-0041021", "BackRu00", "Running Back SF", "RB",
                         LocalDate.parse("2003-03-16"), new Players.Draft(2025, 1, 22, "SF")));
+    }
+
+    @Test
+    void pfrDefenseContent() {
+        pin(Feeds.PFR_DEFENSE, 1, -8736477101758348270L,
+                new PfrDefense.GamePressures("2026_01_SF_LA", 1, "SF", "LAR", 8));
+    }
+
+    @Test
+    void pfrPassingContent() {
+        pin(Feeds.PFR_PASSING, 2, -4226278003542835917L,
+                new PfrPassing.PasserLine("2026_01_SF_LA", 1, "SF", "LAR", "PurdBr00",
+                        "Brock Purdy", 3));
+    }
+
+    @Test
+    void rushingAdvancedStatsContent() {
+        pin(Feeds.RUSHING_ADVANCED_STATS, 1, 4459309022501489508L,
+                new RushingAdvancedStats.RushLine("McCaCh01", "Christian McCaffrey",
+                        "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
     }
 
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,
