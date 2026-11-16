@@ -121,6 +121,19 @@ public class HabitService {
     }
 
     /**
+     * Brings the weekly capture up to date and returns how the user's
+     * costly habits tilt team analysis and trade ideas.
+     *
+     * <p>Side effects: the capture's reads and writes (see
+     * {@link HabitLedger#update}). No model call and no Decision Record.
+     */
+    public HabitLean lean(SleeperAdapter.League league, Snapshot snapshot, WeekFacts week,
+            Instant now) {
+        HabitHistory history = ledger.update(league, snapshot, week, now);
+        return HabitLean.of(history, Habits.measure(history, Function.identity()));
+    }
+
+    /**
      * The answer code writes when there is no habit to explain, held to
      * the same check as a model's, so a number in it can never drift from
      * the evidence.

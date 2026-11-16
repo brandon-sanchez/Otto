@@ -245,7 +245,9 @@ final class TeamWeaknessEvidence {
                 .formatted(decimal(waiver.add().perGame())));
         facts.put(Ordinal.RANK_FACT, "%s among your %ss if you add him"
                 .formatted(Ordinal.of(waiver.place()), position));
-        facts.put("reason", "your %s position is thin".formatted(position));
+        facts.put("reason", waiver.need().strength() == PositionProfile.Strength.THIN
+                ? "your %s position is thin".formatted(position)
+                : "he gives your %s starters a backup who can step in".formatted(position));
         return facts;
     }
 

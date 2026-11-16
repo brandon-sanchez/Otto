@@ -1,9 +1,9 @@
 package otto.team;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import otto.team.PositionProfile.Strength;
 
@@ -20,27 +20,35 @@ public final class WeaknessSuggestions {
     }
 
     /**
-     * Returns up to {@link #MOST} waiver suggestions for the user's team,
-     * thinnest position first.
+     * Returns up to {@link #MOST} waiver suggestions for the user's team:
+     * the positions in {@code depthFirst} first, then his thin positions,
+     * thinnest first.
      *
      * @param freeAgents every free agent with a per-game average
+     * @param depthFirst positions whose depth is weighed as a need even
+     *        when they are not thin, most pressing first; a position in
+     *        surplus is never one
      */
     public static List<WaiverSuggestion> of(LeagueProfile league,
-            List<RatedPlayer> freeAgents) {
+            List<RatedPlayer> freeAgents, List<String> depthFirst) {
         Optional<TeamProfile> user = league.user();
         if (user.isEmpty()) {
             return List.of();
         }
-        List<PositionProfile> thin = user.get().positions().values().stream()
+        Stream<PositionProfile> weighed = depthFirst.stream()
+                .flatMap(position -> user.get().at(position).stream())
+                .filter(position -> position.strength() != Strength.SURPLUS);
+        Stream<PositionProfile> thin = user.get().positions().values().stream()
                 .filter(position -> position.strength() == Strength.THIN)
                 .sorted(Comparator.comparingInt((PositionProfile position) ->
                         position.starterRank() + position.depthRank()).reversed()
                         .thenComparing(position ->
-                                LeagueProfile.POSITIONS.indexOf(position.position())))
+                                LeagueProfile.POSITIONS.indexOf(position.position())));
+        return Stream.concat(weighed, thin)
+                .distinct()
+                .flatMap(need -> waiver(need, freeAgents).stream())
+                .limit(MOST)
                 .toList();
-        List<WaiverSuggestion> suggestions = new ArrayList<>();
-        thin.forEach(need -> waiver(need, freeAgents).ifPresent(suggestions::add));
-        return suggestions.stream().limit(MOST).toList();
     }
 
     /**

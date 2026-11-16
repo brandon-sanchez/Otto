@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
 import otto.harness.Fixtures;
+import otto.harness.LineupHistory;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.StoredRecords;
@@ -77,6 +79,14 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
 
             Free data carries no injury return dates, so I can't say when Josh Jacobs will \
             be back.""";
+
+    private static final String QUIET_LEAN = "lean";
+
+    private static final String KELCE = "1466";
+    private static final String GOEDERT = "6813";
+
+    private static final String NAMES_THE_HABIT = "You tend to leave points on your bench at "
+            + "tight end, so claim TE Depth 04 off waivers.";
 
     private static final String WRONG_RANK = "Your RB depth ranks 9th of 12, so claim RB "
             + "Depth 11 off waivers.";
@@ -351,6 +361,74 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
         assertThat(evidence.get("suggestion-1")).containsEntry("move",
                 "claim RB Depth 11 off waivers");
         assertThat(evidence).doesNotContainKey("suggestion-2");
+    }
+
+    private void tightEndPointsLeftOnTheBench() {
+        List<String> starters = List.of("4046", "4034", "92026", "6794", "6786", KELCE, "8112",
+                "2216", "8135");
+        Map<String, Double> points = new LinkedHashMap<>();
+        points.put("4046", 22.0);
+        points.put("4034", 15.0);
+        points.put("92026", 6.0);
+        points.put("6794", 16.0);
+        points.put("6786", 13.0);
+        points.put(KELCE, 2.0);
+        points.put("8112", 11.0);
+        points.put("2216", 10.0);
+        points.put("8135", 17.0);
+        points.put("4029", 3.0);
+        points.put("6768", 3.0);
+        points.put(GOEDERT, 14.0);
+        for (int week = 9; week <= 11; week++) {
+            LineupHistory.played(sleeper, week, starters, points);
+        }
+    }
+
+    @Test
+    void tightEndPointsLeftOnTheBenchPutTightEndDepthFirstWithoutSayingWhy() {
+        tightEndPointsLeftOnTheBench();
+        redraftLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, checkedAnswer());
+
+        ask("what are my team's weaknesses?");
+
+        Map<String, Map<String, String>> evidence = evidence();
+        assertThat(evidence.get("position-TE").get("strength")).isNotEqualTo("thin");
+        assertThat(evidence.get("suggestion-1"))
+                .containsEntry("move", "claim TE Depth 04 off waivers")
+                .containsEntry("reason", "he gives your TE starters a backup who can step in");
+        assertThat(evidence.get("suggestion-2"))
+                .containsEntry("move", "claim RB Depth 11 off waivers");
+        assertThat(evidence.get(QUIET_LEAN)).containsEntry("weighDepthAt", "TE");
+        theUserReads(CHECKED);
+    }
+
+    @Test
+    void aReplyThatNamesTheUsersHabitIsCorrectedBeforeHeSeesIt() {
+        tightEndPointsLeftOnTheBench();
+        redraftLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(NAMES_THE_HABIT, "94004"), checkedAnswer());
+
+        ask("what are my team's weaknesses?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("brings up how he manages his team")));
+        theUserReads(CHECKED);
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("bench at tight end")));
+    }
+
+    @Test
+    void withoutACostlyHabitTheAnswerCarriesNoLean() {
+        redraftLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, checkedAnswer());
+
+        ask("what are my team's weaknesses?");
+
+        assertThat(evidence()).doesNotContainKey(QUIET_LEAN);
     }
 
     @Test

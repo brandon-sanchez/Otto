@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
 import otto.harness.Fixtures;
+import otto.harness.LineupHistory;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.StoredRecords;
@@ -58,6 +60,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     private static final String BARKLEY = "4866";
     private static final String GOEDERT = "6813";
+    private static final String KELCE = "1466";
     private static final String JEFFERSON = "6794";
     private static final String REAGOR = "6768";
 
@@ -71,6 +74,17 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     private static final String NOT_ON_HIS_ROSTER = "Send GridironGoblin Dallas Goedert and "
             + "Justin Jefferson for Christian McCaffrey.";
+
+    private static final String LAMB = "6786";
+    private static final String TE_DEPTH_04 = "94004";
+    private static final String QB_DEPTH_08 = "91008";
+
+    private static final String TIGHT_END_OFFER = "Send EndZoneEnvy CeeDee Lamb for TE Depth "
+            + "04 and QB Depth 08. It's a slight edge for you on rest-of-season fit, a gap of "
+            + "5.7%.";
+
+    private static final String TIGHT_END_DEPTH ="a 1-for-2: one of yours for two of his, "
+            + "for depth at TE";
 
     private static final String CLOSED = "Trades are closed for the season, so the waiver "
             + "wire is where your team gets better now.";
@@ -377,6 +391,74 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Christian McCaffrey")));
         assertThat(records(RunKind.TRADE_IDEAS)).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class));
+    }
+
+    private void tightEndPointsLeftOnTheBench() {
+        List<String> starters = List.of("4046", "4034", "0", JEFFERSON, LAMB, KELCE, "8112",
+                "2216", "8135");
+        Map<String, Double> points = new LinkedHashMap<>();
+        points.put("4046", 22.0);
+        points.put("4034", 15.0);
+        points.put(JEFFERSON, 16.0);
+        points.put(LAMB, 13.0);
+        points.put(KELCE, 2.0);
+        points.put("8112", 11.0);
+        points.put("2216", 10.0);
+        points.put("8135", 17.0);
+        points.put(REAGOR, 3.0);
+        points.put("4029", 3.0);
+        points.put(GOEDERT, 14.0);
+        for (int week = 9; week <= 11; week++) {
+            LineupHistory.played(sleeper, week, starters, points);
+        }
+    }
+
+    @Test
+    void tightEndPointsLeftOnTheBenchBringTightEndDepthOffersWithoutSayingWhy() {
+        redraftLeague("sleeper/rosters-offers.json");
+        Map<String, Map<String, String>> unswayed = askForTrades("{}");
+        assertThat(unswayed.values()).noneSatisfy(facts -> assertThat(facts)
+                .containsEntry("shape", TIGHT_END_DEPTH));
+
+        nextQuestion();
+        tightEndPointsLeftOnTheBench();
+        OutboundStubs.llmPhrases(llm, "A quiet week.");
+        checkRunner.runCheck();
+        nextQuestion();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_04, QB_DEPTH_08));
+        ask("what trades should I make and why?");
+
+        Map<String, Map<String, String>> swayed = evidence(RunKind.TRADE_IDEAS);
+        assertThat(swayed.get("offer-2"))
+                .containsEntry("sendTo", "EndZoneEnvy")
+                .containsEntry("youGive", "CeeDee Lamb")
+                .containsEntry("youGet", "TE Depth 04 and QB Depth 08")
+                .containsEntry("shape", TIGHT_END_DEPTH);
+        assertThat(swayed.values()).noneSatisfy(facts -> assertThat(facts.get("youGive"))
+                .contains("Dallas Goedert"));
+        assertThat(swayed.get("lean")).containsEntry("weighDepthAt", "TE");
+        theUserReads(TIGHT_END_OFFER);
+    }
+
+    @Test
+    void aTradeReplyThatNamesTheUsersHabitIsCorrectedBeforeHeSeesIt() {
+        redraftLeague("sleeper/rosters-offers.json");
+        tightEndPointsLeftOnTheBench();
+        OutboundStubs.llmPhrases(llm, "A quiet week.");
+        checkRunner.runCheck();
+        nextQuestion();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm,
+                answer("You keep starting the wrong tight end. " + TIGHT_END_OFFER, LAMB,
+                        TE_DEPTH_04, QB_DEPTH_08),
+                answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_04, QB_DEPTH_08));
+
+        ask("what trades should I make and why?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("brings up how he manages his team")));
+        theUserReads(TIGHT_END_OFFER);
     }
 
     @Test

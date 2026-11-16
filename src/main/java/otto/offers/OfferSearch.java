@@ -134,9 +134,11 @@ final class OfferSearch {
      * Reads where the user needs help. A thin position whose starters
      * rank in the league's bottom third needs a better starter; any
      * other thin position needs depth. With no thin position, his
-     * weakest starting position is the one to upgrade.
+     * weakest starting position is the one to upgrade. The positions in
+     * {@code depthFirst} need depth too unless they are in surplus, and
+     * come first.
      */
-    static Needs needs(TeamProfile user, int teams) {
+    static Needs needs(TeamProfile user, int teams, List<String> depthFirst) {
         int third = Math.max(1, teams / 3);
         List<String> starters = new ArrayList<>();
         List<String> depth = new ArrayList<>();
@@ -150,6 +152,14 @@ final class OfferSearch {
                     .max(Comparator.comparingInt(PositionProfile::starterRank))
                     .ifPresent(profile -> starters.add(profile.position()));
         }
+        List<String> weighed = depthFirst.stream()
+                .filter(position -> !starters.contains(position))
+                .filter(position -> user.at(position)
+                        .filter(profile -> profile.strength() != PositionProfile.Strength.SURPLUS)
+                        .isPresent())
+                .toList();
+        depth.removeAll(weighed);
+        depth.addAll(0, weighed);
         return new Needs(starters, depth);
     }
 
