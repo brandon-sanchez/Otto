@@ -1,13 +1,17 @@
 package otto.alerts;
 
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import otto.advice.Sha256;
+import otto.delivery.DeliveryBasis;
 import otto.model.ModelChain;
+import otto.research.PreSendResearch;
 import otto.storage.OttoJson;
 
 /**
@@ -80,6 +84,24 @@ public class AlertPhraser {
                 yield fallback(recommendation);
             }
         };
+    }
+
+    /**
+     * Returns a fingerprint of what {@link #phrase} would be asked to
+     * word. Two inputs with the same fingerprint say the same thing, so
+     * text phrased from one stands for the other. The facts in
+     * {@link PreSendResearch#READ_STATUS_FACTS} are left out, because
+     * they describe the news read rather than anything the Alert says.
+     */
+    public DeliveryBasis basis(Map<String, String> eventFacts, Recommendation recommendation) {
+        Map<String, String> said = new TreeMap<>(eventFacts);
+        said.keySet().removeAll(PreSendResearch.READ_STATUS_FACTS);
+        try {
+            return DeliveryBasis.of(Sha256.hex(OttoJson.MAPPER.writeValueAsString(said)
+                    + OttoJson.MAPPER.writeValueAsString(recommendation)));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Cannot fingerprint Alert facts", e);
+        }
     }
 
     private String fallback(Recommendation recommendation) {

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
@@ -141,6 +142,7 @@ class LockLadder {
                     : lineupAdvice.forImpairedStarter(key, playerId, research, leagueWeek, roster,
                             now, kickoff);
             if (written.isEmpty()) {
+                outbox.cancel(List.of(key), "its advice was withheld");
                 continue;
             }
 
@@ -155,8 +157,7 @@ class LockLadder {
 
             facts.put("playerId", playerId);
             facts.put("runId", written.get().runId());
-            facts.put("text", written.get().text());
-            sent.addAll(outbox.deliver(written.get().text(), List.of(
+            sent.addAll(outbox.deliver(written.get().basis(), written.get()::text, List.of(
                     new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -210,12 +211,12 @@ class LockLadder {
                     "player", player,
                     "health", health.name(),
                     "irReminder", "true");
-            String text = phraser.phrase(facts, recommendation);
-            sent.addAll(outbox.deliver(text, List.of(new Event(
-                    key, EventType.ALERT_SENT, now, AlertService.alertFacts(
-                            new AlertCandidate(AlertCandidate.Source.TRANSITION, key,
-                                    playerId, team, recommendation, facts),
-                            Map.of(), text)))));
+            sent.addAll(outbox.deliver(phraser.basis(facts, recommendation),
+                    () -> phraser.phrase(facts, recommendation), List.of(new Event(
+                            key, EventType.ALERT_SENT, now, AlertService.alertFacts(
+                                    new AlertCandidate(AlertCandidate.Source.TRANSITION, key,
+                                            playerId, team, recommendation, facts),
+                                    Map.of())))));
         }
         return sent;
     }

@@ -1,15 +1,18 @@
 package otto.aws;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
 import otto.storage.DocumentBackend;
+import otto.storage.Lease;
 
 /**
  * The small records: Settings, the Watchlist, Mutes, the conversation,
@@ -32,6 +35,15 @@ public class DynamoDbBackend implements DocumentBackend {
     /** The document itself, held as bytes so no JSON is reshaped in transit. */
     static final String DOCUMENT = "document";
 
+    /** A lease's holder, beside its document so a write can be conditioned on it. */
+    static final String LEASE_HOLDER = "leaseHolder";
+
+    /** When a lease ends, in epoch milliseconds, beside its document for the same reason. */
+    static final String LEASE_UNTIL = "leaseUntil";
+
+    private static final Map<String, String> LEASE_NAMES = Map.of(
+            "#name", NAME, "#holder", LEASE_HOLDER, "#until", LEASE_UNTIL);
+
     private final DynamoDbClient dynamo;
     private final String table;
 
@@ -51,6 +63,48 @@ public class DynamoDbBackend implements DocumentBackend {
             return Optional.empty();
         }
         return Optional.of(item.get(DOCUMENT).b().asByteArray());
+    }
+
+    /** Takes the lease in one conditional write, so two containers never both hold it. */
+    @Override
+    public boolean lease(String name, Lease lease, Instant now) {
+        try {
+            dynamo.putItem(leaseWrite(name, lease)
+                    .conditionExpression(
+                            "attribute_not_exists(#name) OR #holder = :holder OR #until <= :now")
+                    .expressionAttributeNames(LEASE_NAMES)
+                    .expressionAttributeValues(Map.of(
+                            ":holder", AttributeValue.fromS(lease.holder()),
+                            ":now", AttributeValue.fromN(String.valueOf(now.toEpochMilli()))))
+                    .build());
+            return true;
+        } catch (ConditionalCheckFailedException e) {
+            return false;
+        }
+    }
+
+    @Override
+    public void release(String name, String holder) {
+        try {
+            dynamo.putItem(leaseWrite(name, new Lease(holder, Instant.EPOCH))
+                    .conditionExpression("#holder = :holder")
+                    .expressionAttributeNames(Map.of("#holder", LEASE_HOLDER))
+                    .expressionAttributeValues(Map.of(":holder", AttributeValue.fromS(holder)))
+                    .build());
+        } catch (ConditionalCheckFailedException e) {
+            // Another holder took the lease after this one's ran out; it is theirs to end.
+        }
+    }
+
+    private PutItemRequest.Builder leaseWrite(String name, Lease lease) {
+        return PutItemRequest.builder()
+                .tableName(table)
+                .item(Map.of(
+                        NAME, AttributeValue.fromS(name),
+                        DOCUMENT, AttributeValue.fromB(SdkBytes.fromByteArray(lease.bytes())),
+                        LEASE_HOLDER, AttributeValue.fromS(lease.holder()),
+                        LEASE_UNTIL, AttributeValue.fromN(
+                                String.valueOf(lease.until().toEpochMilli()))));
     }
 
     @Override

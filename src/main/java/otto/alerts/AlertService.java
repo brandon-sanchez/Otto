@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import otto.ask.LineupPlanner;
 import otto.ask.ToolAnswer;
 import otto.ask.UserWeek;
 import otto.check.WeekFacts;
+import otto.delivery.AlertDeliveryOutbox;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
@@ -135,8 +137,9 @@ public class AlertService {
             candidates.addAll(edgeDetector.detect(roster, week, now));
         });
 
+        List<AlertCandidate> standing = cancelSuperseded(candidates, userRoster);
         Settings current = settings.current();
-        List<AlertCandidate> sendable = candidates.stream()
+        List<AlertCandidate> sendable = standing.stream()
                 .filter(candidate -> candidate.recommendation().confidence() != Confidence.LOW)
                 .filter(candidate -> current.enabled(candidate.source().trigger()))
                 .filter(candidate -> !lockSuppressed(candidate, week, now))
@@ -147,6 +150,29 @@ public class AlertService {
         userRoster.ifPresent(roster -> sent.addAll(lockLadder.warn(roster, leagueWeek, sendable,
                 now)));
         return sent;
+    }
+
+    private List<AlertCandidate> cancelSuperseded(List<AlertCandidate> candidates,
+            Optional<RosterSnapshot> userRoster) {
+        List<AlertCandidate> kept = new ArrayList<>();
+        for (AlertCandidate candidate : candidates) {
+            if (superseded(candidate, userRoster)) {
+                outbox.cancel(List.of("alert:" + candidate.key()),
+                        "the player's designation changed again");
+            } else {
+                kept.add(candidate);
+            }
+        }
+        return kept;
+    }
+
+    private static boolean superseded(AlertCandidate candidate,
+            Optional<RosterSnapshot> userRoster) {
+        if (candidate.source() != AlertCandidate.Source.TRANSITION || userRoster.isEmpty()) {
+            return false;
+        }
+        PlayerHealth now = userRoster.get().playerHealth().get(candidate.playerId());
+        return now != null && !now.name().equals(candidate.facts().get("to"));
     }
 
     private AlertCandidate reserveAdvice(AlertCandidate candidate, Event event,
@@ -353,37 +379,40 @@ public class AlertService {
             if (unalerted.isEmpty()) {
                 continue;
             }
+            List<String> keys = unalerted.stream()
+                    .map(candidate -> "alert:" + candidate.key())
+                    .toList();
             AlertCandidate primary = unalerted.stream().min(BY_CONFIDENCE).orElseThrow();
             Map<String, String> research = primary.playerId() == null
                     ? Map.of()
                     : preSendResearch.factsFor(primary.playerId());
             Optional<AlertText> written =
-                    alertText(primary, research, leagueWeek, userRoster, now);
+                    alertText(keys, primary, research, leagueWeek, userRoster, now);
             if (written.isEmpty()) {
+                outbox.cancel(keys, "its advice was withheld");
                 continue;
             }
-            String text = text(written.get());
             List<Event> templates = unalerted.stream()
                     .map(candidate -> new Event("alert:" + candidate.key(),
                             EventType.ALERT_SENT, now,
-                            alertFacts(candidate, research, written.get(), text)))
+                            alertFacts(candidate, research, written.get())))
                     .toList();
-            sent.addAll(outbox.deliver(text, templates));
+            sent.addAll(outbox.deliver(written.get().basis(), compose(written.get()), templates));
         }
         return sent;
     }
 
-    private String text(AlertText written) {
+    private Supplier<String> compose(AlertText written) {
         return switch (written) {
-            case AlertText.Advised advised -> advised.text();
+            case AlertText.Advised advised -> advised::text;
             case AlertText.Phrased phrased ->
-                    phraser.phrase(phrased.facts(), phrased.recommendation());
+                    () -> phraser.phrase(phrased.facts(), phrased.recommendation());
         };
     }
 
     private Map<String, String> alertFacts(AlertCandidate candidate,
-            Map<String, String> research, AlertText written, String text) {
-        Map<String, String> facts = new HashMap<>(alertFacts(candidate, research, text));
+            Map<String, String> research, AlertText written) {
+        Map<String, String> facts = new HashMap<>(alertFacts(candidate, research));
         if (written instanceof AlertText.Advised advised) {
             facts.put("runId", advised.runId());
         }
@@ -402,28 +431,32 @@ public class AlertService {
         return LINEUP_PROBLEMS.contains(primary.source()) ? Route.LINEUP_PROBLEM : Route.PHRASED;
     }
 
-    private Optional<AlertText> alertText(AlertCandidate primary, Map<String, String> research,
-            LeagueWeek leagueWeek, Optional<RosterSnapshot> userRoster, Instant now) {
+    private Optional<AlertText> alertText(List<String> keys, AlertCandidate primary,
+            Map<String, String> research, LeagueWeek leagueWeek,
+            Optional<RosterSnapshot> userRoster, Instant now) {
         return switch (route(primary)) {
             case LINEUP_PROBLEM -> lineupAdvice.forProblem("alert:" + primary.key(), primary,
                     research, leagueWeek, userRoster.orElseThrow(), now)
                     .map(AlertText.class::cast);
-            case PHRASED -> Optional.of(phrased(primary, research));
+            case PHRASED -> Optional.of(phrased(keys, primary, research));
         };
     }
 
-    private static AlertText phrased(AlertCandidate primary, Map<String, String> research) {
+    private AlertText phrased(List<String> keys, AlertCandidate primary,
+            Map<String, String> research) {
         Map<String, String> facts = new HashMap<>(primary.facts());
         facts.putAll(research);
-        return new AlertText.Phrased(facts, primary.recommendation());
+        return new AlertText.Phrased(phraser.basis(facts, primary.recommendation()).plus(keys),
+                facts, primary.recommendation());
     }
 
     /**
-     * The facts an Alert's Event Log entry keeps: the candidate's own,
-     * the research read right before sending, and what was sent.
+     * The facts an Alert's Event Log entry keeps: the candidate's own
+     * and the research read right before sending. The outbox adds the
+     * sent text.
      */
     static Map<String, String> alertFacts(AlertCandidate candidate,
-            Map<String, String> research, String text) {
+            Map<String, String> research) {
         Recommendation recommendation = candidate.recommendation();
         Map<String, String> facts = new HashMap<>(candidate.facts());
         facts.putAll(research);
@@ -433,7 +466,6 @@ public class AlertService {
         facts.put("confidence", recommendation.confidence().name());
         facts.put("pros", String.join("; ", recommendation.pros()));
         facts.put("cons", String.join("; ", recommendation.cons()));
-        facts.put("text", text);
         return Map.copyOf(facts);
     }
 }

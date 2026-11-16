@@ -1,5 +1,6 @@
 package otto.storage;
 
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -34,6 +35,41 @@ public interface DocumentBackend {
 
     /** Stores the bytes of one document under its name. */
     void store(String name, byte[] json);
+
+    /**
+     * Stores the lease under its name unless another holder's lease on
+     * it is still live at {@code now}. Taking a lease the holder already
+     * has extends it. A backend that several processes share decides
+     * this in one atomic step; this default is atomic only within one
+     * process, which is all a backend on one machine needs.
+     *
+     * @return false when another holder's lease is still live
+     */
+    default boolean lease(String name, Lease lease, Instant now) {
+        synchronized (this) {
+            if (load(name).map(Lease::parse)
+                    .filter(held -> held.keepsOut(lease.holder(), now))
+                    .isPresent()) {
+                return false;
+            }
+            store(name, lease.bytes());
+            return true;
+        }
+    }
+
+    /**
+     * Ends the holder's lease on {@code name}. A lease that has passed
+     * to another holder is left alone.
+     */
+    default void release(String name, String holder) {
+        synchronized (this) {
+            if (load(name).map(Lease::parse)
+                    .filter(held -> held.holder().equals(holder))
+                    .isPresent()) {
+                store(name, new Lease(holder, Instant.EPOCH).bytes());
+            }
+        }
+    }
 
     /**
      * Ends one run: a backend that batches writes pushes them here. A
