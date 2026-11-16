@@ -20,11 +20,18 @@ import java.util.OptionalDouble;
  * @param basis what the ranks describe, in words: either the season to
  *        date or, in week 1 before any game is played, last season's
  *        final record
+ * @param priorSeasonFinal true when {@code season} is last season's
+ *        final record, built before any game this season
+ * @param throughWeek the latest week the table draws on; every week
+ *        from 1 up to it counts. Null when the table was stored without
+ *        it, so its weeks are unknown until the next build.
  * @param teams how many defenses the ranks run over
  */
 public record DefenseVersusPosition(
         String season,
         String basis,
+        boolean priorSeasonFinal,
+        Integer throughWeek,
         Instant builtAt,
         int teams,
         Map<String, TeamDefense> byTeam) {

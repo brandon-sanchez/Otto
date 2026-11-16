@@ -37,6 +37,15 @@ defenses rides in the sentence because a rank means nothing without
 the size of the field, and early in a season the table can hold fewer
 than 32.
 
+Every matchup rank Otto states follows the same football-analyst
+convention. Among defenses, on any stat, 1st is the toughest matchup
+and the last the easiest: 1st in points allowed allows the fewest, 1st
+in pressure rate pressures the most. For a remaining schedule, 1st is
+the hardest. A player's own stat, such as target share, ranks the most
+first. Each ranked fact also carries a colour from the fantasy player's
+side: red for a hard matchup or a stat that hurts him, green for an
+easy matchup or one that helps, neutral for the middle third.
+
 ## The table ranks QB as well as RB, WR and TE
 
 The spec names RB, WR and TE plus a run-defense rank. This league is

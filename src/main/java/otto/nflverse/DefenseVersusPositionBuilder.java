@@ -131,6 +131,8 @@ public class DefenseVersusPositionBuilder {
         return new DefenseVersusPosition(
                 stats.season(),
                 basis(stats, latestWeek),
+                stats.priorSeasonFinal(),
+                latestWeek,
                 now,
                 byTeam.size(),
                 byTeam);
