@@ -44,8 +44,15 @@ public record TeamDirection(
         CHOSEN,
         /**
          * The user's team measures as rebuilding in a dynasty league, and
-         * he has not said so, so it is held in the middle until he does.
+         * he has not said so, so it is held in the middle until he does,
+         * and he has not been asked yet this season.
          */
-        AWAITING_CONFIRMATION
+        AWAITING_CONFIRMATION,
+        /**
+         * As {@link #AWAITING_CONFIRMATION}, but he was asked this season
+         * and did not answer, so he is held in the middle without being
+         * asked again.
+         */
+        UNANSWERED
     }
 }

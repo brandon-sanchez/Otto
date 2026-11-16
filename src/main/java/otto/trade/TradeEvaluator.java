@@ -347,8 +347,7 @@ public class TradeEvaluator {
             case SourceResult.Unavailable<RestOfSeason> unavailable ->
                 new SourceResult.Unavailable<>(unavailable.source(), unavailable.reason());
             case SourceResult.Ok<RestOfSeason> ok -> {
-                LeagueShape shape = LeagueShape.of(leagueWeek.league(),
-                        leagueWeek.rosters().size());
+                LeagueShape shape = league.shape(leagueWeek);
                 Map<String, InjuredPlayer> injured = injuredPlayers.read(leagueWeek, ok.value());
                 yield new SourceResult.Ok<>(new Basis(InjuredPlayers.priced(ok.value(), injured),
                         shape, replacementOverTheWeeksLeft(leagueWeek, shape, positions,

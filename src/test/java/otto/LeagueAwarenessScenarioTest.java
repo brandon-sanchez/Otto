@@ -203,15 +203,18 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
 
         ask("what does GridironGoblin have?");
 
-        // Their tight end starts below the TE replacement level and no
-        // tight end sits on their bench, while four of their receivers
-        // beat the WR replacement level.
+        // No tight end or spare quarterback sits on their bench above
+        // replacement, while four of their backs beat the RB replacement
+        // level. The league's best lineups start 27 receivers, deeper
+        // than the 26 the projection table ranks, so receivers go unpriced.
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("GridironGoblin"))
                 .withRequestBody(containing("Saquon Barkley"))
                 .withRequestBody(containing("TE Depth 13"))
-                .withRequestBody(containing("below the TE replacement level"))
-                .withRequestBody(containing("Deep at WR")));
+                .withRequestBody(containing("No TE cover on the bench above replacement"))
+                .withRequestBody(containing("Deep at RB"))
+                .withRequestBody(containing("the table ranks only 26 WR, so it does not reach "
+                        + "rank 27")));
     }
 
     @Test

@@ -371,16 +371,17 @@ public class AskTools {
             of the table. """ + RankConvention.DIRECTION + " "
             + RankConvention.TONE + """
              Quote ranks as written, such as 3rd or 5th from the bottom.
-            Call this for "where does he
+            For a player, quote his rank as "quoted" writes it, sample
+            included, and add "askedOverall" when it is there. Call this
+            for "where does he
             rank in target share", "best pass rush in the league",
             "toughest run defense" or "easiest schedule the rest of the
             way".""")
     public ToolAnswer<LeagueRankLookup.Answer> getLeagueRank(
             @ToolParam(description = """
-                    The stat: targets_per_game, target_share,
-                    carries_per_game, carry_share, snap_share,
-                    yards_before_contact_per_carry or pressured_rate for a
-                    player; points_allowed, rushing_yards_allowed,
+                    The stat: for a player, any stat get_stat_leaders
+                    lists, such as target_share, air_yards or
+                    yards_before_contact_per_carry; points_allowed, rushing_yards_allowed,
                     yards_before_contact_allowed, pressure_rate or
                     blitz_rate for a defense; remaining_schedule for a
                     team's rest of season.""")
@@ -395,6 +396,37 @@ public class AskTools {
                     table alone.""")
             String who) {
         return leagueRanks.lookup(stat, position, who);
+    }
+
+    @Tool(name = "get_stat_leaders", description = """
+            The league leaders in one player stat, top 10 unless he names
+            a number, at one position or across every position, over the
+            season or a span of weeks, each with its sample, already
+            written. Send its message word for word. Call this for "top
+            10 WRs in air yards", "top 5 RBs in yards before contact" and
+            "who leads all players in targets?".""")
+    public ToolAnswer<StatLeaders.Answer> getStatLeaders(
+            @ToolParam(description = """
+                    The stat, such as air_yards, targets, target_share,
+                    receiving_yards, yards_per_carry,
+                    yards_before_contact, red_zone_targets or
+                    first_read_targets.""")
+            String stat,
+            @ToolParam(required = false, description = """
+                    QB, RB, WR or TE, or all for every position. Leave
+                    it out for every position.""")
+            String position,
+            @ToolParam(required = false, description = "How many to list, 10 when he names none")
+            Integer count,
+            @ToolParam(required = false, description = """
+                    The first week counted, when he names a span such as
+                    "weeks 3 to 6" or "since week 5".""")
+            Integer fromWeek,
+            @ToolParam(required = false, description = "The last week counted, for a span")
+            Integer toWeek, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(leagueRanks.leaders(stat, position, count, fromWeek, toWeek),
+                StatLeaders.Answer::message);
     }
 
     @Tool(name = "get_standings", description = """

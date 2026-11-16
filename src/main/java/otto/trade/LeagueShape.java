@@ -10,23 +10,28 @@ import otto.advice.Ordinal;
 import otto.sleeper.SleeperAdapter;
 
 /**
- * How many players of each position a league starts, read from its
- * {@code roster_positions}, and the two trade factors that follow from
- * it: the rank Replacement Level is read at and the scarcity multiplier.
+ * How many players of each position a league starts, and the two trade
+ * factors that follow from it: the rank Replacement Level is read at and
+ * the scarcity multiplier.
  *
- * <p>A position's replacement rank is one player for every dedicated
- * starting slot in the league, so a 12-team league with two RB slots
- * prices a back above the 24th RB. A Superflex slot counts as a
- * quarterback slot, because managers fill it with a quarterback whenever
- * they have one. A plain flex slot counts toward no position: it takes
- * whichever back, receiver or tight end is left over, so it adds demand
- * at none of them in particular.
+ * <p>A position's replacement rank is the number of players at it who
+ * start across the league when every team starts its best lineup, flex
+ * and Superflex spots included, as {@code LeagueStarters} counts them.
+ * A twelve-team league with two RB slots and a flex whose teams fill
+ * most flex spots with backs prices a back above the 30th RB or so, not
+ * the 24th. When no projections are read yet to fill those lineups, the
+ * rank falls back to one player for every dedicated slot, with a
+ * Superflex slot counted as a quarterback slot because managers fill it
+ * with one whenever they can.
  *
  * @param teams how many teams the league holds
  * @param slots dedicated starting slots a team has at each position,
  *        Superflex counted at QB
+ * @param starters how many players at each position start across the
+ *        league in every team's best lineup; empty when no lineup could
+ *        be filled
  */
-public record LeagueShape(int teams, Map<String, Integer> slots) {
+public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Integer> starters) {
 
     private static final double NO_SCARCITY = 1.00;
 
@@ -52,10 +57,11 @@ public record LeagueShape(int teams, Map<String, Integer> slots) {
 
     public LeagueShape {
         slots = Map.copyOf(slots);
+        starters = Map.copyOf(starters);
     }
 
     /**
-     * Reads the league's shape.
+     * Reads the league's shape from its slots alone, with no lineup filled.
      *
      * @param rosterCount how many teams the Snapshot holds, used when the
      *        league document doesn't say {@code num_teams}
@@ -71,7 +77,30 @@ public record LeagueShape(int teams, Map<String, Integer> slots) {
                 slots.merge(position, 1, Integer::sum);
             }
         }
-        return new LeagueShape(league.rules().teams().orElse(rosterCount), slots);
+        return new LeagueShape(league.rules().teams().orElse(rosterCount), slots, Map.of());
+    }
+
+    /**
+     * Returns this shape with the starters counted from every team's best
+     * lineup, which then set each replacement rank.
+     *
+     * @param starters players starting at each position across the
+     *        league; only QB, RB, WR and TE are kept
+     */
+    public LeagueShape withStarters(Map<String, Integer> starters) {
+        Map<String, Integer> kept = new LinkedHashMap<>();
+        starters.forEach((position, count) -> {
+            if (POSITIONS.contains(position)) {
+                kept.put(position, count);
+            }
+        });
+        return new LeagueShape(teams, slots, kept);
+    }
+
+    /** True when the shape gives the position a replacement rank of its own. */
+    public boolean ranks(String position) {
+        return position != null
+                && (starters.containsKey(position) || slots.containsKey(position));
     }
 
     /** True when a team can start two quarterbacks, through Superflex or two QB slots. */
@@ -80,11 +109,14 @@ public record LeagueShape(int teams, Map<String, Integer> slots) {
     }
 
     /**
-     * Returns the rank Replacement Level is read at: one player for every
-     * dedicated starting slot in the league, and at least the first one.
+     * Returns the rank Replacement Level is read at: the players at the
+     * position who start in the league's best lineups, or one for every
+     * dedicated slot when no lineup was filled, and at least the first one.
      */
     public int replacementRank(String position) {
-        return Math.max(1, teams * slots.getOrDefault(position, 0));
+        return Math.max(1, starters.isEmpty()
+                ? teams * slots.getOrDefault(position, 0)
+                : starters.getOrDefault(position, 0));
     }
 
     /** Returns the position's scarcity multiplier in this league. */
@@ -101,7 +133,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots) {
      */
     public String describe() {
         String lines = POSITIONS.stream()
-                .filter(slots::containsKey)
+                .filter(this::ranks)
                 .map(position -> "%s among %ss".formatted(Ordinal.of(replacementRank(position)),
                         position))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), LeagueShape::listed));
@@ -110,9 +142,12 @@ public record LeagueShape(int teams, Map<String, Integer> slots) {
                         + "player to replace and carries the biggest premium."
                 : "Your league starts only one quarterback a team, so quarterbacks are easy to "
                         + "replace and carry no Superflex premium.";
+        String basis = starters.isEmpty()
+                ? "one for every starting slot your %d teams fill".formatted(teams)
+                : "one for every player your %d teams start there in their best lineups, flex "
+                        .formatted(teams) + "spots included";
         return ("A player is worth his rest-of-season points above the free agent who ranks %s "
-                + "this week, one for every starting slot your %d teams fill. %s")
-                .formatted(lines, teams, quarterbacks);
+                + "this week, %s. %s").formatted(lines, basis, quarterbacks);
     }
 
     private static String listed(List<String> items) {

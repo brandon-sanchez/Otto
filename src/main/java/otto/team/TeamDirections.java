@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import otto.advice.Ordinal;
 import otto.ask.LeagueWeek;
+import otto.check.SeasonWeek;
 import otto.market.MarketValuation;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
@@ -26,9 +27,10 @@ import otto.trade.LeaguePicks;
  * rebuilding, with a one-line reason.
  *
  * <p>Each team is placed from 0 to 1 against the rest of the league on
- * three measures: its summed market value in the league's format, its
- * record and its points scored. Before a game is played the market is
- * all there is. As the season goes on the record and points weigh more,
+ * three measures: its summed market value in the league's format, how
+ * far it sits from a playoff spot, and its points scored. Before a game
+ * is played the market is all there is. As the season goes on the
+ * standing and points weigh more,
  * because they show how the roster actually plays, but the market keeps
  * a third of the weight to the end, because it prices the weeks still
  * to come. The market already prices age in dynasty and injuries in
@@ -36,6 +38,19 @@ import otto.trade.LeaguePicks;
  * a team's most valuable players appears in the reason only. A dynasty
  * team's value also counts the rookie picks it holds, because a
  * rebuilding team keeps much of its value in picks.
+ *
+ * <p>The playoff measure reads the league's own playoff field, so 5-5
+ * means more when 6 of 12 teams get in than when 4 do: a team's lead
+ * over the first team out, or its deficit to the last team in, counted
+ * in games and set against the games it has left. When the league
+ * document names no playoff field smaller than the league, the record
+ * against the other teams stands in.
+ *
+ * <p>In a dynasty league a user whose numbers say rebuilding is held in
+ * the middle until he says so, and asked once a season. If he doesn't
+ * answer he stays in the middle unasked, unless his numbers swing two
+ * tiers to contending, after which a slide back to rebuilding asks
+ * again.
  */
 @Component
 public class TeamDirections {
@@ -67,8 +82,10 @@ public class TeamDirections {
      * the place of his measured label.
      *
      * <p>Side effects: the market value reads of
-     * {@link MarketValuation#rostered}, and a read of the user's stored
-     * choice.
+     * {@link MarketValuation#rostered}, a read of the user's stored
+     * choice and of whether he was asked about rebuilding this season,
+     * and in a dynasty league a write that forgets that question once
+     * his team measures as contending.
      *
      * @return the labels, or unavailable when no game has been played and
      *         no market list can be read, which leaves nothing to measure
@@ -93,16 +110,42 @@ public class TeamDirections {
                 .orElse(USUAL_REGULAR_SEASON_GAMES));
         Map<Integer, Integer> pickValues = dynasty && market.isPresent()
                 ? pickValues(league, now) : Map.of();
-        Measures measures = new Measures(teams, market, pickValues);
-        Optional<Direction> chosen = choices.chosen(league.league().leagueId());
+        Measures measures = new Measures(teams, market, pickValues,
+                PlayoffRace.of(league), league.lastRegularWeek().orElse(USUAL_REGULAR_SEASON_GAMES));
+        String leagueId = league.league().leagueId();
+        Optional<Direction> chosen = choices.chosen(leagueId);
+        boolean asked = dynasty && choices.askedAboutRebuilding(leagueId, season(league));
         List<TeamDirection> directions = teams.stream()
-                .map(team -> direction(team, measures, progress, dynasty, chosen))
+                .map(team -> direction(team, measures, progress, dynasty, chosen, asked))
                 .sorted(Comparator.comparingInt((TeamDirection team) ->
                                 team.measured().ordinal())
                         .thenComparingInt(TeamDirection::pointsRank))
                 .toList();
+        if (asked && directions.stream().anyMatch(team -> team.userTeam()
+                && team.measured() == Direction.CONTENDING)) {
+            choices.forgetAskedAboutRebuilding(leagueId);
+        }
         return new SourceResult.Ok<>(new LeagueDirections(directions,
                 market.map(MarketValuation.LeagueValues::league), games));
+    }
+
+    /**
+     * Remembers that the user was asked whether he is rebuilding, when
+     * the direction he was shown carried that question, so it is not
+     * asked again this season. Call it once an answer holding the
+     * direction has reached him.
+     *
+     * <p>Side effects: writes the stored questions when the question was asked.
+     */
+    public void asked(LeagueWeek league, TeamDirection user) {
+        if (user.basis() == TeamDirection.Basis.AWAITING_CONFIRMATION) {
+            choices.rememberAskedAboutRebuilding(league.league().leagueId(), season(league));
+        }
+    }
+
+    /** Returns the NFL season of the league's week, or "" before Sleeper names one. */
+    private static String season(LeagueWeek league) {
+        return league.week().seasonWeek().map(SeasonWeek::season).orElse("");
     }
 
     /**
@@ -122,10 +165,24 @@ public class TeamDirections {
      *        id; empty outside dynasty
      */
     private record Measures(List<RosterSnapshot> teams,
-            Optional<MarketValuation.LeagueValues> market, Map<Integer, Integer> pickValues) {
+            Optional<MarketValuation.LeagueValues> market, Map<Integer, Integer> pickValues,
+            Optional<PlayoffRace> race, int lastRegularWeek) {
 
         int recordRank(RosterSnapshot team) {
             return rank(team, Measures::winShare);
+        }
+
+        /**
+         * Returns the team's standing from 0 to 1: how far it sits from a
+         * playoff spot when the league names its field, else its record
+         * against the other teams.
+         */
+        double standing(RosterSnapshot team) {
+            if (race.isEmpty() || team.teamRecord().games() == 0) {
+                return placing(recordRank(team));
+            }
+            int gamesLeft = Math.max(0, lastRegularWeek - team.teamRecord().games());
+            return race.get().placing(team, gamesLeft);
         }
 
         int pointsRank(RosterSnapshot team) {
@@ -183,12 +240,15 @@ public class TeamDirections {
         }
     }
 
+    /**
+     * @param asked true when the user was asked about rebuilding in this
+     *        dynasty league this season and has not answered
+     */
     private static TeamDirection direction(RosterSnapshot team, Measures measures,
-            double progress, boolean dynasty, Optional<Direction> chosen) {
+            double progress, boolean dynasty, Optional<Direction> chosen, boolean asked) {
         int pointsRank = measures.pointsRank(team);
         Optional<Integer> valueRank = measures.valueRank(team);
-        double season = (measures.placing(measures.recordRank(team))
-                + measures.placing(pointsRank)) / 2;
+        double season = (measures.standing(team) + measures.placing(pointsRank)) / 2;
         double marketWeight = valueRank.isEmpty() ? 0
                 : 1 - (1 - LATE_MARKET_WEIGHT) * progress;
         double placing = marketWeight * valueRank.map(measures::placing).orElse(0.0)
@@ -202,24 +262,28 @@ public class TeamDirections {
             basis = TeamDirection.Basis.CHOSEN;
             direction = chosen.get();
         } else if (team.userRoster() && dynasty && measured == Direction.REBUILDING) {
-            basis = TeamDirection.Basis.AWAITING_CONFIRMATION;
+            basis = asked ? TeamDirection.Basis.UNANSWERED
+                    : TeamDirection.Basis.AWAITING_CONFIRMATION;
             direction = Direction.MIDDLE;
         }
         String reason = reason(team.teamRecord(), pointsRank, valueRank,
-                measures.teams().size(), dynasty ? measures.coreAge(team) : Optional.empty());
+                measures.teams().size(), measures.race().map(race -> race.describe(team)),
+                dynasty ? measures.coreAge(team) : Optional.empty());
         return new TeamDirection(team.rosterId(), team.manager(), team.userRoster(), direction,
                 measured, basis, reason, team.teamRecord(), pointsRank, measures.value(team),
                 valueRank);
     }
 
     private static String reason(SleeperAdapter.TeamRecord record, int pointsRank,
-            Optional<Integer> valueRank, int teams, Optional<Double> coreAge) {
+            Optional<Integer> valueRank, int teams, Optional<String> playoffs,
+            Optional<Double> coreAge) {
         Optional<String> value = valueRank.map(rank -> ranked(rank, teams, "valuable roster"));
         String reason;
         if (record.games() == 0) {
             reason = "no games played yet" + value.map(roster -> ", with " + roster).orElse("");
         } else {
-            reason = "%s with %s%s".formatted(standing(record),
+            reason = "%s%s with %s%s".formatted(standing(record),
+                    playoffs.map(race -> ", " + race + ",").orElse(""),
                     ranked(pointsRank, teams, "points"),
                     value.map(roster -> " and " + roster).orElse(""));
         }

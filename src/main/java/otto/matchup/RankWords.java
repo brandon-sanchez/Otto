@@ -2,6 +2,8 @@ package otto.matchup;
 
 import java.util.Locale;
 
+import otto.advice.Ordinal;
+
 /**
  * The words every ranked fact is written in, shared by the matchup
  * evidence and the league-rank tool so that a rank reads the same
@@ -19,9 +21,21 @@ public final class RankWords {
                 : stat.label();
     }
 
-    /** Returns a value as the stat is quoted: a whole percentage or one decimal place. */
+    /**
+     * Returns a value as the stat is quoted: a whole percentage, a whole
+     * count, two decimal places for a rating, or one decimal place.
+     */
     public static String value(RankedStat stat, double value) {
-        return stat.percentage() ? percent(value) : String.format(Locale.ROOT, "%.1f", value);
+        if (stat.percentage()) {
+            return percent(value);
+        }
+        PlayerStat.Figure figure = stat instanceof PlayerStat player ? player.figure()
+                : PlayerStat.Figure.AVERAGE;
+        return switch (figure) {
+            case TOTAL -> String.format(Locale.ROOT, "%.0f", value);
+            case RATING -> String.format(Locale.ROOT, "%.2f", value);
+            case AVERAGE, SHARE -> String.format(Locale.ROOT, "%.1f", value);
+        };
     }
 
     /** Returns a share from 0 to 1 as a whole percentage, such as "24%". */
@@ -88,6 +102,39 @@ public final class RankWords {
             case GREEN -> "green: good news for his fantasy output";
             case NEUTRAL -> "neutral: the middle of his position";
         };
+    }
+
+    /**
+     * Returns a player's rank as it is quoted, such as "2nd in target
+     * share", with the sample beside it for a per-attempt stat, such as
+     * "1st in yards before contact per carry, on 2 carries".
+     */
+    public static String placed(PlayerStat stat, Ranking.Placement placement) {
+        String placed = "%s in %s".formatted(Ordinal.of(placement.rank()), stat.label());
+        return stat.perAttempt()
+                ? "%s, on %s".formatted(placed, count(placement.sample(), stat.sampleUnit()))
+                : placed;
+    }
+
+    /**
+     * Returns a player's rank among every position, such as "3rd of 145
+     * players in targets per game, as a running back", sample included
+     * for a per-attempt stat.
+     *
+     * @param all the ranking across every position the placement is from
+     * @param position the position he plays
+     */
+    public static String overall(Ranking all, Ranking.Placement placement, Position position) {
+        String overall = "%s of %d players in %s, as a %s".formatted(Ordinal.of(placement.rank()),
+                all.population().size(), all.stat().label(), singular(position));
+        return all.stat() instanceof PlayerStat player && player.perAttempt()
+                ? "%s, on %s".formatted(overall, count(placement.sample(), player.sampleUnit()))
+                : overall;
+    }
+
+    /** Returns one player of the position in words, such as "running back". */
+    public static String singular(Position position) {
+        return position.plural().substring(0, position.plural().length() - 1);
     }
 
     /** Returns the stat's name as an id fragment, such as "points-allowed". */

@@ -24,7 +24,8 @@ import java.util.OptionalDouble;
  *
  * @param stat the stat ranked
  * @param position the position the players play, the defenses face, or
- *        the remaining schedules are rated for
+ *        the remaining schedules are rated for; null for a player stat
+ *        ranked across every position
  * @param weeks the weeks the values are drawn from
  * @param population who is ranked, which is everyone in {@code ranked}
  * @param ranked the ranked entries, rank 1 first; ties are in id order
@@ -126,6 +127,19 @@ public record Ranking(RankedStat stat, Position position, Weeks weeks, Populatio
      */
     public static Ranking rank(RankedStat stat, Position position, Weeks weeks,
             List<Measurement> measurements) {
+        return rank(stat, position, group(stat, position), weeks, measurements);
+    }
+
+    /**
+     * Ranks players of every position together, the same way
+     * {@link #rank} ranks one position.
+     */
+    public static Ranking rankAll(PlayerStat stat, Weeks weeks, List<Measurement> measurements) {
+        return rank(stat, null, "players", weeks, measurements);
+    }
+
+    private static Ranking rank(RankedStat stat, Position position, String group, Weeks weeks,
+            List<Measurement> measurements) {
         List<Measurement> eligible = new ArrayList<>();
         List<Unranked> unranked = new ArrayList<>();
         for (Measurement measurement : measurements) {
@@ -142,7 +156,7 @@ public record Ranking(RankedStat stat, Position position, Weeks weeks, Populatio
                 .thenComparing(Measurement::id));
         unranked.sort(Comparator.comparing(Unranked::id));
         return new Ranking(stat, position, weeks,
-                new Population(group(stat, position), eligible.size(), stat.minimumSample(),
+                new Population(group, eligible.size(), stat.minimumSample(),
                         stat.sampleUnit()),
                 placements(eligible), unranked, List.of());
     }

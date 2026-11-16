@@ -79,7 +79,7 @@ class LeagueRankToolScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aPlayerIsFoundByNameAndOneBelowTheMinimumIsSaidToBeUnranked() {
+    void aPlayerIsFoundByNameAndRankedOnHowEverFewDropbacks() {
         feedsReady();
 
         LeagueRankLookup.Answer love = tools.getLeagueRank("pressured_rate", "QB", "jordan love")
@@ -89,8 +89,8 @@ class LeagueRankToolScenarioTest extends WireSeamTest {
 
         assertThat(love.asked().rank()).isEqualTo("1st");
         assertThat(love.asked().matchup()).startsWith("red");
-        assertThat(rush.asked()).isNull();
-        assertThat(rush.askedNote()).contains("Cooper Rush").contains("50 dropbacks");
+        assertThat(rush.asked().rank()).isEqualTo("4th");
+        assertThat(rush.asked().quoted()).isEqualTo("4th in pressured rate, on 46 dropbacks");
     }
 
     @Test
@@ -101,8 +101,8 @@ class LeagueRankToolScenarioTest extends WireSeamTest {
                 .isEqualTo("1st");
         assertThat(tools.getLeagueRank("pressured_rate", "QB", "JORDAN  LOVE.").facts().asked())
                 .isNotNull();
-        assertThat(tools.getLeagueRank("pressured_rate", "QB", "rush").facts().askedNote())
-                .contains("50 dropbacks");
+        assertThat(tools.getLeagueRank("pressured_rate", "QB", "rush").facts().asked().name())
+                .isEqualTo("Cooper Rush");
     }
 
     @Test

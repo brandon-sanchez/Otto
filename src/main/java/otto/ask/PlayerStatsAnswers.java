@@ -68,7 +68,8 @@ public class PlayerStatsAnswers {
             When he asks what stats you can see, say what the evidence holds for this player
             and what free data cannot tell you, from "statsOttoReads" and "notInFreeData".
             A rank is season to date: say so when the stats are for a single week or a few
-            weeks. A stat whose value starts with "unknown" is not zero: if he asked about
+            weeks. Write a rank the way its "quoted" fact does, sample included, and add
+            its "amongAllPlayers" fact when the item has one. A stat whose value starts with "unknown" is not zero: if he asked about
             it, say plainly that you don't have it and give the reason the evidence states,
             and never say you cannot see a stat the evidence holds. Write two to five
             sentences in one or two short paragraphs, never a list. Never write a confidence

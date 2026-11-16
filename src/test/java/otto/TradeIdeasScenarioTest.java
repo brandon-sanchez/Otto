@@ -66,7 +66,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     private static final String CHECKED = "Send GridironGoblin Dallas Goedert and Justin "
             + "Jefferson for Saquon Barkley. It's a slight edge for you on rest-of-season fit, "
-            + "a gap of 8.9%, and on market value GridironGoblin gets 9500 for the 8200 he "
+            + "a gap of 8.2%, and on market value GridironGoblin gets 9500 for the 8200 he "
             + "gives.";
 
     private static final String WRONG_PARTNER = "Send GridironGoblin Dallas Goedert and Jalen "
@@ -76,12 +76,12 @@ class TradeIdeasScenarioTest extends WireSeamTest {
             + "Justin Jefferson for Christian McCaffrey.";
 
     private static final String LAMB = "6786";
-    private static final String TE_DEPTH_04 = "94004";
-    private static final String QB_DEPTH_08 = "91008";
+    private static final String TE_DEPTH_03 = "94003";
+    private static final String WR_DEPTH_04 = "93004";
 
-    private static final String TIGHT_END_OFFER = "Send EndZoneEnvy CeeDee Lamb for TE Depth "
-            + "04 and QB Depth 08. It's a slight edge for you on rest-of-season fit, a gap of "
-            + "5.7%.";
+    private static final String TIGHT_END_OFFER = "Send WaiverWizard CeeDee Lamb for TE Depth "
+            + "03 and WR Depth 04. It's a slight edge for you on rest-of-season fit, a gap of "
+            + "9.4%.";
 
     private static final String TIGHT_END_DEPTH ="a 1-for-2: one of yours for two of his, "
             + "for depth at TE";
@@ -100,6 +100,9 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
+
+    /** The league's week 6 transactions, none unless a test sets them before the league loads. */
+    private String weekSixTransactions = "sleeper/transactions-none.json";
 
     private void leagueInWeek(String leagueFixture, String rostersFixture, String stateFixture,
             int week) {
@@ -120,6 +123,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         for (int played = 1; played <= week; played++) {
             SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/transactions/" + played,
                     played == 5 ? "sleeper/transactions-offers-trade.json"
+                            : played == 6 ? weekSixTransactions
                             : "sleeper/transactions-none.json", "transactions-w" + played);
         }
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/traded_picks",
@@ -220,11 +224,12 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .containsEntry("shape", "a 2-for-1: two of yours for one better player, to "
                         + "upgrade your RB starters")
                 .containsEntry("yourEdge", "a slight edge for you on rest-of-season fit, a "
-                        + "gap of 8.9%")
+                        + "gap of 8.2%")
                 .containsEntry("why1", "On market value GridironGoblin gets 9500 for the 8200 "
                         + "he gives")
-                .containsEntry("why4", "GridironGoblin is contending, 9-2 with the most points "
-                        + "and the 2nd-most valuable roster, so points now matter to him")
+                .containsEntry("why4", "GridironGoblin is contending, 9-2, 4 games clear of "
+                        + "the first team out of the 6 playoff spots, with the most points and "
+                        + "the 2nd-most valuable roster, so points now matter to him")
                 .containsEntry("why5", "GridironGoblin has made 1 trade this season");
         assertThat(evidence).containsKeys("offer-2", "offer-3").doesNotContainKey("offer-4");
         assertThat(evidence.get("summary")).containsEntry("found", "3 offers");
@@ -241,7 +246,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "slight edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "8.9%"))));
+                .withRequestBody(containing(field("gap", "8.2%"))));
     }
 
     @Test
@@ -413,8 +418,18 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         }
     }
 
+    /**
+     * WaiverWizard made a waiver claim in week 6, so he is a manager who
+     * answers offers. He holds the tight ends a 1-for-2 for CeeDee Lamb
+     * can bring back.
+     */
+    private void waiverWizardMadeAMove() {
+        weekSixTransactions = "sleeper/transactions-offers-waiver-move.json";
+    }
+
     @Test
     void tightEndPointsLeftOnTheBenchBringTightEndDepthOffersWithoutSayingWhy() {
+        waiverWizardMadeAMove();
         redraftLeague("sleeper/rosters-offers.json");
         Map<String, Map<String, String>> unswayed = askForTrades("{}");
         assertThat(unswayed.values()).noneSatisfy(facts -> assertThat(facts)
@@ -426,15 +441,15 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
         nextQuestion();
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
-        OutboundStubs.llmAdvises(llm, answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_04, QB_DEPTH_08));
+        OutboundStubs.llmAdvises(llm, answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_03, WR_DEPTH_04));
         ask("what trades should I make and why?");
 
         Map<String, Map<String, String>> swayed = evidence(RunKind.TRADE_IDEAS);
-        assertThat(swayed.get("offer-2"))
-                .containsEntry("sendTo", "EndZoneEnvy")
+        assertThat(swayed.values()).anySatisfy(facts -> assertThat(facts)
+                .containsEntry("sendTo", "WaiverWizard")
                 .containsEntry("youGive", "CeeDee Lamb")
-                .containsEntry("youGet", "TE Depth 04 and QB Depth 08")
-                .containsEntry("shape", TIGHT_END_DEPTH);
+                .containsEntry("youGet", "TE Depth 03 and WR Depth 04")
+                .containsEntry("shape", TIGHT_END_DEPTH));
         assertThat(swayed.values()).noneSatisfy(facts -> assertThat(facts.get("youGive"))
                 .contains("Dallas Goedert"));
         assertThat(swayed.get("lean")).containsEntry("weighDepthAt", "TE");
@@ -443,6 +458,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     @Test
     void aTradeReplyThatNamesTheUsersHabitIsCorrectedBeforeHeSeesIt() {
+        waiverWizardMadeAMove();
         redraftLeague("sleeper/rosters-offers.json");
         tightEndPointsLeftOnTheBench();
         OutboundStubs.llmPhrases(llm, "A quiet week.");
@@ -451,8 +467,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
         OutboundStubs.llmAdvises(llm,
                 answer("You keep starting the wrong tight end. " + TIGHT_END_OFFER, LAMB,
-                        TE_DEPTH_04, QB_DEPTH_08),
-                answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_04, QB_DEPTH_08));
+                        TE_DEPTH_03, WR_DEPTH_04),
+                answer(TIGHT_END_OFFER, LAMB, TE_DEPTH_03, WR_DEPTH_04));
 
         ask("what trades should I make and why?");
 

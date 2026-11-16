@@ -253,6 +253,9 @@ public class TeamWeaknesses {
                 now), lean, now);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
         Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
+        if (outcome instanceof Outcome.Sent || outcome instanceof Outcome.HandedToChat) {
+            facts.direction().ifPresent(direction -> directions.asked(league, direction.user()));
+        }
         return switch (outcome) {
             case Outcome.Sent sent -> ToolAnswer.of(new Answer(name, sent.message()));
             case Outcome.HandedToChat handed -> ToolAnswer.of(new Answer(name, handed.message()));

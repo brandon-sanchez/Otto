@@ -180,15 +180,20 @@ replacement-level body, and here he starts for most of the field.
 
 The Superflex number the spec spells out is the replacement rank rather
 than the Notable one. Replacement level is not a fixed rank, though: it
-is read from the league's own starting slots, one player for every slot
-only that position can fill, with a Superflex slot counted at
-quarterback. A twelve-team Superflex league puts it at QB 24, RB 24,
-WR 24 and TE 12; a ten-team league that starts one quarterback puts the
-quarterback line at QB 10. Team depth, the trade tools and the waiver
-board all read the same rank, so a free agent is worth one thing
-wherever the user asks. Team depth and the waiver board fall back to the
-configured `replacement-cutoffs` only at a position the league document
-gives no dedicated slot.
+is the number of players at the position who start across the league
+when every team starts its best lineup from this week's projections,
+flex and Superflex spots included (`LeagueStarters`). A slot a team
+cannot fill from its own roster counts at the position its manager
+would claim a free agent for. A twelve-team Superflex league with two
+flex spots whose managers fill most of them with backs reads about
+RB 30 rather than RB 24; a ten-team league that starts one quarterback
+puts the quarterback line at QB 10. Before projections are read, the
+rank falls back to one player for every slot only that position can
+fill, with a Superflex slot counted at quarterback. Team depth, the
+trade tools and the waiver board all read the same rank, so a free
+agent is worth one thing wherever the user asks. They fall back to the
+configured `replacement-cutoffs` only at a position neither a lineup
+nor a slot gives a rank.
 The Notable ranks live in Settings, which is where the spec puts them,
 so the Settings-by-chat work can move them without touching this code.
 

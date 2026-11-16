@@ -71,16 +71,25 @@ class RankingTest {
     }
 
     @Test
-    void aPlayerBelowTheMinimumSampleIsNotRankedOrCountedInThePopulation() {
+    void aPlayerIsRankedHoweverSmallHisSample() {
         Ranking ranking = Ranking.rank(PlayerStat.TARGETS_PER_GAME, Position.TE, WEEKS_1_TO_6, List.of(
                 tightEnd("a", 5.0, 30),
-                tightEnd("rookie", 9.0, 9)));
+                tightEnd("rookie", 9.0, 1)));
 
-        assertThat(ranking.placement("rookie")).isEmpty();
+        assertThat(ranking.placement("rookie").orElseThrow().rank()).isEqualTo(1);
+        assertThat(ranking.population().size()).isEqualTo(2);
+    }
+
+    @Test
+    void aDefenseWithNoGameIsNotRankedOrCountedInThePopulation() {
+        Ranking ranking = Ranking.rank(DefenseStat.POINTS_ALLOWED, Position.RB, WEEKS_1_TO_6,
+                List.of(new Ranking.Measurement("DET", "DET", 20.0, 6),
+                        new Ranking.Measurement("NEW", "NEW", 0.0, 0)));
+
+        assertThat(ranking.placement("NEW")).isEmpty();
         assertThat(ranking.unranked()).containsExactly(new Ranking.Unranked(
-                "rookie", "TE rookie", Ranking.Reason.BELOW_MINIMUM, 9));
+                "NEW", "NEW", Ranking.Reason.BELOW_MINIMUM, 0));
         assertThat(ranking.population().size()).isEqualTo(1);
-        assertThat(ranking.placement("a").orElseThrow().rank()).isEqualTo(1);
     }
 
     @Test
@@ -105,7 +114,7 @@ class RankingTest {
         Ranking ranking = Ranking.rank(PlayerStat.TARGETS_PER_GAME, Position.TE, WEEKS_1_TO_6, tightEnds);
 
         assertThat(ranking.population().describe())
-                .isEqualTo("of 2 tight ends with at least 10 targets");
+                .isEqualTo("of 3 tight ends");
         assertThat(ranking.weeks()).isEqualTo(WEEKS_1_TO_6);
         assertThat(ranking.stat().direction()).isEqualTo(Direction.HIGHER_IS_BETTER);
         assertThat(PlayerStat.PRESSURED_RATE.direction()).isEqualTo(Direction.HIGHER_IS_WORSE);
