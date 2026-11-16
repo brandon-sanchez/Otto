@@ -153,7 +153,6 @@ final class MarketValueEvidence {
             cost.question().ifPresent(question -> facts.put("askForKeeperRule", question));
         });
         if (keeper.likely()) {
-            facts.put("keeperLine", String.valueOf(keeper.keeperLine()));
             facts.put("keeperBonus", String.valueOf(keeper.bonus()));
             facts.put("meaning", "He is one of his team's likely keepers, so his value is his "
                     + "redraft value plus his keeper bonus: his dynasty value minus keeperCost, "

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import otto.directory.PlayerHealth;
 
@@ -27,10 +28,13 @@ import otto.directory.PlayerHealth;
  *        each one's game started
  * @param clearings every FAAB claim won in the league this week, the
  *        user's and his rivals'
+ * @param turnout whether each starter listed Questionable at kickoff
+ *        played, by player id; a starter neither his snap counts nor the
+ *        news settled is absent, which is not the same as having sat out
  */
 public record HabitWeek(int week, Optional<PlayedWeek> played,
         Map<String, PlayerHealth> kickoff, List<Move> moves, Set<String> reserve,
-        Set<String> couldGoOnIr, List<Clearing> clearings) {
+        Set<String> couldGoOnIr, List<Clearing> clearings, Map<String, Turnout> turnout) {
 
     public HabitWeek {
         played = played == null ? Optional.empty() : played;
@@ -39,26 +43,45 @@ public record HabitWeek(int week, Optional<PlayedWeek> played,
         reserve = reserve == null ? Set.of() : Set.copyOf(reserve);
         couldGoOnIr = couldGoOnIr == null ? Set.of() : Set.copyOf(couldGoOnIr);
         clearings = clearings == null ? List.of() : List.copyOf(clearings);
+        turnout = turnout == null ? Map.of() : Map.copyOf(turnout);
     }
 
     static HabitWeek empty(int week) {
         return new HabitWeek(week, Optional.empty(), Map.of(), List.of(), Set.of(), Set.of(),
-                List.of());
+                List.of(), Map.of());
     }
 
     HabitWeek withPlayed(PlayedWeek value) {
         return new HabitWeek(week, Optional.of(value), kickoff, moves, reserve, couldGoOnIr,
-                clearings);
+                clearings, turnout);
     }
 
     HabitWeek withKickoff(Map<String, PlayerHealth> value, Set<String> onReserve,
             Set<String> irEligible) {
-        return new HabitWeek(week, played, value, moves, onReserve, irEligible, clearings);
+        return new HabitWeek(week, played, value, moves, onReserve, irEligible, clearings,
+                turnout);
     }
 
     HabitWeek withMoves(List<Move> value, List<Clearing> leagueClearings) {
         return new HabitWeek(week, played, kickoff, value, reserve, couldGoOnIr,
-                leagueClearings);
+                leagueClearings, turnout);
+    }
+
+    HabitWeek withTurnout(Map<String, Turnout> value) {
+        return new HabitWeek(week, played, kickoff, moves, reserve, couldGoOnIr, clearings,
+                value);
+    }
+
+    /**
+     * Returns the starters listed Questionable at kickoff whose turnout
+     * is not settled yet; empty before Sleeper scores the week.
+     */
+    Set<String> unsettledQuestionableStarters() {
+        return played.map(lineup -> lineup.starters().stream()
+                        .filter(playerId -> kickoff.get(playerId) == PlayerHealth.QUESTIONABLE)
+                        .filter(playerId -> !turnout.containsKey(playerId))
+                        .collect(Collectors.toSet()))
+                .orElse(Set.of());
     }
 
     /**

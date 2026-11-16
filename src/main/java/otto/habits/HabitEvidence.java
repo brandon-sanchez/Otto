@@ -39,9 +39,11 @@ final class HabitEvidence {
             Map.entry("overrides", "start/sit calls from Otto he followed or overrode, and what "
                     + "overriding cost against Otto's pick; waiver calls he claimed or passed "
                     + "on"),
-            Map.entry("questionable", "starters listed Questionable at kickoff who scored "
-                    + "nothing, against the share of Questionable players who play, and what "
-                    + "his best benched option for the slot scored"),
+            Map.entry("questionable", "starters listed Questionable at kickoff who sat out, "
+                    + "known from their offensive snaps or news that they were inactive or "
+                    + "ruled out rather than from scoring nothing, against the share of "
+                    + "Questionable players who play, and what his best benched option for "
+                    + "the slot scored"),
             Map.entry("chasing", "players started the week after a big game who then scored "
                     + "less than his best benched option for the slot"),
             Map.entry("team", "starts of one NFL team's players and what they lost to his best "

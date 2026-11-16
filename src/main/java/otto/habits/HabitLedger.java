@@ -51,8 +51,9 @@ import otto.storage.JsonStore;
  * standing as last seen before kickoff, his transactions with their FAAB
  * bids beside every winning bid in the league and the bid it beat, the
  * best free-agent kicker and defense, what the players he dropped scored
- * afterwards, the league's draft, and the start/sit and waiver calls
- * Otto sent him.
+ * afterwards, whether each Questionable starter played (see
+ * {@link Turnouts}), the league's draft, and the start/sit and waiver
+ * calls Otto sent him.
  *
  * <p>A scored week is stored once and read from storage after that, so
  * weeks Sleeper stops serving stay measurable. Weeks played before the
@@ -74,6 +75,14 @@ public class HabitLedger {
 
     private static final String PRESEASON = "pre";
 
+    /**
+     * How many weeks back from this one a Questionable starter's turnout
+     * is still looked for. Snap counts and inactive news land within days
+     * of a game, so a week still unsettled after this stays unsettled
+     * rather than being read again on every Check.
+     */
+    private static final int SETTLE_WEEKS = 3;
+
     private static final Logger log = LoggerFactory.getLogger(HabitLedger.class);
 
     private final SleeperAdapter sleeper;
@@ -82,17 +91,19 @@ public class HabitLedger {
     private final DecisionRecords records;
     private final PlayerDirectoryStore directory;
     private final LineupOptimizer optimizer;
+    private final Turnouts turnouts;
     private final String userId;
 
     public HabitLedger(SleeperAdapter sleeper, JsonStore store, EventLog eventLog,
             DecisionRecords records, PlayerDirectoryStore directory, LineupOptimizer optimizer,
-            OttoProperties properties) {
+            Turnouts turnouts, OttoProperties properties) {
         this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
         this.store = store;
         this.eventLog = eventLog;
         this.records = records;
         this.directory = directory;
         this.optimizer = optimizer;
+        this.turnouts = turnouts;
         this.userId = properties.userId();
     }
 
@@ -141,9 +152,10 @@ public class HabitLedger {
      * stats in a league that starts a kicker or defense or once the user
      * has dropped someone, and the league's draft until one is stored;
      * each is answered from the cache while it is younger than the
-     * cadence interval. One Decision Record read
-     * per waiver board not yet read; and a write of the stored document
-     * when anything in it changed.
+     * cadence interval. For a recent week with a Questionable starter not
+     * yet settled, that week's games and the reads {@link Turnouts#settle}
+     * makes. One Decision Record read per waiver board not yet read; and
+     * a write of the stored document when anything in it changed.
      *
      * @param snapshot the latest Snapshot, whose user roster is the one
      *        captured
@@ -207,6 +219,13 @@ public class HabitLedger {
                 beforeKickoff(thisWeeks.reserve(), Set.copyOf(user.reserve()), user, games, now),
                 beforeKickoff(thisWeeks.couldGoOnIr(), couldGoOnIr(league, user), user, games,
                         now))));
+        for (int number = Math.max(1, thisWeek - SETTLE_WEEKS); number < thisWeek; number++) {
+            HabitWeek captured = weeks.get(number);
+            if (!captured.unsettledQuestionableStarters().isEmpty()) {
+                weeks.put(number, captured.withTurnout(turnouts.settle(current.season(),
+                        captured, games(current.season(), number))));
+            }
+        }
         List<AdviceCall> calls = new ArrayList<>(before.calls());
         Set<String> boardsRead = new HashSet<>(before.boardsRead());
         readCalls(current, league.leagueId(), calls, boardsRead);
@@ -370,13 +389,19 @@ public class HabitLedger {
     }
 
     private Set<String> byes(Week week, Map<String, String> teams) {
-        if (!(sleeper.games(week.season(), week.number())
-                instanceof SourceResult.Ok<List<SleeperAdapter.Game>> games)
-                || games.value().isEmpty()) {
-            return Set.of();
-        }
-        GameWeek gameWeek = GameWeek.of(games.value());
-        return teams.values().stream().filter(gameWeek::onBye).collect(Collectors.toSet());
+        return games(week.season(), week.number())
+                .map(gameWeek -> teams.values().stream()
+                        .filter(gameWeek::onBye)
+                        .collect(Collectors.toSet()))
+                .orElse(Set.of());
+    }
+
+    private Optional<GameWeek> games(String season, int week) {
+        return sleeper.games(season, week)
+                instanceof SourceResult.Ok<List<SleeperAdapter.Game>> games
+                && !games.value().isEmpty()
+                ? Optional.of(GameWeek.of(games.value()))
+                : Optional.empty();
     }
 
     /**

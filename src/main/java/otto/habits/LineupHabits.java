@@ -153,13 +153,15 @@ final class LineupHabits {
 
     /**
      * Starting players listed Questionable at kickoff, against how often
-     * Questionable players play. Scoring nothing is read as sitting out,
-     * the closest Sleeper's points come to an inactive list.
+     * Questionable players play. Only a settled {@link Turnout} counts:
+     * a starter who scored nothing may still have played, so one whose
+     * snaps and news are unknown is counted apart and never as sitting.
      */
     static Optional<HabitReport.Habit> questionable(HabitHistory history,
             Function<String, String> names) {
         int starts = 0;
         int satOut = 0;
+        int unsettled = 0;
         double lost = 0;
         Set<String> players = new HashSet<>();
         for (HabitWeek week : history.scoredWeeks()) {
@@ -169,9 +171,14 @@ final class LineupHabits {
                 if (week.kickoff().get(playerId) != PlayerHealth.QUESTIONABLE) {
                     continue;
                 }
+                Turnout turnout = week.turnout().get(playerId);
+                if (turnout == null) {
+                    unsettled++;
+                    continue;
+                }
                 starts++;
                 players.add(playerId);
-                if (played.pointsOf(playerId).orElse(0.0) == 0) {
+                if (turnout == Turnout.SAT_OUT) {
                     satOut++;
                     lost += played.bestBenchFor(slot).orElse(0.0);
                 }
@@ -189,6 +196,13 @@ final class LineupHabits {
         facts.put("baseRateSeason", QUESTIONABLE_BASE_SEASON);
         facts.put("pointsLost", HabitReport.points(lost));
         facts.put("players", String.join(", ", players.stream().map(names).sorted().toList()));
+        if (unsettled > 0) {
+            facts.put("unsettled", String.valueOf(unsettled));
+            facts.put("unsettledWhy", "For %d more Questionable %s, neither the snap counts "
+                    .formatted(unsettled, unsettled == 1 ? "start" : "starts")
+                    + "nor the news said whether he played, so I left them out rather than "
+                    + "guess.");
+        }
         facts.put("fix", "When a Questionable starter plays late, keep a healthy backup who "
                 + "plays later in the slot, or check the inactive list before his game.");
         return Optional.of(new HabitReport.Habit("questionable", facts, List.copyOf(players)));

@@ -840,25 +840,31 @@ class TradeScenarioTest extends WireSeamTest {
     /**
      * A keeper's worth runs into next season, so the market decides. In
      * a three-keeper league Bijan Robinson is his team's most valuable
-     * player and a likely keeper, so his redraft value carries his
-     * dynasty value on top as a keeper bonus, and that outweighs the two
-     * players coming back even though they help the user more this year.
+     * player and a likely keeper, so his redraft value carries a keeper
+     * bonus on top: his dynasty value less Patrick Mahomes's, the player
+     * the user would keep in his spot instead. That brings him to 13197,
+     * short of the 14900 the two players coming back are worth, so the
+     * market gives the user a slight edge.
      */
     @Test
     void aKeeperTradeIsDecidedByMarketValueWithTheKeeperBonusCounted() {
         longTermLeague("sleeper/league-keeper.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("TE Depth 06 and RB Depth 08", "Bijan Robinson"),
-                "Keep Bijan.");
+                "Take it.");
 
         ask("Bijan for TE Depth 06 and RB Depth 08?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Market value decides this call. In a keeper league"))
                 .withRequestBody(containing("He's a likely keeper, so his 8945 redraft value "
-                        + "carries a 9636 keeper bonus on top"))
-                .withRequestBody(containing(number("total", "18581")))
-                .withRequestBody(containing(field("favours", "GridironGoblin")))
+                        + "carries a 4252 keeper bonus on top"))
+                .withRequestBody(containing("he uses a keeper spot you'd otherwise give to "
+                        + "Patrick Mahomes"))
+                .withRequestBody(containing(number("total", "13197")))
+                .withRequestBody(containing(number("total", "14900")))
+                .withRequestBody(containing("market value GridironGoblin gives up 11.4% more "
+                        + "than he gets"))
                 .withRequestBody(containing("On rest-of-season fit alone this is")));
     }
 

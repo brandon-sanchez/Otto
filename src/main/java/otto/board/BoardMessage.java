@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import otto.directory.DirectoryPlayer;
+import otto.telegram.TelegramText;
 
 /**
  * Lays out a checked {@link BoardAnswer} as the accepted compact board:
@@ -29,9 +30,6 @@ final class BoardMessage {
 
     /** The most entries the message shows; the rest wait behind "View all options". */
     static final int SHOWN = 5;
-
-    /** Telegram's limit on one message, in characters. */
-    static final int TELEGRAM_LIMIT = 4096;
 
     static final String HEADING = "Your waiver options";
     static final String STILL_A_MOVE = "If you still want to make a move";
@@ -208,7 +206,7 @@ final class BoardMessage {
         for (String block : blocks) {
             int joined = current.isEmpty() ? block.length()
                     : current.length() + BREAK.length() + block.length();
-            if (joined >= TELEGRAM_LIMIT && !current.isEmpty()) {
+            if (joined >= TelegramText.LIMIT && !current.isEmpty()) {
                 messages.add(current.toString());
                 current.setLength(0);
             }

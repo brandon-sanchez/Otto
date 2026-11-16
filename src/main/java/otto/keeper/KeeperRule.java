@@ -29,7 +29,7 @@ public record KeeperRule(Kind kind, int amount, Optional<Integer> minimum,
     public static final KeeperRule ASSUMED = new KeeperRule(Kind.SAME, 0, Optional.empty(),
             Optional.empty(), Optional.empty());
 
-    /** Keepers cost only the keeper spot. */
+    /** Keepers cost no draft pick, only the keeper spot, worth the teammate kept instead. */
     public static final KeeperRule FREE = new KeeperRule(Kind.FREE, 0, Optional.empty(),
             Optional.empty(), Optional.empty());
 
@@ -125,8 +125,8 @@ public record KeeperRule(Kind kind, int amount, Optional<Integer> minimum,
             case ROUNDS_EARLIER -> "a keeper costs %d %s earlier than the round he cost the "
                     .formatted(amount, amount == 1 ? "round" : "rounds") + "season before";
             case FIXED_ROUND -> "every keeper costs a round %d pick".formatted(amount);
-            case FREE -> "keepers are free up to the league's keeper limit and cost only the "
-                    + "keeper spot";
+            case FREE -> "keepers cost no draft pick, only the keeper spot they use, which is "
+                    + "worth the best player the team would keep instead";
             case PLUS_DOLLARS -> "a keeper costs what he went for the season before plus $%d"
                     .formatted(amount);
             case PLUS_PERCENT -> "a keeper costs what he went for the season before plus %d%%"

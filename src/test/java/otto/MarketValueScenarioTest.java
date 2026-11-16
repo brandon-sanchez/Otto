@@ -398,7 +398,7 @@ class MarketValueScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aLikelyKeeperAddsHisDynastyValueAboveTheKeeperLineAndNobodyElseDoes() {
+    void aLikelyKeeperAddsHisDynastyValueAboveHisKeeperSpotAndNobodyElseDoes() {
         league("sleeper/league-keeper.json");
         OutboundStubs.llmPhrases(llm, "A quiet week.");
         checkRunner.runCheck();
@@ -410,14 +410,14 @@ class MarketValueScenarioTest extends WireSeamTest {
 
         assertThat(marketValues.answer("Bijan Robinson").unavailable()).isNull();
         assertThat(lastEvidence().get("market-value-9509"))
-                .containsEntry("value", "13990")
+                .containsEntry("value", "13197")
                 .containsEntry("league", "12-team Superflex PPR keeper");
         assertThat(lastEvidence().get("market-keeper-9509"))
                 .containsEntry("likelyKeeper", "yes")
                 .containsEntry("redraftValue", "8945")
                 .containsEntry("dynastyValue", "9636")
-                .containsEntry("keeperLine", "4591")
-                .containsEntry("keeperBonus", "5045");
+                .containsEntry("keeperCost", "5384")
+                .containsEntry("keeperBonus", "4252");
 
         clock.advance(Duration.ofMinutes(1));
         marketValues.answer("Patrick Mahomes");

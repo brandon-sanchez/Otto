@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
@@ -33,14 +34,17 @@ import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.harness.Fixtures;
+import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.StoredRecords;
 import otto.harness.WireSeamTest;
+import otto.nflverse.NflverseFeedService;
 import otto.records.DecisionRecord;
 import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
+import otto.research.ResearchCache;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -93,6 +97,12 @@ class HabitsScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
+
+    @Autowired
+    private NflverseFeedService feeds;
+
+    @Autowired
+    private ResearchCache research;
 
     @BeforeEach
     void aLeagueInSeason() {
@@ -179,19 +189,28 @@ class HabitsScenarioTest extends WireSeamTest {
                 .doesNotContain("overr");
     }
 
+    /**
+     * McCaffrey is listed Questionable and scores nothing in weeks 2 to 4.
+     * The snap counts show 40 snaps in week 2, so he played and simply
+     * didn't score; 0 snaps in week 3 and no line in week 4, beside a
+     * teammate's line, mean he sat. Each week he sat cost the 10 points
+     * Jacobs scored on the bench.
+     */
     @Test
-    void startingQuestionablePlayersWhoSatIsMeasuredAgainstTheBaseRate() {
+    void aQuestionableStarterSatOutOnlyWhenHisSnapCountsSaySo() {
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-mccaffrey-questionable.json", "players-questionable");
-        for (int week = 2; week <= 4; week++) {
-            checkInWeek(week);
-        }
         stubMatchups(1, USUAL_STARTERS, points(Map.of(JACOBS, 10.0)));
         for (int week = 2; week <= 4; week++) {
             stubMatchups(week, USUAL_STARTERS, points(Map.of(MCCAFFREY, 0.0, JACOBS, 10.0)));
         }
-        checkInWeek(5);
-        String answer = "Starting Questionable players cost you 30.0 points: 3 of them sat "
+        snapCounts(snapLine(2, "McCaCh01", 40), snapLine(2, "PurdBr00", 60),
+                snapLine(3, "McCaCh01", 0), snapLine(3, "PurdBr00", 61),
+                snapLine(4, "PurdBr00", 58));
+        for (int week = 2; week <= 5; week++) {
+            checkInWeek(week);
+        }
+        String answer = "Starting Questionable players cost you 20.0 points: 2 of the 3 sat "
                 + "out, when about 70.7% of Questionable players played in 2025.";
         OutboundStubs.llmAdvisesOn(llm, HABITS_REQUEST, habitAnswer(answer));
         OutboundStubs.llmCallsToolThenPhrases(llm, "review_habits", "{}", "Here it is.");
@@ -201,10 +220,50 @@ class HabitsScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("habit-questionable"))
                 .withRequestBody(containing("questionableStarts\\\":\\\"3"))
-                .withRequestBody(containing("satOut\\\":\\\"3"))
+                .withRequestBody(containing("played\\\":\\\"1"))
+                .withRequestBody(containing("satOut\\\":\\\"2"))
                 .withRequestBody(containing("baseRate\\\":\\\"70.7%"))
-                .withRequestBody(containing("pointsLost\\\":\\\"30.0")));
+                .withRequestBody(containing("pointsLost\\\":\\\"20.0")));
         assertThat(onlyHabitsRecord().outcome()).isEqualTo(new Outcome.Sent(answer));
+    }
+
+    /**
+     * With no snap counts for his games, news that he was ruled out
+     * settles weeks 2 to 4. Nothing settles week 5, so the evidence says
+     * so instead of counting his 0 points as a game he sat.
+     */
+    @Test
+    void newsThatHeWasRuledOutSettlesAWeekAndAnUnsettledWeekIsSaidPlainly() {
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-mccaffrey-questionable.json", "players-questionable");
+        stubMatchups(1, USUAL_STARTERS, points(Map.of(JACOBS, 10.0)));
+        for (int week = 2; week <= 5; week++) {
+            stubMatchups(week, USUAL_STARTERS, points(Map.of(MCCAFFREY, 0.0, JACOBS, 10.0)));
+        }
+        sleeper.stubFor(get(urlPathEqualTo("/players/nfl/" + MCCAFFREY + "/news"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("[" + ruledOut(2) + "," + ruledOut(3) + "," + ruledOut(4)
+                                + "]")));
+        for (int week = 2; week <= 6; week++) {
+            if (week == 3) {
+                research.refresh(MCCAFFREY);
+            }
+            checkInWeek(week);
+        }
+        String answer = "Starting Questionable players cost you 30.0 points: 3 of them sat "
+                + "out, when about 70.7% of Questionable players played in 2025.";
+        OutboundStubs.llmAdvisesOn(llm, HABITS_REQUEST, habitAnswer(answer));
+        OutboundStubs.llmCallsToolThenPhrases(llm, "review_habits", "{}", "Here it is.");
+
+        ask(QUESTION);
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("questionableStarts\\\":\\\"3"))
+                .withRequestBody(containing("satOut\\\":\\\"3"))
+                .withRequestBody(containing("unsettled\\\":\\\"1"))
+                .withRequestBody(containing("pointsLost\\\":\\\"30.0")));
     }
 
     @Test
@@ -276,6 +335,42 @@ class HabitsScenarioTest extends WireSeamTest {
     private void ask(String question) {
         assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage(question)))
                 .isEqualTo(WebhookResult.OK);
+    }
+
+    /** One line of nflverse's snap counts for a 49ers skill player in a 2026 week. */
+    private static String snapLine(int week, String pfrId, int snaps) {
+        return "2026_%02d_SF_SEA,x,2026,REG,%d,Player,%s,RB,SF,SEA,%d,%s".formatted(week, week,
+                pfrId, snaps, snaps == 0 ? "0.0" : "0.65");
+    }
+
+    private void snapCounts(String... lines) {
+        NflverseStubs.healthy(nflverse);
+        nflverse.stubFor(get(urlEqualTo(NflverseStubs.SNAPS_2026_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "text/csv")
+                .withBody("game_id,pfr_game_id,season,game_type,week,player,pfr_player_id,"
+                        + "position,team,opponent,offense_snaps,offense_pct\n"
+                        + String.join("\n", lines) + "\n")));
+        feeds.updateIfDue();
+    }
+
+    /**
+     * A report that McCaffrey won't play, the Saturday before his week's
+     * game. Each week's words differ, as real reports do, so none is kept
+     * as a copy of another.
+     */
+    private static String ruledOut(int week) {
+        List<String> details = List.of(
+                "Kyle Shanahan ruled McCaffrey out for Sunday with an Achilles issue.",
+                "McCaffrey missed practice all week and won't play against the Rams.",
+                "The 49ers listed McCaffrey as inactive after a setback in warmups.");
+        return """
+                {"metadata": {"title": "Christian McCaffrey - Week %d status",
+                  "description": "%s",
+                  "analysis": null},
+                 "source": "rotowire", "sport": "nfl", "source_key": "cmc-%d",
+                 "published": %d}""".formatted(week, details.get(week - 2), week,
+                week(week).plus(Duration.ofDays(4)).toEpochMilli());
     }
 
     /** The habits message as the tool handed it to the model, from the Decision Record. */
