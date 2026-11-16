@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
 /**
  * A kind of decision-changing fact a news item reports. Only a report
  * of one of these can be the latest word {@link PreSendResearch} puts
- * in an Alert, because it can change what the user should do. Budgets
+ * in an Alert, because it can change what the user should do. Of news,
+ * only a {@link #ROLE} report can start a role-slip evaluation. Budgets
  * and league rules change decisions too, but they come from the league
  * itself, which every Check reads, not from news.
  *
@@ -39,7 +40,14 @@ public enum ResearchTopic {
     ROSTER(List.of(
             "released", "waived", "signed", "traded", "activated", "placed on",
             "injured reserve", "ir", "practice squad", "elevated", "claimed", "cut",
-            "designated to return", "pup"));
+            "designated to return", "pup")),
+
+    /** His role shrank: he was benched, demoted or moved into a timeshare. */
+    ROLE(List.of(
+            "benched", "demoted", "demotion", "lost his starting", "lose his starting",
+            "losing his starting", "backup role", "reduced role", "diminished role",
+            "smaller role", "committee", "timeshare", "time share", "phased out",
+            "healthy scratch", "down the depth chart", "replaced as the starter"));
 
     private final Pattern words;
 

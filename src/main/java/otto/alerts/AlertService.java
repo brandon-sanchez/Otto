@@ -81,6 +81,8 @@ public class AlertService {
     private final Clock clock;
     private final PreSendResearch preSendResearch;
     private final LineupAdvice lineupAdvice;
+    private final RoleSlipAdvice roleSlipAdvice;
+    private final RoleSlipDetector roleSlipDetector;
     private final LockLadder lockLadder;
 
     public AlertService(StatusTransitionDetector transitionDetector,
@@ -91,6 +93,7 @@ public class AlertService {
             MuteStore muteStore, SettingsStore settings,
             AlertDeliveryOutbox outbox, Clock clock,
             PreSendResearch preSendResearch, LineupAdvice lineupAdvice,
+            RoleSlipAdvice roleSlipAdvice, RoleSlipDetector roleSlipDetector,
             LockLadder lockLadder) {
         this.transitionDetector = transitionDetector;
         this.officialUpdateDetector = officialUpdateDetector;
@@ -106,6 +109,8 @@ public class AlertService {
         this.clock = clock;
         this.preSendResearch = preSendResearch;
         this.lineupAdvice = lineupAdvice;
+        this.roleSlipAdvice = roleSlipAdvice;
+        this.roleSlipDetector = roleSlipDetector;
         this.lockLadder = lockLadder;
     }
 
@@ -132,6 +137,7 @@ public class AlertService {
             candidates.addAll(officialUpdateDetector.detect(roster, eventLog.all(), now));
             candidates.addAll(legalityDetector.detect(roster, week));
             candidates.addAll(edgeDetector.detect(roster, week, now));
+            candidates.addAll(roleSlipDetector.detect(roster, now));
         });
 
         List<AlertCandidate> standing = cancelSuperseded(candidates, userRoster);
@@ -250,7 +256,7 @@ public class AlertService {
         }
         GameWeek games = week.games().get();
         return switch (candidate.source()) {
-            case TRANSITION -> games.underway(candidate.team(), now);
+            case TRANSITION, ROLE_SLIP -> games.underway(candidate.team(), now);
             case LEGALITY, EDGE -> games.locked(candidate.team(), now);
             // Who may hold a player at all is not a lineup slot, and no
             // kickoff settles it.
@@ -270,8 +276,12 @@ public class AlertService {
 
         List<Event> sent = new ArrayList<>();
         for (List<AlertCandidate> group : groups.values()) {
+            // A slip already settled has no advice left to send, so it
+            // must not claim the message of a later candidate on its player.
             List<AlertCandidate> unalerted = group.stream()
                     .filter(candidate -> !outbox.alreadySent("alert:" + candidate.key()))
+                    .filter(candidate -> candidate.source() != AlertCandidate.Source.ROLE_SLIP
+                            || roleSlipAdvice.slipOpen(candidate))
                     .toList();
             if (unalerted.isEmpty()) {
                 continue;
@@ -320,15 +330,22 @@ public class AlertService {
     private enum Route {
         /** A status change on a rostered player: the model advises a roster plan. */
         STATUS_CHANGE,
+        /** A role slip, open in the ledger: the model advises, the ledger routes it. */
+        ROLE_SLIP,
         /** A lineup edge or legality problem: the model advises a lineup move. */
         LINEUP_PROBLEM,
         /** Anything else: the phrasing model words the Recommendation. */
         PHRASED
     }
 
-    private static Route route(AlertCandidate primary, Optional<RosterSnapshot> userRoster) {
+    private static Route route(AlertCandidate primary, List<AlertCandidate> group,
+            Optional<RosterSnapshot> userRoster) {
         if (primary.source() == AlertCandidate.Source.TRANSITION && userRoster.isPresent()) {
             return Route.STATUS_CHANGE;
+        }
+        if (group.stream().anyMatch(
+                candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)) {
+            return Route.ROLE_SLIP;
         }
         return LINEUP_PROBLEMS.contains(primary.source()) ? Route.LINEUP_PROBLEM : Route.PHRASED;
     }
@@ -336,7 +353,7 @@ public class AlertService {
     private Optional<AlertText> alertText(List<String> keys, AlertCandidate primary,
             List<AlertCandidate> group, Map<String, String> research, LeagueWeek leagueWeek,
             Optional<RosterSnapshot> userRoster, Instant now) {
-        return switch (route(primary, userRoster)) {
+        return switch (route(primary, group, userRoster)) {
             case STATUS_CHANGE -> {
                 String key = "alert:" + primary.key();
                 RosterSnapshot roster = userRoster.orElseThrow();
@@ -347,6 +364,15 @@ public class AlertService {
                                 research, leagueWeek, roster, now))
                         .orElseGet(() -> lineupAdvice.forStatusChange(key, primary, research,
                                 leagueWeek, roster, now))
+                        .map(AlertText.class::cast);
+            }
+            case ROLE_SLIP -> {
+                AlertCandidate slip = group.stream()
+                        .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
+                        .findFirst()
+                        .orElseThrow();
+                yield roleSlipAdvice.forRoleSlip("alert:" + slip.key(), slip, research,
+                        leagueWeek, userRoster.orElseThrow(), now)
                         .map(AlertText.class::cast);
             }
             case LINEUP_PROBLEM -> lineupAdvice.forProblem("alert:" + primary.key(), primary,

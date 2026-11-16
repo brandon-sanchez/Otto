@@ -1,0 +1,4 @@
+game_id,pfr_game_id,season,game_type,week,player,pfr_player_id,position,team,opponent,offense_snaps,offense_pct
+2026_01_BUF_HOU,g1,2026,REG,1,James Cook,CookJa01,RB,BUF,HOU,46,0.72
+2026_02_BUF_DET,g2,2026,REG,2,James Cook,CookJa01,RB,BUF,DET,45,0.7
+2026_03_BUF_LAC,g3,2026,REG,3,James Cook,CookJa01,RB,BUF,LAC,45,0.71

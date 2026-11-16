@@ -36,6 +36,12 @@ final class DecisionEvidence {
 
     private static final String UNKNOWN = "unknown";
 
+    /**
+     * The share of a slipping player's projection the best free agent
+     * must reach before a user might drop him for that free agent.
+     */
+    static final double TEMPTING_REPLACEMENT = 0.8;
+
     private DecisionEvidence() {
     }
 
@@ -131,6 +137,48 @@ final class DecisionEvidence {
     }
 
     /**
+     * The evidence for a role slip: what suggests it, the roster plans
+     * legal for him, and, when he starts in a game not yet kicked off,
+     * the bench players who could take his slot.
+     *
+     * @return empty when no decision is open: he can only be kept where
+     *         he is and no lineup change touches him
+     */
+    static Optional<LineupEvidence.Draft> roleSlip(AlertCandidate slip, LeagueWeek leagueWeek,
+            RosterSnapshot roster, Collection<DirectoryPlayer> directory,
+            Function<String, Optional<Players.Player>> profiles, Instant now) {
+        WeekFacts week = leagueWeek.week();
+        LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now);
+        String playerId = slip.playerId();
+        String name = builder.name(playerId);
+        builder.addPlayer(playerId, "the player whose role may have slipped");
+        addSlipEvidence(builder, slip.facts(), now);
+
+        PlayerHealth health = roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE);
+        Planned planned = plans(builder, playerId, health, true, leagueWeek, roster, directory,
+                now);
+        RosterPlans.Plans plans = planned.plans();
+
+        int slotIndex = roster.starters().indexOf(playerId);
+        boolean starting = slotIndex >= 0 && slotIndex < week.startingSlots().size();
+        List<LineupMove> moves = starting ? builder.legalStarts(slotIndex) : List.of();
+        boolean onlyHold = plans.legal().stream()
+                .allMatch(plan -> plan.id().equals(RosterPlans.HOLD));
+        if (onlyHold && moves.isEmpty()) {
+            return Optional.empty();
+        }
+        addPlanEvidence(builder, planned, playerId, leagueWeek, roster, profiles, now);
+
+        String task = "Advise what to do with %s, whose role may have slipped: choose one of "
+                .formatted(name) + "rosterPlans"
+                + (moves.isEmpty() ? "." : ", and say whether to bench him this week for one "
+                        + "of legalMoves or keep him in.");
+        boolean dropTempting = mistakenDropPlausible(planned, playerId, roster, week);
+        return Optional.of(builder.decisionDraft(task, moves, true, plans.legal(), List.of(),
+                Optional.empty(), !dropTempting));
+    }
+
+    /**
      * The roster plans legal for a player, with the best projected free
      * agent at his position, whom a plan that opens a roster spot adds.
      *
@@ -187,6 +235,42 @@ final class DecisionEvidence {
                 builder.addItem(new EvidenceItem("profile-" + playerId, "nflverse:players",
                         Optional.empty(), now, "his age and where he was drafted", facts)));
         builder.addItem(experience(playerId, planned, leagueWeek));
+    }
+
+    private static void addSlipEvidence(LineupEvidence builder, Map<String, String> facts,
+            Instant now) {
+        if (facts.containsKey("roleNews")) {
+            Map<String, String> news = new LinkedHashMap<>();
+            news.put("report", facts.get("roleNews"));
+            news.put("source", facts.get("roleNewsSource"));
+            builder.addItem(new EvidenceItem("role-news",
+                    "research-cache:" + facts.get("roleNewsSource"),
+                    Optional.of(Instant.parse(facts.get("roleNewsPublished"))), now,
+                    "an original report of a smaller role", news));
+        }
+        Map<String, String> usage = new LinkedHashMap<>();
+        facts.forEach((key, value) -> {
+            if (key.startsWith(RoleSlipDetector.USAGE_PREFIX)) {
+                usage.put(key.substring(RoleSlipDetector.USAGE_PREFIX.length()), value);
+            }
+        });
+        if (!usage.isEmpty()) {
+            builder.addItem(new EvidenceItem("usage-drop", "nflverse:usage", Optional.empty(), now,
+                    "his share of his team's work in his latest game against the games before",
+                    usage));
+        }
+    }
+
+    private static boolean mistakenDropPlausible(Planned planned, String playerId,
+            RosterSnapshot roster, WeekFacts week) {
+        boolean droppable = planned.plans().legal().stream()
+                .anyMatch(plan -> plan.id().equals(RosterPlans.DROP));
+        Optional<Double> his = week.projections()
+                .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)));
+        Optional<Double> free = planned.replacement().flatMap(player -> week.projections()
+                .flatMap(table -> table.points(player.playerId(), player.position())));
+        return droppable && his.isPresent() && free.isPresent()
+                && free.get() >= his.get() * TEMPTING_REPLACEMENT;
     }
 
     private static List<String> unknownRecovery(LineupEvidence builder,

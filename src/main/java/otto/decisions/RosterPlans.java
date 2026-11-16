@@ -108,7 +108,8 @@ public final class RosterPlans {
     }
 
     /**
-     * Builds the plans for a rostered player whose status changed.
+     * Builds the plans for a rostered player whose status changed, or
+     * a healthy one whose role may have slipped.
      *
      * @param names the full name of any player id, rostered or not
      */

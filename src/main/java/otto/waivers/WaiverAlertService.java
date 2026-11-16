@@ -1,8 +1,6 @@
 package otto.waivers;
 
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -19,12 +17,11 @@ import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
 import otto.ask.LeagueWeek;
-import otto.delivery.AlertDeliveryOutbox;
+import otto.claims.BoardDelivery;
+import otto.claims.ClaimRound;
 import otto.events.Event;
-import otto.events.EventType;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 
 /**
@@ -32,48 +29,42 @@ import otto.sleeper.SourceResult;
  * role tags and a FAAB range each, in the user's chat at 18:00
  * America/Los_Angeles the evening before the league's own claim
  * deadline. On Sleeper's default schedule that is Tuesday evening.
+ *
+ * <p>Role-slip advice held for the board goes out under it, through
+ * {@link BoardDelivery}.
  */
 @Component
 public class WaiverAlertService {
-
-    /** The user's zone. Pinned here, not read from the clock: the Check runs in UTC. */
-    private static final ZoneId WAIVER_ZONE = ZoneId.of("America/Los_Angeles");
-
-    private static final LocalTime WAIVER_TIME = LocalTime.of(18, 0);
 
     private final WaiverScorer scorer;
     private final AlertPhraser phraser;
     private final MuteStore muteStore;
     private final SettingsStore settings;
-    private final AlertDeliveryOutbox outbox;
+    private final BoardDelivery delivery;
 
     public WaiverAlertService(WaiverScorer scorer, AlertPhraser phraser,
-            MuteStore muteStore, SettingsStore settings,
-            AlertDeliveryOutbox outbox) {
+            MuteStore muteStore, SettingsStore settings, BoardDelivery delivery) {
         this.scorer = scorer;
         this.phraser = phraser;
         this.muteStore = muteStore;
         this.settings = settings;
-        this.outbox = outbox;
+        this.delivery = delivery;
     }
 
     /**
-     * Sends this week's waiver Alert if it is due and has not gone out
+     * Sends this round's waiver Alert if it is due and has not gone out
      * yet.
+     *
+     * <p>Side effects: the waiver ranking's reads, the phrasing model
+     * call, and {@link BoardDelivery}'s writes and sends.
      *
      * @return the Event recorded for a sent Alert, empty otherwise
      */
     public Optional<Event> considerWaiverAlert(LeagueWeek league, Instant now) {
-        Optional<ZonedDateTime> deadline = league.league().rules().nextClaimDeadline(now);
-        if (deadline.isEmpty()) {
-            return Optional.empty();
-        }
-        ZonedDateTime due = eveningBefore(deadline.get());
-        if (now.isBefore(due.toInstant())) {
-            return Optional.empty();
-        }
-        String key = "alert:waiver:" + due.toLocalDate();
-        if (outbox.alreadySent(key)
+        Optional<ClaimRound> round = ClaimRound.next(league.league(), now);
+        if (round.isEmpty()
+                || !round.get().open()
+                || delivery.alreadySent(round.get())
                 || !settings.enabled(Trigger.WAIVER)
                 || muteStore.muted(Trigger.WAIVER.muteTarget())) {
             return Optional.empty();
@@ -88,21 +79,14 @@ public class WaiverAlertService {
             case SourceResult.Unavailable<WaiverBoard> unavailable -> Optional.empty();
             case SourceResult.Ok<WaiverBoard> ok -> ok.value().candidates().isEmpty()
                     ? Optional.empty()
-                    : send(key, due, deadline.get(), ok.value(), now);
+                    : send(round.get(), ok.value());
         };
     }
 
-    static ZonedDateTime eveningBefore(ZonedDateTime deadline) {
-        return deadline.withZoneSameInstant(LeagueRules.CLAIM_ZONE).toLocalDate().minusDays(1)
-                .atTime(WAIVER_TIME)
-                .atZone(WAIVER_ZONE);
-    }
-
-    private Optional<Event> send(String key, ZonedDateTime due, ZonedDateTime deadline,
-            WaiverBoard board, Instant now) {
-        String claimDay = deadline.getDayOfWeek()
+    private Optional<Event> send(ClaimRound round, WaiverBoard board) {
+        String claimDay = round.deadline().getDayOfWeek()
                 .getDisplayName(TextStyle.FULL, Locale.US);
-        Map<String, String> facts = facts(board, due, deadline);
+        Map<String, String> facts = facts(board, round.due(), round.deadline());
         Recommendation recommendation = new Recommendation(
                 null,
                 "your waiver board",
@@ -117,10 +101,8 @@ public class WaiverAlertService {
                 board.candidates().stream().map(WaiverAlertService::headline).toList(),
                 caveats(board, claimDay));
 
-        return outbox.deliver(phraser.basis(facts, recommendation),
-                        () -> phraser.phrase(facts, recommendation),
-                        List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts))))
-                .stream().findFirst();
+        return delivery.deliverPhrased(round, phraser.basis(facts, recommendation),
+                () -> phraser.phrase(facts, recommendation), facts);
     }
 
     /** One target, as the outbound message would say it. */

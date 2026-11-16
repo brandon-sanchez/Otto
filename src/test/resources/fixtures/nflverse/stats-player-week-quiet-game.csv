@@ -1,0 +1,13 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,target_share,fantasy_points,fantasy_points_ppr,air_yards_share,wopr,racr,receiving_epa
+00-0037248,J.Cook,James Cook,RB,RB,2026,1,REG,BUF,HOU,0,0,0,0,0,0,16,80,0,0,3,3,25,0,0,0,0.100,13.5,13.5,NA,NA,NA,NA
+00-0039875,R.Davis,Ray Davis,RB,RB,2026,1,REG,BUF,HOU,0,0,0,0,0,0,6,25,0,0,1,1,5,0,0,0,0.033,4.0,4.0,NA,NA,NA,NA
+00-0037261,K.Shakir,Khalil Shakir,WR,WR,2026,1,REG,BUF,HOU,0,0,0,0,0,0,0,0,0,0,6,9,80,0,0,0,0.300,14.0,14.0,NA,NA,NA,NA
+00-0035700,J.Jacobs,Josh Jacobs,RB,RB,2026,1,REG,GB,CHI,0,0,0,0,0,0,20,90,0,0,3,4,30,0,0,0,0.130,15.0,15.0,NA,NA,NA,NA
+00-0037248,J.Cook,James Cook,RB,RB,2026,2,REG,BUF,DET,0,0,0,0,0,0,16,80,0,0,3,3,25,0,0,0,0.100,13.5,13.5,NA,NA,NA,NA
+00-0039875,R.Davis,Ray Davis,RB,RB,2026,2,REG,BUF,DET,0,0,0,0,0,0,6,25,0,0,1,1,5,0,0,0,0.033,4.0,4.0,NA,NA,NA,NA
+00-0037261,K.Shakir,Khalil Shakir,WR,WR,2026,2,REG,BUF,DET,0,0,0,0,0,0,0,0,0,0,6,9,80,0,0,0,0.300,14.0,14.0,NA,NA,NA,NA
+00-0035700,J.Jacobs,Josh Jacobs,RB,RB,2026,2,REG,GB,WAS,0,0,0,0,0,0,20,90,0,0,3,4,30,0,0,0,0.130,15.0,15.0,NA,NA,NA,NA
+00-0037248,J.Cook,James Cook,RB,RB,2026,3,REG,BUF,LAC,0,0,0,0,0,0,15,12,0,0,3,3,4,0,0,0,0.100,2.6,2.6,NA,NA,NA,NA
+00-0039875,R.Davis,Ray Davis,RB,RB,2026,3,REG,BUF,LAC,0,0,0,0,0,0,6,25,0,0,1,1,5,0,0,0,0.033,4.0,4.0,NA,NA,NA,NA
+00-0037261,K.Shakir,Khalil Shakir,WR,WR,2026,3,REG,BUF,LAC,0,0,0,0,0,0,0,0,0,0,6,9,80,0,0,0,0.300,14.0,14.0,NA,NA,NA,NA
+00-0035700,J.Jacobs,Josh Jacobs,RB,RB,2026,3,REG,GB,ATL,0,0,0,0,0,0,20,90,0,0,3,4,30,0,0,0,0.130,15.0,15.0,NA,NA,NA,NA

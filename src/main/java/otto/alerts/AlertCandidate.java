@@ -37,6 +37,12 @@ public record AlertCandidate(
     public enum Source {
 
         TRANSITION(Trigger.STATUS_TRANSITION, "class:transition", true),
+        /**
+         * A healthy player's role may have slipped. It is a player
+         * decision like a status change, so the same trigger switches
+         * both off, while a Mute can silence role slips alone.
+         */
+        ROLE_SLIP(Trigger.STATUS_TRANSITION, "class:role-slip", true),
         LEGALITY(Trigger.LINEUP_LEGALITY, "class:legality", false),
         EDGE(Trigger.BENCH_EDGE, "class:edge", false),
         WATCHLIST(Trigger.WATCHLIST, "class:watchlist", true),
