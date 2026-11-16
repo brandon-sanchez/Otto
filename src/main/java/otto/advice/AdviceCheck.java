@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,13 +23,14 @@ import otto.storage.OttoJson;
 
 /**
  * Holds a model-written answer to its evidence bundle before anything is
- * sent. It checks player identities and names, every number, every
- * comparison, the recommended move against the legal moves, any dollar
- * amount against the verified budget, the chosen roster plan against
- * the legal plans and the players it moves, that the advice is
- * conditional on every unknown, that every claim cites evidence that
- * supports it, and the message's voice: no "lock", no confidence
- * labels, the kickoff phrase when one is required, and the length limit.
+ * sent. It checks player identities and names, every number, every rank
+ * written as an ordinal such as "3rd", every comparison, the recommended
+ * move against the legal moves, any dollar amount against the verified
+ * budget, the chosen roster plan against the legal plans and the
+ * players it moves, that the advice is conditional on every unknown,
+ * that every claim cites evidence that supports it, and the message's
+ * voice: no "lock", no confidence labels, the kickoff phrase when one
+ * is required, and the length limit.
  *
  * <p>Each failure is written for the model to read, because the
  * correction attempt hands the failures back to it.
@@ -42,6 +44,7 @@ public class AdviceCheck {
     private static final Pattern DOLLARS = Pattern.compile("\\$\\s?(\\d+)");
     private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
     private static final String PROJECTION = "projection";
+    private static final String MATCHUP_PREFIX = "matchup-";
 
     /**
      * Surnames that are also everyday English words. One of them opening
@@ -134,7 +137,7 @@ public class AdviceCheck {
     public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer answer) {
         List<String> failures = new ArrayList<>();
         checkPlayers(bundle, answer, failures);
-        checkNumbers(bundle, answer, failures);
+        checkQuantities(bundle, answer, failures);
         checkClaims(bundle, answer, failures);
         checkComparisons(bundle, answer, failures);
         checkMove(bundle, answer, failures);
@@ -175,20 +178,26 @@ public class AdviceCheck {
     }
 
     /**
-     * Holds every number in the message to the evidence, and every
-     * number in a sentence that names players to the evidence about
-     * them, so a real stat cannot be pinned on the wrong player. The
-     * evidence about a player is every item that names him or his id,
-     * every item that names no player, his projection, and the items
+     * Holds every number and rank in the message to the evidence, and
+     * every one in a sentence that names players to the evidence about
+     * them, so a real stat or rank cannot be pinned on the wrong player.
+     * The evidence about a player is every item that names him or his
+     * id, every item that names no player, his projection, and the items
      * cited by claims about him.
      */
-    private void checkNumbers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
-        Set<BigDecimal> known = bundle.numbers();
-        EvidenceBundle.numbersIn(answer.message()).stream()
-                .filter(number -> !known.contains(EvidenceBundle.normalized(number)))
+    private void checkQuantities(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        Set<Quantity> known = bundle.quantities();
+        Quantity.in(answer.message()).stream()
+                .filter(stated -> !known.contains(stated.quantity()))
+                .map(Quantity.Stated::describe)
                 .distinct()
-                .forEach(number -> failures.add(
-                        "The number %s is not in the evidence.".formatted(number)));
+                .forEach(stated -> failures.add(
+                        "The %s is not in the evidence.".formatted(stated)));
+        Ordinal.vagueIn(answer.message()).stream()
+                .distinct()
+                .forEach(vague -> failures.add(("Write each rank as the evidence writes it, "
+                        + "such as 3rd or 5th from the bottom, not \"%s\".").formatted(vague)));
         for (String sentence : SENTENCE_END.split(answer.message())) {
             List<BundlePlayer> named = bundle.players().stream()
                     .filter(player -> names(sentence, player))
@@ -196,33 +205,33 @@ public class AdviceCheck {
             if (named.isEmpty()) {
                 continue;
             }
-            Set<BigDecimal> about = numbersAbout(bundle, answer, named);
-            EvidenceBundle.numbersIn(sentence).stream()
-                    .filter(number -> known.contains(EvidenceBundle.normalized(number)))
-                    .filter(number -> !about.contains(EvidenceBundle.normalized(number)))
+            Set<Quantity> about = quantitiesAbout(bundle, answer, named);
+            Quantity.in(sentence).stream()
+                    .filter(stated -> known.contains(stated.quantity()))
+                    .filter(stated -> !about.contains(stated.quantity()))
+                    .map(Quantity.Stated::describe)
                     .distinct()
-                    .forEach(number -> failures.add(
-                            "The number %s is not in the evidence about %s.".formatted(number,
+                    .forEach(stated -> failures.add(
+                            "The %s is not in the evidence about %s.".formatted(stated,
                                     named.stream().map(BundlePlayer::fullName)
                                             .collect(Collectors.joining(" or ")))));
         }
     }
 
-    private static Set<BigDecimal> numbersAbout(EvidenceBundle bundle, AdviceAnswer answer,
+    private static Set<Quantity> quantitiesAbout(EvidenceBundle bundle, AdviceAnswer answer,
             List<BundlePlayer> named) {
         Set<String> cited = answer.claims().stream()
                 .filter(claim -> named.stream().anyMatch(player -> names(claim.text(), player)))
                 .flatMap(claim -> claim.evidence().stream())
                 .collect(Collectors.toSet());
-        Stream<String> items = bundle.evidence().stream()
+        Set<Quantity> about = new HashSet<>(Quantity.of(bundle.evidence().stream()
                 .filter(item -> cited.contains(item.id())
                         || named.stream().anyMatch(player -> about(item, player))
-                        || bundle.players().stream().noneMatch(player -> about(item, player)))
-                .flatMap(item -> item.facts().values().stream());
-        Stream<String> projections = named.stream()
-                .flatMap(player -> player.projectedPoints().stream());
-        return EvidenceBundle.numbersOf(Stream.of(items, projections,
-                bundle.kickoffPhrase().stream()).flatMap(texts -> texts));
+                        || bundle.players().stream().noneMatch(player -> about(item, player)))));
+        about.addAll(Quantity.amountsOf(Stream.concat(
+                named.stream().flatMap(player -> player.projectedPoints().stream()),
+                bundle.kickoffPhrase().stream())));
+        return about;
     }
 
     private static boolean about(EvidenceItem item, BundlePlayer player) {
@@ -248,15 +257,32 @@ public class AdviceCheck {
                         "The claim \"%s\" cites evidence %s, which does not exist."
                                 .formatted(claim.text(), id)));
             }
-            Set<BigDecimal> supported = EvidenceBundle.numbersOf(cited.stream()
-                    .flatMap(item -> item.facts().values().stream()));
-            EvidenceBundle.numbersIn(claim.text()).stream()
-                    .filter(number -> !supported.contains(EvidenceBundle.normalized(number)))
+            Set<Quantity> supported = Quantity.of(cited.stream());
+            Quantity.in(claim.text()).stream()
+                    .filter(stated -> !supported.contains(stated.quantity()))
+                    .map(Quantity.Stated::describe)
                     .distinct()
-                    .forEach(number -> failures.add(
-                            "The claim \"%s\" states %s, which its cited evidence does not."
-                                    .formatted(claim.text(), number)));
+                    .forEach(stated -> failures.add(
+                            "The claim \"%s\" states the %s, which its cited evidence does not."
+                                    .formatted(claim.text(), stated)));
+            cited.forEach(item -> matchupSubject(bundle, item)
+                    .filter(player -> !names(claim.text(), player))
+                    .ifPresent(player -> failures.add(("The claim \"%s\" cites %s, which is "
+                            + "about %s, so the claim must name him.").formatted(claim.text(),
+                                    item.id(), player.fullName()))));
         }
+    }
+
+    /**
+     * Returns the player a matchup item is about. Every matchup item's id
+     * ends in its player's id, as {@code matchup-<fact>-<playerId>}.
+     */
+    private static Optional<BundlePlayer> matchupSubject(EvidenceBundle bundle,
+            EvidenceItem item) {
+        if (!item.id().startsWith(MATCHUP_PREFIX)) {
+            return Optional.empty();
+        }
+        return bundle.player(item.id().substring(item.id().lastIndexOf('-') + 1));
     }
 
     private void checkComparisons(EvidenceBundle bundle, AdviceAnswer answer,

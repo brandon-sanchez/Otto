@@ -22,6 +22,7 @@ import otto.decisions.PlayerAvailability;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
+import otto.matchup.MatchupFacts;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.Players;
 import otto.records.Candidate;
@@ -41,11 +42,13 @@ import otto.storage.OttoJson;
 /**
  * Writes the text of bench-edge, lineup-legality, final-pregame,
  * status-change and role-slip Alerts ({@link RoleSlipAdvice} decides
- * when role-slip advice goes out). The model writes each one from an evidence
- * bundle and {@link AdviceWriter} checks it. When the model is down or
- * its advice fails twice, an urgent Alert (a slot that scores zero, or
- * a starter still uncertain as his game nears) and a status change go
- * out as code-written verified facts; any other Alert is withheld.
+ * when role-slip advice goes out). The model writes each one from an
+ * evidence bundle, which carries every player's matchup facts from
+ * {@link MatchupFacts}, and {@link AdviceWriter} checks it. When the
+ * model is down or its advice fails twice, an urgent Alert (a slot
+ * that scores zero, or a starter still uncertain as his game nears) and
+ * a status change go out as code-written verified facts; any other
+ * Alert is withheld.
  *
  * <p>Every run writes one Decision Record. Its run id is derived from
  * the Alert key and what the evidence says, so a later Check over the
@@ -62,12 +65,13 @@ public class LineupAdvice {
     private final SettingsStore settings;
     private final PlayerDirectoryStore directory;
     private final NflverseStore nflverse;
+    private final MatchupFacts matchups;
     private final ResearchCache researchCache;
     private final PreSendResearch preSendResearch;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
-            PlayerDirectoryStore directory, NflverseStore nflverse,
+            PlayerDirectoryStore directory, NflverseStore nflverse, MatchupFacts matchups,
             ResearchCache researchCache, PreSendResearch preSendResearch,
             OttoProperties properties) {
         this.writer = writer;
@@ -75,6 +79,7 @@ public class LineupAdvice {
         this.settings = settings;
         this.directory = directory;
         this.nflverse = nflverse;
+        this.matchups = matchups;
         this.researchCache = researchCache;
         this.preSendResearch = preSendResearch;
         this.userId = properties.userId();
@@ -114,11 +119,12 @@ public class LineupAdvice {
             Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
             Instant now, Instant kickoff) {
         Instant readAt = leagueWeek.snapshot().at();
+        MatchupFacts.Week week = matchups(leagueWeek, now);
         LineupEvidence.Draft draft = switch (candidate.source()) {
             case EDGE -> LineupEvidence.edge(candidate, roster, leagueWeek.week(), readAt, now,
-                    kickoff);
+                    kickoff, week);
             case LEGALITY -> LineupEvidence.legality(candidate, roster, leagueWeek.week(), readAt,
-                    now, kickoff);
+                    now, kickoff, week);
             default -> throw new IllegalArgumentException(
                     "No lineup advice for a " + candidate.source() + " candidate");
         };
@@ -155,7 +161,7 @@ public class LineupAdvice {
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, research,
                 availability(transition, roster, now), leagueWeek, roster, directoryPlayers(),
-                this::profile, now), research, leagueWeek, roster, now);
+                this::profile, matchups(leagueWeek, now), now), research, leagueWeek, roster, now);
     }
 
     /**
@@ -174,7 +180,8 @@ public class LineupAdvice {
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, legality,
                 research, availability(transition, roster, now), leagueWeek, roster,
-                directoryPlayers(), this::profile, now), research, leagueWeek, roster, now);
+                directoryPlayers(), this::profile, matchups(leagueWeek, now), now), research,
+                leagueWeek, roster, now);
     }
 
     private Optional<AlertText.Advised> decide(String alertKey, AlertCandidate transition,
@@ -182,6 +189,11 @@ public class LineupAdvice {
             RosterSnapshot roster, Instant now) {
         return write(alertKey, RunKind.PLAYER_DECISION,
                 draft.withNews(transition.playerId(), research, now), leagueWeek, roster, now);
+    }
+
+    /** Returns the matchup facts for the league's current week. */
+    MatchupFacts.Week matchups(LeagueWeek leagueWeek, Instant now) {
+        return matchups.forWeek(leagueWeek.week().weekNumber(), now);
     }
 
     private Collection<DirectoryPlayer> directoryPlayers() {
@@ -219,7 +231,7 @@ public class LineupAdvice {
             Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
             Instant now, Instant kickoff) {
         LineupEvidence.Draft draft = LineupEvidence.impaired(playerId, roster, leagueWeek.week(),
-                leagueWeek.snapshot().at(), now, kickoff);
+                leagueWeek.snapshot().at(), now, kickoff, matchups(leagueWeek, now));
         return write(alertKey, RunKind.ALERT, draft.withNews(playerId, research, now), leagueWeek,
                 roster, now);
     }

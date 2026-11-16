@@ -143,8 +143,13 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     private void aWaiverWeekOnDisk() {
+        aWaiverWeekOnDisk("nflverse/games-waivers.csv");
+    }
+
+    private void aWaiverWeekOnDisk(String scheduleFixture) {
         SleeperStubs.waiverWeek(sleeper);
         NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH, scheduleFixture);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
         checkRunner.runCheck();
@@ -206,8 +211,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         assertThat(onlyBoardRecord().comparisons().path("lanes").fieldNames())
                 .toIterable()
-                .containsExactlyInAnyOrder("NewsLane", "ProductionLane", "ProjectionLane",
-                        "TrendingLane", "UsageLane");
+                .containsExactlyInAnyOrder("MatchupLane", "NewsLane", "ProductionLane",
+                        "ProjectionLane", "TrendingLane", "UsageLane");
     }
 
     @Test
@@ -318,6 +323,28 @@ class WaiverBoardScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Named the starter in Tampa Bay"))
                 .withRequestBody(containing("13 targets of"))
                 .withRequestBody(containing("19.0")));
+    }
+
+    @Test
+    void eachCandidateCarriesHisOpponentFromTheStoredSchedule() {
+        aWaiverWeekOnDisk("nflverse/games-waivers-matchups.csv");
+        OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST,
+                board(false, OPENING, List.of(IRVING, ROBINSON), List.of()));
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("matchup-opponent-10004"))
+                .withRequestBody(containing("\\\"opponent\\\":\\\"NO\\\""))
+                .withRequestBody(containing("matchup-defense-points-allowed-10004")));
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.evidence()).anySatisfy(evidence -> {
+            assertThat(evidence.id()).isEqualTo("matchup-opponent-10004");
+            assertThat(evidence.source()).isEqualTo("nflverse:schedules");
+            assertThat(evidence.publishedAt()).isPresent();
+        });
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
     }
 
     @Test

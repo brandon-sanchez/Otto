@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
+import otto.advice.Ordinal;
 import otto.ask.LeagueWeek;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
@@ -374,7 +375,7 @@ public class WaiverEvidence {
                 .map(standing -> "%s: %s, %s, league median %s".formatted(standing.slot(),
                         standing.points().map(points -> Facts.points(points) + " points "
                                 + basis).orElse("points unknown"),
-                        standing.rank().map(rank -> "ranked %d of %d".formatted(rank,
+                        standing.rank().map(rank -> "%s of %d".formatted(Ordinal.of(rank),
                                 standing.rankedTeams())).orElse("unranked"),
                         standing.leagueMedian().map(Facts::points).orElse(Facts.UNKNOWN)))
                 .collect(Collectors.joining("; "));

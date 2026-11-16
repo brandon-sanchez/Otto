@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import otto.advice.EvidenceItem;
 import otto.advice.LineupMove;
+import otto.advice.Ordinal;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.decisions.PlayerAvailability;
@@ -25,6 +26,7 @@ import otto.decisions.TaxiSquad;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerHealth;
 import otto.lineup.Slot;
+import otto.matchup.MatchupFacts;
 import otto.nflverse.Players;
 import otto.research.PreSendResearch;
 import otto.sleeper.LeagueRules;
@@ -53,9 +55,10 @@ final class DecisionEvidence {
     static LineupEvidence.Draft draft(AlertCandidate transition, Map<String, String> research,
             PlayerAvailability availability, LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
-            Function<String, Optional<Players.Player>> profiles, Instant now) {
+            Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
+            Instant now) {
         StatusChange change = statusChange(transition, research, availability, leagueWeek,
-                roster, directory, profiles, now);
+                roster, directory, profiles, matchups, now);
         String playerId = transition.playerId();
         if (change.announced() && availability.ruledOut()
                 && roster.starters().contains(playerId)) {
@@ -77,9 +80,10 @@ final class DecisionEvidence {
             Map<String, String> research, PlayerAvailability availability,
             LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
-            Function<String, Optional<Players.Player>> profiles, Instant now) {
+            Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
+            Instant now) {
         StatusChange change = statusChange(transition, research, availability, leagueWeek,
-                roster, directory, profiles, now);
+                roster, directory, profiles, matchups, now);
         return withSlotFix(change.builder(), legality, leagueWeek.week(), change.name(),
                 change.to(), change.task(), change.plans(), change.unknowns(), change.urgent());
     }
@@ -94,9 +98,11 @@ final class DecisionEvidence {
             Map<String, String> research, PlayerAvailability availability,
             LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
-            Function<String, Optional<Players.Player>> profiles, Instant now) {
+            Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
+            Instant now) {
         WeekFacts week = leagueWeek.week();
-        LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now);
+        LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now,
+                matchups);
         String playerId = transition.playerId();
         String name = builder.name(playerId);
         PlayerHealth from = PlayerHealth.valueOf(transition.facts().get("from"));
@@ -146,9 +152,11 @@ final class DecisionEvidence {
      */
     static Optional<LineupEvidence.Draft> roleSlip(AlertCandidate slip, LeagueWeek leagueWeek,
             RosterSnapshot roster, Collection<DirectoryPlayer> directory,
-            Function<String, Optional<Players.Player>> profiles, Instant now) {
+            Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
+            Instant now) {
         WeekFacts week = leagueWeek.week();
-        LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now);
+        LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now,
+                matchups);
         String playerId = slip.playerId();
         String name = builder.name(playerId);
         builder.addPlayer(playerId, "the player whose role may have slipped");
@@ -196,9 +204,12 @@ final class DecisionEvidence {
         WeekFacts week = leagueWeek.week();
         Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
                 directory);
-        replacement.ifPresent(free -> builder.addPlayer(free.playerId(), free.fullName(),
-                "best projected free agent at his position", freeAgentFacts(free),
-                projection(week, free)));
+        replacement.ifPresent(free -> {
+            builder.addPlayer(free.playerId(), free.fullName(),
+                    "best projected free agent at his position", freeAgentFacts(free),
+                    projection(week, free));
+            builder.addMatchups(free.playerId(), free.fullName(), free.position(), free.team());
+        });
         Map<String, String> names = new LinkedHashMap<>(roster.playerNames());
         replacement.ifPresent(free -> names.put(free.playerId(), free.fullName()));
         Optional<DirectoryPlayer> listed = listed(playerId, directory);
@@ -435,9 +446,9 @@ final class DecisionEvidence {
         Map<String, String> facts = new LinkedHashMap<>();
         player.ageOn(now.atZone(ZoneOffset.UTC).toLocalDate())
                 .ifPresent(age -> facts.put("age", String.valueOf(age)));
-        facts.put("nflDraft", player.draft() == null ? "undrafted, or no pick recorded"
-                : "%d round %d, pick %d overall, by %s".formatted(player.draft().year(),
-                        player.draft().round(), player.draft().pick(), player.draft().team()));
+        facts.put(Ordinal.DRAFT_FACT, player.draft() == null ? "undrafted, or no pick recorded"
+                : Ordinal.draft(player.draft().year(), player.draft().round(),
+                        player.draft().pick(), player.draft().team()));
         return facts;
     }
 }

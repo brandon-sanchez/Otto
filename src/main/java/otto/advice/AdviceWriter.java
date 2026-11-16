@@ -44,6 +44,7 @@ public class AdviceWriter {
             The user message is an evidence bundle as JSON. State facts only from the
             evidence bundle: never from memory, never invented. Every number you write
             must appear in the evidence. Name only players listed in "players".
+            """ + RankConvention.ADVICE_RULES + """
 
             Decide what the user should do. Choose one of "legalMoves", or no change
             when "noChangeAllowed" is true. Lead with the recommendation, then give
