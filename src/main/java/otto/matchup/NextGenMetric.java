@@ -6,8 +6,8 @@ import java.util.List;
 import otto.nflverse.NextGenColumn;
 import otto.nflverse.NextGenStats;
 
-/** The Next Gen Stats figures a matchup item quotes, by leaderboard. */
-enum NextGenMetric {
+/** The Next Gen Stats figures Otto quotes, by leaderboard. */
+public enum NextGenMetric {
     TIME_TO_THROW(NextGenStats.Kind.PASSING, NextGenColumn.AVG_TIME_TO_THROW,
             "averageTimeToThrowSeconds"),
     COMPLETION_ABOVE_EXPECTED(NextGenStats.Kind.PASSING,
@@ -30,9 +30,10 @@ enum NextGenMetric {
      *
      * @param unit what it counts, plural, as the evidence writes it
      */
-    record Sample(NextGenColumn column, String unit) {
+    public record Sample(NextGenColumn column, String unit) {
 
-        static Sample of(NextGenStats.Kind kind) {
+        /** Returns the column and unit a leaderboard counts its sample in. */
+        public static Sample of(NextGenStats.Kind kind) {
             return switch (kind) {
                 case PASSING -> new Sample(NextGenColumn.ATTEMPTS, "attempts");
                 case RECEIVING -> new Sample(NextGenColumn.TARGETS, "targets");
@@ -51,15 +52,18 @@ enum NextGenMetric {
         this.label = label;
     }
 
-    NextGenColumn column() {
+    /** Returns the leaderboard column the figure is read from. */
+    public NextGenColumn column() {
         return column;
     }
 
-    String label() {
+    /** Returns the figure's name as evidence writes it, such as "averageSeparationYards". */
+    public String label() {
         return label;
     }
 
-    static List<NextGenMetric> of(NextGenStats.Kind kind) {
+    /** Returns the figures quoted from one leaderboard, in declaration order. */
+    public static List<NextGenMetric> of(NextGenStats.Kind kind) {
         return Arrays.stream(values()).filter(metric -> metric.kind == kind).toList();
     }
 }

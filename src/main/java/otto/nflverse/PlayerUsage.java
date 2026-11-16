@@ -93,9 +93,12 @@ public final class PlayerUsage {
      * @param endZoneTargets targets thrown at least as far as the goal line
      * @param firstReadTargets targets on which FTN charted him as the
      *        quarterback's first read, or null when FTN has not charted the game
+     * @param airYards the air yards of his targets, summed over those the
+     *        play-by-play gives a distance; a throw behind the line counts
+     *        against it
      */
     public record Opportunities(int redZoneTargets, int redZoneCarries, int endZoneTargets,
-            Integer firstReadTargets) {
+            Integer firstReadTargets, int airYards) {
     }
 
     /**
@@ -343,6 +346,7 @@ public final class PlayerUsage {
         private int redZoneCarries;
         private int endZoneTargets;
         private int firstReadTargets;
+        private int airYards;
 
         Tally(String team) {
             this.team = team;
@@ -361,11 +365,14 @@ public final class PlayerUsage {
             if (target && firstRead) {
                 firstReadTargets++;
             }
+            if (target && play.airYards() != null) {
+                airYards += play.airYards();
+            }
         }
 
         Opportunities opportunities(boolean charted) {
             return new Opportunities(redZoneTargets, redZoneCarries, endZoneTargets,
-                    charted ? firstReadTargets : null);
+                    charted ? firstReadTargets : null, airYards);
         }
     }
 
