@@ -22,9 +22,11 @@ import java.util.Set;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, three markers, and each Alert delivery record. Big
- * means everything that grows with the league, the roster of players
- * or the season - the Snapshots, the Player Directory,
+ * its newest turns, three markers, each Alert delivery record, and
+ * the research cache: one player's stories, capped at a fixed count,
+ * and the index of when each player was last read. Big means
+ * everything that grows with the league, the roster of players or the
+ * season - the Snapshots, the Player Directory,
  * defense-versus-position and the Event Log.
  */
 public enum DocumentPlacement {
@@ -50,7 +52,9 @@ public enum DocumentPlacement {
             "alert-id-sequence",
             "telegram-updates");
 
-    private static final Set<String> SMALL_PREFIXES = Set.of("alert-delivery-");
+    private static final Set<String> SMALL_PREFIXES = Set.of(
+            "alert-delivery-",
+            "research-");
 
     /** Returns where the document with this name is stored. */
     public static DocumentPlacement of(String name) {
