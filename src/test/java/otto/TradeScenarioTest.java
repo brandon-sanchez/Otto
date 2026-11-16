@@ -715,6 +715,47 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     /**
+     * GridironGoblin holds QB Depth 05, who projects 18.0 a week, and QB
+     * Depth 20, who projects 8.0. This twelve-team Superflex league fills
+     * 24 quarterback slots, so the 24th quarterback's 3.5 is replacement
+     * and both of his quarterbacks are startable.
+     */
+    @Test
+    void aSuperflexLeaguesQuarterbackDepthCountsTheTwentyFourthQuarterbackAsReplacement() {
+        snapshotOfTheLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_roster",
+                "{\"manager\":\"GridironGoblin\"}", "He has two startable quarterbacks.");
+
+        ask("what does GridironGoblin have?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(quarterbackDepth("3.5", 2))));
+    }
+
+    /**
+     * The same roster in a ten-team league that starts one quarterback a
+     * team: only ten quarterbacks start, so the tenth one's 10.5 is
+     * replacement and QB Depth 20 falls below it.
+     */
+    @Test
+    void aOneQuarterbackLeaguesQuarterbackDepthCountsTheTenthQuarterbackAsReplacement() {
+        snapshotOfTheLeagueAs("sleeper/league-market-1qb-half-ppr.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_roster",
+                "{\"manager\":\"GridironGoblin\"}", "He has one startable quarterback.");
+
+        ask("what does GridironGoblin have?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(quarterbackDepth("10.5", 1))));
+    }
+
+    /** The quarterback line of a team's depth, as it appears inside the chat request. */
+    private static String quarterbackDepth(String replacement, int aboveReplacement) {
+        return "%s,%s,%s".formatted(field("position", "QB"), field("replacement", replacement),
+                number("aboveReplacement", String.valueOf(aboveReplacement)));
+    }
+
+    /**
      * A redraft league plays for this season alone, so the
      * rest-of-season fit decides, and the market says whether the other
      * manager would accept. On FantasyCalc James Cook is worth 6392 and
