@@ -1,6 +1,7 @@
 package otto;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.harness.AdviceStubs;
+import otto.harness.KickerAndDefenseLeague;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -103,6 +105,36 @@ class EdgeScenarioTest extends WireSeamTest {
                 .containsEntry("starterProjection", "11.0")
                 .containsEntry("edge", "2.0")
                 .containsEntry("slot", "TE");
+    }
+
+    @Test
+    void aBenchedRunningBackIsNeverStartedOverTheKickerOrDefense() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.DEFENSE, List.of());
+        OutboundStubs.telegramOk(telegram);
+        AdviceStubs.llmRecommendsEveryFixtureSwap(llm);
+
+        checkRunner.runCheck();
+
+        assertThat(eventLog.all()).noneMatch(event -> event.key().startsWith("alert:edge:"));
+    }
+
+    @Test
+    void aBenchedKickerWhoOutProjectsTheStarterIsAnEdge() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.WEAK_KICKER,
+                KickerAndDefenseLeague.DEFENSE,
+                List.of(KickerAndDefenseLeague.KICKER));
+        OutboundStubs.telegramOk(telegram);
+        AdviceStubs.llmRecommends(llm, new AdviceStubs.Swap(KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.KICKER, "9.0", KickerAndDefenseLeague.WEAK_KICKER,
+                KickerAndDefenseLeague.WEAK_KICKER, "1.0", "8.0", "K"));
+
+        checkRunner.runCheck();
+
+        Event alert = eventLog.all().stream()
+                .filter(event -> event.key().equals("alert:edge:2026-w2:9001-over-9002"))
+                .findFirst().orElseThrow();
+        assertThat(alert.facts()).containsEntry("slot", "K");
     }
 
     @Test

@@ -304,7 +304,7 @@ public class LineupPlanner {
         Map<Integer, String> assigned = optimizer.assign(
                 openSlots.stream().map(slots::get).toList(),
                 movable,
-                team.roster().playerPositions(),
+                team.positions(),
                 team.starters());
 
         Map<Integer, String> optimal = new LinkedHashMap<>(fixed);

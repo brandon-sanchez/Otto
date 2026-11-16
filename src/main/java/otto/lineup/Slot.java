@@ -6,10 +6,11 @@ import java.util.Set;
 
 /**
  * One starting lineup slot with the positions it accepts. Built from
- * the league's roster_positions; the bench (BN) is not a slot. An
- * unrecognized starting slot type accepts every position, so a drifted
- * new slot name degrades to lenient instead of flagging legal lineups
- * as illegal.
+ * the league's roster_positions; the bench (BN) is not a slot. A K slot
+ * takes only a kicker and a DEF slot only a team defense, as
+ * {@link PlayerPositions} reads them. An unrecognized starting slot type
+ * accepts every skill position, so a drifted new slot name degrades to
+ * lenient instead of flagging legal lineups as illegal.
  *
  * Only nested eligibility sets are modeled (each set contains or is
  * contained by every overlapping set): the optimizer's greedy fill is
@@ -26,7 +27,9 @@ public record Slot(String name, Set<String> eligible) {
             "WR", Set.of("WR"),
             "TE", Set.of("TE"),
             "FLEX", Set.of("RB", "WR", "TE"),
-            "SUPER_FLEX", ALL_POSITIONS);
+            "SUPER_FLEX", ALL_POSITIONS,
+            PlayerPositions.KICKER, Set.of(PlayerPositions.KICKER),
+            PlayerPositions.DEFENSE, Set.of(PlayerPositions.DEFENSE));
 
     /**
      * The starting slots of a league, in the order Sleeper aligns the
@@ -42,13 +45,20 @@ public record Slot(String name, Set<String> eligible) {
 
     /**
      * Returns whether this slot's eligibility is its own rather than the
-     * lenient fallback, so a K or DEF slot, which falls back to every
-     * position, is never filled with a skill player in its place.
+     * lenient fallback, so a slot type Otto does not know, such as an
+     * IDP slot, is never filled with a skill player in its place.
      */
     public boolean modelledExactly() {
         return ELIGIBILITY.containsKey(name);
     }
 
+    /**
+     * Returns whether a player at the position may start here.
+     *
+     * @param position the player's position as {@link PlayerPositions}
+     *        reads it; null for a player whose position is unknown, whom
+     *        no slot accepts
+     */
     public boolean accepts(String position) {
         return position != null && eligible.contains(position);
     }

@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -33,6 +32,7 @@ import otto.events.EventType;
 import otto.lineup.GameWeek;
 import otto.lineup.LeagueScoring;
 import otto.lineup.LineupOptimizer;
+import otto.lineup.PlayerPositions;
 import otto.lineup.Slot;
 import otto.records.DecisionRecords;
 import otto.records.Outcome;
@@ -73,12 +73,6 @@ public class HabitLedger {
     private static final String EDGE_PREFIX = "alert:edge:";
 
     private static final String PRESEASON = "pre";
-
-    /** Sleeper's id for a team defense is the team's code, such as {@code KC}. */
-    private static final Pattern TEAM_CODE = Pattern.compile("[A-Z]{2,3}");
-
-    /** Stats only a kicker's projection carries: field goal and extra point attempts. */
-    private static final Set<String> KICKS = Set.of("fga", "xpa");
 
     private static final Logger log = LoggerFactory.getLogger(HabitLedger.class);
 
@@ -331,20 +325,31 @@ public class HabitLedger {
                 points.putIfAbsent(starter, line.get().points().get(slot));
             }
         }
-        Map<String, String> positions = new HashMap<>();
-        Map<String, String> teams = new HashMap<>();
-        for (String playerId : points.keySet()) {
-            known(user.playerPositions().get(playerId), players.get(playerId),
-                    DirectoryPlayer::position).ifPresent(value -> positions.put(playerId, value));
-            known(user.playerTeams().get(playerId), players.get(playerId),
-                    DirectoryPlayer::team).ifPresent(value -> teams.put(playerId, value));
-        }
         List<String> slots = league.rosterPositions().stream()
                 .filter(position -> !"BN".equals(position))
                 .toList();
         Map<String, Map<String, Double>> stats = needsStats(slots, week, leaguePoints)
                 ? stats(week)
                 : Map.of();
+        Map<String, String> positions = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
+        for (String playerId : points.keySet()) {
+            String listed = known(user.playerPositions().get(playerId), players.get(playerId),
+                    DirectoryPlayer::position).orElse(null);
+            PlayerPositions.of(playerId, listed, stats.get(playerId))
+                    .ifPresent(value -> positions.put(playerId, value));
+            known(user.playerTeams().get(playerId), players.get(playerId),
+                    DirectoryPlayer::team).ifPresent(value -> teams.put(playerId, value));
+        }
+        // Sleeper only lets a kicker or defense start in its own slot, so
+        // one with no kicks in his stat line is still placed.
+        List<String> starters = line.get().starters();
+        for (int slot = 0; slot < Math.min(slots.size(), starters.size()); slot++) {
+            if (PlayedWeek.STREAMED.contains(slots.get(slot))
+                    && !StarterLine.EMPTY_SLOT.equals(starters.get(slot))) {
+                positions.putIfAbsent(starters.get(slot), slots.get(slot));
+            }
+        }
         return Optional.of(new PlayedWeek(slots, line.get().starters(), points, leaguePoints,
                 positions, teams, optimal(slots, line.get().starters(), points, positions),
                 byes(week, teams), freeAgents(slots, week, leaguePoints, stats),
@@ -389,7 +394,7 @@ public class HabitLedger {
         }
         Map<String, PlayedWeek.FreeAgent> best = new HashMap<>();
         projections.value().forEach((playerId, line) -> {
-            Optional<String> position = streamedPosition(playerId, line);
+            Optional<String> position = PlayerPositions.kickerOrDefense(playerId, line);
             if (position.isEmpty() || !positions.contains(position.get())
                     || leaguePoints.containsKey(playerId)) {
                 return;
@@ -405,20 +410,6 @@ public class HabitLedger {
             });
         });
         return best;
-    }
-
-    /**
-     * Whether a projected player is a kicker or a defense. The player
-     * directory keeps neither, so Sleeper's own conventions decide: a
-     * defense's id is its team code, and only a kicker's line projects
-     * kicks.
-     */
-    private static Optional<String> streamedPosition(String playerId,
-            Map<String, Double> line) {
-        if (TEAM_CODE.matcher(playerId).matches()) {
-            return Optional.of("DEF");
-        }
-        return KICKS.stream().anyMatch(line::containsKey) ? Optional.of("K") : Optional.empty();
     }
 
     /** What the players the user let go scored that week while on no roster. */

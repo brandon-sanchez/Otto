@@ -1,12 +1,15 @@
 package otto.check;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
 import otto.directory.PlayerHealth;
 import otto.lineup.GameWeek;
 import otto.lineup.LeagueScoring;
+import otto.lineup.PlayerPositions;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.snapshot.RosterSnapshot;
@@ -41,6 +44,34 @@ public record WeekFacts(
 
     public OptionalInt weekNumber() {
         return seasonWeek.stream().mapToInt(SeasonWeek::number).findFirst();
+    }
+
+    /**
+     * Returns the player's lineup position, or null when Otto cannot tell
+     * it. A kicker or defense, which the roster carries no position for,
+     * is read from his id and this week's projection, so a K or DEF slot
+     * sees him.
+     */
+    public String positionOf(RosterSnapshot roster, String playerId) {
+        String known = roster.playerPositions().get(playerId);
+        return projections.map(table -> table.positionOf(playerId, known))
+                .orElseGet(() -> PlayerPositions.of(playerId, known, null))
+                .orElse(null);
+    }
+
+    /**
+     * Returns the lineup position of every roster player Otto can place,
+     * as {@link #positionOf} reads it.
+     */
+    public Map<String, String> positions(RosterSnapshot roster) {
+        Map<String, String> positions = new HashMap<>();
+        for (String playerId : roster.players()) {
+            String position = positionOf(roster, playerId);
+            if (position != null) {
+                positions.put(playerId, position);
+            }
+        }
+        return Map.copyOf(positions);
     }
 
     /**
