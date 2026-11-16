@@ -39,7 +39,7 @@ public class AdviceWriter {
 
     private static final String GROUNDING = """
             You are Otto, a fantasy football assistant texting your one user about
-            their lineup, the way a knowledgeable friend would.
+            their lineup and roster, the way a knowledgeable friend would.
 
             The user message is an evidence bundle as JSON. State facts only from the
             evidence bundle: never from memory, never invented. Every number you write
@@ -48,6 +48,20 @@ public class AdviceWriter {
             Decide what the user should do. Choose one of "legalMoves", or no change
             when "noChangeAllowed" is true. Lead with the recommendation, then give
             the reason in one to three short sentences of plain text.
+
+            """;
+
+    private static final String PLAYER_DECISION = """
+            Also decide what to do with the player the decision is about: choose
+            exactly one of "rosterPlans" by its "id", lead with it, and explain it in
+            one natural paragraph that connects his news, the league's format and
+            rules, and the roster. Name every player the plan drops or adds. Weigh the
+            league's format: redraft is about this season, dynasty and keeper leagues
+            also value the seasons after it. A missing projection or report is
+            unknown, never zero. When "unknowns" lists evidence ids, the decision
+            depends on facts no source supplied: make the advice conditional, say what
+            is missing and what would change your call, and list each id in
+            "conditions".
 
             """;
 
@@ -73,6 +87,12 @@ public class AdviceWriter {
     private static final String LINEUP_SHAPE = "Answer with only this JSON object:\n{\n"
             + ANSWER_FIELDS + "\n}\nUse null for \"move\" to recommend no change.\n";
 
+    private static final String DECISION_SHAPE = "Answer with only this JSON object:\n{\n"
+            + ANSWER_FIELDS + ",\n"
+            + "  \"plan\": \"<id of the chosen roster plan>\",\n"
+            + "  \"conditions\": [\"<id of each unknown the advice is conditional on>\"]\n"
+            + "}\nUse null for \"move\" to recommend no lineup change.\n";
+
     /** One answer, then one correction carrying its failures. */
     private static final int ATTEMPTS = 2;
 
@@ -80,11 +100,14 @@ public class AdviceWriter {
 
     private final ModelChain chain;
     private final AdviceForm<AdviceAnswer> lineup;
+    private final AdviceForm<AdviceAnswer> playerDecision;
 
     /** Asks models through {@code chain} and checks answers with {@code check}. */
     public AdviceWriter(ModelChain chain, AdviceCheck check) {
         this.chain = chain;
         this.lineup = answerForm(GROUNDING + VOICE + LINEUP_SHAPE, check);
+        this.playerDecision = answerForm(GROUNDING + PLAYER_DECISION + VOICE + DECISION_SHAPE,
+                check);
     }
 
     /**
@@ -93,6 +116,15 @@ public class AdviceWriter {
      */
     public AdviceForm<AdviceAnswer> lineup() {
         return lineup;
+    }
+
+    /**
+     * The form for a status change on one of the user's players: a
+     * lineup move plus one of the bundle's roster plans, conditional on
+     * every unknown the bundle lists.
+     */
+    public AdviceForm<AdviceAnswer> playerDecision() {
+        return playerDecision;
     }
 
     /**

@@ -14,18 +14,25 @@ import java.util.Optional;
  * @param claims the factual statements the message makes, each with the
  *        evidence it rests on
  * @param comparisons every "better than" the message states
+ * @param plan the id of the roster plan the message recommends, empty
+ *        when the bundle offers no roster plans
+ * @param conditions the ids of the bundle's unknowns the advice is
+ *        conditional on
  */
 public record AdviceAnswer(
         String message,
         Optional<LineupMove> move,
         List<String> players,
         List<Claim> claims,
-        List<Comparison> comparisons) {
+        List<Comparison> comparisons,
+        Optional<String> plan,
+        List<String> conditions) {
 
     public AdviceAnswer {
         players = List.copyOf(players);
         claims = List.copyOf(claims);
         comparisons = List.copyOf(comparisons);
+        conditions = List.copyOf(conditions);
     }
 
     /** @param evidence the ids of the evidence items the claim rests on */

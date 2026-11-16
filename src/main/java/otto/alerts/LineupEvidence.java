@@ -16,7 +16,9 @@ import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.LineupMove;
+import otto.advice.RosterPlan;
 import otto.check.WeekFacts;
+import otto.decisions.RosterPlans;
 import otto.directory.PlayerHealth;
 import otto.lineup.Slot;
 import otto.snapshot.RosterSnapshot;
@@ -53,7 +55,8 @@ final class LineupEvidence {
                     readAt, "latest injury, availability or roster report", facts));
             return new Draft(new EvidenceBundle(bundle.task(), evidence, bundle.players(),
                     bundle.legalMoves(), bundle.noChangeAllowed(), bundle.kickoffPhrase(),
-                    bundle.maxLength(), bundle.budget()), urgentFacts, holdStaysSilent,
+                    bundle.maxLength(), bundle.budget(), bundle.rosterPlans(),
+                    bundle.unknowns()), urgentFacts, holdStaysSilent,
                     candidateReasons);
         }
     }
@@ -66,7 +69,7 @@ final class LineupEvidence {
     private final Map<String, BundlePlayer> players = new LinkedHashMap<>();
     private final Map<String, String> reasons = new LinkedHashMap<>();
 
-    private LineupEvidence(RosterSnapshot roster, WeekFacts week, Instant rosterReadAt,
+    LineupEvidence(RosterSnapshot roster, WeekFacts week, Instant rosterReadAt,
             Instant now) {
         this.roster = roster;
         this.week = week;
@@ -140,13 +143,47 @@ final class LineupEvidence {
         Optional<String> kickoffPhrase = Optional.ofNullable(kickoff).map(this::kickoffPhrase);
         EvidenceBundle bundle = new EvidenceBundle(task, evidence, List.copyOf(players.values()),
                 moves, noChangeAllowed, kickoffPhrase,
-                kickoffPhrase.isPresent() ? PREGAME_MAX_LENGTH : MAX_LENGTH, Optional.empty());
+                kickoffPhrase.isPresent() ? PREGAME_MAX_LENGTH : MAX_LENGTH, Optional.empty(),
+                List.of(), List.of());
         Optional<String> urgentFacts = fact.map(text -> text + " " + bestOption(moves)
                 + kickoffPhrase.map(phrase -> " His " + phrase + ".").orElse(""));
         return new Draft(bundle, urgentFacts, holdStaysSilent, Map.copyOf(reasons));
     }
 
-    private List<LineupMove> legalStarts(int slotIndex) {
+    /**
+     * @param urgentFacts the verified text sent when the advice cannot
+     *        be had, empty when nothing is sent then
+     * @param holdStaysSilent true when advice to hold with no lineup
+     *        change is not worth sending unasked
+     */
+    Draft decisionDraft(String task, List<LineupMove> moves, boolean noChangeAllowed,
+            List<RosterPlan> plans, List<String> unknowns, Optional<String> urgentFacts,
+            boolean holdStaysSilent) {
+        EvidenceBundle bundle = new EvidenceBundle(task, evidence, List.copyOf(players.values()),
+                moves, noChangeAllowed, Optional.empty(), MAX_LENGTH, Optional.empty(), plans,
+                unknowns);
+        return new Draft(bundle, urgentFacts, holdStaysSilent, Map.copyOf(reasons));
+    }
+
+    void addItem(EvidenceItem item) {
+        evidence.add(item);
+    }
+
+    void addPlayer(String playerId, String fullName, String reason, Map<String, String> facts,
+            Optional<String> projection) {
+        if (players.containsKey(playerId)) {
+            return;
+        }
+        players.put(playerId, new BundlePlayer(playerId, fullName, projection));
+        reasons.put(playerId, reason);
+        evidence.add(new EvidenceItem("player-" + playerId, "sleeper:players", Optional.empty(),
+                rosterReadAt, "who he is and his injury designation", facts));
+        evidence.add(new EvidenceItem("projection-" + playerId, "sleeper:projections",
+                Optional.empty(), now, "projected points this week in league scoring",
+                Map.of("projectedPoints", projection.orElse("no projection available"))));
+    }
+
+    List<LineupMove> legalStarts(int slotIndex) {
         Slot slot = week.startingSlots().get(slotIndex);
         String occupant = slotIndex < roster.starters().size()
                 ? roster.starters().get(slotIndex) : EMPTY_STARTER;
@@ -172,7 +209,7 @@ final class LineupEvidence {
         return moves;
     }
 
-    private String bestOption(List<LineupMove> moves) {
+    String bestOption(List<LineupMove> moves) {
         if (moves.isEmpty()) {
             return "No playable bench player fits that slot.";
         }
@@ -184,7 +221,7 @@ final class LineupEvidence {
                         .formatted(name(best)) + "projection.");
     }
 
-    private void addPlayer(String playerId, String reason) {
+    void addPlayer(String playerId, String reason) {
         if (players.containsKey(playerId)) {
             return;
         }
@@ -208,7 +245,7 @@ final class LineupEvidence {
                 Map.of("projectedPoints", projection.orElse("no projection available"))));
     }
 
-    private static String problemWithoutLockWording(String reason) {
+    static String problemWithoutLockWording(String reason) {
         return switch (reason) {
             case "empty slot" -> "a starting slot is empty";
             case "bye starter" -> "a starter is on bye this week";
@@ -216,7 +253,7 @@ final class LineupEvidence {
         };
     }
 
-    private void addProblem(Map<String, String> facts) {
+    void addProblem(Map<String, String> facts) {
         week.weekNumber().ifPresent(number -> facts.put("week", String.valueOf(number)));
         evidence.add(new EvidenceItem("problem", "otto:lineup-check", Optional.empty(), now,
                 "the lineup problem Otto computed", facts));
@@ -250,16 +287,12 @@ final class LineupEvidence {
         return projection(playerId).map(Double::parseDouble).orElse(Double.NEGATIVE_INFINITY);
     }
 
-    private String name(String playerId) {
+    String name(String playerId) {
         return roster.playerNames().getOrDefault(playerId, playerId);
     }
 
     private String designation(String playerId) {
-        PlayerHealth health = roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE);
-        if (health == PlayerHealth.IR || health == PlayerHealth.PUP) {
-            return health.name();
-        }
-        String words = health.name().replace('_', ' ').toLowerCase(Locale.ROOT);
-        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
+        return RosterPlans.designation(
+                roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE));
     }
 }

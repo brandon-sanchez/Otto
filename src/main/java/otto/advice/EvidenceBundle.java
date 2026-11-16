@@ -33,6 +33,12 @@ import otto.storage.OttoJson;
  * @param budget the verified waiver budget left, in dollars, or empty
  *        when none was verified, in which case no dollar amount may be
  *        stated
+ * @param rosterPlans every roster plan code verified as legal for a
+ *        player decision, of which the answer must choose one; empty
+ *        for advice that is not a player decision
+ * @param unknowns the ids of evidence items that name a fact the
+ *        advice depends on and no source supplied; the answer must be
+ *        conditional on each one
  */
 public record EvidenceBundle(
         String task,
@@ -42,7 +48,9 @@ public record EvidenceBundle(
         boolean noChangeAllowed,
         Optional<String> kickoffPhrase,
         int maxLength,
-        Optional<Integer> budget) {
+        Optional<Integer> budget,
+        List<RosterPlan> rosterPlans,
+        List<String> unknowns) {
 
     private static final Pattern NON_DOLLAR_NUMBER = Pattern.compile("(?<![\\w.$])\\d+(?:\\.\\d+)?(?!\\w)");
 
@@ -50,6 +58,8 @@ public record EvidenceBundle(
         evidence = List.copyOf(evidence);
         players = List.copyOf(players);
         legalMoves = List.copyOf(legalMoves);
+        rosterPlans = List.copyOf(rosterPlans);
+        unknowns = List.copyOf(unknowns);
         if (evidence.stream().map(EvidenceItem::id).distinct().count() != evidence.size()) {
             throw new IllegalArgumentException("Evidence ids repeat within a bundle");
         }
@@ -57,6 +67,10 @@ public record EvidenceBundle(
 
     public Optional<EvidenceItem> item(String id) {
         return evidence.stream().filter(item -> item.id().equals(id)).findFirst();
+    }
+
+    public Optional<RosterPlan> rosterPlan(String id) {
+        return rosterPlans.stream().filter(plan -> plan.id().equals(id)).findFirst();
     }
 
     public Optional<BundlePlayer> player(String playerId) {
@@ -79,6 +93,12 @@ public record EvidenceBundle(
         facts.put("legalMoves", legalMoves);
         facts.put("noChangeAllowed", noChangeAllowed);
         facts.put("budget", budget);
+        if (!rosterPlans.isEmpty()) {
+            facts.put("rosterPlans", rosterPlans);
+        }
+        if (!unknowns.isEmpty()) {
+            facts.put("unknowns", unknowns);
+        }
         try {
             return Sha256.hex(OttoJson.MAPPER.writeValueAsString(facts));
         } catch (JsonProcessingException e) {

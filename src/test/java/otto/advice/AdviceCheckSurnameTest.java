@@ -33,9 +33,9 @@ class AdviceCheckSurnameTest {
                 .map(name -> new BundlePlayer(name.replace(' ', '-'), name, Optional.empty()))
                 .toList();
         EvidenceBundle bundle = new EvidenceBundle("task", List.of(), players, List.of(), true,
-                Optional.empty(), 2000, Optional.empty());
+                Optional.empty(), 2000, Optional.empty(), List.of(), List.of());
         AdviceAnswer answer = new AdviceAnswer(message, Optional.empty(), List.of(), List.of(),
-                List.of());
+                List.of(), Optional.empty(), List.of());
         return check.checkAnswer(bundle, answer).stream()
                 .filter(failure -> failure.contains("by full name before using his surname"))
                 .toList();
