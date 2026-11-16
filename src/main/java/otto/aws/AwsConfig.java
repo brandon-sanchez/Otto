@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import otto.OttoProperties;
+import otto.records.RecordObjects;
 import otto.storage.DocumentBackend;
 
 /**
@@ -49,6 +50,11 @@ public class AwsConfig {
         return new AwsDocumentBackend(
                 new S3BundleBackend(s3, aws.bucket()),
                 new DynamoDbBackend(dynamo, aws.table()));
+    }
+
+    @Bean
+    RecordObjects s3RecordObjects(S3Client s3, OttoProperties properties) {
+        return new S3RecordObjects(s3, properties.aws().recordsBucket());
     }
 
     private ClientOverrideConfiguration timeouts() {
