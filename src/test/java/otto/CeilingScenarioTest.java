@@ -54,6 +54,8 @@ class CeilingScenarioTest extends WireSeamTest {
     private static final String WRONG = "Josh Jacobs has about a 70% chance of an RB12 week "
             + "and a big week reaches 28 or more.";
 
+    private static final String TOOL_RESULT = "\"role\":\"tool\"";
+
     private static final String NARRATION = "Here is what Jacobs can do.";
 
     @Autowired
@@ -108,6 +110,15 @@ class CeilingScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(text)));
     }
 
+    private static void theUserReadsTheCheckedTextAndNoSecondReply() {
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing(quoted(CHECKED))));
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing(NARRATION)));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(TOOL_RESULT)));
+    }
+
     private List<DecisionRecord> ceilingRecords() {
         return StoredRecords.of(decisionRecords, properties.storageDir(), USER_ID, LEAGUE_ID,
                 RunKind.PLAYER_CEILING);
@@ -129,9 +140,7 @@ class CeilingScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("39%"))
                 .withRequestBody(containing("10 to 21"))
                 .withRequestBody(containing("28")));
-        toolResultCarries(CHECKED.substring(0, 40));
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing(NARRATION)));
+        theUserReadsTheCheckedTextAndNoSecondReply();
         assertThat(ceilingRecords()).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isEqualTo(new Outcome.Sent(CHECKED)));
     }
@@ -203,11 +212,7 @@ class CeilingScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("number 70 is not in the evidence")));
-        toolResultCarries(CHECKED.substring(0, 40));
-        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("get_player_ceiling"))
-                .withRequestBody(notContaining("legalMoves"))
-                .withRequestBody(containing("70%")));
+        theUserReadsTheCheckedTextAndNoSecondReply();
         assertThat(ceilingRecords()).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isEqualTo(new Outcome.Sent(CHECKED)));
     }
@@ -227,5 +232,37 @@ class CeilingScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("70%")));
         assertThat(ceilingRecords()).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class));
+    }
+
+    @Test
+    void aCeilingAskedBesideAnotherToolIsExplainedByTheChatModel() {
+        aWeekOfDataOnDisk();
+        OutboundStubs.llmCallsToolsAtOnceThenPhrases(llm, NARRATION,
+                "get_player_ceiling", JACOBS, "get_standings", "{}");
+        OutboundStubs.llmAdvises(llm, checkedAnswer(CHECKED));
+
+        ask("what's Jacobs' ceiling, and where do I stand?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(TOOL_RESULT))
+                .withRequestBody(containing(CHECKED.substring(0, 40))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing(NARRATION)));
+        assertThat(ceilingRecords()).singleElement().satisfies(record ->
+                assertThat(record.outcome()).isEqualTo(new Outcome.HandedToChat(CHECKED)));
+    }
+
+    @Test
+    void anOrdinaryToolResultIsStillExplainedByTheChatModel() {
+        aWeekOfDataOnDisk();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_standings", "{}", NARRATION);
+
+        ask("where do I stand?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(TOOL_RESULT))
+                .withRequestBody(containing("STANDINGS")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing(NARRATION)));
     }
 }

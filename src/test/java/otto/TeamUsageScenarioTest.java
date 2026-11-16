@@ -18,6 +18,7 @@ import otto.telegram.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -110,15 +111,19 @@ class TeamUsageScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void anAskForATeamsBackfieldReachesTheModelAsTheComputedSplitWithinTelegramsLimit() {
+    void anAskForATeamsBackfieldSendsTheComputedSplitAsItIsWithinTelegramsLimit() {
         OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_usage",
-                "{\"team\":\"Chargers\",\"position\":\"RB\"}", "Chargers backfield split.");
+                "{\"team\":\"Chargers\",\"position\":\"RB\"}",
+                "Keaton Mitchell played 90% of the snaps.");
 
         assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("Chargers RB usage")))
                 .isEqualTo(WebhookResult.OK);
 
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("Keaton Mitchell: 26 snaps (37%)")));
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("90%")));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
         for (String group : new String[] {null, "QB", "RB", "WR", "TE"}) {
             assertThat(report("LAC", group).table()).hasSizeLessThan(TELEGRAM_MESSAGE_LIMIT / 2);
         }

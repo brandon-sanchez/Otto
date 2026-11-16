@@ -143,6 +143,25 @@ public final class OutboundStubs {
     }
 
     /**
+     * The same canned run, but the first call answers with several tool
+     * calls at once.
+     *
+     * @param calls each tool's name, then its JSON arguments, in turn
+     */
+    public static void llmCallsToolsAtOnceThenPhrases(WireMockServer llm, String phrase,
+            String... calls) {
+        llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                .inScenario(TOOL_RUN)
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(completion(toolCallBody(calls)))
+                .willSetStateTo(TOOL_CALLED));
+        llm.stubFor(post(urlPathMatching(CHAT_COMPLETIONS_PATH))
+                .inScenario(TOOL_RUN)
+                .whenScenarioStateIs(TOOL_CALLED)
+                .willReturn(completion(contentBody(phrase))));
+    }
+
+    /**
      * The model's answers to fact-checked advice requests, in the order
      * it gives them; the last one repeats. Phrasing requests are left to
      * whatever {@link #llmPhrases} stubbed.
@@ -230,7 +249,18 @@ public final class OutboundStubs {
                 """.formatted(jsonString(phrase));
     }
 
-    private static String toolCallBody(String tool, String arguments) {
+    private static String toolCallBody(String... calls) {
+        StringBuilder toolCalls = new StringBuilder();
+        for (int index = 0; index < calls.length; index += 2) {
+            toolCalls.append(index == 0 ? "" : ",").append("""
+                    {
+                      "id": "call-%d",
+                      "type": "function",
+                      "function": {"name": %s, "arguments": %s}
+                    }
+                    """.formatted(index / 2 + 1, jsonString(calls[index]),
+                    jsonString(calls[index + 1])));
+        }
         return """
                 {
                   "id": "chatcmpl-fixture-tool",
@@ -243,19 +273,13 @@ public final class OutboundStubs {
                       "message": {
                         "role": "assistant",
                         "content": null,
-                        "tool_calls": [
-                          {
-                            "id": "call-1",
-                            "type": "function",
-                            "function": {"name": %s, "arguments": %s}
-                          }
-                        ]
+                        "tool_calls": [%s]
                       },
                       "finish_reason": "tool_calls"
                     }
                   ],
                   "usage": {"prompt_tokens": 120, "completion_tokens": 25, "total_tokens": 145}
                 }
-                """.formatted(jsonString(tool), jsonString(arguments));
+                """.formatted(toolCalls);
     }
 }

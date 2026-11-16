@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -269,8 +270,10 @@ public class AskTools {
             "what's his floor" and "how high can he go".""")
     public ToolAnswer<PlayerCeiling.Answer> getPlayerCeiling(
             @ToolParam(description = "The player, by name or Sleeper player id")
-            String player) {
-        return ceilings.explain(player, clock.instant());
+            String player, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(ceilings.explain(player, clock.instant(), checked.delivery()),
+                PlayerCeiling.Answer::message);
     }
 
     @Tool(name = "get_team_usage", description = """
@@ -289,8 +292,9 @@ public class AskTools {
             @ToolParam(required = false, description = """
                     QB, RB, WR or TE. Leave it out to compare every
                     group's share of the team's targets and carries.""")
-            String position) {
-        return teamUsage.forTeam(team, position);
+            String position, ToolContext context) {
+        return CheckedAnswers.of(context).offer(teamUsage.forTeam(team, position),
+                TeamUsage.Report::table);
     }
 
     @Tool(name = "get_league_rank", description = """
@@ -415,7 +419,12 @@ public class AskTools {
             or how he can improve as a manager, and never bring habits up
             otherwise. Its message is already written and fact-checked:
             send it exactly as it is, adding nothing.""")
-    public ToolAnswer<HabitService.Answer.Written> reviewHabits() {
+    public ToolAnswer<HabitService.Answer.Written> reviewHabits(ToolContext context) {
+        return CheckedAnswers.of(context).offer(habitsAnswer(),
+                HabitService.Answer.Written::message);
+    }
+
+    private ToolAnswer<HabitService.Answer.Written> habitsAnswer() {
         return switch (loader.leagueWeek()) {
             case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
             case SourceResult.Ok<LeagueWeek> ok -> switch (habits.answer(ok.value().league(),
@@ -440,8 +449,9 @@ public class AskTools {
                     The player, by name or Sleeper player id, or a future
                     draft pick written with its year and round, such as
                     2027 1st or 2027 early 2nd.""")
-            String subject) {
-        return marketValues.answer(subject);
+            String subject, ToolContext context) {
+        return CheckedAnswers.of(context).offer(marketValues.answer(subject),
+                MarketValueAnswers.Reply::message);
     }
 
     @Tool(name = "manage_watchlist", description = """

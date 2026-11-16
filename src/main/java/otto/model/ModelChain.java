@@ -30,6 +30,12 @@ import org.slf4j.LoggerFactory;
  * gets the time left minus a reserve for each later provider that may
  * still be asked, so one that hangs cannot use up the whole run.
  *
+ * <p>A run started inside another run's model call, such as a chat tool
+ * that asks a model of its own while the chat reply is being written,
+ * ends no later than that call's time minus its site's reserve. Its own
+ * site's longer deadline never outlasts the reply it works for, and the
+ * outer model keeps time to answer once the inner run gives up.
+ *
  * <p>The runs of one Check also share {@link ModelProperties.Budgets#check()},
  * so that several Alerts in one Check cannot outlast the scheduled
  * function's timeout. A run starts only while its whole deadline still
@@ -50,6 +56,8 @@ public class ModelChain {
 
     /** When the Check this thread runs must end, in {@link System#nanoTime} terms. */
     private static final ScopedValue<Long> CHECK_ENDS = ScopedValue.newInstance();
+
+    private static final ScopedValue<Long> NESTED_RUN_ENDS = ScopedValue.newInstance();
 
     public ModelChain(List<ChatProvider> providers, ProviderBreakers breakers,
             ModelProperties.Budgets budgets) {
@@ -95,11 +103,14 @@ public class ModelChain {
 
         private final ChatProvider provider;
         private final long untilNanos;
+        private final long nestedUntilNanos;
         private final boolean laterProviderRemains;
 
-        private Turn(ChatProvider provider, long untilNanos, boolean laterProviderRemains) {
+        private Turn(ChatProvider provider, long untilNanos, long nestedUntilNanos,
+                boolean laterProviderRemains) {
             this.provider = provider;
             this.untilNanos = untilNanos;
+            this.nestedUntilNanos = nestedUntilNanos;
             this.laterProviderRemains = laterProviderRemains;
         }
 
@@ -125,7 +136,8 @@ public class ModelChain {
             if (remaining <= 0) {
                 throw new ModelTimeout();
             }
-            Future<R> future = abandonableCalls.submit(call::get);
+            Future<R> future = abandonableCalls.submit(() ->
+                    ScopedValue.where(NESTED_RUN_ENDS, nestedUntilNanos).call(call::get));
             try {
                 return future.get(remaining, TimeUnit.NANOSECONDS);
             } catch (TimeoutException e) {
@@ -241,6 +253,9 @@ public class ModelChain {
     public <T> Result<T> call(CallSite site, ProviderCall<T> call) {
         ModelProperties.Budget budget = budget(site);
         long deadline = System.nanoTime() + budget.deadline().toNanos();
+        if (NESTED_RUN_ENDS.isBound() && NESTED_RUN_ENDS.get() - deadline < 0) {
+            deadline = NESTED_RUN_ENDS.get();
+        }
         if (CHECK_ENDS.isBound() && CHECK_ENDS.get() - deadline < 0) {
             throw new OutOfCheckTime();
         }
@@ -260,7 +275,8 @@ public class ModelChain {
                 continue;
             }
             try {
-                T value = call.call(new Turn(provider, until, later > 0));
+                T value = call.call(new Turn(provider, until,
+                        until - budget.reserve().toNanos(), later > 0));
                 breakers.succeeded(provider.name());
                 return new Result.Answered<>(provider, value, skipped);
             } catch (UnusableReply e) {
