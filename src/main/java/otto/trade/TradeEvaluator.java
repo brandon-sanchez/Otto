@@ -1,5 +1,6 @@
 package otto.trade;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
@@ -55,39 +57,19 @@ import otto.snapshot.RosterSnapshot;
 @Component
 public class TradeEvaluator {
 
-    /**
-     * How much harder a position is to replace, in the shape of this
-     * league. Superflex starts two quarterbacks, which is what makes
-     * the quarterback multiplier the largest one; a receiver is the
-     * position the waiver wire answers best, so he is the yardstick
-     * the other three are measured against.
-     */
-    private static final Map<String, Double> SCARCITY = Map.of(
-            "QB", 1.20,
-            "TE", 1.10,
-            "RB", 1.05,
-            "WR", 1.00);
-
-    /** A position nobody prices scarcity for is priced at face value. */
-    private static final double NO_SCARCITY = 1.00;
-
-    /** Inside this percentage of the larger side, the two sides are the same trade. */
-    private static final double EVEN_BAND = 5.0;
-
-    /** Past this percentage, the gap is larger than the math's own error. */
-    private static final double CLEAR_BAND = 15.0;
-
     private final PlayerLookup lookup;
     private final RestOfSeasonProjections restOfSeason;
     private final RosterFit rosterFit;
     private final LeagueAnalysis league;
+    private final TradeMarket market;
 
     public TradeEvaluator(PlayerLookup lookup, RestOfSeasonProjections restOfSeason,
-            RosterFit rosterFit, LeagueAnalysis league) {
+            RosterFit rosterFit, LeagueAnalysis league, TradeMarket market) {
         this.lookup = lookup;
         this.restOfSeason = restOfSeason;
         this.rosterFit = rosterFit;
         this.league = league;
+        this.market = market;
     }
 
     /**
@@ -145,30 +127,37 @@ public class TradeEvaluator {
     }
 
     /**
+     * @param yours the user's rest-of-season fit: what the trade does for
+     *        his roster over the weeks left
      * @param verdict even, slight edge or clear edge, from the user's
-     *        net alone - the trade is his decision and nobody else's
+     *        net alone on the measure that decides - the trade is his
+     *        decision and nobody else's
      * @param favours whose way the trade goes; on an even trade this is
      *        the lean, which is stated but is not a reason to act
      * @param gap the user's net as a share of the larger of his two
-     *        sides
-     * @param partnerOutcome what the same trade does for the partner,
-     *        which is context for what he will accept and never a
+     *        sides, on the measure that decides
+     * @param drivenBy which measure decides, rest-of-season fit or market
+     *        value, and why
+     * @param otherMeasure what the measure that doesn't decide says
+     * @param market both sides at market value, which is what the
+     *        partner weighs; null when the market prices nothing here
+     * @param partnerOutcome what the same trade does for the partner's
+     *        roster, which is context for what he will accept and never a
      *        reason to turn down a trade that is good for the user
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record TradeEvaluation(String tradeDeadline, String week, String partner,
             String restOfSeasonWeeks,
             Perspective yours, Perspective theirs, String verdict, String favours,
-            String gap, String confidence, String partnerOutcome, List<String> leverage,
+            String gap, String confidence, String drivenBy, String otherMeasure,
+            TradeMarket.MarketRead market, String partnerOutcome, List<String> leverage,
             PostTradeRoster yourRosterAfter, PostTradeRoster partnerRosterAfter,
             List<String> notes) {
     }
 
-    private static final String EVEN = "even";
-    private static final String SLIGHT_EDGE = "slight edge";
-    private static final String CLEAR_EDGE = "clear edge";
-
     private static final String YOU = "you";
+
+    private static final String TE_RECEPTION_BONUS = "bonus_rec_te";
 
     /** An exactly level trade leans nobody's way, and says so. */
     private static final String NOBODY = "neither of you";
@@ -227,11 +216,7 @@ public class TradeEvaluator {
 
     // -- resolving what the user typed --------------------------------------
 
-    /** One asset with the player it named, where it named one. */
-    private record Piece(TradeAsset asset, DirectoryPlayer player) {
-    }
-
-    private record Resolved(List<Piece> pieces, String failure) {
+    private record Resolved(List<TradePiece> pieces, String failure) {
     }
 
     /**
@@ -254,7 +239,7 @@ public class TradeEvaluator {
             return "you name %s twice on the same side of this trade, and there is only one "
                     .formatted(twice) + "of him";
         }
-        for (Piece piece : incoming.pieces()) {
+        for (TradePiece piece : incoming.pieces()) {
             if (piece.player() == null) {
                 continue;
             }
@@ -272,7 +257,7 @@ public class TradeEvaluator {
     /** The first player one side names more than once, or null. */
     private static String repeatedWithin(Resolved side) {
         Set<String> seen = new HashSet<>();
-        for (Piece piece : side.pieces()) {
+        for (TradePiece piece : side.pieces()) {
             if (piece.player() != null && !seen.add(piece.player().playerId())) {
                 return piece.player().fullName();
             }
@@ -281,10 +266,10 @@ public class TradeEvaluator {
     }
 
     private Resolved resolve(List<TradeAsset> assets) {
-        List<Piece> pieces = new ArrayList<>();
+        List<TradePiece> pieces = new ArrayList<>();
         for (TradeAsset asset : assets) {
             if (!(asset instanceof TradeAsset.Player named)) {
-                pieces.add(new Piece(asset, null));
+                pieces.add(new TradePiece(asset, null));
                 continue;
             }
             switch (lookup.find(named.reference())) {
@@ -292,7 +277,7 @@ public class TradeEvaluator {
                     return new Resolved(List.of(), notFound.reason());
                 }
                 case PlayerLookup.Match.Found found ->
-                    pieces.add(new Piece(asset, found.player()));
+                    pieces.add(new TradePiece(asset, found.player()));
             }
         }
         return new Resolved(pieces, null);
@@ -318,8 +303,9 @@ public class TradeEvaluator {
         }
         RestOfSeason points = ((SourceResult.Ok<RestOfSeason>) season).value();
         List<Slot> slots = leagueWeek.week().startingSlots();
-        Map<String, Double> replacement = replacementOverTheWeeksLeft(leagueWeek, positions,
-                points.weekCount());
+        LeagueShape shape = LeagueShape.of(leagueWeek.league(), leagueWeek.rosters().size());
+        Map<String, Double> replacement = replacementOverTheWeeksLeft(leagueWeek, shape,
+                positions, points.weekCount());
 
         // Four numbers, not two. Each team prices what it gains against
         // the roster it would then hold, and what it loses against the
@@ -330,24 +316,24 @@ public class TradeEvaluator {
         Roster myAfter = myNow.without(outgoing).with(incoming, positions, points);
         Roster theirAfter = theirNow.without(incoming).with(outgoing, positions, points);
 
-        Priced myGain = side(slots, incoming, points, myAfter, replacement);
-        Priced myCost = side(slots, outgoing, points, myNow, replacement);
-        Priced theirGain = side(slots, outgoing, points, theirAfter, replacement);
-        Priced theirCost = side(slots, incoming, points, theirNow, replacement);
+        Priced myGain = side(slots, shape, incoming, points, myAfter, replacement);
+        Priced myCost = side(slots, shape, outgoing, points, myNow, replacement);
+        Priced theirGain = side(slots, shape, outgoing, points, theirAfter, replacement);
+        Priced theirCost = side(slots, shape, incoming, points, theirNow, replacement);
 
         double myNet = myGain.total() - myCost.total();
         double theirNet = theirGain.total() - theirCost.total();
         double larger = Math.max(myGain.total(), myCost.total());
-        // Classify from the number the reader is shown. A gap printed as
-        // 5.0% must not be called even in one trade and a slight edge in
-        // the next; the rounding is the thing the two have to agree on.
-        double gap = larger == 0 ? 0 : round(Math.abs(myNet) / larger * 100);
 
         // The band reads the user's net and nothing else. What the trade
         // does for the other manager is his business, not a reason to
         // talk the user out of a deal that is good for him.
-        String verdict = gap < EVEN_BAND ? EVEN : gap <= CLEAR_BAND ? SLIGHT_EDGE : CLEAR_EDGE;
-        String favours = myNet > 0 ? YOU : myNet < 0 ? partner.manager() : NOBODY;
+        VerdictBand fit = VerdictBand.of(myGain.total(), myCost.total());
+        String fitFavours = myNet > 0 ? YOU : myNet < 0 ? partner.manager() : NOBODY;
+        TradeMarket.Read priced = market.read(leagueWeek, mine, partner, incoming.pieces(),
+                outgoing.pieces());
+        TradeCall call = TradeCall.decide(leagueWeek.league().rules().format(), fit,
+                fitFavours, priced, partner.manager());
         // A trade nobody can actually make must never state itself. A
         // player neither manager holds still carries his full price, so
         // naming one on the wrong side would otherwise buy a High-
@@ -359,17 +345,19 @@ public class TradeEvaluator {
         // It may still be reported; it may not state itself.
         boolean gainUnpriced = !holdsAPricedPlayer(incoming, points);
         boolean costUnpriced = !holdsAPricedPlayer(outgoing, points);
-        boolean sideUnpriced = gainUnpriced || costUnpriced;
-        Confidence confidence = CLEAR_EDGE.equals(verdict) && offRoster.isEmpty()
-                && !sideUnpriced
+        boolean sideUnpriced = call.marketDecides()
+                ? !priced.bothSidesPriced()
+                : gainUnpriced || costUnpriced;
+        boolean deliverable = offRoster.isEmpty() && !priced.undeliverable();
+        Confidence confidence = call.band().clear() && deliverable && !sideUnpriced
                 ? Confidence.HIGH
                 : Confidence.MEDIUM;
 
         List<String> notes = new ArrayList<>(points.notes());
-        notes.add("A player is worth his rest-of-season points above Replacement Level, times "
-                + "a scarcity multiplier (QB 1.20, TE 1.10, RB 1.05, WR 1.00), times how he "
-                + "fits the roster reading him (1.10 he starts there, 0.90 he is buried, 1.00 "
-                + "otherwise)");
+        notes.add(shape.describe());
+        notes.add("Each player's points are then multiplied by his position's scarcity and by "
+                + "how he fits the roster that would hold him: 1.10 when he starts there, 0.90 "
+                + "when he'd sit behind a better player at his position, and 1.00 otherwise");
         notes.add(("Each team is priced against its own roster, so both can come out ahead. The "
                 + "verdict is yours alone: what this does for %s is context for whether he "
                 + "will agree, and never a reason to turn down a trade that is good for you")
@@ -378,24 +366,26 @@ public class TradeEvaluator {
                 + "point different ways. The net asks whether the value is fair, and counts "
                 + "positional scarcity. The starting lineup asks what the team would actually "
                 + "score, and counts none");
-        if (larger == 0) {
+        if (!call.marketDecides() && larger == 0) {
             notes.add("Nothing on either side of this trade carries a price above Replacement "
                     + "Level, so there is no verdict here to read");
-        } else if (EVEN.equals(verdict)) {
+        } else if (VerdictBand.EVEN.equals(call.band().verdict())) {
             notes.add(("Your two sides are inside %.0f%% of each other, which is a coin flip. "
                     + "The lean is stated because you asked, not because it is a reason to act")
-                    .formatted(EVEN_BAND));
+                    .formatted(VerdictBand.EVEN_BAND));
         }
-        notes.addAll(pickNotes(incoming, outgoing));
-        if (gainUnpriced && costUnpriced) {
-            notes.add("Neither side of this trade holds anything I can put a price on");
-        } else if (sideUnpriced) {
-            notes.add("One side of this trade holds nothing I can put a price on, so the "
-                    + "numbers describe the other side alone");
+        priced.unavailable().ifPresent(notes::add);
+        notes.addAll(priced.pickNotes());
+        tePremium(leagueWeek, incoming, outgoing).ifPresent(notes::add);
+        if (sideUnpriced) {
+            notes.add(!call.marketDecides() && gainUnpriced && costUnpriced
+                    ? "Neither side of this trade holds anything I can put a price on"
+                    : "One side of this trade holds nothing I can put a price on, so the "
+                            + "numbers describe the other side alone");
         }
-        if (!offRoster.isEmpty()) {
-            notes.add("This trade names a player the team giving him up does not hold, so it "
-                    + "is not a trade either manager could agree to as written. Read the "
+        if (!deliverable) {
+            notes.add("This trade names a player or pick the team giving it up doesn't hold, "
+                    + "so it isn't a trade either manager could agree to as written. Read the "
                     + "verdict as a sketch and check the names first");
             notes.addAll(offRoster);
         }
@@ -408,10 +398,13 @@ public class TradeEvaluator {
                 perspective(YOU, myGain, myCost, myNet, slots, myNow, myAfter),
                 perspective(partner.manager(), theirGain, theirCost, theirNet, slots, theirNow,
                         theirAfter),
-                verdict,
-                favours,
-                String.format(Locale.ROOT, "%.1f%%", gap),
+                call.band().verdict(),
+                call.favours(),
+                String.format(Locale.ROOT, "%.1f%%", call.band().gap()),
                 confidence.name(),
+                call.drivenBy(),
+                call.otherMeasure(),
+                priced.market().orElse(null),
                 partnerOutcome(partner, theirNet),
                 deadline.filter(TradeDeadline::passed).isPresent()
                         ? List.of()
@@ -424,9 +417,9 @@ public class TradeEvaluator {
     private PostTradeRoster postTradeRoster(RosterSnapshot before, Roster after,
             Resolved leaving, Resolved arriving, List<Slot> slots) {
         Set<String> holdings = new LinkedHashSet<>(before.players());
-        leaving.pieces().stream().map(Piece::player).filter(Objects::nonNull)
+        leaving.pieces().stream().map(TradePiece::player).filter(Objects::nonNull)
                 .map(DirectoryPlayer::playerId).forEach(holdings::remove);
-        arriving.pieces().stream().map(Piece::player).filter(Objects::nonNull)
+        arriving.pieces().stream().map(TradePiece::player).filter(Objects::nonNull)
                 .map(DirectoryPlayer::playerId).forEach(holdings::add);
 
         Set<String> reserve = retained(before.reserve(), holdings);
@@ -468,7 +461,7 @@ public class TradeEvaluator {
     private TradeRosterLine rosterLine(String slot, String playerId, RosterSnapshot before,
             Resolved arriving) {
         DirectoryPlayer incoming = arriving.pieces().stream()
-                .map(Piece::player)
+                .map(TradePiece::player)
                 .filter(Objects::nonNull)
                 .filter(player -> player.playerId().equals(playerId))
                 .findFirst()
@@ -490,10 +483,11 @@ public class TradeEvaluator {
      * field nobody; he claims the best free agent there is.
      */
     private Map<String, Double> replacementOverTheWeeksLeft(LeagueWeek leagueWeek,
-            Map<String, String> positions, int weeks) {
+            LeagueShape shape, Map<String, String> positions, int weeks) {
         Map<String, Double> replacement = new LinkedHashMap<>();
         positions.values().stream().filter(Objects::nonNull).distinct().sorted()
-                .forEach(position -> league.replacementLevel(leagueWeek, position)
+                .forEach(position -> league.replacementLevel(leagueWeek, position,
+                                shape.replacementRank(position))
                         .ifPresent(weekly -> replacement.put(position, weekly * weeks)));
         return replacement;
     }
@@ -552,10 +546,10 @@ public class TradeEvaluator {
          * This roster without the rest of one side of the trade, so an
          * asset is never read against players that move with it.
          */
-        Roster alongside(Resolved side, Piece priced) {
+        Roster alongside(Resolved side, TradePiece priced) {
             Map<String, Double> held = new LinkedHashMap<>(points);
             Map<String, String> heldPositions = new LinkedHashMap<>(positions);
-            for (Piece other : side.pieces()) {
+            for (TradePiece other : side.pieces()) {
                 if (other == priced || other.player() == null) {
                     continue;
                 }
@@ -585,7 +579,7 @@ public class TradeEvaluator {
         Roster without(Resolved leaving) {
             Map<String, Double> held = new LinkedHashMap<>(points);
             Map<String, String> heldPositions = new LinkedHashMap<>(positions);
-            for (Piece piece : leaving.pieces()) {
+            for (TradePiece piece : leaving.pieces()) {
                 if (piece.player() != null) {
                     held.remove(piece.player().playerId());
                     heldPositions.remove(piece.player().playerId());
@@ -597,7 +591,7 @@ public class TradeEvaluator {
         Roster with(Resolved arriving, Map<String, String> allPositions, RestOfSeason season) {
             Map<String, Double> held = new LinkedHashMap<>(points);
             Map<String, String> heldPositions = new LinkedHashMap<>(positions);
-            for (Piece piece : arriving.pieces()) {
+            for (TradePiece piece : arriving.pieces()) {
                 if (piece.player() == null) {
                     continue;
                 }
@@ -615,11 +609,11 @@ public class TradeEvaluator {
     private record Priced(SideValue side, double total) {
     }
 
-    private Priced side(List<Slot> slots, Resolved assets, RestOfSeason season, Roster reading,
+    private Priced side(List<Slot> slots, LeagueShape shape, Resolved assets, RestOfSeason season, Roster reading,
             Map<String, Double> replacement) {
         List<AssetValue> values = new ArrayList<>();
         double total = 0;
-        for (Piece piece : assets.pieces()) {
+        for (TradePiece piece : assets.pieces()) {
             // Bidding money is not part of a trade in this league, so it
             // is parsed and dropped rather than shown priced at nothing.
             if (piece.asset() instanceof TradeAsset.Faab) {
@@ -629,7 +623,7 @@ public class TradeEvaluator {
             // moving. Two backs sent together must not each be called
             // buried behind the other: they both leave.
             Roster alone = reading.alongside(assets, piece);
-            Valued valued = value(slots, piece, season, alone, replacement);
+            Valued valued = value(slots, shape, piece, season, alone, replacement);
             values.add(valued.asset());
             total += valued.value();
         }
@@ -640,13 +634,13 @@ public class TradeEvaluator {
     private record Valued(AssetValue asset, double value) {
     }
 
-    private Valued value(List<Slot> slots, Piece piece, RestOfSeason season, Roster reading,
+    private Valued value(List<Slot> slots, LeagueShape shape, TradePiece piece, RestOfSeason season, Roster reading,
             Map<String, Double> replacement) {
         if (piece.asset() instanceof TradeAsset.DraftPick) {
             return new Valued(new AssetValue(piece.asset().reference(), "draft pick",
                     null, null, null, null, null, null, null, "0.0", null,
-                    "Otto puts no price on a draft pick, so this side carries one thing the "
-                            + "verdict cannot see"), 0.0);
+                    "A draft pick scores nothing this season, so the rest-of-season numbers "
+                            + "can't see it. Its price is in the market value"), 0.0);
         }
         DirectoryPlayer player = piece.player();
         Optional<Double> projected = season.points(player.playerId());
@@ -660,7 +654,7 @@ public class TradeEvaluator {
         // to trade for: the manager can have that player for a claim.
         Double line = replacement.get(player.position());
         double above = Math.max(0, projected.orElseThrow() - (line == null ? 0 : line));
-        double scarcity = SCARCITY.getOrDefault(player.position(), NO_SCARCITY);
+        double scarcity = shape.scarcity(player.position());
         RosterFit.Factor fit = rosterFit.of(slots,
                 reading.holding(player, projected.orElseThrow()).pool(), player.playerId());
         double value = above * scarcity * fit.factor();
@@ -746,14 +740,18 @@ public class TradeEvaluator {
 
     // -- notes --------------------------------------------------------------
 
-    private static List<String> pickNotes(Resolved incoming, Resolved outgoing) {
-        if (names(incoming, TradeAsset.DraftPick.class)
-                || names(outgoing, TradeAsset.DraftPick.class)) {
-            return List.of("Draft picks count zero. Otto has no way to price a pick in this "
-                    + "league, so a trade that turns on one is a trade this verdict cannot "
-                    + "settle");
+    private static Optional<String> tePremium(LeagueWeek leagueWeek, Resolved incoming,
+            Resolved outgoing) {
+        double bonus = leagueWeek.league().scoringSettings().getOrDefault(TE_RECEPTION_BONUS, 0.0);
+        boolean tightEndMoves = Stream.of(incoming, outgoing)
+                .flatMap(side -> side.pieces().stream())
+                .anyMatch(piece -> piece.player() != null && "TE".equals(piece.player().position()));
+        if (bonus <= 0 || !tightEndMoves) {
+            return Optional.empty();
         }
-        return List.of();
+        return Optional.of(("Your league pays tight ends an extra %s points a catch. The market "
+                + "values don't count that, so the rest-of-season numbers carry it")
+                .formatted(BigDecimal.valueOf(bonus).stripTrailingZeros().toPlainString()));
     }
 
     /**
@@ -768,21 +766,17 @@ public class TradeEvaluator {
                         && season.points(piece.player().playerId()).isPresent());
     }
 
-    private static boolean names(Resolved side, Class<? extends TradeAsset> kind) {
-        return side.pieces().stream().anyMatch(piece -> kind.isInstance(piece.asset()));
-    }
-
     /** A player neither team holds is a trade the user has mis-typed. */
     private static List<String> offRosterNotes(RosterSnapshot mine, RosterSnapshot partner,
             Resolved incoming, Resolved outgoing) {
         List<String> notes = new ArrayList<>();
-        for (Piece piece : incoming.pieces()) {
+        for (TradePiece piece : incoming.pieces()) {
             if (piece.player() != null && !partner.players().contains(piece.player().playerId())) {
                 notes.add("%s is not on %s's roster, so check who you meant".formatted(
                         piece.player().fullName(), partner.manager()));
             }
         }
-        for (Piece piece : outgoing.pieces()) {
+        for (TradePiece piece : outgoing.pieces()) {
             if (piece.player() != null && !mine.players().contains(piece.player().playerId())) {
                 notes.add("%s is not on your roster, so check who you meant"
                         .formatted(piece.player().fullName()));
@@ -801,7 +795,7 @@ public class TradeEvaluator {
 
     private static void addTraded(Map<String, String> positions, Map<String, String> teams,
             Resolved side) {
-        for (Piece piece : side.pieces()) {
+        for (TradePiece piece : side.pieces()) {
             if (piece.player() == null) {
                 continue;
             }

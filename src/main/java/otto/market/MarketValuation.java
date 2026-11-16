@@ -30,10 +30,13 @@ public class MarketValuation {
 
     private final MarketValues values;
     private final NflverseStore nflverse;
+    private final KeeperCosts keeperCosts;
 
-    public MarketValuation(MarketValues values, NflverseStore nflverse) {
+    public MarketValuation(MarketValues values, NflverseStore nflverse,
+            KeeperCosts keeperCosts) {
         this.values = values;
         this.nflverse = nflverse;
+        this.keeperCosts = keeperCosts;
     }
 
     /** What is being priced. */
@@ -149,7 +152,7 @@ public class MarketValuation {
         };
     }
 
-    private static MarketQuote.Keeper blend(Optional<Integer> keeperLimit,
+    private MarketQuote.Keeper blend(Optional<Integer> keeperLimit,
             List<RosterSnapshot> rosters, String playerId, int redraftValue,
             DynastyValues dynasty) {
         Optional<Valued> own = dynasty.of(playerId);
@@ -178,9 +181,10 @@ public class MarketValuation {
                         .limit(limit)
                         .anyMatch(entry -> entry.getKey().equals(playerId)))
                 .orElse(false);
-        boolean likely = topOfHisTeam && ownValue.get() > line;
+        int bonus = ownValue.get() - keeperCosts.costOf(playerId, line);
+        boolean likely = topOfHisTeam && bonus > 0;
         return new MarketQuote.Keeper(keeperLimit, likely, redraftValue, ownValue, ownSource,
-                line, likely ? ownValue.get() - line : 0);
+                line, likely ? bonus : 0);
     }
 
     private static List<String> everyPlayer(RosterSnapshot roster) {

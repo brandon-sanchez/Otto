@@ -61,7 +61,7 @@ public class LeagueAnalysis {
      * count as half a win, which is the same order without needing a
      * second sort key for them.
      */
-    private static final Comparator<RosterSnapshot> BY_SEED = Comparator
+    public static final Comparator<RosterSnapshot> BY_SEED = Comparator
             .comparingDouble((RosterSnapshot roster) ->
                     roster.teamRecord().wins() + 0.5 * roster.teamRecord().ties())
             .thenComparingDouble(roster -> roster.teamRecord().pointsFor())
@@ -368,8 +368,16 @@ public class LeagueAnalysis {
      * different things on the same afternoon.
      */
     public Optional<Double> replacementLevel(LeagueWeek league, String position) {
-        return ranking(league).flatMap(ranked ->
-                ranked.pointsAtRank(position, replacementCutoffs.forPosition(position)));
+        return replacementLevel(league, position, replacementCutoffs.forPosition(position));
+    }
+
+    /**
+     * What a week of Replacement Level is worth at one position when the
+     * caller sets the cutoff rank, as a trade does from the league's own
+     * starting slots. Empty when the table does not reach that rank.
+     */
+    public Optional<Double> replacementLevel(LeagueWeek league, String position, int rank) {
+        return ranking(league).flatMap(ranked -> ranked.pointsAtRank(position, rank));
     }
 
     /**

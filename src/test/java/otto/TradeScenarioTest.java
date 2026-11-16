@@ -6,18 +6,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.harness.Fixtures;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -118,6 +122,33 @@ class TradeScenarioTest extends WireSeamTest {
         resetOutboundStubsAfterCheck();
     }
 
+    /** The same week-12 league read under another league document. */
+    private void snapshotOfTheLeagueAs(String leagueFixture) {
+        week12League();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture,
+                "league-" + leagueFixture);
+        checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
+    }
+
+    private static void fantasyCalcAnswers(boolean dynasty, String fixture) {
+        fantasyCalc.stubFor(get(urlPathEqualTo("/values/current"))
+                .withQueryParam("isDynasty", equalTo(String.valueOf(dynasty)))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(Fixtures.read(fixture))));
+    }
+
+    /** A dynasty or keeper league with both FantasyCalc lists and the league's moved picks. */
+    private void longTermLeague(String leagueFixture) {
+        snapshotOfTheLeagueAs(leagueFixture);
+        fantasyCalcAnswers(false, "fantasycalc/values-trade-redraft.json");
+        fantasyCalcAnswers(true, "fantasycalc/values-trade-dynasty.json");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/traded_picks",
+                "sleeper/traded-picks-trade.json", "traded-picks-v1");
+    }
+
     private void ask(String text) {
         assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage(text)))
                 .isEqualTo(WebhookResult.OK);
@@ -126,6 +157,11 @@ class TradeScenarioTest extends WireSeamTest {
     private static String trade(String gets, String gives) {
         return "{\"manager\":\"GridironGoblin\",\"gets\":\"%s\",\"gives\":\"%s\"}"
                 .formatted(gets, gives);
+    }
+
+    /** A number the model was handed, as it appears inside the chat request. */
+    private static String number(String name, String value) {
+        return "\\\"%s\\\":%s".formatted(name, value);
     }
 
     /** What the model was handed, as it appears inside the chat request. */
@@ -386,24 +422,27 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     /**
-     * Otto prices no draft pick, so a pick counts zero and the answer
-     * says in as many words that the verdict cannot see it. Saying
-     * nothing would let a pick-for-player trade read as a robbery.
+     * A redraft league starts over every year, so the market puts no
+     * value on a pick there and the rest-of-season numbers can't see one
+     * either. The answer says why the pick counts for nothing rather
+     * than pricing it at zero in silence.
      */
     @Test
-    void aDraftPickCountsZeroAndTheAnswerSaysItIsUnvalued() {
+    void aDraftPickInARedraftLeagueCarriesNoValueAndTheAnswerSaysWhy() {
         snapshotOfTheLeague();
+        fantasyCalcAnswers(false, "fantasycalc/values-trade-redraft.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("TE Depth 06 and a 2027 1st round pick", "Josh Jacobs"),
-                "I cannot price the pick, so read this as the players alone.");
+                "The pick has no value in a redraft league.");
 
         ask("TE Depth 06 plus a 2027 1st for Josh Jacobs?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("kind", "draft pick")))
                 .withRequestBody(containing(field("asset", "a 2027 1st round pick")))
-                .withRequestBody(containing("Otto puts no price on a draft pick"))
-                .withRequestBody(containing("Draft picks count zero")));
+                .withRequestBody(containing("A draft pick scores nothing this season"))
+                .withRequestBody(containing("Draft picks carry no value in a redraft league"))
+                .withRequestBody(notContaining("Draft picks count zero")));
     }
 
     /**
@@ -555,7 +594,7 @@ class TradeScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "clear edge")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
-                .withRequestBody(containing("not a trade either manager could agree to"))
+                .withRequestBody(containing("isn't a trade either manager could agree to"))
                 .withRequestBody(containing(
                         "Justin Jefferson is not on GridironGoblin's roster")));
     }
@@ -652,5 +691,203 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("no manager in this league matches")));
+    }
+
+    /**
+     * A one-quarterback league fills one quarterback slot a team, so
+     * only ten quarterbacks start in a ten-team league. QB Depth 05 is
+     * priced against the tenth quarterback, not the twenty-fourth, and
+     * carries no Superflex premium.
+     */
+    @Test
+    void aOneQuarterbackLeagueDoesNotPriceQuarterbacksLikeSuperflex() {
+        snapshotOfTheLeagueAs("sleeper/league-market-1qb-half-ppr.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("QB Depth 05", "Justin Jefferson"),
+                "Quarterbacks are cheap in a one-quarterback league.");
+
+        ask("Jefferson for QB Depth 05, worth it?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(notContaining(field("scarcity", "1.20")))
+                .withRequestBody(containing("ranks 10th among QBs"))
+                .withRequestBody(containing("only one quarterback")));
+    }
+
+    /**
+     * A redraft league plays for this season alone, so the
+     * rest-of-season fit decides, and the market says whether the other
+     * manager would accept. On FantasyCalc James Cook is worth 6392 and
+     * TE Depth 06 5200, so GridironGoblin gets more value than he gives
+     * and would likely say yes to a trade the fit calls a clear edge for
+     * the user.
+     */
+    @Test
+    void aRedraftTradeIsDecidedByFitWithTheMarketSayingWhetherHeWouldAccept() {
+        snapshotOfTheLeague();
+        fantasyCalcAnswers(false, "fantasycalc/values-trade-redraft.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "Take it, and he should say yes.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing(field("favours", "you")))
+                .withRequestBody(containing("Your rest-of-season fit decides this call"))
+                .withRequestBody(containing(
+                        "On market value alone this is a clear edge for GridironGoblin"))
+                .withRequestBody(containing(number("net", "-1192")))
+                .withRequestBody(containing("GridironGoblin gets at least about what he gives"))
+                .withRequestBody(containing("12-team Superflex PPR redraft")));
+    }
+
+    /**
+     * The market doesn't model TE premium, so the league's own scoring
+     * carries it. TE Depth 06 projects 4 catches a week here: in this
+     * league's PPR with half a point more for a tight end's catch he
+     * scores 22.0 a week, 66.0 over the three weeks left, where a
+     * league without the bonus scores him 60.0.
+     */
+    @Test
+    void tePremiumIsCountedThroughTheLeaguesOwnScoring() {
+        week12League();
+        tightEndCatches();
+        checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "His catches are worth more in your league.");
+
+        ask("Cook for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("restOfSeasonPoints", "66.0")))
+                .withRequestBody(containing("Your league pays tight ends an extra 0.5 points a "
+                        + "catch. The market values don't count that")));
+    }
+
+    @Test
+    void aLeagueWithoutTePremiumScoresATightEndsCatchLikeAnyOther() {
+        week12League();
+        tightEndCatches();
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                "sleeper/league-in-season-no-te-premium.json", "league-no-te-premium");
+        checkRunner.runCheck();
+        resetOutboundStubsAfterCheck();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "A catch is a catch here.");
+
+        ask("Cook for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("restOfSeasonPoints", "60.0")))
+                .withRequestBody(notContaining("pays tight ends an extra")));
+    }
+
+    private void tightEndCatches() {
+        SleeperStubs.stubJson(sleeper, PROJECTIONS_12, "sleeper/projections-trade-te-catches.json",
+                "projections-catches-w12");
+        SleeperStubs.stubJson(sleeper, PROJECTIONS_13, "sleeper/projections-trade-te-catches.json",
+                "projections-catches-w13");
+        SleeperStubs.stubJson(sleeper, PROJECTIONS_14, "sleeper/projections-trade-te-catches.json",
+                "projections-catches-w14");
+    }
+
+    /**
+     * A keeper's worth runs into next season, so the market decides. In
+     * a three-keeper league Bijan Robinson is his team's most valuable
+     * player and a likely keeper, so his redraft value carries his
+     * dynasty value on top as a keeper bonus, and that outweighs the two
+     * players coming back even though they help the user more this year.
+     */
+    @Test
+    void aKeeperTradeIsDecidedByMarketValueWithTheKeeperBonusCounted() {
+        longTermLeague("sleeper/league-keeper.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06 and RB Depth 08", "Bijan Robinson"),
+                "Keep Bijan.");
+
+        ask("Bijan for TE Depth 06 and RB Depth 08?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Market value decides this call. In a keeper league"))
+                .withRequestBody(containing("He's a likely keeper, so his 8945 redraft value "
+                        + "carries a 9636 keeper bonus on top"))
+                .withRequestBody(containing(number("total", "18581")))
+                .withRequestBody(containing(field("favours", "GridironGoblin")))
+                .withRequestBody(containing("On rest-of-season fit alone this is")));
+    }
+
+    /**
+     * Picks are priced in dynasty from the pick the partner actually
+     * holds. GridironGoblin holds his own 2027 1st and TwoPointTina's,
+     * and the user asked for an early one, which is TwoPointTina's: she
+     * is last in the standings. FantasyCalc prices an early 2027 1st at
+     * 4982 against James Cook's 5166, inside 5%, so the trade is a coin
+     * flip on the measure that decides it.
+     */
+    @Test
+    void aDynastyTradePricesTheEarlyPickThePartnerHolds() {
+        longTermLeague("sleeper/league-dynasty.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("2027 early 1st", "James Cook"),
+                "That's a fair price for Cook.");
+
+        ask("Cook for GridironGoblin's early 2027 first?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("Market value decides this call. In a dynasty league"))
+                .withRequestBody(containing(field("asset", "2027 early 1st-round pick")))
+                .withRequestBody(containing(number("value", "4982")))
+                .withRequestBody(containing("This is TwoPointTina's pick, which GridironGoblin "
+                        + "got in a trade"))
+                .withRequestBody(containing(field("verdict", "even")))
+                .withRequestBody(notContaining("Draft picks count zero")));
+    }
+
+    /**
+     * A 1st named without its place in the round is the partner's own,
+     * placed from where he stands: first of twelve picks late. The market
+     * has no late 2027 1st, so the pick is priced as a 2027 1st.
+     */
+    @Test
+    void aPickNamedWithoutItsPlaceIsPlacedFromTheStandings() {
+        longTermLeague("sleeper/league-dynasty.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("2027 1st", "Josh Jacobs"),
+                "His pick will fall late.");
+
+        ask("Jacobs for GridironGoblin's 2027 first?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("GridironGoblin is 1st of 12 in the standings, so "
+                        + "the pick should fall late in the round"))
+                .withRequestBody(containing("GridironGoblin holds 2 2027 1sts, and I priced the "
+                        + "one from GridironGoblin"))
+                .withRequestBody(containing(number("value", "2892"))));
+    }
+
+    /**
+     * The user's 2028 1st went to WaiverWizard, so he can't send it. The
+     * trade is still priced, because he may have mixed up his picks, but
+     * it never states itself at High.
+     */
+    @Test
+    void aPickTheUserNoLongerHoldsIsNamedAndNeverStatesItselfAtHigh() {
+        longTermLeague("sleeper/league-dynasty.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "2028 1st"),
+                "You already traded that pick.");
+
+        ask("my 2028 first for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("You don't hold a 2028 1st. Your own went to "
+                        + "WaiverWizard"))
+                .withRequestBody(containing(field("confidence", "MEDIUM")))
+                .withRequestBody(containing("isn't a trade either manager could agree to")));
     }
 }
