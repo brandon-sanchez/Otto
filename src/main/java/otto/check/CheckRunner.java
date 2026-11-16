@@ -25,6 +25,7 @@ import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.habits.HabitLedger;
 import otto.model.ModelChain;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
@@ -67,6 +68,7 @@ public class CheckRunner {
     private final BoardRouting routing;
     private final VerificationService verificationService;
     private final WatchlistWatcher watchlistWatcher;
+    private final HabitLedger habits;
     private final SelfReportService selfReport;
     private final ModelChain models;
     private final Clock clock;
@@ -81,8 +83,8 @@ public class CheckRunner {
             WaiverBoardService waiverBoard, BoardComparison boardComparison,
             BoardRouting routing,
             VerificationService verificationService,
-            WatchlistWatcher watchlistWatcher, SelfReportService selfReport, ModelChain models,
-            Clock clock, OttoProperties properties) {
+            WatchlistWatcher watchlistWatcher, HabitLedger habits, SelfReportService selfReport,
+            ModelChain models, Clock clock, OttoProperties properties) {
         this.directoryService = directoryService;
         this.directoryStore = directoryStore;
         this.sleeper = sleeper;
@@ -99,6 +101,7 @@ public class CheckRunner {
         this.routing = routing;
         this.verificationService = verificationService;
         this.watchlistWatcher = watchlistWatcher;
+        this.habits = habits;
         this.selfReport = selfReport;
         this.models = models;
         this.clock = clock;
@@ -158,6 +161,7 @@ public class CheckRunner {
             round.ifPresent(open -> boardComparison.considerBaselines(leagueWeek, open, scored));
             boardComparison.considerJudging(stage.league().leagueId(), now);
             verificationService.verify(inSeason.get(), week, now);
+            habits.update(stage.league(), inSeason.get(), week, now);
         }
 
         LeagueStatus leagueStatus = stage.snapshot().map(Snapshot::leagueStatus)

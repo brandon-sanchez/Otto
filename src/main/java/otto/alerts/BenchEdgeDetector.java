@@ -32,7 +32,10 @@ import otto.snapshot.RosterSnapshot;
 public class BenchEdgeDetector {
 
     /** The fact holding the Sleeper id of the bench player the swap would start. */
-    static final String BENCH_ID = "benchId";
+    public static final String BENCH_ID = "benchId";
+
+    /** The fact holding the Sleeper id of the starter the swap would sit. */
+    public static final String STARTER_ID = "starterId";
 
     private final LineupOptimizer optimizer;
     private final SettingsStore settings;
@@ -108,7 +111,7 @@ public class BenchEdgeDetector {
         facts.put(BENCH_ID, in);
         facts.put("benchProjection", inPoints);
         facts.put("starter", outName);
-        facts.put("starterId", out);
+        facts.put(STARTER_ID, out);
         facts.put("starterProjection", outPoints);
         facts.put("edge", edgeText);
         facts.put("slot", slotName);

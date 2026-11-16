@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import otto.advice.RankConvention;
 import otto.board.WaiverPreferences;
 import otto.check.WeekFacts;
+import otto.habits.HabitService;
 import otto.settings.SettingsService;
 import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
@@ -44,13 +45,15 @@ public class AskTools {
     private final LeagueRankLookup leagueRanks;
     private final WaiverPreferences waiverPreferences;
     private final PlayerCeiling ceilings;
+    private final HabitService habits;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
-            WaiverPreferences waiverPreferences, PlayerCeiling ceilings, Clock clock) {
+            WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
+            Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -64,6 +67,7 @@ public class AskTools {
         this.leagueRanks = leagueRanks;
         this.waiverPreferences = waiverPreferences;
         this.ceilings = ceilings;
+        this.habits = habits;
         this.clock = clock;
     }
 
@@ -395,6 +399,28 @@ public class AskTools {
                 }
                 yield trades.evaluate(ok.value(), matches.getFirst(), gets, gives);
             }
+        };
+    }
+
+    @Tool(name = "review_habits", description = """
+            How the user manages his team, measured from his own results
+            this season: points left on his bench, how following or
+            overriding Otto's start/sit and waiver calls turned out,
+            chasing last week's big game, starting Questionable players,
+            favouring one NFL team, and his waiver, FAAB and trade
+            activity. It reports only the habits that cost him points.
+            Call this only when he asks about his habits, his mistakes
+            or how he can improve as a manager, and never bring habits up
+            otherwise. Its message is already written and fact-checked:
+            send it exactly as it is, adding nothing.""")
+    public ToolAnswer<HabitService.Answer.Written> reviewHabits() {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
+            case SourceResult.Ok<LeagueWeek> ok -> switch (habits.answer(ok.value().league(),
+                    ok.value().snapshot(), ok.value().week(), clock.instant())) {
+                case HabitService.Answer.Written written -> ToolAnswer.of(written);
+                case HabitService.Answer.Unavailable none -> ToolAnswer.unavailable(none.reason());
+            };
         };
     }
 

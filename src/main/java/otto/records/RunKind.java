@@ -11,5 +11,7 @@ public enum RunKind {
     PLAYER_DECISION,
     /** A player's ceiling and floor, explained in chat when the user asks. */
     PLAYER_CEILING,
-    ALERT
+    ALERT,
+    /** The answer to the user asking about his management habits. */
+    HABITS
 }
