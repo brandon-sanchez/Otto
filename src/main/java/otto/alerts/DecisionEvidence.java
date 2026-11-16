@@ -2,6 +2,7 @@ package otto.alerts;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -18,6 +19,7 @@ import otto.advice.EvidenceItem;
 import otto.advice.LineupMove;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.decisions.TaxiSquad;
 import otto.directory.DirectoryPlayer;
@@ -39,13 +41,22 @@ final class DecisionEvidence {
 
     /**
      * The evidence for a status change on a player whose slot is not a
-     * lineup problem in this Check.
+     * lineup problem in this Check. A starter his team ruled out still
+     * gets his slot filled.
      */
     static LineupEvidence.Draft draft(AlertCandidate transition, Map<String, String> research,
-            LeagueWeek leagueWeek, RosterSnapshot roster, Collection<DirectoryPlayer> directory,
+            PlayerAvailability availability, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, Instant now) {
-        StatusChange change = statusChange(transition, research, leagueWeek, roster, directory,
-                profiles, now);
+        StatusChange change = statusChange(transition, research, availability, leagueWeek,
+                roster, directory, profiles, now);
+        String playerId = transition.playerId();
+        if (change.announced() && availability.ruledOut()
+                && roster.starters().contains(playerId)) {
+            return withAnnouncedSlotFix(change.builder(), roster.starters().indexOf(playerId),
+                    leagueWeek.week(), change.task(), change.plans(), change.unknowns(),
+                    change.urgent());
+        }
         return change.builder().decisionDraft(change.task(), List.of(), true,
                 change.plans().legal(), change.unknowns(), Optional.of(change.urgent()), false);
     }
@@ -57,22 +68,25 @@ final class DecisionEvidence {
      * @param legality the lineup-legality candidate for the same player
      */
     static LineupEvidence.Draft draft(AlertCandidate transition, AlertCandidate legality,
-            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Map<String, String> research, PlayerAvailability availability,
+            LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, Instant now) {
-        StatusChange change = statusChange(transition, research, leagueWeek, roster, directory,
-                profiles, now);
+        StatusChange change = statusChange(transition, research, availability, leagueWeek,
+                roster, directory, profiles, now);
         return withSlotFix(change.builder(), legality, leagueWeek.week(), change.name(),
                 change.to(), change.task(), change.plans(), change.unknowns(), change.urgent());
     }
 
     /** The evidence every status-change decision shares, before its slot is handled. */
     private record StatusChange(LineupEvidence builder, String name, PlayerHealth to,
-            String task, RosterPlans.Plans plans, List<String> unknowns, String urgent) {
+            boolean announced, String task, RosterPlans.Plans plans, List<String> unknowns,
+            String urgent) {
     }
 
     private static StatusChange statusChange(AlertCandidate transition,
-            Map<String, String> research, LeagueWeek leagueWeek, RosterSnapshot roster,
+            Map<String, String> research, PlayerAvailability availability,
+            LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, Instant now) {
         WeekFacts week = leagueWeek.week();
@@ -81,30 +95,39 @@ final class DecisionEvidence {
         String name = builder.name(playerId);
         PlayerHealth from = PlayerHealth.valueOf(transition.facts().get("from"));
         PlayerHealth to = PlayerHealth.valueOf(transition.facts().get("to"));
-        builder.addPlayer(playerId, "the player whose status changed");
-        Map<String, String> change = new LinkedHashMap<>();
-        change.put("player", name);
-        change.put("from", RosterPlans.designation(from));
-        change.put("to", RosterPlans.designation(to));
-        builder.addItem(new EvidenceItem("status-change", "sleeper:players", Optional.empty(),
-                leagueWeek.snapshot().at(), "the designation change this decision is about",
-                change));
+        boolean announced = transition.facts().containsKey(OfficialUpdateDetector.ANNOUNCEMENT);
+        builder.addPlayer(playerId, announced ? "the player his team made an announcement about"
+                : "the player whose status changed");
+        if (!announced) {
+            Map<String, String> change = new LinkedHashMap<>();
+            change.put("player", name);
+            change.put("from", RosterPlans.designation(from));
+            change.put("to", RosterPlans.designation(to));
+            builder.addItem(new EvidenceItem("status-change", "sleeper:players", Optional.empty(),
+                    leagueWeek.snapshot().at(), "the designation change this decision is about",
+                    change));
+        }
 
         boolean reported = research.containsKey("latestReport");
-        List<String> unknowns = reported || !to.isWorseThan(PlayerHealth.PROBABLE)
+        List<String> unknowns = new ArrayList<>(reported || !to.isWorseThan(PlayerHealth.PROBABLE)
                 ? List.of()
-                : unknownRecovery(builder, research, name, now);
+                : unknownRecovery(builder, research, name, now));
 
         Planned planned = plans(builder, playerId, to, reported, leagueWeek, roster, directory,
                 now);
         RosterPlans.Plans plans = planned.plans();
         addPlanEvidence(builder, planned, playerId, leagueWeek, roster, profiles, now);
+        unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
+                leagueWeek.snapshot().at(), now));
 
-        String urgent = "%s went from %s to %s.".formatted(name, RosterPlans.designation(from),
-                RosterPlans.designation(to));
-        String task = "Advise what to do with %s after his status change: choose one of "
-                .formatted(name) + "rosterPlans.";
-        return new StatusChange(builder, name, to, task, plans, unknowns, urgent);
+        String urgent = announced
+                ? AvailabilityEvidence.announced(name, availability)
+                : "%s went from %s to %s.".formatted(name, RosterPlans.designation(from),
+                        RosterPlans.designation(to))
+                        + AvailabilityEvidence.disagreementSuffix(availability);
+        String task = "Advise what to do with %s after %s: choose one of rosterPlans."
+                .formatted(name, announced ? "his team's announcement" : "his status change");
+        return new StatusChange(builder, name, to, announced, task, plans, unknowns, urgent);
     }
 
     /**
@@ -198,6 +221,26 @@ final class DecisionEvidence {
                         + "advise how to fill it from legalMoves.", moves, moves.isEmpty(),
                 plans.legal(), unknowns,
                 Optional.of(urgent + " " + slotFact + " " + builder.bestOption(moves)), false);
+    }
+
+    /**
+     * His team ruled out a starter Sleeper still lets the user start, so
+     * the slot is worth filling, but keeping him in is a move Sleeper
+     * allows.
+     */
+    private static LineupEvidence.Draft withAnnouncedSlotFix(LineupEvidence builder,
+            int slotIndex, WeekFacts week, String task, RosterPlans.Plans plans,
+            List<String> unknowns, String urgent) {
+        Slot slot = week.startingSlots().get(slotIndex);
+        Map<String, String> problem = new LinkedHashMap<>();
+        problem.put("problem", "his team ruled out a starter Sleeper still lets you start");
+        problem.put("slot", slot.name());
+        builder.addProblem(problem);
+        List<LineupMove> moves = builder.legalStarts(slotIndex);
+        return builder.decisionDraft(task + " He is in your %s slot, so also advise whether to "
+                        .formatted(slot.name()) + "replace him there from legalMoves.", moves,
+                true, plans.legal(), unknowns,
+                Optional.of(urgent + " " + builder.bestOption(moves)), false);
     }
 
     private static Optional<DirectoryPlayer> bestProjectedFreeAgent(String playerId, RosterSnapshot roster,
