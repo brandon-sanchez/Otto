@@ -13,6 +13,25 @@ public interface DocumentBackend {
     /** The stored bytes of one document, or empty when it has none yet. */
     Optional<byte[]> load(String name);
 
+    /**
+     * One document's stored bytes and the version they were read at.
+     *
+     * @param version changes whenever the bytes do, so a caller that
+     *        parsed the bytes of this version may reuse what it parsed;
+     *        null when the backend keeps no version, and the bytes must
+     *        be read as new
+     */
+    record Versioned(byte[] bytes, String version) {
+    }
+
+    /**
+     * The stored bytes of one document with their version, or empty when
+     * it has none yet. A backend that keeps no versions reports none.
+     */
+    default Optional<Versioned> loadVersioned(String name) {
+        return load(name).map(bytes -> new Versioned(bytes, null));
+    }
+
     /** Stores the bytes of one document under its name. */
     void store(String name, byte[] json);
 

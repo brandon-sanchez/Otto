@@ -95,13 +95,20 @@ public class OttoStack extends Stack {
     private static final String METRIC_NAMESPACE = "Otto";
 
     /**
-     * The one object every big document lives in. The app spells this
-     * too, in {@code S3BundleBackend}, and cannot share the constant
-     * across the two builds. It is here to keep the bucket grant down
-     * to the one key the app writes; a drift between the two shows up
-     * as a denied write on the first Check after a deploy.
+     * The one object every big document but the nflverse feeds lives
+     * in. The app spells this too, in {@code S3BundleBackend}, and
+     * cannot share the constant across the two builds. It is here to
+     * keep the bucket grant down to the keys the app writes; a drift
+     * between the two shows up as a denied write on the first Check
+     * after a deploy.
      */
     private static final String DOCUMENTS_KEY = "documents.json";
+
+    /**
+     * The prefix each nflverse feed is stored under as an object of its
+     * own. The app spells it too, in {@code S3FeedObjects}.
+     */
+    private static final String FEEDS_PREFIX = "nflverse/";
 
     /**
      * The two key prefixes of the Decision Records bucket. The app
@@ -344,12 +351,14 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * One object and one table, and nothing else in either service. The
-     * bucket grant names the one key the app writes, so a function that
-     * went wrong could not fill the bucket with anything else.
+     * The bundle, the feed objects and one table, and nothing else in
+     * either service. The bucket grant names the keys the app writes, so
+     * a function that went wrong could not fill the bucket with anything
+     * else.
      */
     private void readWriteStorage(Bucket documents, Table records, Function function) {
         documents.grantReadWrite(function, DOCUMENTS_KEY);
+        documents.grantReadWrite(function, FEEDS_PREFIX + "*");
         records.grantReadWriteData(function);
     }
 
