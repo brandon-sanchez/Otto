@@ -24,11 +24,15 @@ import otto.snapshot.RosterSnapshot;
  * "start A over B" pairs. Starters who cannot play (ruled out, bye) are
  * the legality detector's problem, not an edge - pairing against them
  * would price a certain zero as a small edge. Edges always ride at
- * Medium confidence: projections are estimates, so the Alert voices
- * the numbers and the doubt instead of stating a certainty.
+ * Medium confidence: projections are estimates, so the Alert gives
+ * both projected numbers and what could flip them instead of stating a
+ * certainty.
  */
 @Component
 public class BenchEdgeDetector {
+
+    /** The fact holding the Sleeper id of the bench player the swap would start. */
+    static final String BENCH_ID = "benchId";
 
     private final LineupOptimizer optimizer;
     private final SettingsStore settings;
@@ -100,7 +104,7 @@ public class BenchEdgeDetector {
 
         Map<String, String> facts = new HashMap<>();
         facts.put("bench", inName);
-        facts.put("benchId", in);
+        facts.put(BENCH_ID, in);
         facts.put("benchProjection", inPoints);
         facts.put("starter", outName);
         facts.put("starterId", out);

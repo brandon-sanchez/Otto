@@ -1,0 +1,439 @@
+package otto.advice;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.stereotype.Component;
+
+import otto.directory.DirectoryPlayer;
+import otto.directory.PlayerDirectoryStore;
+import otto.storage.OttoJson;
+
+/**
+ * Holds a model-written answer to its evidence bundle before anything is
+ * sent. It checks player identities and names, every number, every
+ * comparison, the recommended move against the legal moves, any dollar
+ * amount against the verified budget, that every claim cites evidence
+ * that supports it, and the message's voice: no "lock", no confidence
+ * labels, the kickoff phrase when one is required, and the length limit.
+ *
+ * <p>Each failure is written for the model to read, because the
+ * correction attempt hands the failures back to it.
+ */
+@Component
+public class AdviceCheck {
+
+    private static final Pattern LOCK = Pattern.compile("(?i)\\block(s|ed|ing)?\\b");
+    private static final Pattern CONFIDENCE_LABEL =
+            Pattern.compile("(?i:\\bconfidence\\b)|\\b(HIGH|MEDIUM|LOW)\\b");
+    private static final Pattern DOLLARS = Pattern.compile("\\$\\s?(\\d+)");
+    private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
+    private static final String PROJECTION = "projection";
+
+    /**
+     * Surnames that are also everyday English words. One of them opening
+     * a sentence reads as the word, as in "Love the matchup", so only its
+     * other uses count as a surname mention.
+     */
+    private static final Set<String> COMMON_WORD_SURNAMES = Set.of(
+            "One", "Two", "Three", "Four", "Five", "Six", "Love", "Hill", "Will", "Hope",
+            "Long", "Little", "Young", "Strong", "Swift", "Rice", "Hunt", "Price", "Mark",
+            "Bell", "Brown", "White", "Green", "Black", "Gray", "Rush", "Ward");
+
+    private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
+
+    /** Where one sentence ends; a decimal point is never followed by a space. */
+    private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
+
+    private final PlayerDirectoryStore directory;
+
+    /** Checks names against the players {@code directory} knows. */
+    public AdviceCheck(PlayerDirectoryStore directory) {
+        this.directory = directory;
+    }
+
+    /**
+     * The outcome of checking one reply.
+     *
+     * @param <T> the shape the reply is read into
+     */
+    public sealed interface Verdict<T> {
+
+        /** Returns what the answer failed, written for the model; empty when it passed. */
+        List<String> failures();
+
+        /**
+         * Returns the verdict on an answer read from its reply: passed
+         * when there are no failures.
+         */
+        static <T> Verdict<T> checked(T answer, List<String> failures) {
+            return failures.isEmpty()
+                    ? new Passed<>(answer)
+                    : new Failed<>(Optional.of(answer), failures);
+        }
+
+        /** Returns the verdict on a reply that could not be read as an answer. */
+        static <T> Verdict<T> unreadable(String failure) {
+            return new Failed<>(Optional.empty(), List.of(failure));
+        }
+
+        /** An answer that passed every check. */
+        record Passed<T>(T answer) implements Verdict<T> {
+
+            @Override
+            public List<String> failures() {
+                return List.of();
+            }
+        }
+
+        /**
+         * A reply that failed at least one check.
+         *
+         * @param answer the parsed answer, empty when the reply could not
+         *        be read as one
+         * @param failures never empty
+         */
+        record Failed<T>(Optional<T> answer, List<String> failures) implements Verdict<T> {
+
+            public Failed {
+                failures = List.copyOf(failures);
+            }
+        }
+    }
+
+    /** Checks one raw lineup-advice reply against the bundle it was written from. */
+    public Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
+        Optional<AdviceAnswer> parsed = parse(reply);
+        if (parsed.isEmpty()) {
+            return Verdict.unreadable("The answer is not the JSON object the instructions ask "
+                    + "for, with a non-empty \"message\".");
+        }
+        return Verdict.checked(parsed.get(), checkAnswer(bundle, parsed.get()));
+    }
+
+    /**
+     * Checks an answer another form of advice has already read from its
+     * reply, so every form holds its text to the same rules.
+     *
+     * @return one failure per broken rule, written for the model; empty
+     *         when the answer passed every check
+     */
+    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer answer) {
+        List<String> failures = new ArrayList<>();
+        checkPlayers(bundle, answer, failures);
+        checkNumbers(bundle, answer, failures);
+        checkClaims(bundle, answer, failures);
+        checkComparisons(bundle, answer, failures);
+        checkMove(bundle, answer, failures);
+        checkBudget(bundle, answer, failures);
+        checkVoice(bundle, answer, failures);
+        return failures;
+    }
+
+    private void checkPlayers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
+        String message = answer.message();
+        for (String playerId : answer.players()) {
+            Optional<BundlePlayer> player = bundle.player(playerId);
+            if (player.isEmpty()) {
+                failures.add("Player id %s is not in the evidence.".formatted(playerId));
+            } else if (!message.contains(player.get().fullName())) {
+                failures.add("The message never names %s by full name."
+                        .formatted(player.get().fullName()));
+            }
+        }
+        for (BundlePlayer player : bundle.players()) {
+            int fullName = message.indexOf(player.fullName());
+            int surname = firstSurnameOutsideOtherNames(player, bundle, message);
+            if (surname >= 0 && (fullName < 0 || surname < fullName)) {
+                failures.add("Introduce %s by full name before using his surname alone."
+                        .formatted(player.fullName()));
+            }
+        }
+        Set<String> inBundle = bundle.players().stream()
+                .map(BundlePlayer::fullName)
+                .collect(Collectors.toSet());
+        directoryNames().stream()
+                .filter(name -> !inBundle.contains(name))
+                .filter(name -> message.contains(name) && word(name).matcher(message).find())
+                .forEach(name -> failures.add(
+                        "The message names %s, who is not in the evidence.".formatted(name)));
+    }
+
+    /**
+     * Holds every number in the message to the evidence, and every
+     * number in a sentence that names players to the evidence about
+     * them, so a real stat cannot be pinned on the wrong player. The
+     * evidence about a player is every item that names him or his id,
+     * every item that names no player, his projection, and the items
+     * cited by claims about him.
+     */
+    private void checkNumbers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
+        Set<BigDecimal> known = bundle.numbers();
+        EvidenceBundle.numbersIn(answer.message()).stream()
+                .filter(number -> !known.contains(EvidenceBundle.normalized(number)))
+                .distinct()
+                .forEach(number -> failures.add(
+                        "The number %s is not in the evidence.".formatted(number)));
+        for (String sentence : SENTENCE_END.split(answer.message())) {
+            List<BundlePlayer> named = bundle.players().stream()
+                    .filter(player -> names(sentence, player))
+                    .toList();
+            if (named.isEmpty()) {
+                continue;
+            }
+            Set<BigDecimal> about = numbersAbout(bundle, answer, named);
+            EvidenceBundle.numbersIn(sentence).stream()
+                    .filter(number -> known.contains(EvidenceBundle.normalized(number)))
+                    .filter(number -> !about.contains(EvidenceBundle.normalized(number)))
+                    .distinct()
+                    .forEach(number -> failures.add(
+                            "The number %s is not in the evidence about %s.".formatted(number,
+                                    named.stream().map(BundlePlayer::fullName)
+                                            .collect(Collectors.joining(" or ")))));
+        }
+    }
+
+    private static Set<BigDecimal> numbersAbout(EvidenceBundle bundle, AdviceAnswer answer,
+            List<BundlePlayer> named) {
+        Set<String> cited = answer.claims().stream()
+                .filter(claim -> named.stream().anyMatch(player -> names(claim.text(), player)))
+                .flatMap(claim -> claim.evidence().stream())
+                .collect(Collectors.toSet());
+        Stream<String> items = bundle.evidence().stream()
+                .filter(item -> cited.contains(item.id())
+                        || named.stream().anyMatch(player -> about(item, player))
+                        || bundle.players().stream().noneMatch(player -> about(item, player)))
+                .flatMap(item -> item.facts().values().stream());
+        Stream<String> projections = named.stream()
+                .flatMap(player -> player.projectedPoints().stream());
+        return EvidenceBundle.numbersOf(Stream.of(items, projections,
+                bundle.kickoffPhrase().stream()).flatMap(texts -> texts));
+    }
+
+    private static boolean about(EvidenceItem item, BundlePlayer player) {
+        return Arrays.asList(item.id().split("-")).contains(player.playerId())
+                || item.facts().values().stream().anyMatch(value ->
+                        value.equals(player.playerId()) || value.contains(player.fullName()));
+    }
+
+    private static boolean names(String text, BundlePlayer player) {
+        return text.contains(player.fullName())
+                || word(lastName(player.fullName())).matcher(text).find();
+    }
+
+    private void checkClaims(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
+        for (AdviceAnswer.Claim claim : answer.claims()) {
+            if (claim.evidence().isEmpty()) {
+                failures.add("The claim \"%s\" cites no evidence.".formatted(claim.text()));
+                continue;
+            }
+            List<EvidenceItem> cited = new ArrayList<>();
+            for (String id : claim.evidence()) {
+                bundle.item(id).ifPresentOrElse(cited::add, () -> failures.add(
+                        "The claim \"%s\" cites evidence %s, which does not exist."
+                                .formatted(claim.text(), id)));
+            }
+            Set<BigDecimal> supported = EvidenceBundle.numbersOf(cited.stream()
+                    .flatMap(item -> item.facts().values().stream()));
+            EvidenceBundle.numbersIn(claim.text()).stream()
+                    .filter(number -> !supported.contains(EvidenceBundle.normalized(number)))
+                    .distinct()
+                    .forEach(number -> failures.add(
+                            "The claim \"%s\" states %s, which its cited evidence does not."
+                                    .formatted(claim.text(), number)));
+        }
+    }
+
+    private void checkComparisons(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        for (AdviceAnswer.Comparison comparison : answer.comparisons()) {
+            if (!PROJECTION.equals(comparison.basis())) {
+                failures.add("The evidence supports only projection comparisons, not \"%s\"."
+                        .formatted(comparison.basis()));
+                continue;
+            }
+            Optional<BigDecimal> higher = projection(bundle, comparison.higher(), failures);
+            Optional<BigDecimal> lower = projection(bundle, comparison.lower(), failures);
+            if (higher.isPresent() && lower.isPresent()
+                    && higher.get().compareTo(lower.get()) <= 0) {
+                failures.add("%s does not project higher than %s.".formatted(
+                        name(bundle, comparison.higher()), name(bundle, comparison.lower())));
+            }
+        }
+    }
+
+    private static Optional<BigDecimal> projection(EvidenceBundle bundle, String playerId,
+            List<String> failures) {
+        Optional<BundlePlayer> player = bundle.player(playerId);
+        if (player.isEmpty()) {
+            failures.add("Player id %s is not in the evidence.".formatted(playerId));
+            return Optional.empty();
+        }
+        if (player.get().projectedPoints().isEmpty()) {
+            failures.add("%s has no projection, so no projection comparison can name him."
+                    .formatted(player.get().fullName()));
+            return Optional.empty();
+        }
+        return player.get().projectedPoints().map(BigDecimal::new);
+    }
+
+    private static void checkMove(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        if (answer.move().isEmpty()) {
+            if (!bundle.noChangeAllowed()) {
+                failures.add("The answer recommends no change, but the lineup must change: "
+                        + "choose one of the legal moves.");
+            }
+            return;
+        }
+        LineupMove move = answer.move().get();
+        if (!bundle.legalMoves().contains(move)) {
+            failures.add("The move \"%s\" is not legal. The legal moves are: %s.".formatted(
+                    move.describe(), bundle.legalMoves().isEmpty() ? "none"
+                            : bundle.legalMoves().stream().map(LineupMove::describe)
+                                    .collect(Collectors.joining("; "))));
+        }
+    }
+
+    private static void checkBudget(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        Matcher dollars = DOLLARS.matcher(answer.message());
+        while (dollars.find()) {
+            int amount = Integer.parseInt(dollars.group(1));
+            if (bundle.budget().isEmpty()) {
+                failures.add("The message states $%d, but no budget is in the evidence."
+                        .formatted(amount));
+            } else if (amount > bundle.budget().get()) {
+                failures.add("The message states $%d, more than the verified budget of $%d."
+                        .formatted(amount, bundle.budget().get()));
+            }
+        }
+    }
+
+    private static void checkVoice(EvidenceBundle bundle, AdviceAnswer answer,
+            List<String> failures) {
+        String message = answer.message();
+        if (LOCK.matcher(message).find()) {
+            failures.add("Never say \"lock\"; say when the game starts.");
+        }
+        if (CONFIDENCE_LABEL.matcher(message).find()) {
+            failures.add("Never write a confidence label; name the specific uncertainty.");
+        }
+        bundle.kickoffPhrase()
+                .filter(phrase -> !message.toLowerCase().contains(phrase.toLowerCase()))
+                .ifPresent(phrase -> failures.add(
+                        "The message must say \"%s\".".formatted(phrase)));
+        if (message.length() > bundle.maxLength()) {
+            failures.add("The message is %d characters; the limit is %d."
+                    .formatted(message.length(), bundle.maxLength()));
+        }
+    }
+
+    private Collection<String> directoryNames() {
+        return directory.read()
+                .map(stored -> stored.players().values().stream()
+                        .map(DirectoryPlayer::fullName)
+                        .filter(name -> name != null && name.contains(" "))
+                        .collect(Collectors.toSet()))
+                .orElse(Set.of());
+    }
+
+    private static Optional<AdviceAnswer> parse(String reply) {
+        String text = reply.strip();
+        Matcher fence = CODE_FENCE.matcher(text);
+        if (fence.matches()) {
+            text = fence.group(1);
+        }
+        JsonNode root;
+        try {
+            root = OttoJson.MAPPER.readTree(text);
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+        if (!root.isObject() || !root.path("message").isTextual()
+                || root.path("message").asText().isBlank()) {
+            return Optional.empty();
+        }
+        JsonNode move = root.path("move");
+        Optional<LineupMove> lineupMove = move.isObject()
+                ? Optional.of(new LineupMove(text(move, "start"), text(move, "bench"),
+                        text(move, "slot")))
+                : Optional.empty();
+        List<AdviceAnswer.Claim> claims = new ArrayList<>();
+        root.path("claims").forEach(claim -> claims.add(new AdviceAnswer.Claim(
+                claim.path("text").asText(""), strings(claim.path("evidence")))));
+        List<AdviceAnswer.Comparison> comparisons = new ArrayList<>();
+        root.path("comparisons").forEach(comparison -> comparisons.add(
+                new AdviceAnswer.Comparison(text(comparison, "higher"),
+                        text(comparison, "lower"), text(comparison, "basis"))));
+        return Optional.of(new AdviceAnswer(root.path("message").asText(), lineupMove,
+                strings(root.path("players")), claims, comparisons));
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.isValueNode() && !value.isNull() ? value.asText() : null;
+    }
+
+    private static List<String> strings(JsonNode array) {
+        List<String> values = new ArrayList<>();
+        array.forEach(value -> values.add(value.asText()));
+        return values;
+    }
+
+    private static String name(EvidenceBundle bundle, String playerId) {
+        return bundle.player(playerId).map(BundlePlayer::fullName).orElse(playerId);
+    }
+
+    private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
+            String message) {
+        String lastName = lastName(player.fullName());
+        boolean commonWord = COMMON_WORD_SURNAMES.contains(lastName);
+        Matcher surname = word(lastName).matcher(message);
+        while (surname.find()) {
+            int at = surname.start();
+            if (commonWord && opensASentence(message, at)) {
+                continue;
+            }
+            boolean insideAnotherName = bundle.players().stream()
+                    .map(BundlePlayer::fullName)
+                    .filter(name -> !name.equals(player.fullName()))
+                    .anyMatch(name -> {
+                        Matcher other = word(name).matcher(message);
+                        while (other.find()) {
+                            if (other.start() <= at && at < other.end()) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+            if (!insideAnotherName) {
+                return at;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean opensASentence(String message, int at) {
+        return BEFORE_SENTENCE_START.matcher(message.substring(0, at)).find();
+    }
+
+    private static String lastName(String fullName) {
+        return fullName.substring(fullName.lastIndexOf(' ') + 1);
+    }
+
+    private static Pattern word(String text) {
+        return Pattern.compile("\\b" + Pattern.quote(text) + "\\b");
+    }
+}

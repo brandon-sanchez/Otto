@@ -1,5 +1,8 @@
 package otto;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -17,9 +20,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A Check whose shared model budget cannot fit another phrasing run: the
- * run is not started, the Alert waits for the next Check, and the Check
- * still finishes.
+ * A Check whose shared model budget cannot fit another advice run: the
+ * run is not started, nothing records it as made, and the Check still
+ * finishes.
  */
 class CheckDeadlineScenarioTest extends WireSeamTest {
 
@@ -29,23 +32,28 @@ class CheckDeadlineScenarioTest extends WireSeamTest {
     @Autowired
     private LastCheckStore lastCheck;
 
+    @Autowired
+    private OttoProperties properties;
+
     @DynamicPropertySource
-    static void aCheckTooShortForAnyPhrasingRun(DynamicPropertyRegistry registry) {
+    static void aCheckTooShortForAnyAdviceRun(DynamicPropertyRegistry registry) {
         registry.add("otto.models.budgets.check", () -> "PT1S");
     }
 
     @Test
-    void anAlertThatNoLongerFitsTheCheckIsLeftForTheNextCheck() {
+    void adviceThatNoLongerFitsTheCheckIsLeftUnmadeForTheNextCheck() {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
                 "sleeper/projections-edge.json", "projections-v1");
         OutboundStubs.telegramOk(telegram);
-        OutboundStubs.llmPhrases(llm, "Start Josh Jacobs.");
+        OutboundStubs.llmAdvises(llm, "{}");
 
         checkRunner.runCheck();
 
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        assertThat(Path.of(properties.storageDir(), "decision-records")).satisfies(records ->
+                assertThat(Files.exists(records.resolve("records"))).isFalse());
         assertThat(lastCheck.read()).hasValueSatisfying(check ->
                 assertThat(check.lastCheckAt()).isEqualTo(clock.instant()));
     }
