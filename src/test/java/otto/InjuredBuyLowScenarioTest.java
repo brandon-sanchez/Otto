@@ -288,7 +288,7 @@ class InjuredBuyLowScenarioTest extends WireSeamTest {
 
         assertThat(injury).containsEntry("worth", "in a keeper league he is worth his redraft "
                 + "value, which is 0 because his season is over, plus his keeper value of "
-                + "3400, so 3400 in all");
+                + "2600, so 2600 in all");
         assertThat(injury).doesNotContainKey("timing");
     }
 
