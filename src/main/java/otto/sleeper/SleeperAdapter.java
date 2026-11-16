@@ -550,6 +550,15 @@ public class SleeperAdapter {
     }
 
     /**
+     * The trending window every caller reads with: one day of adds. One
+     * window shared by every caller is one cached Sleeper read a Check.
+     */
+    public static final int TRENDING_LOOKBACK_HOURS = 24;
+
+    /** How many of the most-added players every caller asks for. */
+    public static final int TRENDING_LIMIT = 25;
+
+    /**
      * The most-added players across every Sleeper league, most added
      * first. It is a national number, not a league one: it says the rest
      * of the fantasy world has noticed somebody, which is why the waiver

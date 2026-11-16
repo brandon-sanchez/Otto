@@ -23,6 +23,9 @@ public final class OutboundStubs {
     public static final String GET_UPDATES_PATH = "/bottest-bot-token/getUpdates";
     public static final String CHAT_COMPLETIONS_PATH = "(/v1)?/chat/completions";
 
+    /** Text only a waiver board's advice request carries: the start of its task. */
+    public static final String WAIVER_BOARD_REQUEST = "Rank this week's waiver candidates";
+
     private static final String ADVICE_REQUEST = "legalMoves";
 
     static final int ADVICE_PRIORITY = 1;

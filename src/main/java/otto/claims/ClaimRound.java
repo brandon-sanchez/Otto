@@ -6,14 +6,16 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
+import otto.records.RunIds;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 
 /**
  * The league's next claim round as one Check sees it: the claim
- * deadline, when the round's waiver board is due, and the key its Alert
- * is sent under. The waiver board and the role-slip advice held for it
- * read the round here, so neither depends on the other.
+ * deadline, when the round's waiver board is due, the key its Alert is
+ * sent under, and the run id its evidence-based board is recorded under.
+ * Both waiver boards and the role-slip advice held for a board read the
+ * round here, so none of them depends on another.
  *
  * @param leagueId the Sleeper league the round belongs to
  * @param deadline when the league's claims run, in the zone Sleeper runs them in
@@ -25,6 +27,8 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
     private static final ZoneId BOARD_ZONE = ZoneId.of("America/Los_Angeles");
 
     private static final LocalTime BOARD_TIME = LocalTime.of(18, 0);
+
+    private static final String BOARD_RUN_PREFIX = "waiver-board-";
 
     /**
      * Returns the league's next claim round, empty when its claim day
@@ -54,5 +58,14 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
     /** Returns the Alert key the round's waiver board is sent under. */
     public String alertKey() {
         return "alert:waiver:" + due().toLocalDate();
+    }
+
+    /**
+     * Returns the run id of the round's evidence-based board, derived
+     * from the league and the claim deadline so every Check in the
+     * window finds the same record.
+     */
+    public String boardRunId() {
+        return RunIds.stable(BOARD_RUN_PREFIX, leagueId, deadline.toInstant().toString());
     }
 }

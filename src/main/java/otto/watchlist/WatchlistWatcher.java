@@ -36,14 +36,6 @@ import otto.storage.JsonStore;
 public class WatchlistWatcher {
 
     /**
-     * Sharply is Sleeper's own ranking: a player who was outside the
-     * most-added list over the last day and is now inside it. That needs
-     * no invented multiplier, and it fires once per entry.
-     */
-    private static final int TRENDING_LIMIT = 25;
-    private static final int TRENDING_LOOKBACK_HOURS = 24;
-
-    /**
      * How far a projection must move to be worth a message: one point
      * in league scoring, the same size as the bench-over-starter edge
      * the spec calls worth acting on. Anything smaller is feed drift.
@@ -133,6 +125,10 @@ public class WatchlistWatcher {
     }
 
     /**
+     * Sharply is Sleeper's own ranking: a player who was outside the
+     * most-added list over the last day and is inside it at this read.
+     * That needs no invented multiplier, and it fires once per entry.
+     *
      * @return the most-added ids now, or empty when the feed is down -
      *         the stored reading then stays as it was, so the entry is
      *         still news once the feed is back
@@ -140,7 +136,8 @@ public class WatchlistWatcher {
     private Optional<Set<String>> readTrending(List<WatchlistStore.Entry> watched, Observed last,
             Instant at, List<Event> events) {
         SourceResult<List<SleeperAdapter.TrendingPlayer>> result =
-                sleeper.trendingAdds(TRENDING_LOOKBACK_HOURS, TRENDING_LIMIT);
+                sleeper.trendingAdds(SleeperAdapter.TRENDING_LOOKBACK_HOURS,
+                        SleeperAdapter.TRENDING_LIMIT);
         selfReport.reportIfUnavailable(result);
         if (!(result instanceof SourceResult.Ok<List<SleeperAdapter.TrendingPlayer>> ok)) {
             return Optional.empty();
@@ -163,8 +160,8 @@ public class WatchlistWatcher {
                             "player", entry.player(),
                             "team", entry.team() == null ? "" : entry.team(),
                             "adds", String.valueOf(count),
-                            "lookbackHours", String.valueOf(TRENDING_LOOKBACK_HOURS),
-                            "trendingLimit", String.valueOf(TRENDING_LIMIT))));
+                            "lookbackHours", String.valueOf(SleeperAdapter.TRENDING_LOOKBACK_HOURS),
+                            "trendingLimit", String.valueOf(SleeperAdapter.TRENDING_LIMIT))));
         }
         return Optional.of(new LinkedHashSet<>(adds.keySet()));
     }
