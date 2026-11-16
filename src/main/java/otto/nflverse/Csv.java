@@ -27,7 +27,7 @@ import java.util.stream.StreamSupport;
  * that. A row missing a column reads as blank rather than throwing, so
  * one drifted column never costs the whole feed.
  */
-final class Csv {
+public final class Csv {
 
     private static final int BUFFER = 1 << 16;
 
@@ -40,9 +40,9 @@ final class Csv {
      * @param columns column name to index, shared across every row
      * @param values this row's fields
      */
-    record Row(Map<String, Integer> columns, List<String> values) {
+    public record Row(Map<String, Integer> columns, List<String> values) {
 
-        String text(String column) {
+        public String text(String column) {
             Integer index = columns.get(column);
             if (index == null || index >= values.size()) {
                 return "";
@@ -51,7 +51,7 @@ final class Csv {
         }
 
         /** A blank or unparsable field counts as zero, as these files write "NA". */
-        double number(String column) {
+        public double number(String column) {
             String value = text(column);
             if (value.isBlank()) {
                 return 0.0;
@@ -73,7 +73,7 @@ final class Csv {
      * given input stream, so the caller must consume it before the
      * underlying connection closes.
      */
-    static Stream<Row> stream(InputStream in) {
+    public static Stream<Row> stream(InputStream in) {
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(in, StandardCharsets.UTF_8), BUFFER);
         String header = nextRecord(reader);

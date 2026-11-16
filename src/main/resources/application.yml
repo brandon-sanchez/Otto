@@ -14,6 +14,9 @@ otto:
     download-base-url: "https://github.com"
     player-ids-base-url: "https://raw.githubusercontent.com"
     check-interval: 1h
+  market:
+    fantasy-calc-base-url: "https://api.fantasycalc.com"
+    dynasty-process-base-url: "https://raw.githubusercontent.com"
   team-sites:
     # Where each team's site lives; {host} is the host in OfficialTeams.
     url-template: "https://www.{host}"

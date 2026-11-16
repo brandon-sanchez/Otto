@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * What the stack promises, read back off the template it produces: the
- * shape of the two functions, the four schedules, the stores, the
+ * shape of the two functions, the schedules, the stores, the
  * alarms, and the services that are deliberately absent.
  */
 class OttoStackTest {
@@ -121,8 +121,8 @@ class OttoStackTest {
     }
 
     @Test
-    void thereAreFiveSchedules() {
-        template.resourceCountIs("AWS::Scheduler::Schedule", 5);
+    void thereAreSixSchedules() {
+        template.resourceCountIs("AWS::Scheduler::Schedule", 6);
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(1 minute)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"check\"}"))));
@@ -140,6 +140,9 @@ class OttoStackTest {
         template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
                 "ScheduleExpression", "rate(5 minutes)",
                 "Target", Match.objectLike(Map.of("Input", "{\"job\":\"team-reports\"}"))));
+        template.hasResourceProperties("AWS::Scheduler::Schedule", Map.of(
+                "ScheduleExpression", "rate(1 hour)",
+                "Target", Match.objectLike(Map.of("Input", "{\"job\":\"market-values\"}"))));
     }
 
     @Test

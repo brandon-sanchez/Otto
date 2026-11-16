@@ -534,6 +534,8 @@ public class OttoStack extends Stack {
         // a test on each side pins it.
         schedule("TeamReportsSchedule", target, invoker, "rate(5 minutes)", null,
                 "team-reports", 0);
+        schedule("MarketValuesSchedule", target, invoker, "rate(1 hour)", null,
+                "market-values", 0);
     }
 
     private void schedule(String id, Alias target, Role invoker, String expression,

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import otto.check.CheckResult;
 import otto.check.CheckRunner;
+import otto.market.MarketValueRefresh;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
 import otto.research.ResearchDiscovery;
@@ -67,6 +68,7 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
             case DEFENSE_VERSUS_POSITION -> defenseVersusPosition();
             case RESEARCH -> research();
             case TEAM_REPORTS -> teamReports();
+            case MARKET_VALUES -> marketValues();
         };
     }
 
@@ -92,6 +94,10 @@ public class ScheduledHandler implements RequestHandler<Map<String, Object>, Str
 
     private String research() {
         return "research: " + OttoRuntime.bean(ResearchDiscovery.class).discover();
+    }
+
+    private String marketValues() {
+        return "market values: " + OttoRuntime.bean(MarketValueRefresh.class).refresh();
     }
 
     private String teamReports() {
