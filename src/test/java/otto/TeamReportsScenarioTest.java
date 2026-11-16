@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +89,8 @@ class TeamReportsScenarioTest extends WireSeamTest {
                 player(FREIERMUTH, "Pat Freiermuth", "TE", "PIT"),
                 player(WASHINGTON, "Darnell Washington", "TE", "PIT"),
                 player("9905", "Kenneth Walker", "WR", "NYJ"))
-                .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player))));
+                .collect(Collectors.toMap(DirectoryPlayer::playerId, player -> player)),
+                Map.of()));
     }
 
     @Test

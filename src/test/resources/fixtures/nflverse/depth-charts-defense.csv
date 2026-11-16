@@ -1,0 +1,19 @@
+dt,team,player_name,espn_id,gsis_id,pos_grp_id,pos_grp,pos_id,pos_name,pos_abb,pos_slot,pos_rank
+2026-09-08T07:30:00Z,NE,Jonathan Jones,3044739,00-0032853,16,Base 3-4 D,29,Left Cornerback,LCB,8,1
+2026-09-15T07:30:00Z,NE,Drake Maye,4431452,00-0039851,21,3WR 1TE,8,Quarterback,QB,9,1
+2026-09-15T07:30:00Z,NE,Carlton Davis III,3122618,00-0034778,16,Base 3-4 D,29,Left Cornerback,LCB,8,1
+2026-09-15T07:30:00Z,NE,Charles Woods,4241477,00-0039770,16,Base 3-4 D,29,Left Cornerback,LCB,8,2
+2026-09-15T07:30:00Z,NE,Alex Austin,4429165,00-0039500,16,Base 3-4 D,29,Left Cornerback,LCB,8,3
+2026-09-15T07:30:00Z,NE,Christian Gonzalez,4569987,00-0039147,16,Base 3-4 D,29,Right Cornerback,RCB,11,1
+2026-09-15T07:30:00Z,NE,Channing Canada,4685279,00-0041316,16,Base 3-4 D,29,Right Cornerback,RCB,11,2
+2026-09-15T07:30:00Z,NE,Marcus Jones,4242393,00-0037253,16,Base 3-4 D,36,Nickel Back,NB,12,1
+2026-09-15T07:30:00Z,NE,Kevin Byard,2582132,00-0033132,16,Base 3-4 D,37,Free Safety,FS,10,1
+2026-09-15T07:30:00Z,NE,Craig Woodson,4430807,00-0040716,16,Base 3-4 D,37,Strong Safety,SS,9,1
+2026-09-15T07:30:00Z,NE,Elijah Ponder,4597504,00-0040574,16,Base 3-4 D,35,Weakside Linebacker,WLB,4,1
+2026-09-15T07:30:00Z,NE,Harold Landry III,3125116,00-0034828,16,Base 3-4 D,35,Weakside Linebacker,WLB,4,2
+2026-09-15T07:30:00Z,NE,Robert Spillane,3115306,00-0034720,16,Base 3-4 D,33,Right Inside Linebacker,RILB,6,1
+2026-09-15T07:30:00Z,NE,Christian Barmore,4241986,00-0036981,16,Base 3-4 D,11,Left Defensive End,LDE,1,1
+2026-09-15T07:30:00Z,NE,Andy Borregales,4686003,00-0041499,9,Special Teams,22,Place Kicker,PK,1,1
+2026-09-15T07:30:00Z,BUF,Greg Rousseau,4372016,00-0036915,16,Base 4-3 D,11,Left Defensive End,LDE,1,1
+2026-09-15T07:30:00Z,BUF,Terrel Bernard,4361516,00-0038570,16,Base 4-3 D,35,Weakside Linebacker,WLB,5,1
+2026-09-15T07:30:00Z,BUF,Ed Oliver,3916945,00-0035263,16,Base 4-3 D,24,Left Defensive Tackle,LDT,2,1
