@@ -115,6 +115,23 @@ class FingerprintPinTest {
                         "2026_01_SF_LA", 1, "SF", "LAR", 18, 41, 52, 3));
     }
 
+    @Test
+    void pbpParticipationContent() {
+        pin(Feeds.PBP_PARTICIPATION, 1, 5781561941494782773L,
+                new PbpParticipation.TeamGame("2025_01_KC_LAC", 1, "KC", "LAC", 8, 3, 5,
+                        Map.of("COVER_3", 3, "COVER_1", 2), 2, Map.of("00-0030506", 6)));
+    }
+
+    @Test
+    void nextGenStatsContent() {
+        NextGenStats.Line line = new NextGenStats.Line("2026", 1, "00-0036264", "Jordan Love",
+                "QB", "GB", Map.of(NextGenColumn.AVG_TIME_TO_THROW, 2.62,
+                        NextGenColumn.AGGRESSIVENESS, 12.1));
+        pin(Feeds.NGS_PASSING, 2, 7692232138300070L, line);
+        pin(Feeds.NGS_RECEIVING, 2, 7692232138300070L, line);
+        pin(Feeds.NGS_RUSHING, 2, 7692232138300070L, line);
+    }
+
     private static <R> void pin(FeedSpec<R, ?> spec, int contentVersion, long fingerprint,
             R row) {
         assertThat(spec.contentVersion())

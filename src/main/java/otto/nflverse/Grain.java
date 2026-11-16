@@ -34,6 +34,19 @@ sealed interface Grain<R> {
     }
 
     /**
+     * One unit per season and week, for a file that spans seasons and
+     * publishes a week whole, with no game or team the schedule could
+     * expect a row from.
+     */
+    record PerWeek<R>(Function<R, String> season, ToIntFunction<R> week) implements Grain<R> {
+
+        @Override
+        public Coverage.Unit unit(R row) {
+            return new Coverage.Unit.Week(season.apply(row), week.applyAsInt(row));
+        }
+    }
+
+    /**
      * One unit per team, for a file with no week: a snapshot such as a
      * depth chart. The spec's stamp dates the snapshot, and the schedule
      * places it in a week at query time.

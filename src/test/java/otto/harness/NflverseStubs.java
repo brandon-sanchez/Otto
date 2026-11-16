@@ -1,5 +1,11 @@
 package otto.harness;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPOutputStream;
+
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -30,6 +36,10 @@ public final class NflverseStubs {
             "/repos/nflverse/nflverse-data/releases/tags/ftn_charting";
     public static final String ADVSTATS_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pfr_advstats";
+    public static final String PARTICIPATION_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/pbp_participation";
+    public static final String NGS_RELEASE_PATH =
+            "/repos/nflverse/nflverse-data/releases/tags/nextgen_stats";
     public static final String PBP_RELEASE_PATH =
             "/repos/nflverse/nflverse-data/releases/tags/pbp";
     public static final String PLAYERS_RELEASE_PATH =
@@ -59,6 +69,11 @@ public final class NflverseStubs {
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2026.csv";
     public static final String PFR_PASSING_2025_PATH =
             DOWNLOAD + "pfr_advstats/advstats_week_pass_2025.csv";
+    public static final String PARTICIPATION_2025_PATH =
+            DOWNLOAD + "pbp_participation/pbp_participation_2025.csv";
+    public static final String NGS_PASSING_PATH = DOWNLOAD + "nextgen_stats/ngs_passing.csv.gz";
+    public static final String NGS_RECEIVING_PATH = DOWNLOAD + "nextgen_stats/ngs_receiving.csv.gz";
+    public static final String NGS_RUSHING_PATH = DOWNLOAD + "nextgen_stats/ngs_rushing.csv.gz";
     public static final String PBP_2026_PATH = DOWNLOAD + "pbp/play_by_play_2026.csv";
     public static final String PBP_2025_PATH = DOWNLOAD + "pbp/play_by_play_2025.csv";
     public static final String PLAYERS_PATH = DOWNLOAD + "players/players.csv";
@@ -78,6 +93,8 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
+        nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
@@ -102,6 +119,8 @@ public final class NflverseStubs {
         ftnCharting(nflverse);
         pressure(nflverse);
         rushingAdvancedStats(nflverse);
+        participation(nflverse);
+        nextGenStats(nflverse);
         usageSources(nflverse);
         stubJson(nflverse, STATS_RELEASE_PATH, "nflverse/release-stats-player.json");
         stubJson(nflverse, DEPTH_RELEASE_PATH, "nflverse/release-depth-charts.json");
@@ -349,6 +368,17 @@ public final class NflverseStubs {
     }
 
     /**
+     * Last season's participation file as published on 2026-02-10, the
+     * newest season file nflverse has. Trimmed to the first plays of
+     * three 2025 regular-season games, Kansas City's weeks 1 and 3 among
+     * them, and of one playoff game the feed must drop.
+     */
+    private static void participation(WireMockServer nflverse) {
+        stubJson(nflverse, PARTICIPATION_RELEASE_PATH, "nflverse/release-pbp-participation.json");
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025.csv");
+    }
+
+    /**
      * The play-by-play the pressure rates divide by: the healthy rows plus
      * one pass play per dropback in every game of the PFR passing file
      * but Pittsburgh at Cleveland in week 4, which it leaves out.
@@ -361,6 +391,11 @@ public final class NflverseStubs {
         stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-rankings.csv");
     }
 
+    /** The participation file renamed the column that says man or zone. */
+    public static void participationDrifted(WireMockServer nflverse) {
+        stubCsv(nflverse, PARTICIPATION_2025_PATH, "nflverse/pbp-participation-2025-drifted.csv");
+    }
+
     /**
      * FTN re-pulls weeks 1 and 2 in bulk: every one of their plays carries
      * a new date_pulled and nothing else about them changes. The same
@@ -369,6 +404,13 @@ public final class NflverseStubs {
     public static void ftnRePulled(WireMockServer nflverse) {
         stubJson(nflverse, FTN_RELEASE_PATH, "nflverse/release-ftn-charting-repulled.json");
         stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-2026-repulled.csv");
+    }
+
+    private static void nextGenStats(WireMockServer nflverse) {
+        stubJson(nflverse, NGS_RELEASE_PATH, "nflverse/release-nextgen-stats.json");
+        stubGzippedCsv(nflverse, NGS_PASSING_PATH, "nflverse/ngs-passing.csv");
+        stubGzippedCsv(nflverse, NGS_RECEIVING_PATH, "nflverse/ngs-receiving.csv");
+        stubGzippedCsv(nflverse, NGS_RUSHING_PATH, "nflverse/ngs-rushing.csv");
     }
 
     private static void rushingAdvancedStats(WireMockServer nflverse) {
@@ -478,6 +520,23 @@ public final class NflverseStubs {
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
                 .withBody(Fixtures.read(fixture))));
+    }
+
+    /**
+     * Serves a fixture compressed, as GitHub serves a {@code .csv.gz}
+     * asset: gzip bytes in the body and no Content-Encoding header.
+     */
+    public static void stubGzippedCsv(WireMockServer server, String path, String fixture) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bytes)) {
+            gzip.write(Fixtures.read(fixture).getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        server.stubFor(get(urlEqualTo(path)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/octet-stream")
+                .withBody(bytes.toByteArray())));
     }
 
     public static void stubCsv(WireMockServer server, String path, String fixture) {

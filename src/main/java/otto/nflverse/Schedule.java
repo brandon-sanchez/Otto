@@ -55,7 +55,7 @@ public record Schedule(
     }
 
     /** The newest week every listed game of which is final; empty before week 1 is done. */
-    OptionalInt latestCompletedWeek(String season) {
+    public OptionalInt latestCompletedWeek(String season) {
         Map<Integer, Boolean> allFinal = rows.stream()
                 .filter(game -> game.season().equals(season))
                 .collect(Collectors.toMap(Game::week, Game::finished, Boolean::logicalAnd));

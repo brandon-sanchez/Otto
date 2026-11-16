@@ -72,6 +72,20 @@ public class NflverseStore {
         return read(Feeds.RUSHING_ADVANCED_STATS);
     }
 
+    /** Returns last season's stored participation file, or empty before its first download. */
+    public Optional<PbpParticipation> pbpParticipation() {
+        return read(Feeds.PBP_PARTICIPATION);
+    }
+
+    /** The stored leaderboard of one kind, or empty before its first download. */
+    public Optional<NextGenStats> nextGenStats(NextGenStats.Kind kind) {
+        return read(switch (kind) {
+            case PASSING -> Feeds.NGS_PASSING;
+            case RECEIVING -> Feeds.NGS_RECEIVING;
+            case RUSHING -> Feeds.NGS_RUSHING;
+        });
+    }
+
     /** Returns the stored play-by-play, or empty before its first download. */
     public Optional<PlayByPlay> playByPlay() {
         return read(Feeds.PLAY_BY_PLAY);

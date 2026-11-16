@@ -87,7 +87,10 @@ interface FeedSpec<R, D extends NflverseFeed> {
         CURRENT,
 
         /** Last season's final file until a current-season game is final. */
-        LAST_PLAYED
+        LAST_PLAYED,
+
+        /** Always last season's file: the feed is published only once a season is over. */
+        PREVIOUS
     }
 
     /** When the schedule starts expecting a game's units. */

@@ -1,0 +1,4 @@
+season,season_type,week,player_display_name,player_position,team_abbr,efficiency,percent_attempts_gte_eight_defenders,avg_time_to_los,rush_attempts,rush_yards,avg_rush_yards,rush_touchdowns,player_gsis_id,player_first_name,player_last_name,player_jersey_number,player_short_name,expected_rush_yards,rush_yards_over_expected,rush_yards_over_expected_per_att,rush_pct_over_expected
+2026,REG,0,Bijan Robinson,RB,ATL,3.6,18.2,2.7,50,270,5.4,2,00-0038542,Bijan,Robinson,7,B.Robinson,230.5,39.5,0.79,0.46
+2026,REG,1,Bijan Robinson,RB,ATL,3.4,15.0,2.6,18,101,5.6,1,00-0038542,Bijan,Robinson,7,B.Robinson,82.0,19.0,1.06,0.5
+2026,REG,1,Kyle Juszczyk,FB,SF,4.1,40.0,2.9,10,30,3.0,0,00-0033015,Kyle,Juszczyk,44,K.Juszczyk,33.0,-3.0,-0.3,0.3

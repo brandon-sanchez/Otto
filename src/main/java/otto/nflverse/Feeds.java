@@ -22,14 +22,18 @@ final class Feeds {
     static final PfrDefenseFeed PFR_DEFENSE = new PfrDefenseFeed();
     static final PfrPassingFeed PFR_PASSING = new PfrPassingFeed();
     static final RushingAdvancedStatsFeed RUSHING_ADVANCED_STATS = new RushingAdvancedStatsFeed();
+    static final PbpParticipationFeed PBP_PARTICIPATION = new PbpParticipationFeed();
+    static final NextGenStatsFeed NGS_PASSING = new NextGenStatsFeed(NextGenStats.Kind.PASSING);
+    static final NextGenStatsFeed NGS_RECEIVING = new NextGenStatsFeed(NextGenStats.Kind.RECEIVING);
+    static final NextGenStatsFeed NGS_RUSHING = new NextGenStatsFeed(NextGenStats.Kind.RUSHING);
     static final PlayByPlayFeed PLAY_BY_PLAY = new PlayByPlayFeed();
     static final ExpectedPointsFeed EXPECTED_POINTS = new ExpectedPointsFeed();
     static final PlayersFeed PLAYERS = new PlayersFeed();
 
     static final List<FeedSpec<?, ?>> ALL = List.of(
             SCHEDULE, WEEKLY_STATS, DEPTH_CHARTS, WEEKLY_ROSTERS, SNAP_COUNTS, FTN_CHARTING,
-            PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS, PLAY_BY_PLAY, EXPECTED_POINTS,
-            PLAYERS);
+            PFR_DEFENSE, PFR_PASSING, RUSHING_ADVANCED_STATS, PBP_PARTICIPATION,
+            NGS_PASSING, NGS_RECEIVING, NGS_RUSHING, PLAY_BY_PLAY, EXPECTED_POINTS, PLAYERS);
 
     private Feeds() {
     }
