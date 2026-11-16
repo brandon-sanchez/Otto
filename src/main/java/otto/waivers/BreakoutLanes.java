@@ -54,8 +54,19 @@ public final class BreakoutLanes {
 
     static final double SLOW_SNAP_SHARE = 0.55;
 
-    static final double FAST_BACK_TARGET_SHARE = 0.25;
+    /**
+     * The fast-lane bar for a running back's target share. The best
+     * season-long shares for backs sit near 22-23%, so one game at 20%
+     * is a real spike in his receiving role while still being a line
+     * a back can reach.
+     */
+    static final double FAST_BACK_TARGET_SHARE = 0.20;
 
+    /**
+     * The slow-lane bar for a running back's target share. A season
+     * share near 15% belongs to the backs whose receiving work makes
+     * them weekly PPR starters.
+     */
     static final double SLOW_BACK_TARGET_SHARE = 0.15;
 
     /** How many straight games the slow lane asks for. */

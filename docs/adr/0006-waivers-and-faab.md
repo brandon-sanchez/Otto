@@ -312,8 +312,9 @@ game. Keaton Mitchell took 19% of the Chargers' targets in week 4 of
 2026 on 37% of the snaps, and no snap lane could see it. A back is now
 read on two lanes, snaps and targets, and either one tags him:
 
-- `FAST_BACK_TARGET_SHARE` = 25%. A back with a quarter of his team's
-  targets in one game is being used as a receiver first.
+- `FAST_BACK_TARGET_SHARE` = 20%. The best season-long target shares
+  for backs sit near 22-23%, so a 25% bar almost never fired. A fifth
+  of his team's targets in one game is still a real spike.
 - `SLOW_BACK_TARGET_SHARE` = 15% in two straight games. A season share
   near 15% belongs to the backs whose receiving work makes them weekly
   PPR starters.

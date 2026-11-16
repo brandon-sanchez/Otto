@@ -527,11 +527,40 @@ class WaiverScenarioTest extends WireSeamTest {
         Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
         assertThat(targetLine(board, "Ray Davis"))
                 .contains("breakout",
-                        "he held 17% and then 21% of target share over weeks 2 and 3, at or "
+                        "he held 17% and then 19% of target share over weeks 2 and 3, at or "
                                 + "above the 15% that marks a real role in both",
                         "his target share has risen every week: week 1 10%, week 2 17%, "
-                                + "week 3 21%",
+                                + "week 3 19%",
+                        "he played 44% of the snaps in week 3")
+                .doesNotContain("so the role is his on one game");
+    }
+
+    @Test
+    void oneGameAtAFifthOfTheTargetsIsABacksBreakout() {
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAReceivingBackSpike);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A back caught a game's worth of targets.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Ray Davis"))
+                .contains("breakout",
+                        "he took 21% of target share in week 3, at or above the 20% that "
+                                + "marks an elite one, so the role is his on one game",
                         "he played 44% of the snaps in week 3");
+    }
+
+    @Test
+    void oneGameJustUnderAFifthOfTheTargetsIsNoBacksBreakout() {
+        aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAReceivingBackNearSpike);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A back caught a few more passes.");
+
+        runCheckAt(TUESDAY_EVENING);
+
+        Event board = boardEvent(SEPTEMBER_BOARD).orElseThrow();
+        assertThat(targetLine(board, "Ray Davis")).doesNotContain("breakout");
     }
 
     @Test

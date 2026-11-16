@@ -179,13 +179,33 @@ public final class NflverseStubs {
 
     /**
      * Three played weeks over which one back's receiving role grows, 10%,
-     * 17% and then 21% of his team's targets, while he never plays more
-     * than 44% of the snaps. Only his target share can tag him.
+     * 17% and then 19% of his team's targets, while he never plays more
+     * than 44% of the snaps. Only his target share can tag him, and no
+     * single week of it reaches the fast lane.
      */
     public static void waiverWeekWithAReceivingBack(WireMockServer nflverse) {
         waiverWeekWithAReturningStarter(nflverse);
         stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-receiving-back.csv");
         stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-receiving-back.csv");
+    }
+
+    /**
+     * The receiving back's quiet weeks, 10% and then 7% of the targets,
+     * before one game at 21%. Only the fast target lane can tag him.
+     */
+    public static void waiverWeekWithAReceivingBackSpike(WireMockServer nflverse) {
+        waiverWeekWithAReceivingBack(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-receiving-back-spike.csv");
+    }
+
+    /**
+     * The same quiet weeks before one game at 19%, just under the fast
+     * target lane, so nothing tags him.
+     */
+    public static void waiverWeekWithAReceivingBackNearSpike(WireMockServer nflverse) {
+        waiverWeekWithAReceivingBack(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH,
+                "nflverse/stats-player-week-receiving-back-near-spike.csv");
     }
 
     /**
