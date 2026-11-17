@@ -337,6 +337,20 @@ class InjuredBuyLowScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void newsThatOnlySaysHeCouldReturnInAWeekIsNoTimeline() {
+        leagueInWeek12("sleeper/league-in-season.json");
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft-injured.json");
+        newsIsRead(RETURNING, "sleeper/news-92001-hedged-week.json");
+
+        Map<String, String> injury = judge("RB Depth 01", answer("I don't know his timeline "
+                + "for his knee.", RETURNING));
+
+        assertThat(injury)
+                .containsEntry("timeline", "I don't know his timeline for his knee")
+                .doesNotContainKeys("reportedBy", "likelyBack");
+    }
+
+    @Test
     void aReplyThatInventsAReturnWeekIsCorrectedOnceAndThenWithheld() {
         leagueInWeek12("sleeper/league-in-season.json");
         fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft-injured.json");

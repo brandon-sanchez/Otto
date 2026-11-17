@@ -7,6 +7,8 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,6 +75,23 @@ class ReturnTimelineTest {
     @Test
     void aTargetedReturnWeekIsRead() {
         assertThat(read("Robinson targeting a return in Week 14", null))
+                .isInstanceOfSatisfying(ReturnTimeline.ByWeek.class,
+                        byWeek -> assertThat(byWeek.week()).isEqualTo(14));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "Robinson could return in Week 14",
+        "Robinson might be back by Week 14",
+        "Robinson is hoping to return in Week 14",
+        "Robinson has a chance to be activated in Week 14"})
+    void aReturnWeekTheStoryIsUnsureOfIsNoTimeline(String headline) {
+        assertThat(read(headline, null)).isInstanceOf(ReturnTimeline.Unknown.class);
+    }
+
+    @Test
+    void aReturnWeekStatedAsTheEarliestIsRead() {
+        assertThat(read("Robinson is not expected back until Week 14", null))
                 .isInstanceOfSatisfying(ReturnTimeline.ByWeek.class,
                         byWeek -> assertThat(byWeek.week()).isEqualTo(14));
     }
