@@ -132,7 +132,7 @@ public class TradeIdeas {
     /**
      * Finds trade offers and has the model explain them.
      *
-     * <p>Side effects: the habit capture's reads and writes, the reads
+     * <p>Side effects: the habit capture's reads, the reads
      * {@link TradeOffers#find} makes, one or two model calls, and one
      * Decision Record of kind {@link RunKind#TRADE_IDEAS} whatever the
      * outcome. After the deadline, the weaknesses answer's reads and its

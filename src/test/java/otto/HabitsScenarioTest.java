@@ -32,8 +32,10 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import otto.check.CheckRunner;
 import otto.events.Event;
@@ -52,6 +54,7 @@ import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchCache;
+import otto.storage.DocumentBackend;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -110,6 +113,9 @@ class HabitsScenarioTest extends WireSeamTest {
 
     @Autowired
     private ResearchCache research;
+
+    @MockitoSpyBean
+    private DocumentBackend backend;
 
     @BeforeEach
     void aLeagueInSeason() {
@@ -364,6 +370,29 @@ class HabitsScenarioTest extends WireSeamTest {
         lastWeekWasRead(2);
     }
 
+    /**
+     * The Check stores the capture every minute. A chat answer that
+     * stored it too would have the deployed storage refuse whichever of
+     * the two wrote second, and a refused webhook run makes Telegram send
+     * the question again.
+     */
+    @Test
+    void aHabitsQuestionReadsTheNewestWeekButLeavesStoringItToTheCheck() {
+        for (int week = 1; week <= 6; week++) {
+            stubMatchups(week, USUAL_STARTERS, points(Map.of(JACOBS, 6.0, COOK, 14.0)));
+        }
+        checkInWeek(6);
+        leagueIsInWeek(7);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "review_habits", "{}", "Here it is.");
+        Mockito.clearInvocations(backend);
+
+        ask(QUESTION);
+
+        assertThat(sentMessage()).contains("6 weeks");
+        Mockito.verify(backend, Mockito.never())
+                .store(Mockito.eq("habit-weeks"), Mockito.any());
+    }
+
     @Test
     void aSleeperReadTheCaptureCouldNotMakeIsLoggedAsAWarning() {
         stubMatchups(1, USUAL_STARTERS, points(Map.of()));
@@ -457,6 +486,12 @@ class HabitsScenarioTest extends WireSeamTest {
 
     /** Runs one Check in the given week, before any of that week's games start. */
     private void checkInWeek(int week) {
+        leagueIsInWeek(week);
+        checkRunner.runCheck();
+    }
+
+    /** Moves the clock and Sleeper to the given week, before any of its games start. */
+    private void leagueIsInWeek(int week) {
         clock.set(week(week));
         stubBody(SleeperStubs.STATE_PATH, Fixtures.read("sleeper/state-nfl.json")
                 .replace("\"week\": 2", "\"week\": " + week)
@@ -468,7 +503,6 @@ class HabitsScenarioTest extends WireSeamTest {
         for (int round = 1; round <= week; round++) {
             stubTransactionsIfUnset(round);
         }
-        checkRunner.runCheck();
     }
 
     private final Map<Integer, Boolean> transactionsStubbed = new HashMap<>();
