@@ -1,8 +1,10 @@
 package otto.lineup;
 
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Projected points for one week: each player's projected stat line
@@ -31,6 +33,11 @@ public class ProjectionTable {
     public boolean projectsAnyone() {
         return statLines.values().stream()
                 .anyMatch(statLine -> scoring.price(statLine, null).isPresent());
+    }
+
+    /** Every player the table carries a stat line for, priced or not. */
+    public Set<String> playerIds() {
+        return Collections.unmodifiableSet(statLines.keySet());
     }
 
     public Optional<Double> points(String playerId, String position) {

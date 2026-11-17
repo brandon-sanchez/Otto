@@ -54,6 +54,7 @@ import otto.team.WeaknessSuggestions;
 import otto.trade.RestOfSeason;
 import otto.trade.RestOfSeasonProjections;
 import otto.trade.TradeDeadline;
+import otto.trade.TradeDeadlines;
 
 /**
  * Answers "what are my team's weaknesses?" in chat, only when the user
@@ -124,13 +125,15 @@ public class TeamWeaknesses {
     private final TeamDirections directions;
     private final TradeOffers offers;
     private final HabitService habits;
+    private final TradeDeadlines deadlines;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
             MarketValues market, TeamDirections directions, TradeOffers offers,
-            HabitService habits, CheckedAdvice advice, AdviceCheck check) {
+            HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
+            AdviceCheck check) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
@@ -140,6 +143,7 @@ public class TeamWeaknesses {
         this.directions = directions;
         this.offers = offers;
         this.habits = habits;
+        this.deadlines = deadlines;
         this.advice = advice;
         this.form = AdviceForm.of(INSTRUCTIONS, (bundle, reply) ->
                 QuietHabits.failHabitMentions(check.check(bundle, reply)));
@@ -209,16 +213,16 @@ public class TeamWeaknesses {
         Map<String, Double> perGame = TeamProfiler.perGame(season);
         LeagueProfile profile = profiler.profile(league, shapes.shape(league), perGame);
         TeamProfile user = profile.user().orElseThrow();
-        Optional<Integer> deadline = TradeDeadline.passedWeek(
-                league.league().tradeDeadline(), league.week().weekNumber());
+        Optional<String> tradesClosed = deadlines.assess(league)
+                .flatMap(TradeDeadline::closedBecause);
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
         List<WaiverSuggestion> waivers = WeaknessSuggestions.of(profile,
                 rated(freeAgents, perGame, league), lean.depthAt());
         TeamWeaknessEvidence.Facts facts = new TeamWeaknessEvidence.Facts(name, profile, user,
-                waivers, deadline.isEmpty() ? trades(league, waivers.size(), lean, now)
+                waivers, tradesClosed.isEmpty() ? trades(league, waivers.size(), lean, now)
                         : List.of(),
                 market(league, now), sidelined(mine, user), season.weeks(),
-                deadline, limits(mine, user), everyLeague, direction(league, now));
+                tradesClosed, limits(mine, user), everyLeague, direction(league, now));
         EvidenceBundle bundle = QuietHabits.add(TeamWeaknessEvidence.bundle(facts, MAX_LENGTH,
                 now), lean, now);
         CheckedAdvice.Checked checked = advice.write(bundle, form,

@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -198,18 +199,20 @@ public class TeamProfiler {
      * the twelfth-best rostered RB sets the line.
      *
      * @param starting the position's replacement rank in the league's
-     *        {@link LeagueShape}
+     *        {@link LeagueShape}; empty, which no player reaches, when it
+     *        has none
      */
-    private static double startableLine(List<Team> teams, String position, int starting) {
+    private static double startableLine(List<Team> teams, String position,
+            OptionalInt starting) {
         List<Double> pooled = teams.stream()
                 .flatMap(team -> team.at(position).stream())
                 .map(RatedPlayer::perGame)
                 .sorted(Comparator.reverseOrder())
                 .toList();
-        if (starting == 0 || pooled.isEmpty()) {
+        if (starting.isEmpty() || pooled.isEmpty()) {
             return Double.POSITIVE_INFINITY;
         }
-        return pooled.get((int) Math.min(starting, pooled.size()) - 1);
+        return pooled.get(Math.min(starting.getAsInt(), pooled.size()) - 1);
     }
 
     private static Strength strength(int startable, int spots, int starterRank, int depthRank,

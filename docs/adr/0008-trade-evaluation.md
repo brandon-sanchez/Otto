@@ -18,19 +18,40 @@ model recorded below.
 
 ## A closed deadline marks the price instead of hiding it
 
-The league's `settings.trade_deadline` sets the last week for trades.
-Otto still prices a trade after that week because the user asked for the
-information. The first field in the tool result says when the deadline
-passed and that the trade can no longer be submitted. The Ask tool tells
-the narrator to start with that field. The user gets the requested price
-without mistaking an impossible trade for a legal one.
+The league's `settings.trade_deadline` names the week trading closes in.
+Sleeper closes trading when the last game of that week ends, usually
+Monday night, and a trade accepted before then still completes when its
+review period ends later. Sleeper's own week number stays on the deadline
+week for a day or two after that game, so the week number can't say
+whether trading is open. Otto reads the stored nflverse schedule instead:
+trading is closed once every game of the deadline week has a result, or
+once the week's last kickoff is 3 hours 30 minutes old. That length is
+longer than a typical game on purpose: telling the user trades are closed
+while the last game is still being played costs him a legal trade, and
+telling him they are open a few minutes too long costs one failed try.
+When the schedule can't be read, doesn't list the week, or lists the last
+game without a kickoff time, trading counts as closed from 08:00 UTC on
+the Tuesday after the week's first game, counted from the season start
+date Sleeper publishes.
 
-During the deadline week, the field says that the trade remains legal
-but is nearly out of time. Before that week, the result does not include
-the field. An absent, null, zero, or negative setting means that the
-league has no deadline. It never becomes a week-zero deadline.
+Otto still prices a trade after trading closes because the user asked
+for the information. The first field in the tool result says that the
+deadline passed and that the trade can no longer be submitted. The Ask
+tool tells the narrator to start with that field. The user gets the
+requested price without mistaking an impossible trade for a legal one.
 
-After the deadline, Otto returns no Leverage Note. The note would tell
+During the deadline week, while its last game has not ended, the field
+says when trades close, that a trade has to be proposed and accepted
+before then, and that its review period can finish afterward. Before
+that week, the result does not include the field. An absent, null, zero,
+or negative setting means that the league has no deadline, and so does
+99 or any week from 18 on. It never becomes a week-zero deadline.
+
+`settings.disable_trades` turns trades off for the whole season. Otto
+treats that league as closed in every week, with a field that says
+trades are turned off.
+
+Once trading is closed, Otto returns no Leverage Note. The note would tell
 the user what the partner may pay for, although the partner can no longer
 trade. The price remains useful without that prompt.
 
@@ -212,7 +233,8 @@ leagues his and the partner's draft picks are pieces like players.
 Buy-low players on other teams come first as targets and sell-high
 players on his team come first as chips. No player is held back.
 
-After the trade deadline there are no offers. `suggest_trades` answers
+Once trading is closed, by the deadline or because the league has
+trades turned off, there are no offers. `suggest_trades` answers
 with the weaknesses read, which says trades are closed and points to
 waivers. Otto never sends or accepts a trade on Sleeper.
 

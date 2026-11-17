@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerHealth;
+import otto.lineup.PlayerPositions;
 import otto.sleeper.SleeperAdapter;
 
 /** Assembles a Snapshot from polled league state and the Player Directory. */
@@ -53,6 +54,8 @@ public class SnapshotBuilder {
                         teams.put(playerId, player.team());
                     }
                 }));
+        roster.players().forEach(playerId -> PlayerPositions.defenseTeam(playerId)
+                .ifPresent(team -> teams.put(playerId, team)));
         return new RosterSnapshot(
                 roster.rosterId(),
                 ownerId,

@@ -46,6 +46,15 @@ public final class PlayerPositions {
     }
 
     /**
+     * Returns the NFL team a team defense plays for, which is its id.
+     *
+     * @return empty for any player who is not a team defense
+     */
+    public static Optional<String> defenseTeam(String playerId) {
+        return TEAM_CODE.matcher(playerId).matches() ? Optional.of(playerId) : Optional.empty();
+    }
+
+    /**
      * Returns {@link #DEFENSE} for a team-code id, {@link #KICKER} for a
      * stat line with kick attempts, and empty for anyone else.
      *
@@ -53,7 +62,7 @@ public final class PlayerPositions {
      */
     public static Optional<String> kickerOrDefense(String playerId,
             Map<String, Double> statLine) {
-        if (TEAM_CODE.matcher(playerId).matches()) {
+        if (defenseTeam(playerId).isPresent()) {
             return Optional.of(DEFENSE);
         }
         return statLine != null && KICKS.stream().anyMatch(statLine::containsKey)
