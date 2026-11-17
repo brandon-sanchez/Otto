@@ -285,6 +285,35 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aTradeOfMoreThanFourPiecesASideIsDeclinedInPlainWords() {
+        redraftLeague("sleeper/rosters-offers.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades",
+                "{\"shape\":\"9-for-9\"}", NARRATION);
+
+        ask("build me a 9-for-9 trade");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("\"role\":\"tool\""))
+                .withRequestBody(containing("I build trades of up to 4 players a side")));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("legalMoves")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing(NARRATION)));
+    }
+
+    @Test
+    void aFourForFourIsTheLargestShapeBuilt() {
+        redraftLeague("sleeper/rosters-offers.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades",
+                "{\"shape\":\"4-for-4\"}", NARRATION);
+
+        ask("build me a 4-for-4 trade");
+
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("I build trades of up to 4 players a side")));
+    }
+
+    @Test
     void anyShapeTheUserAsksForIsBuilt() {
         redraftLeague("sleeper/rosters-offers.json");
 

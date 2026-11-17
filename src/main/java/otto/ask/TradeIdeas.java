@@ -143,7 +143,8 @@ public class TradeIdeas {
      *        without a number
      * @param shown how many offers he has already seen when he asks for
      *        more; null otherwise
-     * @param shape the shape he asked for, such as "3-for-2"; null for
+     * @param shape the shape he asked for, such as "3-for-2", with at
+     *        most {@link TradeShape#MOST_PIECES} pieces a side; null for
      *        the default shapes
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
@@ -158,6 +159,11 @@ public class TradeIdeas {
         }
         if (count != null && count < 1) {
             return ToolAnswer.unavailable("ask for at least one trade idea");
+        }
+        if (TradeShape.tooLarge(shape)) {
+            return ToolAnswer.unavailable(("he asked for a %s trade, and I build trades of up "
+                    + "to %d players a side: tell him that plainly, and offer to build one "
+                    + "that size or smaller").formatted(shape.strip(), TradeShape.MOST_PIECES));
         }
         Optional<TradeShape> asked = Optional.ofNullable(shape).filter(text -> !text.isBlank())
                 .map(TradeShape::parse)
