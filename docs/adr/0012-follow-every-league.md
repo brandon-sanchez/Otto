@@ -64,10 +64,10 @@ The work that calls no model costs a few conditional Sleeper GETs per league per
 
 A chat message picks its league before the Ask loop runs, in code, with no model call:
 
-1. A message that names a league, by its name or by its format ("my dynasty league") when only one followed league has that format, is about that league.
-2. A message that says "all of them", "every league", "both" and the like is about every league.
+1. A message that names a league is about that league. It names one by its whole name, or by a distinctive word of its name or its format followed by "league", "team" or "one" ("the Canes league", "my dynasty league"), when only one followed league has that word or format. A bare "Mahomes" or "dynasty value" names no league, so a league called "Mahomes Mafia" does not take over a question about the player.
+2. A message that says "every league", "all my leagues", "both leagues" or "all my teams" is about every league. "All of them" and "both" count only as a short reply to "which league?": in a question they usually mean players.
 3. Otherwise the message is about the league the chat was last about, which Otto keeps for 24 hours, the length of the conversation window. After an answer about every league, the chat is about no one league, so the next question that names none is asked about.
-4. Otherwise, when Otto follows more than one league, it asks which one, and lists them by name. A short reply that names a league, or says "all", answers the question that was waiting.
+4. Otherwise, when Otto follows more than one league, it asks which one, and lists them by name. A short reply that names a league, even by a bare word ("dynasty"), or says "all of them", answers the question that was waiting.
 
 With one league followed, these steps always pick it, so the Ask loop sees exactly what it saw before.
 

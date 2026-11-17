@@ -27,8 +27,8 @@ import otto.sleeper.LeagueScope;
  * model call (ADR-0012):
  *
  * <ol>
- *   <li>a message that names leagues is about them, and "all of them"
- *       is about every league;</li>
+ *   <li>a message that names leagues is about them, and one that says
+ *       "every league" is about every league;</li>
  *   <li>otherwise it is about the league the chat was last about;</li>
  *   <li>otherwise Otto asks which league, and a short reply that names
  *       one answers the question that was waiting.</li>
@@ -88,19 +88,18 @@ public class LeagueAsk {
         String question = chatLeague.waiting(now)
                 .filter(waiting -> LeagueMentions.onlyAChoice(message, followed))
                 .orElse(message);
-        if (LeagueMentions.everyLeague(message)) {
-            chatLeague.answeredEveryLeague(now);
-            return everyLeague(followed, question);
-        }
         List<FollowedLeague> named = LeagueMentions.named(message, followed);
+        if (named.isEmpty() && LeagueMentions.everyLeague(message)) {
+            named = followed;
+        }
         if (named.size() > 1) {
-            chatLeague.answeredEveryLeague(now);
+            chatLeague.answeredSeveral(now);
             return everyLeague(named, question);
         }
         Optional<FollowedLeague> league = named.stream().findFirst()
                 .or(() -> chatLeague.current(now).flatMap(leagues::find));
         if (league.isEmpty()) {
-            chatLeague.waitFor(message, now);
+            chatLeague.waitFor(question, now);
             return List.of(new Reply(Optional.empty(), whichLeague(followed)));
         }
         chatLeague.answered(league.get().leagueId(), now);

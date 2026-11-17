@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class LeagueListChat {
 
     private static final Pattern LIST = Pattern.compile(
-            "^/leagues(@\\w+)?$|\\b(which|what) leagues\\b|\\blist (my |the |your )?leagues\\b"
+            "^/leagues(@\\w+)?$|\\blist (my |the |your )?leagues\\b"
                     + "|\\bleagues (are you|do you) (follow|following|watch|watching)\\b");
 
     private static final Pattern LEAVE_OUT = Pattern.compile(

@@ -31,7 +31,7 @@ public class ChatLeague {
      * The stored state.
      *
      * @param leagueId the league the last answer was about; null when it
-     *        covered every league or no answer has been given
+     *        covered several leagues or no answer has been given
      * @param waiting the question Otto asked "which league?" about; null
      *        when none is waiting
      */
@@ -53,8 +53,8 @@ public class ChatLeague {
         store.write(DOCUMENT, new State(leagueId, null, now));
     }
 
-    /** Remembers that the last answer covered every league, so the next league is unclear. */
-    public void answeredEveryLeague(Instant now) {
+    /** Remembers that the last answer covered several leagues, so the next league is unclear. */
+    public void answeredSeveral(Instant now) {
         store.write(DOCUMENT, new State(null, null, now));
     }
 

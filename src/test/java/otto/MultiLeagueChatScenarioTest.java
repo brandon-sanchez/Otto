@@ -162,9 +162,11 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         twoLeaguesInWeek12();
         modelReadsEachLeague();
 
-        say("what are the weaknesses on all of them?");
+        say("what are my team's weaknesses?");
+        say("all of them");
 
         assertThat(sent()).containsExactly(
+                "Which league is that about? Raising Canes Demon, Dynasty Bros, or all of them?",
                 "League: " + TwoLeagues.CONFIG_LEAGUE_NAME + "\n\n" + REDRAFT_READ,
                 "League: " + TwoLeagues.DYNASTY_LEAGUE_NAME + "\n\n" + DYNASTY_READ);
     }
@@ -187,6 +189,18 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         say("and who is on my bench?");
         assertThat(sent()).last().isEqualTo(
                 "League: Dynasty Bros\n\nStart your best lineup.");
+    }
+
+    @Test
+    void askingAboutEveryLeagueInOneMessageAnswersEachLeague() {
+        twoLeaguesInWeek12();
+        modelReadsEachLeague();
+
+        say("what are the weaknesses on all my teams?");
+
+        assertThat(sent()).containsExactly(
+                "League: " + TwoLeagues.CONFIG_LEAGUE_NAME + "\n\n" + REDRAFT_READ,
+                "League: " + TwoLeagues.DYNASTY_LEAGUE_NAME + "\n\n" + DYNASTY_READ);
     }
 
     @Test

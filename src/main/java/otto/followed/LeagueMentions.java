@@ -1,32 +1,41 @@
 package otto.followed;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import otto.sleeper.LeagueRules.LeagueFormat;
 
 /**
  * Reads which of the owner's leagues a chat message names, in code and
- * without a model call. A message names a league by its whole name, by
- * a distinctive word of its name ("the Canes league"), or by its format
- * ("my dynasty league"). It names every league with words such as "all
- * of them", "every league" or "both".
+ * without a model call.
+ *
+ * <p>A question names a league by its whole name, or by a distinctive
+ * word of its name or its format followed by "league", "team" or "one"
+ * ("the Canes league", "my dynasty league"). A bare "Mahomes" or
+ * "dynasty value" names no league, so a league called "Mahomes Mafia"
+ * does not take over a question about the player. A short reply to
+ * "which league?" may use the bare word ("dynasty").
+ *
+ * <p>A question names every league with "every league", "all my
+ * leagues", "both leagues" or "all my teams". "All of them" and "both"
+ * name every league only as a short reply: in a question they are as
+ * likely to mean players.
  */
 public final class LeagueMentions {
 
-    /**
-     * "Both of them" alone is not here: in a question it is as likely to
-     * mean two players as two leagues.
-     */
     private static final Pattern EVERY_LEAGUE = Pattern.compile(
-            "\\b(all|every|each|both)( of)?( my| the)? (leagues?|teams?)\\b|\\ball of them\\b");
+            "\\b(every|each) league\\b|\\b(all|both)( of)?( my| the)? leagues\\b"
+                    + "|\\b(all|both)( of)? my teams\\b");
 
-    /** A reply made of these and filler alone, such as "both of them", picks every league. */
     private static final Set<String> EVERY_WORDS = Set.of("all", "both", "every", "each");
+
+    /** The words after a name word or format word that make it name a league. */
+    private static final Set<String> LEAGUE_NOUNS = Set.of("league", "team", "one");
 
     /** Name words too common to tell one league from another. */
     private static final Set<String> COMMON_WORDS = Set.of("league", "leagues", "fantasy",
@@ -54,32 +63,36 @@ public final class LeagueMentions {
     /**
      * Returns the leagues among {@code leagues} that the message names,
      * in their order: by whole name first, then by a distinctive name
-     * word that only one of them has, then by format. Empty when the
-     * message names none.
+     * word only one of them has, then by a format only one of them has.
+     * Empty when the message names none.
      */
     public static List<FollowedLeague> named(String message, List<FollowedLeague> leagues) {
-        String words = " " + words(message) + " ";
+        List<String> tokens = Arrays.asList(words(message).split(" "));
+        String spaced = " " + String.join(" ", tokens) + " ";
+        boolean reply = onlyAChoice(message, leagues);
         List<FollowedLeague> byName = leagues.stream()
                 .filter(league -> league.name() != null && !words(league.name()).isBlank())
-                .filter(league -> words.contains(" " + words(league.name()) + " "))
+                .filter(league -> spaced.contains(" " + words(league.name()) + " "))
                 .toList();
         if (!byName.isEmpty()) {
             return byName;
         }
+        Predicate<String> namesALeague = word -> tokens.contains(word)
+                && (reply || followedByALeagueNoun(tokens, word));
         List<FollowedLeague> byWord = leagues.stream()
                 .filter(league -> distinctiveWords(league).stream()
-                        .anyMatch(word -> words.contains(" " + word + " ")
-                                && leagues.stream().filter(other -> other != league)
-                                        .noneMatch(other -> distinctiveWords(other)
-                                                .contains(word))))
+                        .filter(word -> leagues.stream().filter(other -> other != league)
+                                .noneMatch(other -> distinctiveWords(other).contains(word)))
+                        .anyMatch(namesALeague))
                 .toList();
         if (!byWord.isEmpty()) {
             return byWord;
         }
-        return leagues.stream()
+        List<FollowedLeague> byFormat = leagues.stream()
                 .filter(league -> league.format() != null)
-                .filter(league -> words.contains(" " + formatWord(league.format()) + " "))
+                .filter(league -> namesALeague.test(formatWord(league.format())))
                 .toList();
+        return byFormat.size() == 1 ? byFormat : List.of();
     }
 
     /**
@@ -88,15 +101,25 @@ public final class LeagueMentions {
      * new question.
      */
     public static boolean onlyAChoice(String message, List<FollowedLeague> leagues) {
-        Set<String> choiceWords = leagues.stream()
-                .flatMap(league -> Arrays.stream(words(league.label()).split(" ")))
-                .collect(Collectors.toSet());
-        leagues.stream().filter(league -> league.format() != null)
-                .map(league -> formatWord(league.format()))
-                .forEach(choiceWords::add);
+        Set<String> choiceWords = new HashSet<>();
+        leagues.forEach(league -> {
+            choiceWords.addAll(Arrays.asList(words(league.label()).split(" ")));
+            if (league.format() != null) {
+                choiceWords.add(formatWord(league.format()));
+            }
+        });
         return Arrays.stream(words(message).split(" "))
                 .filter(word -> !word.isBlank())
                 .allMatch(word -> FILLER.contains(word) || choiceWords.contains(word));
+    }
+
+    private static boolean followedByALeagueNoun(List<String> tokens, String word) {
+        for (int index = 0; index < tokens.size() - 1; index++) {
+            if (tokens.get(index).equals(word) && LEAGUE_NOUNS.contains(tokens.get(index + 1))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<String> distinctiveWords(FollowedLeague league) {
