@@ -24,6 +24,7 @@ public record OttoProperties(
         Aws aws,
         Duration directoryCheckInterval,
         Duration preDraftCheckInterval,
+        Duration leagueDiscoveryInterval,
         Duration sleeperCadence,
         double edgeThreshold,
         PositionCutoffs notableCutoffs,

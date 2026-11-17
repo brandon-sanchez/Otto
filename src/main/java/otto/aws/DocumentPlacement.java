@@ -2,6 +2,8 @@ package otto.aws;
 
 import java.util.Set;
 
+import otto.storage.DocumentNaming;
+
 /**
  * Which store a document belongs in: an S3 object of its own, the S3
  * bundle, or DynamoDB.
@@ -24,7 +26,8 @@ import java.util.Set;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, three markers, each Alert delivery record, where
+ * its newest turns, three markers, the list of followed leagues, each
+ * Alert delivery record, where
  * each waiver board's full list resumes, and the research cache: one
  * player's stories, capped at a fixed count, and the index of when
  * each player was last read. The market values are small too: one day
@@ -57,7 +60,8 @@ public enum DocumentPlacement {
             "last-check",
             "alert-id-sequence",
             "telegram-updates",
-            "account-deletion-request");
+            "account-deletion-request",
+            "followed-leagues");
 
     private static final Set<String> SMALL_PREFIXES = Set.of(
             "alert-delivery-",
@@ -65,8 +69,13 @@ public enum DocumentPlacement {
             "research-",
             "market-values-");
 
-    /** Returns where the document with this name is stored. */
-    public static DocumentPlacement of(String name) {
+    /**
+     * Returns where the document with this name is stored. A league's
+     * own copy of a document is stored where the config league's copy
+     * is, so the league suffix is read past.
+     */
+    public static DocumentPlacement of(String stored) {
+        String name = DocumentNaming.withoutLeague(stored);
         if (name.startsWith(FEED_NAME_PREFIX) || name.equals(TEAM_REPORTS)) {
             return FEED;
         }

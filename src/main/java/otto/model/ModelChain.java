@@ -14,6 +14,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import otto.sleeper.LeagueScope;
+
 /**
  * The one way Otto asks a model for anything. Providers are tried one
  * at a time in the configured order, never in parallel: a fallback is
@@ -140,8 +142,10 @@ public class ModelChain {
             if (remaining <= 0) {
                 throw new ModelTimeout();
             }
-            Future<R> future = abandonableCalls.submit(() ->
-                    ScopedValue.where(NESTED_RUN_ENDS, nestedUntilNanos).call(call::get));
+            // A chat tool runs inside the call and reads Sleeper, so the
+            // call must stay on the league its caller was working for.
+            Future<R> future = abandonableCalls.submit(LeagueScope.carried(() ->
+                    ScopedValue.where(NESTED_RUN_ENDS, nestedUntilNanos).call(call::get)));
             try {
                 return future.get(remaining, TimeUnit.NANOSECONDS);
             } catch (TimeoutException e) {

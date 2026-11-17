@@ -354,7 +354,7 @@ class AwsStorageScenarioTest {
         List<String> small = List.of("settings", "watchlist", "watchlist-observations",
                 "mutes", "conversation", "last-check", "alert-id-sequence",
                 "telegram-updates", "alert-delivery-key:abc", "alert-delivery-id:1",
-                "board-options-sent-1", "account-deletion-request");
+                "board-options-sent-1", "account-deletion-request", "followed-leagues");
 
         List<String> feeds = List.of("nflverse-play-by-play", "nflverse-ftn-charting",
                 "team-reports");
@@ -362,6 +362,16 @@ class AwsStorageScenarioTest {
         assertThat(big).allMatch(name -> DocumentPlacement.of(name) != DocumentPlacement.SMALL);
         assertThat(small).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.SMALL);
         assertThat(feeds).allMatch(name -> DocumentPlacement.of(name) == DocumentPlacement.FEED);
+    }
+
+    @Test
+    void aLeaguesOwnCopyOfADocumentIsStoredWhereTheConfigLeaguesCopyIs() {
+        assertThat(DocumentPlacement.of("settings@league-2001"))
+                .isEqualTo(DocumentPlacement.SMALL);
+        assertThat(DocumentPlacement.of("alert-delivery-key:abc@league-2001"))
+                .isEqualTo(DocumentPlacement.SMALL);
+        assertThat(DocumentPlacement.of("snapshot-current@league-2001"))
+                .isEqualTo(DocumentPlacement.BUNDLE);
     }
 
     /**
