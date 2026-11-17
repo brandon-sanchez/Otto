@@ -14,7 +14,7 @@ import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
 import otto.offers.Offer;
-import otto.trade.TradeEvaluator;
+import otto.trade.PricedTrade;
 
 /**
  * Writes trade offers as evidence: every name, number and reason the
@@ -123,21 +123,20 @@ final class TradeIdeaEvidence {
     }
 
     private static Map<String, String> offer(Offer offer) {
-        TradeEvaluator.TradeEvaluation evaluation = offer.priced().evaluation();
+        PricedTrade priced = offer.priced();
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("sendTo", offer.partner());
         facts.put("youGive", names(offer.gives()));
         facts.put("youGet", names(offer.gets()));
         facts.put("shape", shape(offer));
-        facts.put("yourEdge", edge(offer.priced()));
+        facts.put("yourEdge", edge(priced));
         facts.put("yourLineup", "your starting lineup changes by %s points over %s".formatted(
-                evaluation.yours().startersDelta(), evaluation.restOfSeasonWeeks()));
-        if (evaluation.market() != null) {
-            facts.put("market", "on market value you get %d and give %d".formatted(
-                    evaluation.market().youGet().total(), evaluation.market().youGive().total()));
-        }
-        if (evaluation.otherMeasure() != null) {
-            facts.put("otherMeasure", evaluation.otherMeasure());
+                priced.yours().startersDelta(), priced.restOfSeasonWeeks()));
+        priced.market().ifPresent(market -> facts.put("market",
+                "on market value you get %d and give %d".formatted(market.youGet().total(),
+                        market.youGive().total())));
+        if (priced.otherMeasure() != null) {
+            facts.put("otherMeasure", priced.otherMeasure());
         }
         for (int index = 0; index < offer.reasons().size(); index++) {
             facts.put("why" + (index + 1), offer.reasons().get(index));
@@ -150,9 +149,9 @@ final class TradeIdeaEvidence {
     }
 
     /** Says how far the deciding measure leans the user's way, as evaluate_trade does. */
-    private static String edge(TradeEvaluator.PricedTrade priced) {
+    private static String edge(PricedTrade priced) {
         String measure = priced.marketDecides() ? "market value" : "rest-of-season fit";
-        String gap = priced.evaluation().gap();
+        String gap = priced.gapText();
         return "even".equals(priced.verdict())
                 ? "about even on %s, leaning your way by %s".formatted(measure, gap)
                 : "a %s for you on %s, a gap of %s".formatted(priced.verdict(), measure, gap);

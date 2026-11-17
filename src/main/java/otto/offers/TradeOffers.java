@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +37,7 @@ import otto.team.TeamProfiler;
 import otto.trade.InjuredValue;
 import otto.trade.InjuredValues;
 import otto.trade.LeaguePicks;
+import otto.trade.PricedTrade;
 import otto.trade.TradeDeadline;
 import otto.trade.TradeEvaluator;
 import otto.trade.TradePiece;
@@ -171,10 +171,10 @@ public class TradeOffers {
 
     private Ideas search(LeagueWeek league, RosterSnapshot mine, TradeEvaluator.Basis basis,
             Request request, Instant now) {
-        LeagueProfile profile = profiler.profile(league, basis.shape(),
-                TeamProfiler.perGame(basis.season()));
+        Map<String, Double> perGame = TeamProfiler.perGame(basis.season());
+        LeagueProfile profile = profiler.profile(league, basis.shape(), perGame);
         TeamProfile user = profile.user().orElseThrow();
-        OfferSearch.League read = read(league, mine, user, basis, now);
+        OfferSearch.League read = read(league, mine, user, basis, perGame, now);
         OfferSearch.Needs needs = OfferSearch.needs(user, profile.teams().size(),
                 request.lean().depthAt());
         List<OfferSearch.Asset> spare = OfferSearch.assets(read, mine);
@@ -192,7 +192,7 @@ public class TradeOffers {
                         !candidate.marketFair())
                 .thenComparing(Comparator.comparingDouble(
                         OfferSearch.Candidate::estimate).reversed()));
-        Judge judge = new Judge(league, mine, profile, directions(league, now),
+        Judge judge = new Judge(league, basis, mine, profile, directions(league, now),
                 activity.read(league));
         int wanted = request.skip() + request.count();
         List<Offer> accepted = judge.offers(candidates,
@@ -247,11 +247,10 @@ public class TradeOffers {
     }
 
     private OfferSearch.League read(LeagueWeek league, RosterSnapshot mine, TeamProfile user,
-            TradeEvaluator.Basis basis, Instant now) {
+            TradeEvaluator.Basis basis, Map<String, Double> perGame, Instant now) {
         Map<String, DirectoryPlayer> players = directory.read()
                 .map(PlayerDirectory::players).orElse(Map.of());
         Map<String, Double> unfitted = new HashMap<>();
-        Map<String, Double> perGame = TeamProfiler.perGame(basis.season());
         league.rosters().forEach(roster -> roster.players().forEach(playerId ->
                 Optional.ofNullable(roster.playerPositions().get(playerId))
                         .flatMap(position -> TradeEvaluator.unfitted(basis, playerId, position))
@@ -341,15 +340,18 @@ public class TradeOffers {
     private final class Judge {
 
         private final LeagueWeek league;
+        private final TradeEvaluator.Basis basis;
         private final RosterSnapshot mine;
         private final LeagueProfile profile;
         private final Map<Integer, TeamDirection> directions;
         private final ManagerActivity.Activity activity;
-        private final Map<Integer, TradeEvaluator.Basis> bases = new LinkedHashMap<>();
 
-        Judge(LeagueWeek league, RosterSnapshot mine, LeagueProfile profile,
-                Map<Integer, TeamDirection> directions, ManagerActivity.Activity activity) {
+        /** @param basis read for the whole league, which prices any two teams' trade */
+        Judge(LeagueWeek league, TradeEvaluator.Basis basis, RosterSnapshot mine,
+                LeagueProfile profile, Map<Integer, TeamDirection> directions,
+                ManagerActivity.Activity activity) {
             this.league = league;
+            this.basis = basis;
             this.mine = mine;
             this.profile = profile;
             this.directions = directions;
@@ -395,11 +397,7 @@ public class TradeOffers {
          */
         private Optional<Judged> judge(OfferSearch.Candidate candidate) {
             RosterSnapshot partner = candidate.partner();
-            Optional<TradeEvaluator.Basis> basis = basis(partner);
-            if (basis.isEmpty()) {
-                return Optional.empty();
-            }
-            TradeEvaluator.PricedTrade priced = evaluator.price(league, basis.get(), mine,
+            PricedTrade priced = evaluator.price(league, basis, mine,
                     partner, pieces(candidate.gets()), pieces(candidate.gives()));
             boolean modest = !priced.marketDecides() || !CLEAR_EDGE.equals(priced.verdict());
             if (!priced.favoursYou() || !priced.deliverable() || !modest) {
@@ -423,16 +421,6 @@ public class TradeOffers {
                             candidate.need(), described(candidate.gets()),
                             described(candidate.gives()), priced, acceptance.reasons(),
                             direction, Optional.empty()), acceptance));
-        }
-
-        private Optional<TradeEvaluator.Basis> basis(RosterSnapshot partner) {
-            if (!bases.containsKey(partner.rosterId())) {
-                bases.put(partner.rosterId(), switch (evaluator.basis(league, mine, partner)) {
-                    case SourceResult.Ok<TradeEvaluator.Basis> ok -> ok.value();
-                    case SourceResult.Unavailable<TradeEvaluator.Basis> _ -> null;
-                });
-            }
-            return Optional.ofNullable(bases.get(partner.rosterId()));
         }
     }
 
