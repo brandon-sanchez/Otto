@@ -40,6 +40,15 @@ public record Slot(String name, Set<String> eligible) {
                 .toList();
     }
 
+    /**
+     * Returns whether this slot's eligibility is its own rather than the
+     * lenient fallback, so a K or DEF slot, which falls back to every
+     * position, is never filled with a skill player in its place.
+     */
+    public boolean modelledExactly() {
+        return ELIGIBILITY.containsKey(name);
+    }
+
     public boolean accepts(String position) {
         return position != null && eligible.contains(position);
     }

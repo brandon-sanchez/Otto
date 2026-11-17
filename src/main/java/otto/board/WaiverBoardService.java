@@ -73,6 +73,12 @@ import otto.storage.OttoJson;
 @Component
 public class WaiverBoardService {
 
+    /**
+     * The {@code trigger} fact of the Event Log entry for a sent board,
+     * whose {@code runId} fact names the board's Decision Record.
+     */
+    public static final String TRIGGER = "waiver board";
+
     private static final String PLACE_CLAIMS_YOURSELF =
             "If you want to make claims, place them yourself in Sleeper.";
 
@@ -278,7 +284,7 @@ public class WaiverBoardService {
 
     private Optional<Event> send(ClaimRound round, Sendable board) {
         Map<String, String> facts = new LinkedHashMap<>();
-        facts.put("trigger", "waiver board");
+        facts.put("trigger", TRIGGER);
         facts.put("runId", round.boardRunId());
         facts.put("leagueId", round.leagueId());
         facts.put("claimDeadline", round.deadline().toString());

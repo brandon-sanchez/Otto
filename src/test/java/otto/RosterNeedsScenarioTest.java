@@ -62,6 +62,11 @@ class RosterNeedsScenarioTest extends WireSeamTest {
     private RosterNeedsService needs;
 
     private void aWeekThreeLeague(String rostersFixture) {
+        stubWeekThreeLeague(rostersFixture);
+        checkRunner.runCheck();
+    }
+
+    private void stubWeekThreeLeague(String rostersFixture) {
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-needs.json", "players-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
@@ -84,7 +89,6 @@ class RosterNeedsScenarioTest extends WireSeamTest {
                 "matchups-w2");
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "A lineup alert.");
-        checkRunner.runCheck();
     }
 
     private RosterNeeds assess() {
@@ -199,8 +203,9 @@ class RosterNeedsScenarioTest extends WireSeamTest {
 
     @Test
     void aWeekSleeperCannotServeAndNobodyStoredIsSaidRatherThanScoredAsZero() {
-        aWeekThreeLeague("sleeper/rosters-needs.json");
+        stubWeekThreeLeague("sleeper/rosters-needs.json");
         sleeper.stubFor(get(urlEqualTo(MATCHUPS_WEEK_1)).willReturn(aResponse().withStatus(500)));
+        checkRunner.runCheck();
 
         RosterNeeds assessed = assess();
 

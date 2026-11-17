@@ -85,7 +85,7 @@ final class LineupEvidence {
         LineupEvidence builder = new LineupEvidence(roster, week, rosterReadAt, now, matchups);
         Map<String, String> facts = candidate.facts();
         String bench = facts.get("benchId");
-        String starter = facts.get("starterId");
+        String starter = facts.get(BenchEdgeDetector.STARTER_ID);
         builder.addPlayer(bench, "bench player who out-projects a starter");
         builder.addPlayer(starter, "starter the bench player out-projects");
         Map<String, String> problem = new LinkedHashMap<>();

@@ -253,8 +253,13 @@ public class SleeperAdapter {
      * scored for that team, in league scoring. The two lists align with
      * the league's starting slots; an empty slot is Sleeper's
      * {@code "0"} and scores 0.
+     *
+     * @param playerPoints what every player on the roster that week
+     *        scored, bench included, read from Sleeper's undocumented
+     *        {@code players_points}; empty when Sleeper sent none
      */
-    public record StarterLine(int rosterId, List<String> starters, List<Double> points) {
+    public record StarterLine(int rosterId, List<String> starters, List<Double> points,
+            Map<String, Double> playerPoints) {
 
         /** How Sleeper writes a starting slot nobody filled. */
         public static final String EMPTY_SLOT = "0";
@@ -262,6 +267,7 @@ public class SleeperAdapter {
         public StarterLine {
             starters = List.copyOf(starters);
             points = List.copyOf(points);
+            playerPoints = playerPoints == null ? Map.of() : Map.copyOf(playerPoints);
         }
     }
 
@@ -546,7 +552,14 @@ public class SleeperAdapter {
                 List<String> starterIds = new ArrayList<>();
                 starters.forEach(starter -> starterIds.add(
                         starter.isNull() ? StarterLine.EMPTY_SLOT : starter.asText()));
-                lines.add(new StarterLine(matchup.get("roster_id").asInt(), starterIds, scored));
+                Map<String, Double> playerPoints = new LinkedHashMap<>();
+                matchup.path("players_points").properties().forEach(entry -> {
+                    if (entry.getValue().isNumber()) {
+                        playerPoints.put(entry.getKey(), entry.getValue().asDouble());
+                    }
+                });
+                lines.add(new StarterLine(matchup.get("roster_id").asInt(), starterIds, scored,
+                        playerPoints));
             }
             return ok(lines);
         });
