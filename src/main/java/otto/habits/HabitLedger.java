@@ -95,8 +95,9 @@ public class HabitLedger {
 
     /**
      * How long after its first capture the latest scored week is still
-     * read again. Sleeper turns the week over on the Tuesday and stat
-     * corrections land through the Thursday, so three days covers them.
+     * read again. The week is first captured when Sleeper turns it over,
+     * early in the week after its games, and stat corrections land
+     * through the Thursday after the games, so three days covers them.
      */
     private static final Duration CORRECTIONS_LAND_WITHIN = Duration.ofDays(3);
 
@@ -226,7 +227,7 @@ public class HabitLedger {
     }
 
     private HabitHistory captured(SleeperAdapter.League league, Snapshot snapshot,
-            WeekFacts week, Instant now, boolean store) {
+            WeekFacts week, Instant now, boolean keep) {
         Optional<SeasonWeek> current = week.seasonWeek()
                 .filter(seasonWeek -> !PRESEASON.equals(seasonWeek.seasonType()));
         Optional<RosterSnapshot> user = snapshot.rosters().stream()
@@ -239,8 +240,8 @@ public class HabitLedger {
         try {
             before = Optional.of(stored(league.leagueId(), current.get().season()));
             Stored after = updated(before.get(), league, user.get(), current.get(), week, now);
-            if (store && !after.equals(before.get())) {
-                this.store.write(DOCUMENT, after);
+            if (keep && !after.equals(before.get())) {
+                store.write(DOCUMENT, after);
             }
             return history(after);
         } catch (RuntimeException e) {
@@ -494,9 +495,11 @@ public class HabitLedger {
         if (positions.isEmpty()) {
             return Map.of();
         }
+        Map<String, Map<String, Double>> projections = read(
+                "week " + week.number() + " projections",
+                sleeper.projections(week.season(), week.number())).orElse(Map.of());
         Map<String, PlayedWeek.FreeAgent> best = new HashMap<>();
-        read("week " + week.number() + " projections",
-                sleeper.projections(week.season(), week.number())).orElse(Map.of()).forEach((playerId, line) -> {
+        projections.forEach((playerId, line) -> {
             Optional<String> position = PlayerPositions.kickerOrDefense(playerId, line);
             if (position.isEmpty() || !positions.contains(position.get())
                     || leaguePoints.containsKey(playerId)) {

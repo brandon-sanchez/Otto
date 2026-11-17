@@ -143,9 +143,10 @@ public class TradeIdeas {
      *        without a number
      * @param shown how many offers he has already seen when he asks for
      *        more; null otherwise
-     * @param shape the shape he asked for, such as "3-for-2", with at
-     *        most {@link TradeShape#MOST_PIECES} pieces a side; null for
-     *        the default shapes
+     * @param shape the shape he asked for, such as "3-for-2"; null for
+     *        the default shapes. A side of more than
+     *        {@link TradeShape#MOST_PIECES} pieces is answered as
+     *        unavailable
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
