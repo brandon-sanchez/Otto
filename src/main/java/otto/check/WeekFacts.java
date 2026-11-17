@@ -47,16 +47,15 @@ public record WeekFacts(
     }
 
     /**
-     * Returns the player's lineup position, or null when Otto cannot tell
+     * Returns the player's lineup position, or empty when Otto cannot tell
      * it. A kicker or defense, which the roster carries no position for,
      * is read from his id and this week's projection, so a K or DEF slot
      * sees him.
      */
-    public String positionOf(RosterSnapshot roster, String playerId) {
+    public Optional<String> positionOf(RosterSnapshot roster, String playerId) {
         String known = roster.playerPositions().get(playerId);
         return projections.map(table -> table.positionOf(playerId, known))
-                .orElseGet(() -> PlayerPositions.of(playerId, known, null))
-                .orElse(null);
+                .orElseGet(() -> PlayerPositions.of(playerId, known, null));
     }
 
     /**
@@ -66,10 +65,7 @@ public record WeekFacts(
     public Map<String, String> positions(RosterSnapshot roster) {
         Map<String, String> positions = new HashMap<>();
         for (String playerId : roster.players()) {
-            String position = positionOf(roster, playerId);
-            if (position != null) {
-                positions.put(playerId, position);
-            }
+            positionOf(roster, playerId).ifPresent(position -> positions.put(playerId, position));
         }
         return Map.copyOf(positions);
     }

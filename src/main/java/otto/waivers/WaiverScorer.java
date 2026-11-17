@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1162,16 +1163,17 @@ public class WaiverScorer {
          * basis says so - a replacement level of zero would price every
          * scrub as a starter.
          *
-         * @param rank the league's replacement rank, 0 when it has none
+         * @param rank the league's replacement rank; empty when it has
+         *        none, which the lowest projected player then sets
          */
-        private Replacement replacementFor(String position, int rank) {
+        private Replacement replacementFor(String position, OptionalInt rank) {
             List<Double> ranked = directory.players().values().stream()
                     .filter(player -> position.equals(player.position()))
                     .map(player -> projections.points(player.playerId(), position))
                     .flatMap(Optional::stream)
                     .sorted(Comparator.reverseOrder())
                     .toList();
-            int cutoff = rank > 0 ? rank : ranked.size();
+            int cutoff = rank.orElse(ranked.size());
             if (ranked.isEmpty()) {
                 return new Replacement(position, 0.0,
                         "no %s is projected this week, so I have no %s replacement level"

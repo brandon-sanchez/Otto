@@ -140,7 +140,8 @@ public class LineupLegalityDetector {
 
     private String projectionDisplay(RosterSnapshot roster, WeekFacts week, String playerId) {
         return week.projections()
-                .map(table -> table.display(playerId, week.positionOf(roster, playerId)))
+                .map(table -> table.display(playerId,
+                        week.positionOf(roster, playerId).orElse(null)))
                 .orElse(ProjectionTable.NO_PROJECTION);
     }
 
@@ -155,11 +156,12 @@ public class LineupLegalityDetector {
                 .filter(playerId -> !starters.contains(playerId))
                 .filter(playerId -> !roster.reserve().contains(playerId))
                 .filter(playerId -> !roster.taxi().contains(playerId))
-                .filter(playerId -> slot.accepts(week.positionOf(roster, playerId)))
+                .filter(playerId -> week.positionOf(roster, playerId).filter(slot::accepts)
+                        .isPresent())
                 .filter(playerId -> week.canPlay(roster, playerId))
                 .max(Comparator.comparingDouble(playerId -> week.projections()
                         .flatMap(table -> table.points(playerId,
-                                week.positionOf(roster, playerId)))
+                                week.positionOf(roster, playerId).orElse(null)))
                         .orElse(Double.NEGATIVE_INFINITY)));
         return best
                 .map(playerId -> "%s (%s)".formatted(

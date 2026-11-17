@@ -1,5 +1,7 @@
 package otto.lineup;
 
+import java.util.OptionalInt;
+
 /**
  * One rank per position in the weekly projection table. The same shape
  * carries two different lines the spec draws:
@@ -14,16 +16,23 @@ package otto.lineup;
  */
 public record PositionCutoffs(int qb, int rb, int wr, int te) {
 
-    public int forPosition(String position) {
+    /**
+     * Returns the position's rank.
+     *
+     * @param position a lineup position, or null when it is unknown
+     * @return empty for an unknown position or one these cutoffs don't
+     *         name, such as a kicker
+     */
+    public OptionalInt forPosition(String position) {
         if (position == null) {
-            return 0;
+            return OptionalInt.empty();
         }
         return switch (position) {
-            case "QB" -> qb;
-            case "RB" -> rb;
-            case "WR" -> wr;
-            case "TE" -> te;
-            default -> 0;
+            case "QB" -> OptionalInt.of(qb);
+            case "RB" -> OptionalInt.of(rb);
+            case "WR" -> OptionalInt.of(wr);
+            case "TE" -> OptionalInt.of(te);
+            default -> OptionalInt.empty();
         };
     }
 }

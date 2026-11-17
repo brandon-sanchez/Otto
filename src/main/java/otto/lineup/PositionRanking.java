@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 
 /**
@@ -21,10 +20,11 @@ import otto.directory.PlayerDirectory;
  * Replacement level is what the player at the cutoff rank projects,
  * which is what makes a starting slot a gap.
  *
- * Only players the Player Directory keeps are ranked - quarterbacks,
- * running backs, receivers and tight ends - and only those the table
- * prices. A player with no projection holds no rank rather than the
- * last one.
+ * Quarterbacks, running backs, receivers and tight ends are ranked from
+ * the Player Directory, and kickers and team defenses, which it does not
+ * keep, from the table as {@link PlayerPositions} reads them. Only
+ * players the table prices are ranked: a player with no projection holds
+ * no rank rather than the last one.
  */
 public final class PositionRanking {
 
@@ -42,13 +42,18 @@ public final class PositionRanking {
     public static PositionRanking of(ProjectionTable table, PlayerDirectory directory) {
         Map<String, Double> points = new HashMap<>();
         Map<String, List<String>> byPosition = new HashMap<>();
-        for (DirectoryPlayer player : directory.players().values()) {
-            table.points(player.playerId(), player.position()).ifPresent(projected -> {
-                points.put(player.playerId(), projected);
-                byPosition.computeIfAbsent(player.position(), position -> new ArrayList<>())
-                        .add(player.playerId());
-            });
-        }
+        Map<String, String> positions = new HashMap<>();
+        directory.players().values()
+                .forEach(player -> positions.put(player.playerId(), player.position()));
+        table.playerIds().stream()
+                .filter(playerId -> !positions.containsKey(playerId))
+                .forEach(playerId -> table.positionOf(playerId, null)
+                        .ifPresent(position -> positions.put(playerId, position)));
+        positions.forEach((playerId, position) ->
+                table.points(playerId, position).ifPresent(projected -> {
+                    points.put(playerId, projected);
+                    byPosition.computeIfAbsent(position, key -> new ArrayList<>()).add(playerId);
+                }));
 
         Map<String, Integer> ranks = new HashMap<>();
         byPosition.forEach((position, playerIds) -> {
@@ -95,8 +100,8 @@ public final class PositionRanking {
 
     /** True when the player is inside his position's cutoff rank. */
     public boolean inside(String playerId, String position, PositionCutoffs cutoffs) {
-        int cutoff = cutoffs.forPosition(position);
+        OptionalInt cutoff = cutoffs.forPosition(position);
         OptionalInt rank = rankOf(playerId);
-        return cutoff > 0 && rank.isPresent() && rank.getAsInt() <= cutoff;
+        return cutoff.isPresent() && rank.isPresent() && rank.getAsInt() <= cutoff.getAsInt();
     }
 }

@@ -198,8 +198,8 @@ public class TradeEvaluator {
 
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
-        addRoster(positions, teams, mine.get());
-        addRoster(positions, teams, partner);
+        addPlacedPlayers(positions, teams, leagueWeek, mine.get());
+        addPlacedPlayers(positions, teams, leagueWeek, partner);
         addTraded(positions, teams, resolvedIn);
         addTraded(positions, teams, resolvedOut);
         return switch (basis(leagueWeek, positions, teams)) {
@@ -246,7 +246,7 @@ public class TradeEvaluator {
     public SourceResult<Basis> basis(LeagueWeek leagueWeek) {
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
-        leagueWeek.rosters().forEach(roster -> addRoster(positions, teams, roster));
+        leagueWeek.rosters().forEach(roster -> addPlacedPlayers(positions, teams, leagueWeek, roster));
         return basis(leagueWeek, positions, teams);
     }
 
@@ -386,9 +386,9 @@ public class TradeEvaluator {
         return replacement;
     }
 
-    private static void addRoster(Map<String, String> positions, Map<String, String> teams,
-            RosterSnapshot roster) {
-        positions.putAll(roster.playerPositions());
+    private static void addPlacedPlayers(Map<String, String> positions, Map<String, String> teams,
+            LeagueWeek leagueWeek, RosterSnapshot roster) {
+        positions.putAll(leagueWeek.week().positions(roster));
         teams.putAll(roster.playerTeams());
     }
 
