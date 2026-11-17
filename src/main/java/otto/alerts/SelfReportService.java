@@ -45,7 +45,8 @@ public class SelfReportService {
                 Map.of("source", source, "reason", safeReason));
         if (eventLog.append(event)) {
             telegram.sendMessage(
-                    "Heads up: I cannot read %s right now (%s). I keep watching everything else and will use it again once it recovers."
+                    ("Heads up, I can't read %s right now, and the error says %s. I'm still "
+                            + "watching everything else, and I'll use it again once it's back.")
                             .formatted(source, safeReason));
         }
     }

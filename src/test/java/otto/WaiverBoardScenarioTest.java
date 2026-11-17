@@ -182,9 +182,9 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         List<String> messages = boardMessages();
         assertThat(messages).singleElement().satisfies(message -> assertThat(message)
                 .startsWith("Your waiver options\n\n" + OPENING)
-                .contains("1. Bucky Irving · RB, TB\nOtto: bid $9 · Suggested range $7–$12.\n"
+                .contains("1. Bucky Irving · RB, TB\nI'd bid $9. Anything from $7 to $12 makes sense.\n"
                         + "Bucky Irving played 71% of offensive snaps")
-                .contains("2. Wandale Robinson · WR, NYG\nOtto: bid $5 · Suggested range $3–$8.\n"
+                .contains("2. Wandale Robinson · WR, NYG\nI'd bid $5. Anything from $3 to $8 makes sense.\n"
                         + "Wandale Robinson drew 13 targets")
                 .doesNotContain("View all options")
                 .doesNotContainIgnoringCase("score")
@@ -317,6 +317,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(BOARD_REQUEST))
                 .withRequestBody(containing("71% of offensive snaps (47 snaps)"))
+                .withRequestBody(containing("Never put a label in front of an explanation"))
                 .withRequestBody(containing("0 targets of 18 team targets"))
                 .withRequestBody(containing("red-zone and end-zone work unknown"))
                 .withRequestBody(containing("expected points unknown"))
@@ -400,8 +401,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("No waiver board this round")))
-                .withRequestBody(matchingJsonPath("$.text", containing("past my checks"))));
+                        containing("waiver board for you this round")))
+                .withRequestBody(matchingJsonPath("$.text", containing("past my fact checks"))));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("James Cook")));
     }
@@ -422,11 +423,11 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("No waiver board this round")))
+                        containing("waiver board for you this round")))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("could not reach the model"))));
+                        containing("couldn't reach the model"))));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing("past my checks")));
+                .withRequestBody(containing("past my fact checks")));
     }
 
     @Test
@@ -470,7 +471,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         assertThat(boardRecords()).isEmpty();
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing("No waiver board this round")));
+                .withRequestBody(containing("waiver board for you this round")));
 
         clock.set(FALLBACK);
         checkRunner.runCheck();
@@ -479,7 +480,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(onlyBoardRecord().outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("No waiver board this round")))
+                        containing("waiver board for you this round")))
                 .withRequestBody(matchingJsonPath("$.text",
                         containing("there is no player directory yet"))));
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
@@ -521,7 +522,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         String message = String.join("\n\n", boardMessages());
         assertThat(message).contains("5. ").doesNotContain("6. ")
-                .endsWith("View all options: 1 more player on the full board.");
+                .endsWith("Tap View all options to see 1 more player.");
         String viewAll = "all:" + boardAlertId();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath(BUTTONS + "[1][0].callback_data",
@@ -558,7 +559,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo("I could not send the full list. Tap again in a minute."))));
+                        equalTo("I couldn't send the full list. Tap the button again in a minute."))));
         telegram.resetAll();
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.telegramCallbackAnswered(telegram);
@@ -597,7 +598,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo("I could not send the full list. Tap again in a minute."))));
+                        equalTo("I couldn't send the full list. Tap the button again in a minute."))));
     }
 
     @Test

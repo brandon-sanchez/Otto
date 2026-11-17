@@ -96,8 +96,8 @@ public class OfficialUpdateDetector {
                 .ifPresent(since -> facts.put(DESIGNATED_SINCE, since.toString()));
         boolean certain = starter && availability.ruledOut();
         Recommendation change = new Recommendation(playerId, player,
-                "The %s announced %s %s; Sleeper lists him as %s".formatted(update.teamName(),
-                        player, availability.ruledOut() ? "will not play" : "will play",
+                "The %s announced %s %s, and Sleeper lists him as %s".formatted(
+                        update.teamName(), player, availability.ruledOut() ? "will not play" : "will play",
                         RosterPlans.designation(availability.designation())),
                 certain ? Confidence.HIGH : Confidence.MEDIUM, List.of(), List.of());
         return new AlertCandidate(AlertCandidate.Source.TRANSITION,

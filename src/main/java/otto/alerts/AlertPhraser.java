@@ -1,13 +1,17 @@
 package otto.alerts;
 
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import otto.advice.FriendVoice;
 import otto.advice.Sha256;
 import otto.delivery.DeliveryBasis;
 import otto.model.ModelChain;
@@ -26,20 +30,19 @@ public class AlertPhraser {
 
     private static final String SYSTEM = """
             You are Otto, a fantasy football assistant texting your one user.
-            Phrase the computed recommendation below as a short Telegram alert,
-            2-5 lines. Lead with the action. When something is uncertain,
-            say exactly what is uncertain, using the pros and cons; never
-            write a confidence label. Introduce players by full name. Use
-            only the facts given. Never invent numbers, names, or reasons.
-            When the event includes latestReport, it is the newest injury,
-            availability or roster report, read just now: mention it and
-            credit latestReportSource.
+            Phrase the computed recommendation below as a short Telegram alert of
+            one or two short paragraphs. Open with the action, then explain it
+            with the pros, and when something is uncertain say exactly what is
+            uncertain, using the cons. Never write a confidence label. Introduce
+            players by full name. Use only the facts given. Never invent numbers,
+            names, or reasons. When the event includes latestReport, it is the
+            newest injury, availability or roster report, read just now: mention
+            it and credit latestReportSource.
 
-            Use Telegram-friendly plain text: one compact paragraph and "- "
-            bullets for parallel details.
-            Put a blank line between the action and supporting details. Never use
-            a Markdown table.
-            """;
+            Use plain text with a blank line between paragraphs. Never use bullets,
+            Markdown or a table.
+
+            """ + FriendVoice.RULE;
 
     private static final Logger log = LoggerFactory.getLogger(AlertPhraser.class);
 
@@ -62,7 +65,7 @@ public class AlertPhraser {
                     "recommendation", recommendation));
         } catch (JsonProcessingException e) {
             log.warn("Cannot write Alert facts, using deterministic fallback", e);
-            return fallback(recommendation);
+            return asProse(recommendation);
         }
         return switch (chain.call(ModelChain.CallSite.PHRASING, turn -> {
             String content = turn.timed(() -> turn.provider().chat().prompt().system(SYSTEM)
@@ -76,7 +79,7 @@ public class AlertPhraser {
             case ModelChain.Result.Exhausted<String> exhausted -> {
                 log.warn("LLM phrasing failed, using deterministic fallback: {}",
                         exhausted.reason());
-                yield fallback(recommendation);
+                yield asProse(recommendation);
             }
         };
     }
@@ -99,10 +102,19 @@ public class AlertPhraser {
         }
     }
 
-    private String fallback(Recommendation recommendation) {
-        StringBuilder text = new StringBuilder(recommendation.action()).append('\n');
-        recommendation.pros().forEach(pro -> text.append("\n- ").append(pro));
-        recommendation.cons().forEach(con -> text.append("\n- Watch out: ").append(con));
-        return text.toString();
+    private static String asProse(Recommendation recommendation) {
+        return Stream.of(sentence(recommendation.action()), paragraph(recommendation.pros()),
+                        paragraph(recommendation.cons()))
+                .filter(paragraph -> !paragraph.isEmpty())
+                .collect(Collectors.joining("\n\n"));
+    }
+
+    private static String paragraph(List<String> items) {
+        return items.stream().map(AlertPhraser::sentence).collect(Collectors.joining(" "));
+    }
+
+    private static String sentence(String text) {
+        String stripped = text.strip();
+        return stripped.isEmpty() || stripped.matches(".*[.!?]$") ? stripped : stripped + ".";
     }
 }

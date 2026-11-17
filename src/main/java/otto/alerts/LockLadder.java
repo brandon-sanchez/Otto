@@ -198,14 +198,14 @@ class LockLadder {
             Recommendation recommendation = new Recommendation(
                     playerId,
                     player,
-                    "IR reminder: %s is still eligible to leave IR before lock"
-                            .formatted(player),
+                    "%s can still come off IR before lock".formatted(player),
                     health == PlayerHealth.ACTIVE || health == PlayerHealth.PROBABLE
                             ? Confidence.HIGH : Confidence.MEDIUM,
-                    List.of("Move him out now if you want to use him this week"),
+                    List.of("Move him off IR now if you want to use him this week"),
                     List.of(health == PlayerHealth.QUESTIONABLE
-                            ? "He is still QUESTIONABLE, so keeping him on IR preserves flexibility"
-                            : "A bench spot may need to be opened"));
+                            ? "He's still questionable, so leaving him on IR keeps your "
+                                    + "options open"
+                            : "You may need to open a bench spot for him"));
             Map<String, String> facts = Map.of(
                     "playerId", playerId,
                     "player", player,

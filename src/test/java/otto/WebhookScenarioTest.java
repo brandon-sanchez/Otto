@@ -80,7 +80,7 @@ class WebhookScenarioTest extends WireSeamTest {
         assertThat(result).isEqualTo(WebhookResult.OK);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
                 .withRequestBody(matchingJsonPath(
-                        "$.text", equalTo("I do not answer this chat."))));
+                        "$.text", equalTo("I don't answer this chat."))));
         assertThat(eventLog.all().stream()
                 .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
     }
@@ -133,7 +133,7 @@ class WebhookScenarioTest extends WireSeamTest {
         assertThat(result).isEqualTo(WebhookResult.OK);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo("That alert is too old to act on. Ask me instead."))));
+                        equalTo("That alert is too old to act on, so ask me about it instead."))));
         assertThat(eventLog.all().stream()
                 .filter(event -> event.type() == EventType.USER_ACTION)).isEmpty();
     }

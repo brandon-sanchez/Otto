@@ -15,6 +15,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 
+import otto.advice.FriendVoice;
 import otto.model.ModelChain;
 
 /**
@@ -47,8 +48,13 @@ public class AskService {
             manage_waiver_preferences reports it, whatever the
             conversation said before.
 
-            Use Telegram-friendly plain text. Ordinary factual answers stay
-            conversational. Structured answers follow these exact contracts.
+            Use Telegram-friendly plain text.
+
+            """ + FriendVoice.RULE + """
+
+            Rosters, lineups, standings and the other structured answers below keep
+            their exact layouts, slot labels included. Everything you write around
+            them to explain follows the voice rule.
 
             A roster always shows the complete roster in league slot order:
             ----- STARTERS -----
@@ -77,13 +83,13 @@ public class AskService {
             who cannot play under ----- OUT / IR -----. Omit healthy players and
             empty sections. If none are injured, say so in one sentence.
 
-            A comparison uses ----- COMPARISON -----, one line per player, then
-            Recommendation and Difference lines. Waiver answers use
-            ----- WAIVER TARGETS ----- and default to the best three. Every target
-            includes Recommended Drop. Say "Recommended Drop: None - open roster
-            spot available" when no drop is needed. Otherwise name the drop and
-            explain what the target does better, including consistency or evidence
-            of an improving role when the tool supplied it.
+            A comparison uses ----- COMPARISON -----, one line per player, then a
+            sentence or two on whom to start and by how much. Waiver answers use
+            ----- WAIVER TARGETS ----- and default to the best three. For every
+            target, say in a sentence whom he should drop to make room, or that he
+            has an open roster spot and needs no drop, and explain what the target
+            does better, including consistency or evidence of an improving role
+            when the tool supplied it.
 
             A trade answer starts with ----- TRADE VERDICT -----, lists what the
             user receives and gives, and shows starting-lineup impact. Then show
@@ -99,29 +105,30 @@ public class AskService {
             """;
 
     private static final String BRIEF = """
-            Keep ordinary answers to 2 to 5 lines. Keep each line short. Structured formats may
-            use as many lines as their complete sections require. Lead with the
-            recommendation or direct answer, then give only the most useful reason.
-            He will ask "why" or "more" when he wants the rest.
+            Keep ordinary answers to a few natural sentences, usually two to four.
+            Structured formats may use as many lines as their complete sections
+            require. Lead with the recommendation or direct answer, then give the
+            reason that matters most. He will ask "why" or "more" when he wants the
+            rest.
             """;
 
     private static final String DEEP = """
             Give the full reasoning this time. Include the numbers your tools
             returned, the alternatives they ranked, and what would change the
-            call. Group related details and use bullets when there is more than
-            one item. Stay inside the tool results.
+            call. Write it as short paragraphs with one idea each, and stay inside
+            the tool results.
             """;
 
     /** What the user gets when the model cannot be reached at all. */
     private static final String UNREACHABLE = """
-            I cannot reach my language model right now, so I cannot answer \
-            that. My checks and alerts keep running, and I will answer once \
-            it is back.""";
+            I can't reach my language model right now, so I can't answer \
+            that yet. My checks and alerts keep running, and I'll answer once \
+            it's back.""";
 
     /** What the user gets when the model answers with nothing. */
     private static final String EMPTY_ANSWER = """
-            My language model came back with nothing that time. Ask me \
-            again and I will have another go.""";
+            My language model came back empty that time. Ask me again and \
+            I'll have another go.""";
 
     private static final Set<String> DEPTH_WORDS =
             Set.of("why", "more", "detail", "details", "explain", "expand");

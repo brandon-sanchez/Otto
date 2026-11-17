@@ -171,9 +171,9 @@ class WaiverPreferenceScenarioTest extends WireSeamTest {
                         .contains("Bucky Irving", "outside the focus"));
         assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
         assertThat(String.join("\n\n", ((Outcome.SentBoard) record.outcome()).messages()))
-                .contains("1. Bucky Irving · RB, TB\nOtto: bid $2 · Suggested range $1–$3.\n"
+                .contains("1. Bucky Irving · RB, TB\nI'd bid $2. Anything from $1 to $3 makes sense.\n"
                         + "Bucky Irving played 71% of offensive snaps "
-                        + "in his latest game.\nOutside your focus: His coach named him the "
+                        + "in his latest game.\nHe isn't at a position you asked me to focus on. His coach named him the "
                         + "starter, and no tight end on the board has a role that size.")
                 .contains("2. Cade Otton · TE, TB");
     }

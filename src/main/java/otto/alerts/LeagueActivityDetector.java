@@ -104,13 +104,13 @@ public class LeagueActivityDetector {
     private enum Crossing {
 
         TRADE(DiffKind.TRADE,
-                "League trade",
-                "%s agreed it, and it is already done",
-                "This one is yours, so your roster has changed"),
+                "A trade just went through in your league",
+                "%s agreed to it, and it's already done",
+                "This one involves you, so your roster has changed"),
         COMMISSIONER_EDIT(DiffKind.COMMISSIONER,
-                "Commissioner edit",
-                "The commissioner made it, and it is already done",
-                "This one is yours: your roster changed without your say");
+                "The commissioner just moved players between teams",
+                "The commissioner made the move, and it's already done",
+                "This one involves you, and your roster changed without your say");
 
         private final DiffKind kind;
         private final String headline;
@@ -151,22 +151,24 @@ public class LeagueActivityDetector {
             String from = event.facts().getOrDefault("fromManager", "");
             managers.add(from);
             managers.add(to);
-            lines.add("%s to %s".formatted(event.facts().getOrDefault("player", "a player"), to));
+            lines.add("%s is now on %s's roster".formatted(
+                    event.facts().getOrDefault("player", "a player"), to));
             userInvolved |= "true".equals(event.facts().get("userInvolved"));
         }
         managers.remove("");
         String teams = String.join(" and ", managers);
-        String swap = String.join("; ", lines);
+        String swap = String.join(", and ", lines);
 
         Recommendation recommendation = new Recommendation(
                 null,
                 teams,
-                "%s: %s".formatted(crossing.headline, swap),
+                "%s. %s.".formatted(crossing.headline, swap),
                 Confidence.HIGH,
                 List.of(crossing.because.formatted(teams),
                         userInvolved
                                 ? crossing.yours
-                                : "Nothing to do: this is a power shift to know about"),
+                                : "You don't need to do anything, but it shifts the balance "
+                                        + "of power in your league"),
                 List.of());
 
         Map<String, String> facts = new HashMap<>();
@@ -229,10 +231,10 @@ public class LeagueActivityDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "Commissioner edit: %s is off your roster".formatted(player),
+                "The commissioner took %s off your roster".formatted(player),
                 Confidence.HIGH,
-                List.of("The commissioner made it, and it is already done",
-                        "You are a %s short until you fill the slot".formatted(
+                List.of("The commissioner made the move, and it's already done",
+                        "You're a %s short until you fill that spot".formatted(
                                 position.isBlank() ? "player" : position)),
                 List.of());
     }
@@ -261,7 +263,7 @@ public class LeagueActivityDetector {
             return new Recommendation(
                     playerId,
                     player,
-                    "%s dropped %s, who is outside the Notable %s cutoff".formatted(
+                    "%s dropped %s, who sits outside the notable %s cutoff".formatted(
                             manager, player, position.isBlank() ? "player" : position),
                     Confidence.LOW,
                     List.of(),
@@ -272,13 +274,13 @@ public class LeagueActivityDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "Consider a claim: %s dropped %s".formatted(manager, player),
+                "%s dropped %s, and he's worth a claim".formatted(manager, player),
                 Confidence.MEDIUM,
                 List.of("%s is the %s %s in this week's projections at %s points".formatted(
                                 player, ordinal(rank.orElseThrow()), position, projection),
-                        "That is inside the top %d %s the league treats as notable".formatted(
-                                cutoff, position)),
-                List.of("%s dropped him for a reason worth knowing before you bid"
+                        "That puts him inside the top %d at %s, the cutoff this league "
+                                .formatted(cutoff, position) + "treats as notable"),
+                List.of("It's worth finding out why %s let him go before you bid"
                                 .formatted(manager),
                         "A claim spends waiver budget you may want later in the season"));
     }
@@ -289,7 +291,7 @@ public class LeagueActivityDetector {
         return new Recommendation(
                 playerId,
                 player,
-                "%s dropped %s, and I have no weekly projection table to rank him against"
+                "%s dropped %s, and I don't have this week's projections to rank him against"
                         .formatted(manager, player),
                 Confidence.LOW,
                 List.of(),

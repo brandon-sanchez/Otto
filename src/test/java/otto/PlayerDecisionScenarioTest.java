@@ -151,6 +151,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("mute:")));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("rosterPlans"))
+                .withRequestBody(containing("Never put a label in front of an explanation"))
                 .withRequestBody(containing("format\\\":\\\"redraft"))
                 .withRequestBody(containing(FOUR_WEEKS))
                 .withRequestBody(containing("Kenneth Gainwell")));

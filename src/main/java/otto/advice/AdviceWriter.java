@@ -47,8 +47,9 @@ public class AdviceWriter {
             """ + RankConvention.ADVICE_RULES + """
 
             Decide what the user should do. Choose one of "legalMoves", or no change
-            when "noChangeAllowed" is true. Lead with the recommendation, then give
-            the reason in one to three short sentences of plain text.
+            when "noChangeAllowed" is true. Lead with the recommendation, then explain
+            it in two to four sentences of plain text that tell him why, the way you
+            would say it out loud.
 
             """;
 
@@ -66,7 +67,8 @@ public class AdviceWriter {
 
             """;
 
-    private static final String VOICE = """
+    private static final String VOICE = FriendVoice.RULE + """
+
             Introduce every player by full name before using a surname alone. When
             "kickoffPhrase" is present, use it word for word. Never say a player or a
             game "locks". Never write a confidence label such as High or Medium; when

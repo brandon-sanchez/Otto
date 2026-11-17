@@ -105,6 +105,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("State facts only from"))
+                .withRequestBody(containing("Never put a label in front of an explanation"))
                 .withRequestBody(containing("Josh Jacobs"))
                 .withRequestBody(containing("16.5"))
                 .withRequestBody(containing("13.0")));

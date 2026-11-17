@@ -119,9 +119,10 @@ record FaabConsensus(List<Suggestion> comparable, List<Suggestion> unconverted) 
             return Optional.empty();
         }
         return Optional.of(average()
-                .map(share -> "Published FAAB consensus: about %s%s.".formatted(percent(share),
-                        leagueBudget.inLeague(share, "your league")))
-                .orElseGet(() -> "Published FAAB suggestions: %d, too few for a consensus."
+                .map(share -> "Published FAAB advice comes to about %s of the budget%s."
+                        .formatted(percent(share), leagueBudget.inLeague(share, "your league")))
+                .orElseGet(() -> ("I found only %d published FAAB suggestions, which is too "
+                        + "few to call a consensus.")
                         .formatted(comparable.size() + unconverted.size())));
     }
 

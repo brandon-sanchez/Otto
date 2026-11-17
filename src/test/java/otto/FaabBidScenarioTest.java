@@ -155,7 +155,7 @@ class FaabBidScenarioTest extends WireSeamTest {
                 .satisfies(exchange -> assertThat(exchange.checkFailures()).isEmpty());
         assertThat(record.roster().faabRemaining()).contains(100);
         assertThat(onlyMessage(record)).contains("1. Bucky Irving · RB, TB\n"
-                + "Otto: bid $9 · Suggested range $7–$12.\n" + IRVING_REASONING + "\n" + LIMIT);
+                + "I'd bid $9. Anything from $7 to $12 makes sense.\n" + IRVING_REASONING + "\n" + LIMIT);
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(OutboundStubs.WAIVER_BOARD_REQUEST))
                 .withRequestBody(containing("budgetLeft"))
@@ -203,7 +203,7 @@ class FaabBidScenarioTest extends WireSeamTest {
         assertThat(record.exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure)
                         .contains("high of $12 is above the user's own limit of $10"));
-        assertThat(onlyMessage(record)).contains("Otto: bid $9 · Suggested range $7–$10.");
+        assertThat(onlyMessage(record)).contains("I'd bid $9. Anything from $7 to $10 makes sense.");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("$10 per player, set by the user")));
     }
@@ -217,11 +217,11 @@ class FaabBidScenarioTest extends WireSeamTest {
         DecisionRecord record = onlyBoardRecord();
         assertThat(record.exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure).contains(
-                        "Bids are withheld because the league's FAAB budget could not be read"));
+                        "Bids are withheld because I couldn't read the league's FAAB budget"));
         assertThat(record.roster().faabRemaining()).isEmpty();
         assertThat(onlyMessage(record))
-                .contains("No dollar bids this round: the league's FAAB budget could not be "
-                        + "read.")
+                .contains("I'm leaving out dollar bids this round because I couldn't read the "
+                        + "league's FAAB budget.")
                 .doesNotContain("$");
     }
 
@@ -233,8 +233,8 @@ class FaabBidScenarioTest extends WireSeamTest {
 
         DecisionRecord record = onlyBoardRecord();
         assertThat(record.roster().faabRemaining()).contains(0);
-        assertThat(onlyMessage(record)).contains("Otto: bid $0 · Suggested range $0–$0.")
-                .doesNotContain("No dollar bids");
+        assertThat(onlyMessage(record)).contains("I'd bid $0. Anything from $0 to $0 makes sense.")
+                .doesNotContain("dollar bids");
     }
 
     @Test
@@ -246,7 +246,7 @@ class FaabBidScenarioTest extends WireSeamTest {
         DecisionRecord record = onlyBoardRecord();
         assertThat(record.exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure).contains("claims by waiver priority"));
-        assertThat(onlyMessage(record)).doesNotContain("$").doesNotContain("No dollar bids");
+        assertThat(onlyMessage(record)).doesNotContain("$").doesNotContain("dollar bids");
     }
 
     @Test
@@ -276,10 +276,10 @@ class FaabBidScenarioTest extends WireSeamTest {
         String message = onlyMessage(onlyBoardRecord());
         assertThat(message)
                 .contains("2. Wandale Robinson · WR, NYG\n"
-                        + "Published FAAB consensus: about 10% ($10 in your league).\n"
-                        + "Otto: bid $8 · Suggested range $6–$11.")
+                        + "Published FAAB advice comes to about 10% of the budget ($10 in your league).\n"
+                        + "I'd bid $8. Anything from $6 to $11 makes sense.")
                 .contains("1. Bucky Irving · RB, TB\n"
-                        + "Published FAAB suggestions: 2, too few for a consensus.");
+                        + "I found only 2 published FAAB suggestions, which is too few to call a consensus.");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("the average of 3 independent sources"))
                 .withRequestBody(containing("$20, its budget not stated, so not converted")));
@@ -297,8 +297,9 @@ class FaabBidScenarioTest extends WireSeamTest {
         assertThat(record.exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure)
                         .contains("their highs add up to $110, more than the $100"));
-        assertThat(onlyMessage(record)).contains("Claim together: Bucky Irving and Wandale "
-                + "Robinson, $70 at the top of every range, within the $100 you have left.");
+        assertThat(onlyMessage(record)).contains("Put in claims for Bucky Irving and Wandale "
+                + "Robinson together. At the top of every range that's $70, which fits in the "
+                + "$100 you have left.");
     }
 
     @Test

@@ -1,12 +1,16 @@
 package otto;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -20,6 +24,7 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.sleeper.SleeperAdapter;
+import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
 
@@ -311,9 +316,38 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
                 .isFalse();
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Saquon Barkley"))
-                .withRequestBody(containing("Consider a claim"))
+                .withRequestBody(containing("worth a claim"))
                 .withRequestBody(containing("MEDIUM"))
-                .withRequestBody(containing("GridironGoblin")));
+                .withRequestBody(containing("GridironGoblin"))
+                .withRequestBody(containing("Never put a label in front of an explanation")));
+    }
+
+    @Test
+    void anAlertTheModelCannotPhraseStillReadsAsSentences() throws IOException {
+        week14League();
+        checkRunner.runCheck();
+        llm.resetAll();
+        OutboundStubs.llmRefuses(llm);
+
+        checkAfterTheDrops();
+
+        assertThat(sentTexts()).singleElement().asString()
+                .startsWith("GridironGoblin dropped Saquon Barkley, and he's worth a claim.\n\n"
+                        + "Saquon Barkley is the 1st RB in this week's projections at ")
+                .contains(" points. That puts him inside the top 24 at RB, the cutoff this "
+                        + "league treats as notable.\n\n")
+                .endsWith("It's worth finding out why GridironGoblin let him go before you "
+                        + "bid. A claim spends waiver budget you may want later in the season.")
+                .doesNotContain("Watch out", "\n- ");
+    }
+
+    private List<String> sentTexts() throws IOException {
+        List<String> texts = new ArrayList<>();
+        for (LoggedRequest request : telegram.findAll(
+                postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)))) {
+            texts.add(OttoJson.MAPPER.readTree(request.getBodyAsString()).path("text").asText());
+        }
+        return texts;
     }
 
     @Test
@@ -365,7 +399,7 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Josh Jacobs"))
                 .withRequestBody(containing("SenorMustache"))
                 .withRequestBody(containing("GridironGoblin"))
-                .withRequestBody(containing("Commissioner edit"))
+                .withRequestBody(containing("The commissioner just moved players between teams. Josh Jacobs is now on"))
                 .withRequestBody(containing("HIGH")));
 
         // News once: the next Check says nothing about it.
@@ -397,7 +431,7 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
                 .isTrue();
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Saquon Barkley"))
-                .withRequestBody(containing("Consider a claim"))
+                .withRequestBody(containing("worth a claim"))
                 .withRequestBody(containing("MEDIUM")));
     }
 

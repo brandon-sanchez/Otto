@@ -133,8 +133,8 @@ public class VerificationService {
                     .allMatch(alert -> muted(
                             alert.key().substring(ALERT_PREFIX.length()),
                             alert.facts().get("playerId")));
-            String text = ("All set - the %s problem is fixed and I see it in the league. "
-                    + "Closing this one.").formatted(player);
+            String text = ("All set. The %s problem is fixed and I can see it in the league, "
+                    + "so I'm closing this one.").formatted(player);
             if (!silent && !telegram.sendMessage(text)) {
                 continue;
             }
@@ -255,8 +255,8 @@ public class VerificationService {
             }
 
             String player = action.facts().getOrDefault("player", "that alert");
-            String text = ("Gentle nudge: you tapped Done on the %s alert, but I do not "
-                    + "see a lineup change yet. No rush - I still warn you before lock.")
+            String text = ("You tapped Done on the %s alert, but I don't see a lineup "
+                    + "change yet. No rush, I'll still warn you before lock.")
                     .formatted(player);
             if (!telegram.sendMessage(text)) {
                 continue;
