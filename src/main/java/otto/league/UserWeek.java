@@ -1,4 +1,4 @@
-package otto.ask;
+package otto.league;
 
 import java.time.Instant;
 import java.util.List;

@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import otto.league.UserWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.ProjectionTable;
 import otto.sleeper.SleeperAdapter;

@@ -3,7 +3,7 @@ package otto.waivers;
 import java.time.Instant;
 import java.util.function.Supplier;
 
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
 import otto.sleeper.SourceResult;
 
 /**

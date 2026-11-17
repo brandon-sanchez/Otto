@@ -13,8 +13,8 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import otto.advice.Ordinal;
-import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.league.LeagueWeek;
 import otto.market.MarketValuation;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;

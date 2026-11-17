@@ -17,6 +17,7 @@ import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
 import otto.matchup.MatchupSources;

@@ -10,6 +10,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
 import otto.alerts.Confidence;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;

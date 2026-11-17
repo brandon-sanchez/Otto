@@ -12,8 +12,8 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
+import otto.league.LeagueWeek;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.PlayerPositions;
 import otto.lineup.ProjectionTable;

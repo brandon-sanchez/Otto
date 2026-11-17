@@ -13,13 +13,13 @@ import org.springframework.stereotype.Component;
 
 import otto.advice.AdviceAnswer;
 import otto.advice.LineupMove;
-import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
 import otto.claims.RoleSlipLedger;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
+import otto.league.LeagueWeek;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.settings.SettingsStore;

@@ -11,8 +11,8 @@ import java.util.OptionalInt;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.league.LeagueWeek;
 import otto.market.DraftPick;
 import otto.market.MarketQuote;
 import otto.market.MarketValuation;

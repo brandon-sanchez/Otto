@@ -14,8 +14,10 @@ import java.util.stream.IntStream;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
 import otto.directory.NameMatch;
 import otto.directory.PlayerHealth;
+import otto.league.UserWeek;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.LineupSwap;
 import otto.lineup.Slot;

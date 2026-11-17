@@ -9,6 +9,7 @@ import java.util.function.ToIntFunction;
 
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
 import otto.matchup.Position;
 import otto.matchup.TeamNames;
 import otto.nflverse.NflverseStore;

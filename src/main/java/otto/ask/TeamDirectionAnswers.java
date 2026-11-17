@@ -14,6 +14,8 @@ import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
+import otto.league.LeagueWeek;
 import otto.records.DecisionRecord;
 import otto.records.Outcome;
 import otto.records.RunIds;

@@ -7,6 +7,8 @@ import java.util.OptionalInt;
 
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
+import otto.league.UserWeek;
 import otto.lineup.GameWeek;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;

@@ -1,4 +1,4 @@
-package otto.ask;
+package otto.advice;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

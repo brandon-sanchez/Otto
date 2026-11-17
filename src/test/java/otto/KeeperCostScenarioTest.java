@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import otto.advice.ToolAnswer;
 import otto.ask.AskTools;
 import otto.ask.MarketValueAnswers;
-import otto.ask.ToolAnswer;
 import otto.check.CheckRunner;
 import otto.harness.Fixtures;
 import otto.harness.NflverseStubs;

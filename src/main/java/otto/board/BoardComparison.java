@@ -19,12 +19,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
 import otto.claims.ClaimRound;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
+import otto.league.LeagueWeek;
 import otto.lineup.LeagueScoring;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.Slot;
@@ -44,9 +44,9 @@ import otto.records.RunKind;
 import otto.records.Versions;
 import otto.settings.SettingsStore;
 import otto.snapshot.RosterSnapshot;
-import otto.waivers.ScoredBoard;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
+import otto.waivers.ScoredBoard;
 
 /**
  * Compares the waiver board with its baselines every claim round, so

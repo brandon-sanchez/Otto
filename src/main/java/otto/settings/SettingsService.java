@@ -12,8 +12,8 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
 import otto.alerts.MuteStore;
-import otto.ask.ToolAnswer;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
 

@@ -8,7 +8,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
-import otto.ask.ToolAnswer;
+import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
 import otto.events.Event;

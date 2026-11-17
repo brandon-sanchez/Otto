@@ -24,6 +24,7 @@ import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
 import otto.ceiling.Ceiling;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
@@ -31,6 +32,8 @@ import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketValues;
@@ -130,6 +133,7 @@ public class TeamWeaknesses {
     private final UserWeekLoader loader;
     private final RestOfSeasonProjections restOfSeason;
     private final TeamProfiler profiler;
+    private final LeagueShapes shapes;
     private final PlayerDirectoryStore directory;
     private final MarketValues market;
     private final TeamDirections directions;
@@ -141,13 +145,14 @@ public class TeamWeaknesses {
     private final String userId;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
-            TeamProfiler profiler, PlayerDirectoryStore directory, MarketValues market,
-            TeamDirections directions, TradeOffers offers, HabitService habits,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
+            TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
+            MarketValues market, TeamDirections directions, TradeOffers offers,
+            HabitService habits, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
             OttoProperties properties) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
+        this.shapes = shapes;
         this.directory = directory;
         this.market = market;
         this.directions = directions;
@@ -238,7 +243,7 @@ public class TeamWeaknesses {
             Instant now, CheckedAnswers.Delivery delivery) {
         String name = league.league().name();
         Map<String, Double> perGame = TeamProfiler.perGame(season);
-        LeagueProfile profile = profiler.profile(league, perGame);
+        LeagueProfile profile = profiler.profile(league, shapes.shape(league), perGame);
         TeamProfile user = profile.user().orElseThrow();
         Optional<Integer> deadline = passedDeadline(league);
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);

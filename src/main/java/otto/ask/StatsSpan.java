@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import otto.advice.ToolAnswer;
 import otto.nflverse.Schedule;
 
 /**

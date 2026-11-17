@@ -10,7 +10,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
 
-import otto.ask.ToolAnswer;
+import otto.advice.ToolAnswer;
 import otto.claims.ClaimRound;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;

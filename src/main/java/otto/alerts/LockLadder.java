@@ -12,13 +12,13 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.delivery.AlertDeliveryOutbox;
 import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.league.LeagueWeek;
 import otto.lineup.GameWeek;
 import otto.research.PreSendResearch;
 import otto.settings.SettingsStore;

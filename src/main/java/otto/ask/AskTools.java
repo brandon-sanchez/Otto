@@ -11,10 +11,13 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
 import otto.board.WaiverPreferences;
 import otto.check.WeekFacts;
 import otto.habits.HabitService;
 import otto.keeper.KeeperRuleChat;
+import otto.league.LeagueWeek;
+import otto.league.UserWeek;
 import otto.settings.SettingsService;
 import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;

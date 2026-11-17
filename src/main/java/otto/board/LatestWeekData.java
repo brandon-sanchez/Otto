@@ -8,8 +8,8 @@ import java.util.OptionalInt;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.league.LeagueWeek;
 import otto.nflverse.Coverage;
 import otto.nflverse.FeedId;
 import otto.nflverse.NflverseReadiness;

@@ -8,6 +8,8 @@ import otto.OttoProperties;
 import otto.alerts.SelfReportService;
 import otto.check.WeekFacts;
 import otto.check.WeekFactsBuilder;
+import otto.league.LeagueWeek;
+import otto.league.UserWeek;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;

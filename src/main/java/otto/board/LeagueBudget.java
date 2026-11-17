@@ -2,7 +2,7 @@ package otto.board;
 
 import java.util.Optional;
 
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
 
 /**
  * The FAAB budget each team in the league starts with, which a share of

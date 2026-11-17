@@ -8,6 +8,8 @@ import java.util.function.Function;
 
 import org.springframework.ai.chat.model.ToolContext;
 
+import otto.advice.ToolAnswer;
+
 /**
  * The checked answers the chat tools of one round of tool calls hand
  * back, and whether such an answer goes to the user unchanged.

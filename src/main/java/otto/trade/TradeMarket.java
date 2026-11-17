@@ -11,7 +11,7 @@ import java.util.OptionalInt;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
 import otto.market.DraftPick;
 import otto.market.MarketQuote;
 import otto.market.MarketValuation;
