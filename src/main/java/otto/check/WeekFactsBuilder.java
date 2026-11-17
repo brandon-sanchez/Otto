@@ -3,6 +3,7 @@ package otto.check;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.springframework.stereotype.Component;
 
@@ -43,7 +44,7 @@ public class WeekFactsBuilder {
 
     /** The Check's read: poll, because polling is what a Check is. */
     public WeekFacts build(SleeperAdapter.League league) {
-        return build(league, polling);
+        return build(league, polling, OptionalInt.empty());
     }
 
     /**
@@ -51,10 +52,22 @@ public class WeekFactsBuilder {
      * the cadence interval, and only an older one costs a request.
      */
     public WeekFacts buildWithinCadence(SleeperAdapter.League league) {
-        return build(league, withinCadence);
+        return build(league, withinCadence, OptionalInt.empty());
     }
 
-    private WeekFacts build(SleeperAdapter.League league, SleeperAdapter sleeper) {
+    /**
+     * An Ask's read of another week of the same season, such as next
+     * week's lineup: that week's projections and games, read the same
+     * way as this week's.
+     *
+     * @param week the regular-season week number to read
+     */
+    public WeekFacts buildWithinCadence(SleeperAdapter.League league, int week) {
+        return build(league, withinCadence, OptionalInt.of(week));
+    }
+
+    private WeekFacts build(SleeperAdapter.League league, SleeperAdapter sleeper,
+            OptionalInt namedWeek) {
         List<Slot> slots = Slot.startingSlots(league.rosterPositions());
         LeagueScoring scoring = new LeagueScoring(league.scoringSettings());
         if (slots.isEmpty() || scoring.isEmpty()) {
@@ -68,7 +81,7 @@ public class WeekFactsBuilder {
             return WeekFacts.unavailable(scoring, slots);
         }
         String season = stateOk.value().season();
-        int week = stateOk.value().week();
+        int week = namedWeek.orElse(stateOk.value().week());
 
         // A projection table without scoring settings could only answer
         // "no projection available"; stay empty so readers skip instead.

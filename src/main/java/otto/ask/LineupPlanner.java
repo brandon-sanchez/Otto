@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 import otto.directory.NameMatch;
 import otto.directory.PlayerHealth;
 import otto.lineup.LineupOptimizer;
+import otto.lineup.LineupSwap;
 import otto.lineup.Slot;
 
 /**
@@ -63,9 +65,21 @@ public class LineupPlanner {
     public record Swap(String start, String sit, String slot, String gain) {
     }
 
+    /**
+     * One week's recommended lineup.
+     *
+     * @param message the answer the user reads, written from these
+     *        figures by {@link LineupMessage}; null until it is written
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record LineupPlan(String week, String currentProjected, String optimalProjected,
             String delta, List<SlotLine> optimal, List<BenchLine> bench,
-            List<BenchLine> reserve, List<BenchLine> taxi, List<Swap> swaps) {
+            List<BenchLine> reserve, List<BenchLine> taxi, List<Swap> swaps, String message) {
+
+        LineupPlan withMessage(String text) {
+            return new LineupPlan(week, currentProjected, optimalProjected, delta, optimal,
+                    bench, reserve, taxi, swaps, text);
+        }
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -138,7 +152,10 @@ public class LineupPlanner {
             lines.add(slotLine(team, now, slots.get(index).name(), optimal.get(index)));
         }
 
-        List<Swap> swaps = optimizer.swaps(team.starters(), optimal.values(), movable).stream()
+        Map<String, Double> swappable = swappablePoints(team, now, movable);
+        List<Swap> swaps = samePositionFirst(team,
+                        optimizer.swaps(team.starters(), optimal.values(), swappable), swappable)
+                .stream()
                 .map(swap -> new Swap(
                         team.name(swap.starting()),
                         team.name(swap.sitting()),
@@ -160,7 +177,8 @@ public class LineupPlanner {
                 rosterLines(team, now, proposedBench),
                 team.supportsReserve() ? rosterLines(team, now, team.reserve()) : null,
                 team.supportsTaxi() ? rosterLines(team, now, team.taxi()) : null,
-                swaps));
+                swaps,
+                null));
     }
 
     /**
@@ -326,6 +344,57 @@ public class LineupPlanner {
             team.points(playerId).ifPresent(projected -> points.put(playerId, projected));
         }
         return points;
+    }
+
+    /**
+     * The movable players plus every unlocked starter who scores
+     * nothing as set: one on bye, ruled out or unprojected. Benching
+     * him is a real swap the user can make, so he must be pairable even
+     * though he can never be picked to start.
+     */
+    private Map<String, Double> swappablePoints(UserWeek team, Instant now,
+            Map<String, Double> movable) {
+        Map<String, Double> points = new HashMap<>(movable);
+        for (int index = 0; index < team.slots().size(); index++) {
+            String starterId = team.starterAt(index);
+            if (starterId != null && !team.locked(starterId, now)) {
+                points.putIfAbsent(starterId, 0.0);
+            }
+        }
+        return points;
+    }
+
+    /**
+     * Re-pairs the swaps so a player comes in for one of his own
+     * position whenever one is leaving. Two starters on bye both score
+     * zero, so strength alone would pair them with the incoming players
+     * at random, and "start a tight end over a quarterback" reads wrong
+     * even when the totals are right.
+     */
+    private List<LineupSwap> samePositionFirst(UserWeek team, List<LineupSwap> swaps,
+            Map<String, Double> points) {
+        List<String> leaving = new ArrayList<>(swaps.stream().map(LineupSwap::sitting).toList());
+        Map<String, String> outgoingFor = new LinkedHashMap<>();
+        for (LineupSwap swap : swaps) {
+            String position = team.position(swap.starting());
+            leaving.stream()
+                    .filter(playerId -> Objects.equals(team.position(playerId), position))
+                    .findFirst()
+                    .ifPresent(outgoing -> {
+                        outgoingFor.put(swap.starting(), outgoing);
+                        leaving.remove(outgoing);
+                    });
+        }
+        List<LineupSwap> paired = new ArrayList<>();
+        for (LineupSwap swap : swaps) {
+            String incoming = swap.starting();
+            String outgoing = outgoingFor.containsKey(incoming)
+                    ? outgoingFor.get(incoming)
+                    : leaving.removeFirst();
+            paired.add(new LineupSwap(incoming, outgoing,
+                    points.get(incoming) - points.get(outgoing)));
+        }
+        return paired;
     }
 
     /** True when a slot's starter can no longer be taken out. */

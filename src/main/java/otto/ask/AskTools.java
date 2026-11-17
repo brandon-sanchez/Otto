@@ -34,8 +34,13 @@ import otto.watchlist.WatchlistService;
 @Component
 public class AskTools {
 
+    private static final String WEEK_PARAM = """
+            Which week the lineup is for: "next" for next week, or a week
+            number such as "11". Leave it out for this week.""";
+
     private final UserWeekLoader loader;
     private final LineupPlanner planner;
+    private final LineupAnswers lineups;
     private final PlayerAnalysis players;
     private final LeagueAnalysis league;
     private final WaiverScorer waivers;
@@ -55,7 +60,8 @@ public class AskTools {
     private final TeamDirectionAnswers directions;
     private final Clock clock;
 
-    public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
+    public AskTools(UserWeekLoader loader, LineupPlanner planner, LineupAnswers lineups,
+            PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
@@ -65,6 +71,7 @@ public class AskTools {
             Clock clock) {
         this.loader = loader;
         this.planner = planner;
+        this.lineups = lineups;
         this.players = players;
         this.league = league;
         this.waivers = waivers;
@@ -122,16 +129,18 @@ public class AskTools {
     }
 
     @Tool(name = "recommend_lineup", description = """
-            The optimal legal lineup for this week with the projected
-            point delta against the lineup the user has set now, and the
-            concrete start-over-sit swaps that get there. Call this for
-            "lineup", start/sit questions, and any request for the best
-            lineup.""")
-    public ToolAnswer<LineupPlanner.LineupPlan> recommendLineup() {
-        return switch (loader.load()) {
-            case SourceResult.Unavailable<UserWeek> unavailable -> unavailable(unavailable);
-            case SourceResult.Ok<UserWeek> ok -> planner.recommend(ok.value(), clock.instant());
-        };
+            The recommended lineup for one week, already written and
+            checked: it names the week, says which games are left and
+            which starters have locked when the week is under way, gives
+            the start-over-sit swaps or the reason to change nothing, and
+            lists the lineup. Send its message word for word. Call this
+            for "lineup", start/sit questions, and any request for the
+            best lineup, this week's or a later one's.""")
+    public ToolAnswer<LineupPlanner.LineupPlan> recommendLineup(
+            @ToolParam(required = false, description = WEEK_PARAM) String week,
+            ToolContext context) {
+        return CheckedAnswers.of(context).offer(lineups.recommend(week, clock.instant()),
+                LineupPlanner.LineupPlan::message);
     }
 
     @Tool(name = "whatif_lineup", description = """
@@ -146,12 +155,9 @@ public class AskTools {
                     The starter to sit, by name or Sleeper player id. Leave
                     it out to sit the weakest starter whose slot accepts
                     the incoming player.""")
-            String sit) {
-        return switch (loader.load()) {
-            case SourceResult.Unavailable<UserWeek> unavailable -> unavailable(unavailable);
-            case SourceResult.Ok<UserWeek> ok ->
-                planner.whatIf(ok.value(), clock.instant(), start, sit);
-        };
+            String sit,
+            @ToolParam(required = false, description = WEEK_PARAM) String week) {
+        return lineups.whatIf(week, clock.instant(), start, sit);
     }
 
     @Tool(name = "compare_players", description = """

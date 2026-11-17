@@ -66,10 +66,27 @@ public class UserWeekLoader {
     }
 
     public SourceResult<UserWeek> load() {
-        return league().flatMap(league -> userRoster()
-                .<SourceResult<UserWeek>>map(roster -> new SourceResult.Ok<>(
-                        new UserWeek(league, roster, weekFactsBuilder.buildWithinCadence(league))))
-                .orElseGet(() -> new SourceResult.Unavailable<>("snapshot", NO_SNAPSHOT)));
+        return league().flatMap(league -> userWeek(league,
+                weekFactsBuilder.buildWithinCadence(league)));
+    }
+
+    /**
+     * The user's roster as it stands, read against another week's
+     * projections and games. Designations are today's, because nobody
+     * publishes next week's yet.
+     *
+     * @param week the regular-season week number to read
+     */
+    public SourceResult<UserWeek> load(int week) {
+        return league().flatMap(league -> userWeek(league,
+                weekFactsBuilder.buildWithinCadence(league, week)));
+    }
+
+    private SourceResult<UserWeek> userWeek(SleeperAdapter.League league, WeekFacts week) {
+        return userRoster()
+                .<SourceResult<UserWeek>>map(roster ->
+                        new SourceResult.Ok<>(new UserWeek(league, roster, week)))
+                .orElseGet(() -> new SourceResult.Unavailable<>("snapshot", NO_SNAPSHOT));
     }
 
     /**

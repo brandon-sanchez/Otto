@@ -1,0 +1,142 @@
+[
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110MIN",
+    "metadata": {
+      "home_team": "MIN",
+      "away_team": "CHI"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110ATL",
+    "metadata": {
+      "home_team": "ATL",
+      "away_team": "CAR"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110DAL",
+    "metadata": {
+      "home_team": "DAL",
+      "away_team": "NYG"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110NYJ",
+    "metadata": {
+      "home_team": "NYJ",
+      "away_team": "NE"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110BUF",
+    "metadata": {
+      "home_team": "BUF",
+      "away_team": "MIA"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110PHI",
+    "metadata": {
+      "home_team": "PHI",
+      "away_team": "WAS"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110TB",
+    "metadata": {
+      "home_team": "TB",
+      "away_team": "NO"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110KC",
+    "metadata": {
+      "home_team": "KC",
+      "away_team": "BAL"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-15",
+    "start_time": 1794765600000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110SF",
+    "metadata": {
+      "home_team": "SF",
+      "away_team": "SEA"
+    }
+  },
+  {
+    "status": "complete",
+    "date": "2026-11-17",
+    "start_time": 1794878100000,
+    "week": 10,
+    "season": "2026",
+    "season_type": "regular",
+    "sport": "nfl",
+    "game_id": "2026110GB",
+    "metadata": {
+      "home_team": "GB",
+      "away_team": "DET"
+    }
+  }
+]

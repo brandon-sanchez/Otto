@@ -78,15 +78,10 @@ public class AskService {
             health labels in parentheses. Use the same roster format for every
             manager.
 
-            A lineup recommendation leads with the recommendation and projected
-            gain, then shows the complete resulting STARTERS, BENCH, IR and TAXI
-            roster. Show the complete roster even when no swap is recommended.
-            Mark each changed player on a separate short line so Telegram wrapping
-            cannot detach it from a long name:
-            FLEX: Player Name
-            ↳ Move to starter
-            WR: Other Player
-            ↳ Move to bench
+            A lineup recommendation arrives already written in the
+            recommend_lineup message; send it word for word. When you answer
+            from it beside other tools, keep the week it names, the games it
+            says are left and the players it says are locked.
 
             An injury-only question lists potentially playable PROBABLE and
             QUESTIONABLE players first under ----- MAY PLAY -----, then players

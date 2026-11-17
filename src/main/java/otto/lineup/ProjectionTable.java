@@ -22,6 +22,17 @@ public class ProjectionTable {
         this.statLines = statLines;
     }
 
+    /**
+     * True when at least one player has a stat line the league scores.
+     * Sleeper answers a week it has not projected yet with an entry for
+     * every player that carries only draft-position fields, so a week
+     * with stat lines can still be unprojected.
+     */
+    public boolean projectsAnyone() {
+        return statLines.values().stream()
+                .anyMatch(statLine -> scoring.price(statLine, null).isPresent());
+    }
+
     public Optional<Double> points(String playerId, String position) {
         return scoring.price(statLines.get(playerId), position);
     }
