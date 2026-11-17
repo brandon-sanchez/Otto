@@ -40,6 +40,7 @@ import otto.records.Outcome;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SleeperAdapter.StarterLine;
+import otto.sleeper.SleeperDrafts;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
@@ -104,6 +105,7 @@ public class HabitLedger {
     private static final Logger log = LoggerFactory.getLogger(HabitLedger.class);
 
     private final SleeperAdapter sleeper;
+    private final SleeperDrafts drafts;
     private final JsonStore store;
     private final EventLog eventLog;
     private final DecisionRecords records;
@@ -112,10 +114,11 @@ public class HabitLedger {
     private final Turnouts turnouts;
     private final String userId;
 
-    public HabitLedger(SleeperAdapter sleeper, JsonStore store, EventLog eventLog,
-            DecisionRecords records, PlayerDirectoryStore directory, LineupOptimizer optimizer,
-            Turnouts turnouts, OttoProperties properties) {
+    public HabitLedger(SleeperAdapter sleeper, SleeperDrafts drafts, JsonStore store,
+            EventLog eventLog, DecisionRecords records, PlayerDirectoryStore directory,
+            LineupOptimizer optimizer, Turnouts turnouts, OttoProperties properties) {
         this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
+        this.drafts = drafts;
         this.store = store;
         this.eventLog = eventLog;
         this.records = records;
@@ -301,7 +304,7 @@ public class HabitLedger {
         Set<String> boardsRead = new HashSet<>(before.boardsRead());
         readCalls(current, league.leagueId(), calls, boardsRead);
         Map<String, HabitHistory.Drafted> drafted = before.drafted().isEmpty()
-                ? drafted(user.rosterId())
+                ? drafted(league.leagueId(), user.rosterId())
                 : before.drafted();
         return new Stored(league.leagueId(), current.season(), weeks, calls, boardsRead,
                 drafted, scoreReads);
@@ -370,15 +373,16 @@ public class HabitLedger {
         return allowed.orElse(false);
     }
 
-    private Map<String, HabitHistory.Drafted> drafted(int userRosterId) {
-        Optional<List<SleeperAdapter.DraftSelection>> picks =
-                read("the draft", sleeper.draftPicks());
-        if (picks.isEmpty()) {
+    private Map<String, HabitHistory.Drafted> drafted(String leagueId, int userRosterId) {
+        Optional<SleeperDrafts.Draft> draft =
+                read("the draft", drafts.latest(leagueId)).flatMap(found -> found);
+        if (draft.isEmpty()) {
             return Map.of();
         }
         Map<String, HabitHistory.Drafted> drafted = new HashMap<>();
-        picks.get().forEach(pick -> drafted.put(pick.playerId(), new HabitHistory.Drafted(
-                pick.round(), pick.pickNumber(), pick.rosterId() == userRosterId)));
+        draft.get().picks().forEach(pick -> drafted.put(pick.playerId(),
+                new HabitHistory.Drafted(pick.round(), pick.pickNumber(),
+                        pick.rosterId() == userRosterId)));
         return drafted;
     }
 
