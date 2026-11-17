@@ -2,7 +2,7 @@
 
 Status: accepted (2026-11-17, issue #235)
 
-Otto was built for one Sleeper league, named by `otto.league-id`. The owner plays in several, so Otto now follows every league his Sleeper account is in this season. Every feature works per league: the scheduled Checks, Alerts, the waiver board, player decisions, habits, market values, Decision Records, Settings and Mutes. This ADR records how Otto finds the leagues, how it keeps each league's state apart, how one Check covers them all, and how a chat answer picks its league.
+Otto was built for one Sleeper league, named by `otto.league-id`. The owner plays in several, so Otto now follows every league his Sleeper account is in this season. Every feature works per league: the scheduled Checks, Alerts, the waiver board, the news and market-value jobs, player decisions, habits, market values, Decision Records, Settings and Mutes. This ADR records how Otto finds the leagues, how it keeps each league's state apart, how one Check covers them all, and how a chat answer picks its league.
 
 The rule that shaped every choice below: the league in `otto.league-id` behaves exactly as it did before. Its stored documents keep their names, its Alerts read the same when it is the only league, and nobody has to run a migration.
 
@@ -32,7 +32,7 @@ A document either belongs to a league or is shared by all of them.
 
 | Belongs to a league | Shared |
 |---|---|
-| `settings`, `mutes` | `conversation` (each turn notes its league) |
+| `settings`, `mutes` | `conversation` (each turn notes its league), `chat-league` |
 | `snapshot-current`, `snapshot-previous`, `last-check` | `watchlist` (a player is worth watching in any league) |
 | `event-log`, `unsaved-run-outcomes` | `player-directory`, nflverse feeds, research, team reports |
 | `habit-weeks`, `starter-points`, `role-slips` | `market-values-*` (kept per format, so per league already) |
@@ -66,10 +66,10 @@ A chat message picks its league before the Ask loop runs, in code, with no model
 
 1. A message that names a league, by its name or by its format ("my dynasty league") when only one followed league has that format, is about that league.
 2. A message that says "all of them", "every league", "both" and the like is about every league.
-3. Otherwise the message is about the league of the last exchange in the conversation window (the last 24 hours).
+3. Otherwise the message is about the league the chat was last about, which Otto keeps for 24 hours, the length of the conversation window. After an answer about every league, the chat is about no one league, so the next question that names none is asked about.
 4. Otherwise, when Otto follows more than one league, it asks which one, and lists them by name. A short reply that names a league, or says "all", answers the question that was waiting.
 
-With one league followed, step 1 to step 4 always pick it, so the Ask loop sees exactly what it saw before.
+With one league followed, these steps always pick it, so the Ask loop sees exactly what it saw before.
 
 Each conversation turn records its league, and the Ask loop's window shows the model only the turns about the league in scope. An answer about one league's roster never steers an answer about another's. A turn stored before this change has no league, which reads as the config league.
 
@@ -93,4 +93,5 @@ The scenario tests run two leagues side by side, a redraft league and a dynasty 
 ## Not done here
 
 - A league that Sleeper renews for a new season gets a new league id. Otto follows the new id once the next season's list names it, but the config league keeps its old id until `otto.league-id` changes. Linking a renewed league to the old one through `previous_league_id` is left for a later change.
+- Defense-versus-position is built once a night in the config league's scoring and shared by every league. Its ranks barely move between scoring formats, and a per-league table would leave a newly found league without one until the next night.
 - The Watchlist is shared by every league. A per-league Watchlist would need its own chat wording, and nobody has asked for it.

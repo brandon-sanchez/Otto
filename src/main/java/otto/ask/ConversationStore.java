@@ -8,6 +8,8 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
 
+import otto.OttoProperties;
+import otto.sleeper.LeagueScope;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 
@@ -16,6 +18,10 @@ import otto.storage.OttoJson;
  * day of conversation, capped at the last twenty messages. Both bounds
  * matter - the cap keeps a busy Sunday inside one prompt, and the day
  * keeps last week's start/sit talk from steering this week's answer.
+ *
+ * <p>Each turn notes the league it was about, and the window holds only
+ * the turns about the league in {@link LeagueScope}, so talk about one
+ * league's roster never steers an answer about another's.
  */
 @Component
 public class ConversationStore {
@@ -28,32 +34,44 @@ public class ConversationStore {
             OttoJson.MAPPER.getTypeFactory().constructCollectionType(List.class, Turn.class);
 
     private final JsonStore store;
+    private final String configLeagueId;
 
-    public ConversationStore(JsonStore store) {
+    public ConversationStore(JsonStore store, OttoProperties properties) {
         this.store = store;
+        this.configLeagueId = properties.leagueId();
     }
 
-    /** One message in the conversation, from the user or the assistant. */
-    public record Turn(Role role, String text, Instant at) {
+    /**
+     * One message in the conversation, from the user or the assistant.
+     *
+     * @param leagueId the league the exchange was about; null in a turn
+     *        stored before turns named their league, which was about the
+     *        config league
+     */
+    public record Turn(Role role, String text, Instant at, String leagueId) {
 
         public enum Role {
             USER, ASSISTANT
         }
     }
 
-    /** The messages the next Ask carries as context. */
+    /** The messages about the league in scope that the next Ask carries as context. */
     public List<Turn> window(Instant now) {
         Instant oldest = now.minus(WINDOW);
+        String league = leagueInScope();
         return newest(all().stream()
                 .filter(turn -> turn.at().isAfter(oldest))
+                .filter(turn -> league.equals(
+                        turn.leagueId() == null ? configLeagueId : turn.leagueId()))
                 .toList());
     }
 
-    /** Records one exchange: what the user asked and what Otto answered. */
+    /** Records one exchange about the league in scope: what the user asked and what Otto answered. */
     public synchronized void record(Instant now, String question, String answer) {
+        String league = leagueInScope();
         List<Turn> turns = new ArrayList<>(all());
-        turns.add(new Turn(Turn.Role.USER, question, now));
-        turns.add(new Turn(Turn.Role.ASSISTANT, answer, now));
+        turns.add(new Turn(Turn.Role.USER, question, now, league));
+        turns.add(new Turn(Turn.Role.ASSISTANT, answer, now, league));
         // The stored document stays bounded by the same cap the window
         // reads with: nothing beyond it can ever come back.
         store.write(DOCUMENT, newest(turns));
@@ -63,6 +81,10 @@ public class ConversationStore {
         return turns.size() <= MAX_MESSAGES
                 ? turns
                 : List.copyOf(turns.subList(turns.size() - MAX_MESSAGES, turns.size()));
+    }
+
+    private String leagueInScope() {
+        return LeagueScope.bound().orElse(configLeagueId);
     }
 
     private List<Turn> all() {
