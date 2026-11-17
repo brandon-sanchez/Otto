@@ -30,10 +30,6 @@ import otto.sleeper.SleeperAdapter;
  * tight end in a league with no tight end slot, reads its rank from the
  * configured {@code otto.replacement-cutoffs}.
  *
- * <p>The waiver board, a team's depth, a trade and a team profile all
- * read their replacement rank here, so all of them agree on what a free
- * agent is worth.
- *
  * @param teams how many teams the league holds
  * @param slots dedicated starting slots a team has at each position,
  *        Superflex counted at QB

@@ -10,8 +10,7 @@ import java.util.function.ToIntFunction;
  * One player's usage summed over a set of his games. Each part counts
  * only the games whose source holds it, and names the weeks it could not
  * count, so a source that is missing a game is never read as a quiet
- * game. A stats answer and the league's stat ranks both read a player's
- * usage from here.
+ * game.
  *
  * @param snaps his offensive snaps, and the mean of his per-game snap
  *        shares, the way the league ranking averages them
