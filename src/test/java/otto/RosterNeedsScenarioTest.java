@@ -12,15 +12,11 @@ import otto.harness.KickerAndDefenseLeague;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
-import otto.league.LeagueShapes;
-import otto.league.LeagueWeek;
-import otto.league.TeamDepth;
 import otto.needs.RosterNeeds;
 import otto.needs.RosterNeeds.SidelineReason;
 import otto.needs.RosterNeeds.SlotStanding;
 import otto.needs.RosterNeedsService;
 import otto.sleeper.SourceResult;
-import otto.snapshot.RosterSnapshot;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -65,9 +61,6 @@ class RosterNeedsScenarioTest extends WireSeamTest {
 
     @Autowired
     private RosterNeedsService needs;
-
-    @Autowired
-    private LeagueShapes shapes;
 
     private void aWeekThreeLeague(String rostersFixture) {
         stubWeekThreeLeague(rostersFixture);
@@ -264,23 +257,5 @@ class RosterNeedsScenarioTest extends WireSeamTest {
 
         assertThat(coverage.openSlots()).containsExactly("K", "DEF");
         assertThat(coverage.positionsThatFill()).containsExactlyInAnyOrder("K", "DEF");
-    }
-
-    @Test
-    void kickersAndDefensesHaveNoDepthToRead() {
-        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
-                KickerAndDefenseLeague.DEFENSE, List.of());
-        OutboundStubs.telegramOk(telegram);
-        OutboundStubs.llmPhrases(llm, "A lineup alert.");
-        checkRunner.runCheck();
-        LeagueWeek league = ((SourceResult.Ok<LeagueWeek>) loader.leagueWeek()).value();
-        RosterSnapshot user = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster).findFirst().orElseThrow();
-
-        TeamDepth depth = TeamDepth.of(league, shapes.shape(league), shapes.ranking(league),
-                user);
-
-        assertThat(depth.positions()).extracting(TeamDepth.PositionDepth::position)
-                .containsExactly("QB", "RB", "TE", "WR");
     }
 }

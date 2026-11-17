@@ -10,7 +10,8 @@ import otto.sleeper.SleeperAdapter;
  * One roster inside a Snapshot. The userRoster flag marks the roster
  * owned by the configured user; Alert detectors key off it. Health,
  * name, position, and team maps cover only players present in the
- * Player Directory. The compact constructor normalizes absent
+ * Player Directory, except that a team defense's team is read from its
+ * id, so its bye week shows. The compact constructor normalizes absent
  * collections, so Snapshots stored before a field existed still load.
  *
  * @param teamRecord what this team has won and lost so far

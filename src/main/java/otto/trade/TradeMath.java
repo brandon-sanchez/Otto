@@ -75,9 +75,7 @@ final class TradeMath {
     static Pricing price(RosterFit rosterFit, List<Slot> slots, TradeEvaluator.Basis basis,
             RosterSnapshot mine, RosterSnapshot partner, List<TradePiece> gets,
             List<TradePiece> gives) {
-        Map<String, String> positions = new HashMap<>();
-        positions.putAll(mine.playerPositions());
-        positions.putAll(partner.playerPositions());
+        Map<String, String> positions = new HashMap<>(basis.positions());
         addTraded(positions, gets);
         addTraded(positions, gives);
         RestOfSeason points = basis.season();

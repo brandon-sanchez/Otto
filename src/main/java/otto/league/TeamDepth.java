@@ -94,11 +94,12 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
         List<String> strengths = new ArrayList<>();
         List<String> gaps = new ArrayList<>();
         for (String position : rankedPositions(shape, team)) {
-            int rank = shape.replacementRank(position);
+            int rank = shape.replacementRank(position).orElseThrow();
             Optional<Double> replacement = shape.replacementLevel(ranking, position);
             int startingSlots = dedicatedSlots(team, position);
             List<String> theirs = team.roster().players().stream()
-                    .filter(playerId -> position.equals(team.position(playerId)))
+                    .filter(playerId -> team.position(playerId).filter(position::equals)
+                            .isPresent())
                     .toList();
             List<String> startable = replacement
                     .map(level -> theirs.stream()
@@ -152,8 +153,9 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
                 gaps.add("The %s slot is empty".formatted(slot.name()));
                 continue;
             }
-            String position = team.position(playerId);
-            Optional<Double> replacement = shape.replacementLevel(ranking, position);
+            Optional<String> position = team.position(playerId);
+            Optional<Double> replacement =
+                    position.flatMap(known -> shape.replacementLevel(ranking, known));
             Optional<Double> projected = team.points(playerId);
             if (replacement.isEmpty() || projected.isEmpty()
                     || projected.orElseThrow() >= replacement.orElseThrow()) {
@@ -161,7 +163,7 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
             }
             gaps.add("%s: %s projects %s, below the %s replacement level of %s".formatted(
                     slot.name(), team.name(playerId), points(projected.orElseThrow()),
-                    position, points(replacement.orElseThrow())));
+                    position.orElseThrow(), points(replacement.orElseThrow())));
         }
         return gaps;
     }

@@ -197,7 +197,7 @@ final class LineupEvidence {
                 .filter(playerId -> !starters.contains(playerId))
                 .filter(playerId -> !roster.reserve().contains(playerId))
                 .filter(playerId -> !roster.taxi().contains(playerId))
-                .filter(playerId -> slot.accepts(week.positionOf(roster, playerId)))
+                .filter(playerId -> week.fits(roster, playerId, slot))
                 .filter(playerId -> week.canPlay(roster, playerId))
                 .filter(playerId -> week.games()
                         .map(games -> !games.locked(roster.playerTeams().get(playerId), now))

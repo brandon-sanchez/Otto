@@ -49,9 +49,14 @@ public record UserWeek(
         return roster.playerNames().getOrDefault(playerId, playerId);
     }
 
-    /** The player's lineup position, kickers and defenses included; null when unknown. */
-    public String position(String playerId) {
+    /** The player's lineup position, kickers and defenses included; empty when unknown. */
+    public Optional<String> position(String playerId) {
         return week.positionOf(roster, playerId);
+    }
+
+    /** True when Otto can place the player at a position the slot accepts. */
+    public boolean fits(String playerId, Slot slot) {
+        return week.fits(roster, playerId, slot);
     }
 
     /** Every rostered player's lineup position that {@link #position} can read. */
@@ -84,12 +89,13 @@ public record UserWeek(
     }
 
     public Optional<Double> points(String playerId) {
-        return week.projections().flatMap(table -> table.points(playerId, position(playerId)));
+        return week.projections()
+                .flatMap(table -> table.points(playerId, position(playerId).orElse(null)));
     }
 
     public String projection(String playerId) {
         return week.projections()
-                .map(table -> table.display(playerId, position(playerId)))
+                .map(table -> table.display(playerId, position(playerId).orElse(null)))
                 .orElse(ProjectionTable.NO_PROJECTION);
     }
 

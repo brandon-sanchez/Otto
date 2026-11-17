@@ -59,9 +59,14 @@ public record Settings(
                 notableCutoffs == null ? DEFAULT_CUTOFFS : notableCutoffs, "", null);
     }
 
-    /** One position's cutoff, read the way the chat names it. */
+    /**
+     * Returns one position's cutoff, read the way the chat names it.
+     *
+     * @param position one of {@link #CUTOFF_POSITIONS}
+     * @throws java.util.NoSuchElementException for any other position
+     */
     public int notableCutoff(String position) {
-        return notablePlayerCutoffs.forPosition(position);
+        return notablePlayerCutoffs.forPosition(position).orElseThrow();
     }
 
     public boolean enabled(Trigger trigger) {
