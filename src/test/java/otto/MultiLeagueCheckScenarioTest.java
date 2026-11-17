@@ -1,5 +1,7 @@
 package otto;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
 
@@ -76,7 +78,7 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
         return telegram.findAll(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)))
                 .stream()
                 .map(LoggedRequest::getBodyAsString)
-                .map(TwoLeagueJson::read)
+                .map(MultiLeagueCheckScenarioTest::json)
                 .filter(body -> body.has("reply_markup"))
                 .toList();
     }
@@ -146,15 +148,11 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
                 .withQueryParam("isDynasty", equalTo("true")));
     }
 
-    /** Telegram request bodies as JSON. */
-    private static final class TwoLeagueJson {
-
-        static JsonNode read(String body) {
-            try {
-                return OttoJson.MAPPER.readTree(body);
-            } catch (java.io.IOException e) {
-                throw new java.io.UncheckedIOException(e);
-            }
+    private static JsonNode json(String body) {
+        try {
+            return OttoJson.MAPPER.readTree(body);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

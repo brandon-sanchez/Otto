@@ -190,12 +190,10 @@ public class TeamWeaknesses {
     private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
             AnswerDelivery delivery) {
         String name = league.league().name();
-        // With several leagues followed, the chat picked this league
-        // before the Ask loop ran, so the reference has been read already.
-        boolean picked = leagues.several();
-        boolean everyLeague = !picked && reference != null
+        boolean chatPickedLeague = leagues.several();
+        boolean everyLeague = !chatPickedLeague && reference != null
                 && EVERY_LEAGUE.matcher(reference).find();
-        if (!picked && !everyLeague && !names(reference, name)) {
+        if (!chatPickedLeague && !everyLeague && !names(reference, name)) {
             return ToolAnswer.unavailable(("I follow one league, %s, and no other, so I "
                     + "cannot read \"%s\"").formatted(name, reference));
         }

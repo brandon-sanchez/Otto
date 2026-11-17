@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>Leaving out or bringing back needs a message that names one league
  * and says nothing else. "Bring Jacobs back from IR in my dynasty
- * league" says more, so it reaches the Ask loop as it always did.
+ * league" says more, so it reaches the Ask loop.
  */
 @Component
 public class LeagueListChat {

@@ -34,8 +34,7 @@ import otto.sleeper.LeagueScope;
  *       one answers the question that was waiting.</li>
  * </ol>
  *
- * <p>With one league followed, every message is about it, and the Ask
- * loop sees exactly what it always saw.
+ * <p>With one league followed, every message is about it.
  */
 @Component
 public class LeagueAsk {

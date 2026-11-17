@@ -1,9 +1,12 @@
 package otto;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -127,8 +130,7 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
                          "comparisons": []}""".formatted(OutboundStubs.jsonString(read))))));
     }
 
-    private static com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder completion(
-            String body) {
+    private static ResponseDefinitionBuilder completion(String body) {
         return aResponse().withStatus(200).withHeader("Content-Type", "application/json")
                 .withBody(body);
     }
@@ -150,8 +152,8 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         try {
             JsonNode json = OttoJson.MAPPER.readTree(body);
             return json.path("text").asText();
-        } catch (java.io.IOException e) {
-            throw new java.io.UncheckedIOException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
