@@ -48,6 +48,7 @@ public class AskTools {
     private final PlayerCeiling ceilings;
     private final HabitService habits;
     private final MarketValueAnswers marketValues;
+    private final TeamWeaknesses weaknesses;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
@@ -55,7 +56,7 @@ public class AskTools {
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
-            MarketValueAnswers marketValues, Clock clock) {
+            MarketValueAnswers marketValues, TeamWeaknesses weaknesses, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -71,6 +72,7 @@ public class AskTools {
         this.ceilings = ceilings;
         this.habits = habits;
         this.marketValues = marketValues;
+        this.weaknesses = weaknesses;
         this.clock = clock;
     }
 
@@ -454,6 +456,25 @@ public class AskTools {
             String subject, ToolContext context) {
         return CheckedAnswers.of(context).offer(marketValues.answer(subject),
                 MarketValueAnswers.Reply::message);
+    }
+
+    @Tool(name = "get_team_weaknesses", description = """
+            Where the user's team is strong, thin or in surplus, position
+            by position against every team in his league, bench and depth
+            included, with how high its big weeks reach and up to three
+            waiver or trade moves, already written and fact-checked. Send
+            its message word for word. Call this only when he asks, for
+            "what are my team's weaknesses", "how can I improve my team"
+            and "where is my roster thin".""")
+    public ToolAnswer<TeamWeaknesses.Answer> getTeamWeaknesses(
+            @ToolParam(required = false, description = """
+                    The league he named, or his words such as "all of
+                    them" when he asks about every league. Leave it out
+                    when he named none.""")
+            String league, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return checked.offer(weaknesses.answer(league, clock.instant(), checked.delivery()),
+                TeamWeaknesses.Answer::message);
     }
 
     @Tool(name = "manage_watchlist", description = """
