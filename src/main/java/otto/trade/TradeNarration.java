@@ -37,16 +37,19 @@ class TradeNarration {
 
     private final RosterFit rosterFit;
     private final LeagueShapes shapes;
+    private final TradeDeadlines deadlines;
 
-    TradeNarration(RosterFit rosterFit, LeagueShapes shapes) {
+    TradeNarration(RosterFit rosterFit, LeagueShapes shapes, TradeDeadlines deadlines) {
         this.rosterFit = rosterFit;
         this.shapes = shapes;
+        this.deadlines = deadlines;
     }
 
     /**
      * Returns the answer {@code evaluate_trade} gives.
      *
-     * <p>Side effects: none beyond the depth reads behind the leverage note.
+     * <p>Side effects: the depth reads behind the leverage note, and the
+     * stored schedule read in the trade deadline week.
      *
      * @param gets what the user receives
      * @param gives what the user sends
@@ -54,8 +57,7 @@ class TradeNarration {
     TradeEvaluator.TradeEvaluation evaluation(LeagueWeek leagueWeek, TradeEvaluator.Basis basis,
             RosterSnapshot mine, RosterSnapshot partner, List<TradePiece> gets,
             List<TradePiece> gives, PricedTrade priced) {
-        Optional<TradeDeadline> deadline = TradeDeadline.assess(
-                leagueWeek.league().tradeDeadline(), leagueWeek.week().weekNumber());
+        Optional<TradeDeadline> deadline = deadlines.assess(leagueWeek);
         List<Slot> slots = leagueWeek.week().startingSlots();
         TradeMath.Pricing pricing = priced.pricing();
         TradeCall call = priced.call();
@@ -74,7 +76,7 @@ class TradeNarration {
                 call.otherMeasure(),
                 priced.market().orElse(null),
                 partnerOutcome(partner, pricing.theirNet()),
-                deadline.filter(TradeDeadline::passed).isPresent()
+                deadline.filter(TradeDeadline::closed).isPresent()
                         ? List.of()
                         : leverage(leagueWeek, basis.shape(), mine, partner),
                 postTradeRoster(mine, pricing.myAfter(), gives, gets, slots),

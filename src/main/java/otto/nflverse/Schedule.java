@@ -3,6 +3,7 @@ package otto.nflverse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,15 @@ public record Schedule(
     record Window(Instant start, Instant end) {
     }
 
+    /**
+     * How long after kickoff a game is taken to be over when the file
+     * carries no result yet. A result arrives only with the file's next
+     * republication, hours after a night game ends. A game played in
+     * regulation runs a little over three hours; the extra covers a long
+     * broadcast, so that a game still being played rarely reads as over.
+     */
+    private static final Duration GAME_LENGTH = Duration.ofMinutes(210);
+
     /** One week's games in kickoff order. */
     List<Game> games(String season, int week) {
         return rows.stream()
@@ -74,6 +84,31 @@ public record Schedule(
                         && (game.home().equals(team) || game.away().equals(team)))
                 .sorted(Comparator.comparingInt(Game::week))
                 .toList();
+    }
+
+    /**
+     * Returns whether the last game of a week has ended: every game of the
+     * week has a result, or the week's last kickoff is a game's length
+     * behind {@code now}.
+     *
+     * @return empty when the schedule cannot say: it lists no game for the
+     *         week, or the last game has no result and no kickoff time yet
+     */
+    public Optional<Boolean> weekOver(String season, int week, Instant now) {
+        List<Game> games = games(season, week);
+        if (games.isEmpty()) {
+            return Optional.empty();
+        }
+        if (games.stream().allMatch(Game::finished)) {
+            return Optional.of(true);
+        }
+        Instant lastKickoff = games.getLast().kickoff();
+        // The feed reads a game with no time listed as midnight Eastern,
+        // which no game kicks off at.
+        boolean timeUnlisted = lastKickoff.atZone(ScheduleFeed.EASTERN).toLocalTime()
+                .equals(LocalTime.MIDNIGHT);
+        return timeUnlisted ? Optional.empty()
+                : Optional.of(!now.isBefore(lastKickoff.plus(GAME_LENGTH)));
     }
 
     boolean anyFinal(String season) {

@@ -58,6 +58,9 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     private static final Instant WEEK_12 = Instant.parse("2026-11-24T18:00:00Z");
 
+    private static final Instant BEFORE_THE_LAST_GAME = Instant.parse("2026-12-07T19:00:00Z");
+    private static final Instant AFTER_THE_LAST_GAME = Instant.parse("2026-12-08T14:00:00Z");
+
     private static final String USER_ID = "777001";
     private static final String LEAGUE_ID = "1389748403805650944";
 
@@ -127,7 +130,12 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     private void leagueInWeek(String leagueFixture, String rostersFixture, String stateFixture,
             int week) {
-        clock.set(WEEK_12);
+        leagueInWeek(leagueFixture, rostersFixture, stateFixture, week, WEEK_12);
+    }
+
+    private void leagueInWeek(String leagueFixture, String rostersFixture, String stateFixture,
+            int week, Instant now) {
+        clock.set(now);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-team.json", "players-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture, "league-v1");
@@ -386,23 +394,102 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void inTheDeadlineWeekOffersSayItIsTheLastWeekToTrade() {
+    void onMondayBeforeTheDeadlineWeeksLastGameOffersSayWhenTradesClose() {
+        deadlineWeekLeague(BEFORE_THE_LAST_GAME);
+        scheduleStored("nflverse/games-deadline-week.csv");
+
+        Map<String, Map<String, String>> evidence = askForTrades("{}");
+
+        assertThat(evidence.get("trade-deadline")).containsEntry("tradeDeadline",
+                "The trade deadline is this week. Trades close when week 13's last game "
+                        + "ends, usually Monday night. A trade has to be proposed and accepted "
+                        + "before then, and its review period can finish afterward.");
+        assertThat(evidence).containsKey("offer-1");
+    }
+
+    private void scheduleStored(String fixture) {
+        NflverseStubs.healthy(nflverse);
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH, fixture);
+        feeds.updateIfDue();
+    }
+
+    private void deadlineWeekLeague(Instant now) {
         leagueInWeek("sleeper/league-in-season.json", "sleeper/rosters-offers.json",
-                "sleeper/state-nfl-week13.json", 13);
+                "sleeper/state-nfl-week13.json", 13, now);
         fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+    }
+
+    private void theAnswerSaysTradesAreClosed(String reason) {
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(CLOSED));
+
+        ask("what trades should I make?");
+
+        assertThat(records(RunKind.TRADE_IDEAS)).isEmpty();
+        Map<String, Map<String, String>> evidence = evidence(RunKind.TEAM_WEAKNESSES);
+        assertThat(evidence.get("trade-deadline").get("tradeDeadline")).startsWith(reason);
+        assertThat(evidence.values()).noneSatisfy(facts ->
+                assertThat(facts).containsKey("sendTo"));
+        theUserReads(CLOSED);
+    }
+
+    @Test
+    void onTuesdayMorningAfterTheDeadlineWeeksLastGameTradesAreClosed() {
+        deadlineWeekLeague(AFTER_THE_LAST_GAME);
+        scheduleStored("nflverse/games-deadline-week.csv");
+
+        theAnswerSaysTradesAreClosed("the trade deadline passed after week 13");
+    }
+
+    @Test
+    void withoutAStoredScheduleTradesCloseOnTuesdayAtEightUtc() {
+        deadlineWeekLeague(AFTER_THE_LAST_GAME);
+
+        theAnswerSaysTradesAreClosed("the trade deadline passed after week 13");
+    }
+
+    @Test
+    void aStoredScheduleThatCannotBeReadFallsBackToTuesdayAtEightUtc() {
+        deadlineWeekLeague(AFTER_THE_LAST_GAME);
+        store.write("nflverse-schedule", "not a schedule");
+
+        theAnswerSaysTradesAreClosed("the trade deadline passed after week 13");
+    }
+
+    @Test
+    void withoutAStoredScheduleTradesAreOpenUntilTuesdayAtEightUtc() {
+        deadlineWeekLeague(Instant.parse("2026-12-08T07:59:00Z"));
 
         Map<String, Map<String, String>> evidence = askForTrades("{}");
 
         assertThat(evidence.get("trade-deadline").get("tradeDeadline"))
-                .startsWith("The trade deadline is this week, week 13.");
+                .startsWith("The trade deadline is this week.");
         assertThat(evidence).containsKey("offer-1");
     }
 
+    @Test
+    void aDeadlineOfWeek99IsNoDeadline() {
+        leagueInWeek("sleeper/league-in-season-trade-deadline-99.json",
+                "sleeper/rosters-offers.json", "sleeper/state-nfl-week14.json", 14);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+
+        Map<String, Map<String, String>> evidence = askForTrades("{}");
+
+        assertThat(evidence).containsKey("offer-1").doesNotContainKey("trade-deadline");
+    }
+
+    @Test
+    void aLeagueWithTradesTurnedOffGetsNoOffersInAnyWeek() {
+        leagueInWeek("sleeper/league-in-season-trades-disabled.json",
+                "sleeper/rosters-offers.json", "sleeper/state-nfl-week12.json", 12);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+
+        theAnswerSaysTradesAreClosed(
+                "trades are turned off in this league for the whole season");
+    }
+
     private void playoffWeeksStored() {
-        NflverseStubs.healthy(nflverse);
-        NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH,
-                "nflverse/games-playoff-weeks.csv");
-        feeds.updateIfDue();
+        scheduleStored("nflverse/games-playoff-weeks.csv");
         Map<String, DefenseVersusPosition.TeamDefense> byTeam = new HashMap<>();
         Map.of("CHI", Map.entry("WR", 25), "DET", Map.entry("WR", 30), "GB",
                 Map.entry("WR", 22), "DAL", Map.entry("TE", 10), "NYG", Map.entry("TE", 20),
