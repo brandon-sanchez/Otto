@@ -11,7 +11,7 @@ public interface DocumentNaming {
     /**
      * What a league's own copy of a document carries after its name,
      * followed by the league id. The league named in config carries
-     * none, so its documents keep the names they always had.
+     * none.
      */
     String LEAGUE_SUFFIX = "@league-";
 

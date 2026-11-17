@@ -20,8 +20,7 @@ import otto.storage.JsonStore;
 /**
  * The Sleeper leagues Otto follows for the owner: every league his
  * account is in this season, less the ones he left out in chat. The
- * league named in config is always first, so a single-league setup
- * reads exactly as it did before Otto followed more than one.
+ * league named in config is always first.
  *
  * <p>The league list is read from Sleeper by {@link #refreshIfDue}, at
  * most once per {@code otto.league-discovery-interval}. A failed read
@@ -110,11 +109,6 @@ public class FollowedLeagues {
         return followed().stream()
                 .filter(league -> league.leagueId().equals(leagueId))
                 .findFirst();
-    }
-
-    /** Returns the id of the league named in config, whose documents keep their plain names. */
-    public String configLeagueId() {
-        return configLeagueId;
     }
 
     /**

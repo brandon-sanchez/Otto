@@ -142,8 +142,6 @@ public class ModelChain {
             if (remaining <= 0) {
                 throw new ModelTimeout();
             }
-            // A chat tool runs inside the call and reads Sleeper, so the
-            // call must stay on the league its caller was working for.
             Future<R> future = abandonableCalls.submit(LeagueScope.carried(() ->
                     ScopedValue.where(NESTED_RUN_ENDS, nestedUntilNanos).call(call::get)));
             try {

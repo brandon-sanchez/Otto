@@ -15,10 +15,9 @@ import otto.storage.DocumentNaming;
  * the league id for every other league. Every other document is shared
  * by all leagues and keeps its plain name.
  *
- * <p>The config league keeps the names it always had, so the documents
- * stored before Otto followed more than one league are its documents,
- * with nothing to rename or copy. ADR-0012 lists which documents
- * belong to a league and why.
+ * <p>The config league's documents keep their plain names, so documents
+ * stored under those names are its documents, with nothing to rename
+ * or copy. ADR-0012 lists which documents belong to a league and why.
  */
 @Component
 public class LeagueDocumentNaming implements DocumentNaming {
