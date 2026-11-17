@@ -3,6 +3,7 @@ package otto;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -21,18 +22,24 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.habits.HabitLedger;
 import otto.harness.Fixtures;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
@@ -330,6 +337,62 @@ class HabitsScenarioTest extends WireSeamTest {
         llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("given away 45.0"))
                 .withRequestBody(containing("review_habits")));
+    }
+
+    /**
+     * Stat corrections to last week's scores land within days of its
+     * games, so the Checks a minute apart leave the week alone, a Check
+     * hours later reads it again, and one after the corrections are in
+     * never does.
+     */
+    @Test
+    void lastWeeksScoresAreReadAgainEveryFewHoursUntilCorrectionsAreIn() {
+        for (int week = 1; week <= 2; week++) {
+            stubMatchups(week, USUAL_STARTERS, points(Map.of()));
+        }
+        checkInWeek(3);
+        for (int minute = 1; minute <= 3; minute++) {
+            checkAfter(Duration.ofSeconds(61));
+        }
+        lastWeekWasRead(1);
+
+        checkAfter(Duration.ofHours(5));
+        lastWeekWasRead(2);
+
+        checkAfter(Duration.ofDays(4));
+        checkAfter(Duration.ofHours(5));
+        lastWeekWasRead(2);
+    }
+
+    @Test
+    void aSleeperReadTheCaptureCouldNotMakeIsLoggedAsAWarning() {
+        stubMatchups(1, USUAL_STARTERS, points(Map.of()));
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.LEAGUE_PATH + "/matchups/2"))
+                .willReturn(aResponse().withStatus(500)));
+        ListAppender<ILoggingEvent> captureLog = new ListAppender<>();
+        captureLog.start();
+        Logger ledgerLog = (Logger) LoggerFactory.getLogger(HabitLedger.class);
+        ledgerLog.addAppender(captureLog);
+        try {
+            checkInWeek(3);
+        } finally {
+            ledgerLog.detachAppender(captureLog);
+        }
+
+        assertThat(captureLog.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .anySatisfy(message -> assertThat(message).contains("week 2 matchups"));
+    }
+
+    private void checkAfter(Duration wait) {
+        clock.set(clock.instant().plus(wait));
+        checkRunner.runCheck();
+    }
+
+    private static void lastWeekWasRead(int times) {
+        sleeper.verify(times, getRequestedFor(urlEqualTo(
+                SleeperStubs.LEAGUE_PATH + "/matchups/2")));
     }
 
     private void ask(String question) {
