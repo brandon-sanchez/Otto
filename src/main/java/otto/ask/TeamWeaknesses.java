@@ -29,6 +29,8 @@ import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
+import otto.habits.HabitLean;
+import otto.habits.HabitService;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketValues;
@@ -60,7 +62,9 @@ import otto.trade.RestOfSeasonProjections;
  * from per-game rest-of-season projections, ranks the user's starters
  * and depth against the rest, and picks up to three moves. The model
  * explains it in one message, and {@link AdviceCheck} holds every name,
- * number and rank in that message to the evidence first.
+ * number and rank in that message to the evidence first. The user's
+ * costly habits weigh which moves are picked, and the message never
+ * names them.
  */
 @Component
 public class TeamWeaknesses {
@@ -81,7 +85,7 @@ public class TeamWeaknesses {
             must appear in the evidence, written as the evidence writes it. Name only
             players listed in "players", and introduce each by full name before using his
             surname alone.
-            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
+            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             Write plain text in four parts, with a blank line between parts:
             1. Two or three sentences that sum up the team: where it is strong and where it
@@ -130,6 +134,7 @@ public class TeamWeaknesses {
     private final MarketValues market;
     private final TeamDirections directions;
     private final TradeOffers offers;
+    private final HabitService habits;
     private final AdviceWriter writer;
     private final RunOutcomes runs;
     private final AdviceForm<AdviceAnswer> form;
@@ -137,8 +142,9 @@ public class TeamWeaknesses {
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, PlayerDirectoryStore directory, MarketValues market,
-            TeamDirections directions, TradeOffers offers, AdviceWriter writer,
-            AdviceCheck check, RunOutcomes runs, OttoProperties properties) {
+            TeamDirections directions, TradeOffers offers, HabitService habits,
+            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
+            OttoProperties properties) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
@@ -146,6 +152,7 @@ public class TeamWeaknesses {
         this.market = market;
         this.directions = directions;
         this.offers = offers;
+        this.habits = habits;
         this.writer = writer;
         this.runs = runs;
         this.userId = properties.userId();
@@ -158,7 +165,7 @@ public class TeamWeaknesses {
             @Override
             public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
                     String reply) {
-                return check.check(bundle, reply);
+                return QuietHabits.failHabitMentions(check.check(bundle, reply));
             }
         };
     }
@@ -179,9 +186,9 @@ public class TeamWeaknesses {
      * explain it.
      *
      * <p>Side effects: the rest-of-season projection reads, the market
-     * value reads for every roster, one or two model calls, and one
-     * Decision Record of kind {@link RunKind#TEAM_WEAKNESSES} whatever the
-     * outcome.
+     * value reads for every roster, the habit capture's reads and writes,
+     * one or two model calls, and one Decision Record of kind
+     * {@link RunKind#TEAM_WEAKNESSES} whatever the outcome.
      *
      * @param leagueReference the league the user named; null or blank for
      *        the league in the conversation, or words such as "all of
@@ -234,13 +241,16 @@ public class TeamWeaknesses {
         LeagueProfile profile = profiler.profile(league, perGame);
         TeamProfile user = profile.user().orElseThrow();
         Optional<Integer> deadline = passedDeadline(league);
+        HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
         List<WaiverSuggestion> waivers = WeaknessSuggestions.of(profile,
-                rated(freeAgents, perGame, league));
+                rated(freeAgents, perGame, league), lean.depthAt());
         TeamWeaknessEvidence.Facts facts = new TeamWeaknessEvidence.Facts(name, profile, user,
-                waivers, deadline.isEmpty() ? trades(league, waivers.size(), now) : List.of(),
+                waivers, deadline.isEmpty() ? trades(league, waivers.size(), lean, now)
+                        : List.of(),
                 market(league, now), sidelined(mine, user), season.weeks(),
                 deadline, limits(mine, user), everyLeague, direction(league, now));
-        EvidenceBundle bundle = TeamWeaknessEvidence.bundle(facts, MAX_LENGTH, now);
+        EvidenceBundle bundle = QuietHabits.add(TeamWeaknessEvidence.bundle(facts, MAX_LENGTH,
+                now), lean, now);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
         Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
         return switch (outcome) {
@@ -255,13 +265,13 @@ public class TeamWeaknesses {
      * {@link WeaknessSuggestions#MOST} suggestions in all. A league the
      * offer search can't price gets waiver moves alone.
      */
-    private List<Offer> trades(LeagueWeek league, int waivers, Instant now) {
+    private List<Offer> trades(LeagueWeek league, int waivers, HabitLean lean, Instant now) {
         int room = WeaknessSuggestions.MOST - waivers;
         if (room < 1) {
             return List.of();
         }
-        return switch (offers.find(league, new TradeOffers.Request(room, 0, Optional.empty()),
-                now)) {
+        return switch (offers.find(league,
+                new TradeOffers.Request(room, 0, Optional.empty(), lean), now)) {
             case SourceResult.Ok<TradeOffers.Ideas> ideas -> ideas.value().offers();
             case SourceResult.Unavailable<TradeOffers.Ideas> _ -> List.of();
         };

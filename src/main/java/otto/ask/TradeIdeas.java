@@ -19,6 +19,8 @@ import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.habits.HabitLean;
+import otto.habits.HabitService;
 import otto.offers.Offer;
 import otto.offers.TradeOffers;
 import otto.offers.TradeShape;
@@ -37,7 +39,8 @@ import otto.trade.TradeDeadline;
  * offers. {@link TradeOffers} finds and prices each offer, the model
  * explains them in one message, and {@link AdviceCheck} holds every name
  * and number to the evidence first. A message that pins a player on the
- * wrong manager's offer fails the check too. After the trade deadline
+ * wrong manager's offer fails the check too, and so does one that names
+ * the user's habits, which only tilt the search. After the trade deadline
  * there are no offers: the answer is the weaknesses read, which says
  * trades are closed and points to waivers.
  */
@@ -64,7 +67,7 @@ public class TradeIdeas {
             must appear in the evidence, written as the evidence writes it. Name only
             players listed in "players", and introduce each by full name before using his
             surname alone.
-            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
+            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             Write plain text. When "trade-deadline" is present, open with it. Then give
             each "offer-" item in order, one short paragraph each, numbered 1, 2, 3. Each
@@ -91,17 +94,19 @@ public class TradeIdeas {
     private final UserWeekLoader loader;
     private final TradeOffers offers;
     private final TeamWeaknesses weaknesses;
+    private final HabitService habits;
     private final AdviceWriter writer;
     private final AdviceCheck check;
     private final RunOutcomes runs;
     private final String userId;
 
     public TradeIdeas(UserWeekLoader loader, TradeOffers offers, TeamWeaknesses weaknesses,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
+            HabitService habits, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
             OttoProperties properties) {
         this.loader = loader;
         this.offers = offers;
         this.weaknesses = weaknesses;
+        this.habits = habits;
         this.writer = writer;
         this.check = check;
         this.runs = runs;
@@ -121,11 +126,11 @@ public class TradeIdeas {
     /**
      * Finds trade offers and has the model explain them.
      *
-     * <p>Side effects: the reads {@link TradeOffers#find} makes, one or two
-     * model calls, and one Decision Record of kind
-     * {@link RunKind#TRADE_IDEAS} whatever the outcome. After the
-     * deadline, the weaknesses answer's reads and its Decision Record
-     * instead.
+     * <p>Side effects: the habit capture's reads and writes, the reads
+     * {@link TradeOffers#find} makes, one or two model calls, and one
+     * Decision Record of kind {@link RunKind#TRADE_IDEAS} whatever the
+     * outcome. After the deadline, the weaknesses answer's reads and its
+     * Decision Record instead.
      *
      * @param count how many offers he asked for; null for the default of
      *        {@link TradeOffers#DEFAULT_COUNT}, or when he asked for more
@@ -175,7 +180,9 @@ public class TradeIdeas {
             return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
                     : ToolAnswer.of(new Answer(read.facts().message()));
         }
-        return switch (offers.find(league, request, now)) {
+        HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
+        return switch (offers.find(league, new TradeOffers.Request(request.count(),
+                request.skip(), request.shape(), lean), now)) {
             case SourceResult.Unavailable<TradeOffers.Ideas> unavailable ->
                 ToolAnswer.unavailable(unavailable.reason());
             case SourceResult.Ok<TradeOffers.Ideas> ideas when ideas.value().offers().isEmpty() ->
@@ -185,18 +192,18 @@ public class TradeIdeas {
                         : "no trade I could build is a win for him that the other manager "
                                 + "would plausibly accept right now");
             case SourceResult.Ok<TradeOffers.Ideas> ideas -> explain(league, request,
-                    ideas.value().offers(), deadline, now, delivery);
+                    ideas.value().offers(), deadline, lean, now, delivery);
         };
     }
 
     private ToolAnswer<Answer> explain(LeagueWeek league, TradeOffers.Request request,
-            List<Offer> found, Optional<TradeDeadline> deadline, Instant now,
+            List<Offer> found, Optional<TradeDeadline> deadline, HabitLean lean, Instant now,
             CheckedAnswers.Delivery delivery) {
         int maxLength = Math.min(LONGEST, INTRO_LENGTH + LENGTH_PER_OFFER * found.size());
-        EvidenceBundle bundle = TradeIdeaEvidence.bundle(new TradeIdeaEvidence.Facts(
-                league.league().name(), found, request.count(), request.skip(),
-                request.shape().map(TradeShape::words), deadline.map(TradeDeadline::message)),
-                maxLength, now);
+        EvidenceBundle bundle = QuietHabits.add(TradeIdeaEvidence.bundle(
+                new TradeIdeaEvidence.Facts(league.league().name(), found, request.count(),
+                        request.skip(), request.shape().map(TradeShape::words),
+                        deadline.map(TradeDeadline::message)), maxLength, now), lean, now);
         AdviceForm<AdviceAnswer> form = form(found);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
         Outcome outcome = runs.record(record(league, found, bundle, form, result, now,
@@ -229,7 +236,8 @@ public class TradeIdeas {
             @Override
             public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
                     String reply) {
-                AdviceCheck.Verdict<AdviceAnswer> verdict = check.check(bundle, reply);
+                AdviceCheck.Verdict<AdviceAnswer> verdict =
+                        QuietHabits.failHabitMentions(check.check(bundle, reply));
                 Optional<AdviceAnswer> answer = switch (verdict) {
                     case AdviceCheck.Verdict.Passed<AdviceAnswer> passed ->
                         Optional.of(passed.answer());

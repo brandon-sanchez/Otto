@@ -19,6 +19,7 @@ import otto.buysell.BuySellReader;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
+import otto.habits.HabitLean;
 import otto.market.MarketValuation;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
@@ -93,13 +94,20 @@ public class TradeOffers {
      *        are left out so "show more" brings new ones
      * @param shape the shape he asked for; empty for the default shapes,
      *        a 2-for-1 for an upgrade and a 1-for-2 for depth
+     * @param lean how his costly habits tilt the search: depth at the
+     *        positions it names is sought as a need
      */
-    public record Request(int count, int skip, Optional<TradeShape> shape) {
+    public record Request(int count, int skip, Optional<TradeShape> shape, HabitLean lean) {
 
         public Request {
             if (count < 1 || skip < 0) {
                 throw new IllegalArgumentException("Ask for at least one offer");
             }
+        }
+
+        /** A request with no tilt from his habits. */
+        public Request(int count, int skip, Optional<TradeShape> shape) {
+            this(count, skip, shape, HabitLean.NONE);
         }
     }
 
@@ -147,7 +155,8 @@ public class TradeOffers {
         LeagueProfile profile = profiler.profile(league, TeamProfiler.perGame(basis.season()));
         TeamProfile user = profile.user().orElseThrow();
         OfferSearch.League read = read(league, mine, user, basis, now);
-        OfferSearch.Needs needs = OfferSearch.needs(user, profile.teams().size());
+        OfferSearch.Needs needs = OfferSearch.needs(user, profile.teams().size(),
+                request.lean().depthAt());
         List<OfferSearch.Asset> spare = OfferSearch.assets(read, mine);
         List<OfferSearch.Candidate> candidates = new ArrayList<>();
         for (RosterSnapshot partner : league.rosters()) {
