@@ -227,7 +227,7 @@ public class MarketValuation {
 
     /**
      * One keeper league's blend, priced once and asked about each player:
-     * the keeper line, what keeping costs and every team's likely keepers.
+     * what keeping costs and every team's likely keepers.
      */
     private final class Keepers {
 
@@ -237,7 +237,7 @@ public class MarketValuation {
         private final Optional<Integer> keeperLimit;
         private Prices prices;
 
-        private record Prices(int line, KeeperScale scale, KeeperCosts.Pricing pricing,
+        private record Prices(KeeperScale scale, KeeperCosts.Pricing pricing,
                 Set<String> likely) {
         }
 
@@ -255,37 +255,61 @@ public class MarketValuation {
             Optional<MarketQuote.Source> ownSource = own.map(Valued::source);
             if (keeperLimit.isEmpty() || keeperLimit.get() < 1 || own.isEmpty()) {
                 return new MarketQuote.Keeper(keeperLimit, false, redraftValue, ownValue,
-                        ownSource, 0, 0, Optional.empty());
+                        ownSource, 0, Optional.empty());
             }
             Prices priced = prices();
             KeeperCost cost = priced.pricing().costOf(playerId, priced.scale());
             boolean likely = priced.likely().contains(playerId);
             return new MarketQuote.Keeper(keeperLimit, likely, redraftValue, ownValue,
-                    ownSource, priced.line(), likely ? ownValue.get() - cost.value() : 0,
+                    ownSource, likely ? ownValue.get() - cost.value() : 0,
                     Optional.of(cost));
         }
 
         private Prices prices() {
             if (prices == null) {
                 int limit = keeperLimit.orElseThrow();
-                List<Integer> rostered = rosters.stream()
-                        .flatMap(roster -> everyPlayer(roster).stream())
-                        .map(dynasty::of)
-                        .flatMap(Optional::stream)
-                        .map(Valued::value)
-                        .sorted(Comparator.reverseOrder())
-                        .toList();
-                int keepers = rosters.size() * limit;
-                int line = rostered.size() > keepers ? rostered.get(keepers) : 0;
-                KeeperScale scale = new KeeperScale(line, dynasty.ranked());
                 KeeperCosts.Pricing pricing = keeperCosts.pricing(league);
+                KeeperScale scale = new KeeperScale(spots(limit, pricing), dynasty.ranked());
                 Set<String> likely = rosters.stream()
                         .flatMap(roster -> likelyKeepers(roster, limit, dynasty, pricing, scale)
                                 .stream())
                         .collect(Collectors.toUnmodifiableSet());
-                prices = new Prices(line, scale, pricing, likely);
+                prices = new Prices(scale, pricing, likely);
             }
             return prices;
+        }
+
+        /**
+         * What a keeper spot is worth to each rostered player's team. A
+         * player at his league's year limit can't be kept, so he never
+         * stands in for anyone, and whether he is comes from the rule
+         * alone, so the scale it is asked with carries no spots yet.
+         */
+        private Map<String, KeeperScale.KeeperSpot> spots(int limit,
+                KeeperCosts.Pricing pricing) {
+            KeeperScale unspotted = new KeeperScale(Map.of(), dynasty.ranked());
+            Map<String, KeeperScale.KeeperSpot> spots = new HashMap<>();
+            for (RosterSnapshot roster : rosters) {
+                List<String> keepable = everyPlayer(roster).stream()
+                        .filter(id -> dynasty.of(id).filter(valued -> valued.value() > 0)
+                                .isPresent())
+                        .filter(id -> pricing.costOf(id, unspotted).keepable())
+                        .sorted(Comparator.comparingInt(
+                                (String id) -> dynasty.of(id).orElseThrow().value()).reversed())
+                        .toList();
+                for (String playerId : everyPlayer(roster)) {
+                    List<String> others = keepable.stream()
+                            .filter(id -> !id.equals(playerId))
+                            .toList();
+                    Optional<String> instead = others.size() >= limit
+                            ? Optional.of(others.get(limit - 1))
+                            : Optional.empty();
+                    spots.put(playerId, new KeeperScale.KeeperSpot(roster.userRoster(),
+                            instead.map(id -> roster.playerNames().getOrDefault(id, id)),
+                            instead.map(id -> dynasty.of(id).orElseThrow().value()).orElse(0)));
+                }
+            }
+            return spots;
         }
     }
 

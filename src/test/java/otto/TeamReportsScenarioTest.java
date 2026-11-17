@@ -299,22 +299,46 @@ class TeamReportsScenarioTest extends WireSeamTest {
                 .contains("chiefs.com", "feed", "layout");
     }
 
+    /**
+     * The error alarm hears about a failing feed once, on its third
+     * failed run in a row, and again only after the feed has recovered
+     * and then failed three runs in a row once more.
+     */
     @Test
-    void aFeedThatKeepsFailingIsLoggedAsAnErrorOnItsThirdRunInARow(CapturedOutput output) {
+    void aFeedThatKeepsFailingIsLoggedAsAnErrorOnceUntilItRecovers(CapturedOutput output) {
         knownPlayers();
         clock.set(SATURDAY_AFTERNOON);
         teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED))
                 .willReturn(aResponse().withStatus(503)));
 
-        teamReports.poll();
-        clock.advance(Duration.ofMinutes(5));
-        teamReports.poll();
-        assertThat(output.getOut()).doesNotContainPattern("ERROR.*otto\\.research\\.TeamReports");
+        pollEveryFiveMinutes(2);
+        assertThat(feedErrors(output)).isZero();
 
-        clock.advance(Duration.ofMinutes(5));
-        teamReports.poll();
+        pollEveryFiveMinutes(3);
+        assertThat(feedErrors(output)).isEqualTo(1);
         assertThat(output.getOut()).containsPattern(
                 "ERROR.*otto\\.research\\.TeamReports.*chiefs\\.com.*3 runs in a row");
+
+        site("chiefs.com", FEED, "team-sites/chiefs-rss.xml");
+        pollEveryFiveMinutes(1);
+        teamSites.stubFor(get(urlPathEqualTo("/chiefs.com" + FEED))
+                .willReturn(aResponse().withStatus(503)));
+        pollEveryFiveMinutes(3);
+        assertThat(feedErrors(output)).isEqualTo(2);
+    }
+
+    private void pollEveryFiveMinutes(int runs) {
+        for (int run = 0; run < runs; run++) {
+            teamReports.poll();
+            clock.advance(Duration.ofMinutes(5));
+        }
+    }
+
+    private static long feedErrors(CapturedOutput output) {
+        return output.getOut().lines()
+                .filter(line -> line.matches(".*ERROR.*otto\\.research\\.TeamReports.*"
+                        + "chiefs\\.com.*runs in a row.*"))
+                .count();
     }
 
     @Test

@@ -15,8 +15,14 @@ import otto.sleeper.SleeperDrafts;
  * Prices keepers from the league's latest finished draft and its keeper
  * rule. A kept player costs next season what the rule makes of his round
  * or price in that draft, and that pick or those dollars cost what the
- * dynasty market says they buy. In season the latest finished draft is
- * this season's; before the draft it is last season's.
+ * dynasty market says they buy. "Last season's draft" always means the
+ * latest finished draft: during the season that is this season's draft,
+ * and before the draft it is last season's.
+ *
+ * <p>A free keeper costs the keeper spot he uses on his own team: the
+ * dynasty value of the best teammate who would otherwise be kept in it
+ * (see {@link KeeperScale.KeeperSpot}). Only a team with too few other
+ * keepable players to fill its spots keeps him for nothing.
  */
 @Component
 public class DraftKeeperCosts implements KeeperCosts {
@@ -31,7 +37,7 @@ public class DraftKeeperCosts implements KeeperCosts {
     public Pricing pricing(SleeperAdapter.League league) {
         KeeperRules.InForce inForce = rules.inForce(league.leagueId());
         if (inForce.rule().kind() == KeeperRule.Kind.FREE) {
-            return (playerId, scale) -> free(inForce, league, scale);
+            return (playerId, scale) -> free(inForce, playerId, scale);
         }
         return (playerId, scale) -> priced(inForce, playerId, scale);
     }
@@ -41,15 +47,41 @@ public class DraftKeeperCosts implements KeeperCosts {
         rules.markAsked(leagueId);
     }
 
-    private static KeeperCost free(KeeperRules.InForce inForce, SleeperAdapter.League league,
+    private static KeeperCost free(KeeperRules.InForce inForce, String playerId,
             KeeperScale scale) {
-        String spots = league.rules().keeperLimit()
-                .map(limit -> "one of your %d keeper spots".formatted(limit))
-                .orElse("a keeper spot");
-        return new KeeperCost(scale.keeperLine(), true, ("Keeping him costs no draft pick, "
-                + "only %s, which is worth about what the best player nobody keeps is worth "
-                + "(%d).").formatted(spots, scale.keeperLine()), inForce.sentence(),
-                inForce.question(), Optional.empty());
+        Optional<KeeperCost> pastLimit = pastYearLimit(inForce, playerId, Optional.empty());
+        if (pastLimit.isPresent()) {
+            return pastLimit.get();
+        }
+        Optional<KeeperScale.KeeperSpot> spot = scale.spotOf(playerId);
+        String cost = spot.map(DraftKeeperCosts::spotCost)
+                .orElse("Keeping him costs no draft pick, only a keeper spot.");
+        return new KeeperCost(spot.map(KeeperScale.KeeperSpot::value).orElse(0), true, cost,
+                inForce.sentence(), inForce.question(), Optional.empty());
+    }
+
+    private static String spotCost(KeeperScale.KeeperSpot spot) {
+        return spot.instead()
+                .map(instead -> "Keeping him costs no draft pick, but he uses a keeper spot "
+                        + "%s otherwise give to %s, worth %d.".formatted(
+                                spot.usersTeam() ? "you'd" : "his team would", instead,
+                                spot.value()))
+                .orElseGet(() -> "Keeping him costs no draft pick, and %s no other player "
+                        .formatted(spot.usersTeam() ? "you have" : "his team has")
+                        + "worth a keeper spot, so the spot costs nothing.");
+    }
+
+    /** He can't be kept once he has been kept the league's limit of seasons in a row. */
+    private static Optional<KeeperCost> pastYearLimit(KeeperRules.InForce inForce,
+            String playerId, Optional<Integer> budget) {
+        int kept = yearsKept(inForce.drafts(), playerId);
+        if (inForce.rule().yearLimit().filter(limit -> kept >= limit).isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new KeeperCost(0, false, ("He can't be kept again: he has been kept "
+                + "%d %s in a row, your league's limit.").formatted(kept,
+                kept == 1 ? "season" : "seasons"), inForce.sentence(), inForce.question(),
+                budget));
     }
 
     private static KeeperCost priced(KeeperRules.InForce inForce, String playerId,
@@ -58,13 +90,11 @@ public class DraftKeeperCosts implements KeeperCosts {
         SleeperDrafts.Draft latest = inForce.drafts().getFirst();
         boolean auction = inForce.auction();
         Optional<Integer> budget = latest.budget();
-        int kept = yearsKept(inForce.drafts(), playerId);
-        if (rule.yearLimit().filter(limit -> kept >= limit).isPresent()) {
-            return new KeeperCost(0, false, ("He can't be kept again: he has been kept %d %s "
-                    + "in a row, your league's limit.").formatted(kept,
-                    kept == 1 ? "season" : "seasons"), inForce.sentence(), inForce.question(),
-                    budget);
+        Optional<KeeperCost> pastLimit = pastYearLimit(inForce, playerId, budget);
+        if (pastLimit.isPresent()) {
+            return pastLimit.get();
         }
+        int kept = yearsKept(inForce.drafts(), playerId);
         Optional<SleeperDrafts.Pick> pick = latest.pickOf(playerId);
         Optional<Integer> last = pick.flatMap(drafted -> auction ? drafted.price()
                 : Optional.of(drafted.round()));

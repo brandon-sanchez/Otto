@@ -56,10 +56,7 @@ public record MarketQuote(
     }
 
     /**
-     * A keeper league's blend for one player. The keeper line is the
-     * dynasty value of the best rostered player who falls outside every
-     * team's likely keepers: what a keeper spot gives up when keepers
-     * cost nothing else.
+     * A keeper league's blend for one player.
      *
      * @param keeperLimit the most players a team may keep, empty when the
      *        league does not say, in which case nobody is a likely keeper
@@ -80,7 +77,6 @@ public record MarketQuote(
             int redraftValue,
             Optional<Integer> dynastyValue,
             Optional<Source> dynastySource,
-            int keeperLine,
             int bonus,
             Optional<KeeperCost> cost) {
     }

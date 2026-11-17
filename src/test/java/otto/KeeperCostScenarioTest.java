@@ -75,7 +75,14 @@ class KeeperCostScenarioTest extends WireSeamTest {
             + "keepers, so I'm assuming the most common rule: a keeper costs the round he was "
             + "drafted in the season before, and an undrafted player costs the last round.";
 
-    private static final String AUCTION_RULE = "a keeper costs what he went for the season "
+    /**
+     * The rival rosters Puka Nacua (7146), two depth receivers (4450 and
+     * 4350), Saquon Barkley (2321) and Mike Evans (1808).
+     */
+    private static final String RIVAL_WITH_FIVE_KEEPABLE =
+            "sleeper/keeper/rosters-rival-five-keepable.json";
+
+    private static final String AUCTION_RULE ="a keeper costs what he went for the season "
             + "before plus $5, never less than $20, and an undrafted player costs $1";
 
     @Autowired
@@ -97,9 +104,14 @@ class KeeperCostScenarioTest extends WireSeamTest {
     private String storageDir;
 
     private void keeperLeague(String leagueFixture) {
+        keeperLeague(leagueFixture, "sleeper/rosters.json");
+    }
+
+    private void keeperLeague(String leagueFixture, String rostersFixture) {
         SleeperStubs.healthyInSeason(sleeper);
         OutboundStubs.telegramOk(telegram);
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture, "league-keeper");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, rostersFixture, "rosters-v1");
         OutboundStubs.llmPhrases(llm, "A quiet week.");
         checkRunner.runCheck();
         llm.resetAll();
@@ -116,7 +128,11 @@ class KeeperCostScenarioTest extends WireSeamTest {
 
     /** The rounds league with its 2026 and 2025 drafts. */
     private void roundsLeagueWithTwoDrafts() {
-        keeperLeague("sleeper/keeper/league-snake-2026.json");
+        roundsLeagueWithTwoDrafts("sleeper/rosters.json");
+    }
+
+    private void roundsLeagueWithTwoDrafts(String rostersFixture) {
+        keeperLeague("sleeper/keeper/league-snake-2026.json", rostersFixture);
         drafts(SleeperStubs.LEAGUE_PATH, "drafts-snake-2026.json", DRAFT_PICKS_PATH,
                 "picks-snake-2026.json");
         SleeperStubs.stubJson(sleeper, PREVIOUS_LEAGUE_PATH,
@@ -250,22 +266,52 @@ class KeeperCostScenarioTest extends WireSeamTest {
     }
 
     /**
-     * Free keepers cost only the keeper spot: the dynasty value of the
-     * best rostered player outside every team's keepers, 4591. Bijan's
-     * bonus is 9636 - 4591 = 5045.
+     * A free keeper costs the keeper spot he uses on his own team: the
+     * value of the best player that team would keep instead, its fourth
+     * most valuable keepable player with three spots. The user's fourth
+     * is Patrick Mahomes at 5384, so Bijan's bonus is 9636 - 5384 = 4252.
+     * The rival's fourth is Saquon Barkley at 2321, behind Puka Nacua and
+     * two depth receivers, so Nacua's bonus is 7146 - 2321 = 4825.
      */
     @Test
-    void freeKeepersCostOnlyTheKeeperSpot() {
-        roundsLeagueWithTwoDrafts();
+    void aFreeKeeperCostsTheBestPlayerHisOwnTeamWouldKeepInstead() {
+        roundsLeagueWithTwoDrafts(RIVAL_WITH_FIVE_KEEPABLE);
         rule("set", "free", null, null, null, null);
 
         assertThat(keeperEvidenceFor("Bijan Robinson", "9509"))
                 .containsEntry("likelyKeeper", "yes")
-                .containsEntry("keeperCost", "4591")
-                .containsEntry("keeperBonus", "5045")
+                .containsEntry("keeperCost", "5384")
+                .containsEntry("keeperBonus", "4252")
+                .containsEntry("whatKeepingHimCosts", "Keeping him costs no draft pick, but he "
+                        + "uses a keeper spot you'd otherwise give to Patrick Mahomes, worth "
+                        + "5384.")
                 .containsEntry("keeperRule", "Your league's keeper rule, as you told me: "
-                        + "keepers are free up to the league's keeper limit and cost only the "
-                        + "keeper spot.");
+                        + "keepers cost no draft pick, only the keeper spot they use, which is "
+                        + "worth the best player the team would keep instead.");
+        assertThat(keeperEvidenceFor("Puka Nacua", "9493"))
+                .containsEntry("likelyKeeper", "yes")
+                .containsEntry("keeperCost", "2321")
+                .containsEntry("keeperBonus", "4825")
+                .containsEntry("whatKeepingHimCosts", "Keeping him costs no draft pick, but he "
+                        + "uses a keeper spot his team would otherwise give to Saquon Barkley, "
+                        + "worth 2321.");
+    }
+
+    /**
+     * In season, "last season's draft" means the latest finished draft,
+     * this season's. Bijan was kept in round 1 of the 2026 draft after
+     * going in round 2 in 2025, so the 2026 round prices him: a round 1
+     * pick, worth 5166, not round 2's 3550.
+     */
+    @Test
+    void inSeasonLastSeasonsDraftMeansTheLatestFinishedDraft() {
+        roundsLeagueWithTwoDrafts();
+        rule("set", "same", null, null, null, null);
+
+        assertThat(keeperEvidenceFor("Bijan Robinson", "9509"))
+                .containsEntry("keeperCost", "5166")
+                .hasEntrySatisfying("whatKeepingHimCosts", cost -> assertThat(cost)
+                        .contains("round 1 of the 2026 draft"));
     }
 
     /**
@@ -343,7 +389,11 @@ class KeeperCostScenarioTest extends WireSeamTest {
                 .doesNotContainKey("askForKeeperRule");
     }
 
-    /** A league with no finished draft treats keepers as free and says why. */
+    /**
+     * A league with no finished draft treats keepers as free and says
+     * why. The rival rosters only Saquon Barkley, so he has no teammate
+     * to keep instead and his keeper spot costs nothing.
+     */
     @Test
     void noFinishedDraftTreatsKeepersAsFreeAndSaysSo() {
         keeperLeague("sleeper/league-keeper.json");
@@ -351,12 +401,17 @@ class KeeperCostScenarioTest extends WireSeamTest {
                 "sleeper/keeper/drafts-pre-draft.json", "drafts-pre-draft");
 
         assertThat(keeperEvidenceFor("Bijan Robinson", "9509"))
-                .containsEntry("keeperCost", "4591")
-                .containsEntry("keeperBonus", "5045")
+                .containsEntry("keeperCost", "5384")
+                .containsEntry("keeperBonus", "4252")
                 .containsEntry("keeperRule", "I couldn't find a finished draft for this league "
                         + "on Sleeper, so I'm treating keepers as free: keeping a player costs "
                         + "only the keeper spot.")
                 .containsKey("askForKeeperRule");
+        assertThat(keeperEvidenceFor("Saquon Barkley", "4866"))
+                .containsEntry("keeperCost", "0")
+                .containsEntry("whatKeepingHimCosts", "Keeping him costs no draft pick, and "
+                        + "his team has no other player worth a keeper spot, so the spot costs "
+                        + "nothing.");
     }
 
     /**

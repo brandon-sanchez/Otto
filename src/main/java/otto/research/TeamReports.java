@@ -72,9 +72,11 @@ public class TeamReports {
     private static final Duration RUN_BUDGET = Duration.ofSeconds(120);
 
     /**
-     * Runs in a row a team's feed may fail before each further failure
-     * is logged as an error, which the error alarm counts. One failed
-     * read is a blip the next run usually clears and is only a warning.
+     * The failed run in a row on which a team's feed is logged as an
+     * error, which trips the error alarm. Earlier failures are blips the
+     * next run usually clears and are only warnings. Only this run is an
+     * error, so a feed that stays down raises the alarm once, and again
+     * only after it has read cleanly and then failed this many runs more.
      */
     private static final int FAILED_RUNS_LOGGED_AS_ERROR = 3;
 
@@ -154,7 +156,7 @@ public class TeamReports {
                     TeamRun.FeedState read = new TeamRun(sites, cache, entry.getKey(),
                             entry.getValue(), players.get(), now, tally).run(held);
                     feeds.put(entry.getKey(), read);
-                    if (read.failedRuns() >= FAILED_RUNS_LOGGED_AS_ERROR) {
+                    if (read.failedRuns() == FAILED_RUNS_LOGGED_AS_ERROR) {
                         log.error("team reports: the {} feed failed {} runs in a row",
                                 entry.getValue().host(), read.failedRuns());
                     }

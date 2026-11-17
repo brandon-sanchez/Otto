@@ -22,6 +22,7 @@ import otto.events.EventLog;
 import otto.storage.JsonStore;
 import otto.storage.Lease;
 import otto.telegram.TelegramClient;
+import otto.telegram.TelegramText;
 
 /**
  * The write-through delivery state for Alerts. A delivery is pending
@@ -150,7 +151,7 @@ public class AlertDeliveryOutbox {
             List<Event> templates) {
         String text = pendingText(templates.stream().map(Event::key).toList(), basis)
                 .orElseGet(compose);
-        return deliver(List.of(text), false, basis, templates);
+        return deliver(TelegramText.parts(text), false, basis, templates);
     }
 
     /**

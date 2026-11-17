@@ -72,7 +72,7 @@ class HabitLeanTest {
     private static HabitHistory history(double benchedBack) {
         List<HabitWeek> weeks = IntStream.rangeClosed(1, 3)
                 .mapToObj(week -> new HabitWeek(week, Optional.of(played(benchedBack)),
-                        Map.of(), List.of(), Set.of(), Set.of(), List.of()))
+                        Map.of(), List.of(), Set.of(), Set.of(), List.of(), Map.of()))
                 .toList();
         return new HabitHistory("2026", weeks, List.of(), Map.of());
     }

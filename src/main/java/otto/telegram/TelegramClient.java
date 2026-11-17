@@ -35,13 +35,21 @@ public class TelegramClient {
     }
 
     /**
-     * Sends one text message to the configured chat. A failure is
-     * logged, never thrown, so callers decide whether to retry.
+     * Sends text to the configured chat, tidied and split as
+     * {@link TelegramText#parts} lays it out, one message per part in
+     * order. A failure is logged, never thrown, so callers decide
+     * whether to retry; sending stops at the first part Telegram refuses,
+     * so a retry can repeat the parts already sent.
      *
-     * @return true when Telegram accepted the message
+     * @return true when Telegram accepted every part
      */
     public boolean sendMessage(String text) {
-        return post("sendMessage", Map.of("chat_id", chatId, "text", text));
+        for (String part : TelegramText.parts(text)) {
+            if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -59,11 +67,18 @@ public class TelegramClient {
     /**
      * Sends one Alert as {@link #sendAlert(String, long)} does, adding a
      * View all options button on a row of its own when asked. Its tap
-     * arrives as "all:5".
+     * arrives as "all:5". Text too long for one message goes out as
+     * {@link #sendMessage} splits it, with the buttons on the last part.
      *
-     * @return true when Telegram accepted the message
+     * @return true when Telegram accepted every part
      */
     public boolean sendAlert(String text, long alertId, boolean viewAllOptions) {
+        List<String> parts = TelegramText.parts(text);
+        for (String part : parts.subList(0, parts.size() - 1)) {
+            if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
+                return false;
+            }
+        }
         List<Map<String, String>> buttons = List.of(
                 Map.of("text", "Done", "callback_data", "done:" + alertId),
                 Map.of("text", "Ignore", "callback_data", "ignore:" + alertId),
@@ -74,7 +89,7 @@ public class TelegramClient {
                 : List.of(buttons);
         return post("sendMessage", Map.of(
                 "chat_id", chatId,
-                "text", text,
+                "text", parts.getLast(),
                 "reply_markup", Map.of("inline_keyboard", rows)));
     }
 
