@@ -164,7 +164,6 @@ public class CheckRunner {
                 results.stream().flatMap(result -> result.alertsSent().stream()).toList());
     }
 
-    /** The leagues in this minute's order: the list turned one place further each minute. */
     private static List<FollowedLeague> inTurn(List<FollowedLeague> followed, Instant now) {
         int first = (int) Math.floorMod(now.getEpochSecond() / 60, followed.size());
         List<FollowedLeague> ordered = new ArrayList<>(followed.subList(first, followed.size()));

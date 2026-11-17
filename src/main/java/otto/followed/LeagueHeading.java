@@ -12,7 +12,7 @@ import otto.telegram.MessageHeading;
  * follows more than one league. Alerts, waiver boards, follow-ups and
  * outage reports all go out through the Telegram client, so each names
  * its league without having to remember to. With one league followed
- * nothing is added, and every message reads as it always did.
+ * nothing is added.
  */
 @Component
 public class LeagueHeading implements MessageHeading {

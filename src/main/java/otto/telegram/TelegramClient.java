@@ -129,7 +129,6 @@ public class TelegramClient {
                 "text", text));
     }
 
-    /** Splitting comes after the heading is added, so a headed message still fits the limit. */
     private String headed(String text) {
         return heading.current().map(line -> line + "\n\n" + text).orElse(text);
     }
