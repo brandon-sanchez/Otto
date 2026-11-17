@@ -17,12 +17,16 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.TwoLeagues;
 import otto.harness.WireSeamTest;
+import otto.market.MarketValueRefresh;
 import otto.sleeper.LeagueScope;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -50,6 +54,9 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
     @Autowired
     private FollowedLeagues leagues;
+
+    @Autowired
+    private MarketValueRefresh marketValues;
 
     private void baselineCheck() {
         TwoLeagues.healthyInSeason(sleeper);
@@ -125,6 +132,18 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
         assertThat(alertsSent()).singleElement().satisfies(alert ->
                 assertThat(alert.path("text").asText()).startsWith(NEWS));
+    }
+
+    @Test
+    void theMarketValueJobReadsTheListEachLeaguesFormatNeeds() {
+        baselineCheck();
+
+        marketValues.refresh();
+
+        fantasyCalc.verify(getRequestedFor(urlPathEqualTo("/values/current"))
+                .withQueryParam("isDynasty", equalTo("false")));
+        fantasyCalc.verify(getRequestedFor(urlPathEqualTo("/values/current"))
+                .withQueryParam("isDynasty", equalTo("true")));
     }
 
     /** Telegram request bodies as JSON. */
