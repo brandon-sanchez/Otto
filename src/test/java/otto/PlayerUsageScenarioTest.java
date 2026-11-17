@@ -87,13 +87,13 @@ class PlayerUsageScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void redZoneAndEndZoneOpportunitiesComeFromThePlayByPlay() {
+    void redZoneEndZoneAndAirYardsComeFromThePlayByPlay() {
         assertThat(week(HAMPTON, 4).opportunities())
-                .isEqualTo(new PlayerUsage.Opportunities(0, 3, 0, 0));
+                .isEqualTo(new PlayerUsage.Opportunities(0, 3, 0, 0, 2));
         assertThat(week(HERBERT, 4).opportunities())
-                .isEqualTo(new PlayerUsage.Opportunities(1, 1, 1, 0));
+                .isEqualTo(new PlayerUsage.Opportunities(1, 1, 1, 0, 9));
         assertThat(week(JOHNSTON, 4).opportunities())
-                .isEqualTo(new PlayerUsage.Opportunities(0, 0, 1, 1));
+                .isEqualTo(new PlayerUsage.Opportunities(0, 0, 1, 1, 66));
     }
 
     @Test
@@ -142,7 +142,7 @@ class PlayerUsageScenarioTest extends WireSeamTest {
 
         assertThat(rucci.snaps()).isEqualTo(new PlayerUsage.Snaps(35, 0.49));
         assertThat(rucci.volume()).isEqualTo(new PlayerUsage.Volume(0, 31, 0.0, 0, 32, 0.0));
-        assertThat(rucci.opportunities()).isEqualTo(new PlayerUsage.Opportunities(0, 0, 0, 0));
+        assertThat(rucci.opportunities()).isEqualTo(new PlayerUsage.Opportunities(0, 0, 0, 0, 0));
         assertThat(rucci.expected()).isEqualTo(new PlayerUsage.Expected(0.0, 0.0, 0.0, 0.0));
     }
 

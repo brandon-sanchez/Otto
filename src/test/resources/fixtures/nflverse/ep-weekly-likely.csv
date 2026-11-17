@@ -1,0 +1,5 @@
+season,posteam,week,game_id,player_id,full_name,position,rec_attempt,rush_attempt,rec_touchdown,rush_touchdown,rec_touchdown_exp,rush_touchdown_exp,total_touchdown,total_touchdown_exp,total_fantasy_points,total_fantasy_points_exp,rec_attempt_team,rush_attempt_team
+2026,BAL,1,2026_01_CLE_BAL,00-0037770,Isaiah Likely,TE,4,0,0,0,0.4,0,0,0.4,7.2,6.1,28,35
+2026,BAL,2,2026_02_BAL_CIN,00-0037770,Isaiah Likely,TE,5,0,0,0,0.4,0,0,0.4,9.8,8.4,30,35
+2026,BAL,4,2026_04_PIT_BAL,00-0037770,Isaiah Likely,TE,6,0,0,0,0.4,0,0,0.4,12.6,10.9,34,35
+2026,BAL,5,2026_05_BAL_HOU,00-0037770,Isaiah Likely,TE,7,0,1,0,0.4,0,1,0.4,17.3,12.4,31,35

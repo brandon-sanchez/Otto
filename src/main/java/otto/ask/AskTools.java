@@ -58,6 +58,7 @@ public class AskTools {
     private final TeamWeaknesses weaknesses;
     private final BuyLowSellHigh buySell;
     private final TeamDirectionAnswers directions;
+    private final PlayerStatsAnswers playerStats;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, LineupAnswers lineups,
@@ -68,7 +69,7 @@ public class AskTools {
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
             MarketValueAnswers marketValues, KeeperRuleChat keeperRules,
             TeamWeaknesses weaknesses, BuyLowSellHigh buySell, TeamDirectionAnswers directions,
-            Clock clock) {
+            PlayerStatsAnswers playerStats, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.lineups = lineups;
@@ -89,6 +90,7 @@ public class AskTools {
         this.weaknesses = weaknesses;
         this.buySell = buySell;
         this.directions = directions;
+        this.playerStats = playerStats;
         this.clock = clock;
     }
 
@@ -291,6 +293,49 @@ public class AskTools {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return checked.offer(ceilings.explain(player, clock.instant(), checked.delivery()),
                 PlayerCeiling.Answer::message);
+    }
+
+    @Tool(name = "get_player_stats", description = """
+            One player's usage and advanced stats for one week, his team's
+            last few games or the season so far: snaps and snap share,
+            targets and target share, carries and carry share, air yards,
+            air-yards share and WOPR, red-zone, end-zone and first-read
+            targets, expected fantasy points against actual, his Next Gen
+            Stats and, for a running back, PFR's contact figures, each with
+            its sample and his season rank at his position, already written
+            and fact-checked. Send its message word for word. Otto stores
+            all of these, so call this before ever saying a stat is out of
+            reach. Give at most one of week, weeksAgo and lastGames, and
+            none for the season so far. Call it for "what was his snap %
+            last week", "how many targets did he get", "what about the
+            week before" and "what advanced stats can you see".""")
+    public ToolAnswer<PlayerStatsAnswers.Answer> getPlayerStats(
+            @ToolParam(description = "The player, by name or Sleeper player id")
+            String player,
+            @ToolParam(required = false, description = """
+                    One NFL week by its number. Use it when he names a
+                    week, or for the week before or after one you already
+                    answered about.""")
+            Integer week,
+            @ToolParam(required = false, description = """
+                    One week counted back: 1 for last week, 2 for the week
+                    before last.""")
+            Integer weeksAgo,
+            @ToolParam(required = false, description = """
+                    His team's last this many games, for "lately" or "the
+                    last three weeks".""")
+            Integer lastGames,
+            @ToolParam(required = false, description = """
+                    What he asked about, in his words, such as "snap
+                    percentage" or "advanced stats".""")
+            String asked, ToolContext context) {
+        CheckedAnswers checked = CheckedAnswers.of(context);
+        return switch (StatsSpan.parse(week, weeksAgo, lastGames)) {
+            case StatsSpan.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
+            case StatsSpan.Parsed.Ok parsed -> checked.offer(playerStats.answer(player,
+                    parsed.span(), asked, clock.instant(), checked.delivery()),
+                    PlayerStatsAnswers.Answer::message);
+        };
     }
 
     @Tool(name = "get_team_usage", description = """

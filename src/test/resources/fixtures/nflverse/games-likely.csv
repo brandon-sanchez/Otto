@@ -1,0 +1,13 @@
+game_id,season,game_type,week,gameday,weekday,gametime,away_team,away_score,home_team,home_score,location,result,total,overtime,old_game_id,gsis,nfl_detail_id,pfr,pff,espn,ftn,away_rest,home_rest,away_moneyline,home_moneyline,spread_line,away_spread_odds,home_spread_odds,total_line,under_odds,over_odds,div_game,roof,surface,temp,wind,away_qb_id,home_qb_id,away_qb_name,home_qb_name,away_coach,home_coach,referee,stadium_id,stadium
+2026_01_CLE_BAL,2026,REG,1,2026-09-13,Sunday,13:00,CLE,20,BAL,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_02_BAL_CIN,2026,REG,2,2026-09-20,Sunday,13:00,BAL,20,CIN,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_04_PIT_BAL,2026,REG,4,2026-10-04,Sunday,13:00,PIT,20,BAL,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_05_BAL_HOU,2026,REG,5,2026-10-11,Sunday,13:00,BAL,20,HOU,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_01_KC_LAC,2026,REG,1,2026-09-13,Sunday,13:00,KC,20,LAC,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_02_PHI_KC,2026,REG,2,2026-09-20,Sunday,13:00,PHI,20,KC,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_03_KC_NYG,2026,REG,3,2026-09-27,Sunday,13:00,KC,20,NYG,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_04_DAL_KC,2026,REG,4,2026-10-04,Sunday,13:00,DAL,20,KC,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_05_KC_JAX,2026,REG,5,2026-10-11,Sunday,13:00,KC,20,JAX,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_03_PIT_CIN,2026,REG,3,2026-09-27,Sunday,13:00,PIT,20,CIN,24,Home,4,44,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_06_DEN_BAL,2026,REG,6,2026-10-18,Sunday,13:00,DEN,,BAL,,Home,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2026_06_KC_LV,2026,REG,6,2026-10-18,Sunday,13:00,KC,,LV,,Home,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

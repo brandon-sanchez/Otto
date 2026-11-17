@@ -473,6 +473,29 @@ public final class NflverseStubs {
         stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-usage.csv");
     }
 
+    /**
+     * Made-up Ravens and Chiefs weeks 1 to 5 of 2026. Baltimore is on bye in
+     * week 3, and week 6 is still to play. Every source holds Baltimore's
+     * games, so Likely's snaps, targets, air yards, red-zone and
+     * first-read looks and expected points are all known. Next Gen lists
+     * Likely for the season and weeks 4 and 5 only, and never lists Mark
+     * Andrews. Travis Kelce fills out the tight-end rankings. PFR's
+     * rushing file holds Derrick Henry's carries.
+     */
+    public static void isaiahLikelysSeason(WireMockServer nflverse) {
+        healthy(nflverse);
+        stubCsv(nflverse, SCHEDULE_PATH, "nflverse/games-likely.csv");
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-likely.csv");
+        stubCsv(nflverse, SNAPS_2026_PATH, "nflverse/snap-counts-likely.csv");
+        stubCsv(nflverse, PBP_2026_PATH, "nflverse/play-by-play-likely.csv");
+        stubCsv(nflverse, FTN_2026_PATH, "nflverse/ftn-charting-likely.csv");
+        stubCsv(nflverse, EXPECTED_POINTS_2026_PATH, "nflverse/ep-weekly-likely.csv");
+        stubCsv(nflverse, PLAYERS_PATH, "nflverse/players-likely.csv");
+        stubCsv(nflverse, PLAYER_IDS_PATH, "nflverse/db-playerids-likely.csv");
+        stubGzippedCsv(nflverse, NGS_RECEIVING_PATH, "nflverse/ngs-receiving-likely.csv");
+        stubCsv(nflverse, ADVSTATS_RUSH_2026_PATH, "nflverse/advstats-week-rush-likely.csv");
+    }
+
     /** The schedule's release index is down, and no schedule has ever been read. */
     public static void scheduleUnavailable(WireMockServer nflverse) {
         nflverse.stubFor(get(urlEqualTo(SCHEDULE_RELEASE_PATH))

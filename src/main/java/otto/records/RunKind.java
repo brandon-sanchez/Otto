@@ -11,6 +11,8 @@ public enum RunKind {
     PLAYER_DECISION,
     /** A player's ceiling and floor, explained in chat when the user asks. */
     PLAYER_CEILING,
+    /** One player's usage and advanced stats for a week, recent weeks or the season, in chat. */
+    PLAYER_STATS,
     ALERT,
     /** The answer to the user asking about his management habits. */
     HABITS,
