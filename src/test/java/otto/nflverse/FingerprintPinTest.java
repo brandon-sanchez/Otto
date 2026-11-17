@@ -24,7 +24,8 @@ class FingerprintPinTest {
     @Test
     void scheduleContent() {
         pin(Feeds.SCHEDULE, 1, 6398640526969526180L,
-                new Schedule.Game("2026_01_SF_LA", "2026", 1, KICKOFF, "LAR", "SF", true));
+                new Schedule.Game("2026_01_SF_LA", "2026", 1, KICKOFF, "LAR", "SF", true,
+                        null, null, null, null));
     }
 
     @Test
@@ -83,9 +84,9 @@ class FingerprintPinTest {
 
     @Test
     void expectedPointsContent() {
-        pin(Feeds.EXPECTED_POINTS, 1, -763215299568986574L,
+        pin(Feeds.EXPECTED_POINTS, 2, 3435587484668712326L,
                 new ExpectedPoints.Line("00-0041021", "RB", "SF", 1, "2026_01_SF_LA", 1.0, 0.78,
-                        17.3, 11.05));
+                        17.3, 11.05, 2.0, 31.0, 13.0, 26.0));
     }
 
     @Test

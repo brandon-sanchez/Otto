@@ -118,6 +118,11 @@ public class NflverseStore {
         return read(Feeds.EXPECTED_POINTS);
     }
 
+    /** Returns last season's final expected fantasy points, or empty before their download. */
+    public Optional<ExpectedPoints> expectedPointsLastSeason() {
+        return read(Feeds.EXPECTED_POINTS_LAST_SEASON);
+    }
+
     /** Returns the stored nflverse player register, or empty before its first download. */
     public Optional<Players> players() {
         return read(Feeds.PLAYERS);

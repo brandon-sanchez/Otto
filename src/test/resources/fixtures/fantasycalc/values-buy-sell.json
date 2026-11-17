@@ -1,0 +1,37 @@
+[
+  {
+    "player": {"name": "Jaxon Smith-Njigba", "sleeperId": "9488", "position": "WR", "maybeTeam": "SEA"},
+    "value": 9100, "overallRank": 1, "positionRank": 1, "redraftValue": 9100, "trend30Day": 2100,
+    "maybeTier": 1, "maybeAdp": null, "maybeTradeFrequency": 0.012, "maybeRosterPercent": 0.999
+  },
+  {
+    "player": {"name": "Trey McBride", "sleeperId": "8130", "position": "TE", "maybeTeam": "ARI"},
+    "value": 5100, "overallRank": 2, "positionRank": 1, "redraftValue": 5100, "trend30Day": -900,
+    "maybeTier": 2, "maybeAdp": null, "maybeTradeFrequency": 0.009, "maybeRosterPercent": 0.998
+  },
+  {
+    "player": {"name": "George Pickens", "sleeperId": "8137", "position": "WR", "maybeTeam": "DAL"},
+    "value": 4100, "overallRank": 3, "positionRank": 2, "redraftValue": 4100, "trend30Day": -900,
+    "maybeTier": 3, "maybeAdp": null, "maybeTradeFrequency": 0.015, "maybeRosterPercent": 0.997
+  },
+  {
+    "player": {"name": "Saquon Barkley", "sleeperId": "4866", "position": "RB", "maybeTeam": "PHI"},
+    "value": 3800, "overallRank": 4, "positionRank": 1, "redraftValue": 3800, "trend30Day": -1300,
+    "maybeTier": 3, "maybeAdp": null, "maybeTradeFrequency": 0.018, "maybeRosterPercent": 0.999
+  },
+  {
+    "player": {"name": "Jameson Williams", "sleeperId": "8148", "position": "WR", "maybeTeam": "DET"},
+    "value": 3300, "overallRank": 5, "positionRank": 3, "redraftValue": 3300, "trend30Day": 0,
+    "maybeTier": 4, "maybeAdp": null, "maybeTradeFrequency": 0.008, "maybeRosterPercent": 0.985
+  },
+  {
+    "player": {"name": "Courtland Sutton", "sleeperId": "5045", "position": "WR", "maybeTeam": "DEN"},
+    "value": 2600, "overallRank": 6, "positionRank": 4, "redraftValue": 2600, "trend30Day": -100,
+    "maybeTier": 5, "maybeAdp": null, "maybeTradeFrequency": 0.007, "maybeRosterPercent": 0.97
+  },
+  {
+    "player": {"name": "Colston Loveland", "sleeperId": "12517", "position": "TE", "maybeTeam": "CHI"},
+    "value": 2200, "overallRank": 7, "positionRank": 2, "redraftValue": 2200, "trend30Day": -300,
+    "maybeTier": 5, "maybeAdp": null, "maybeTradeFrequency": 0.006, "maybeRosterPercent": 0.95
+  }
+]

@@ -31,9 +31,14 @@ public record ExpectedPoints(
      * @param fantasyPoints what he scored under ffopportunity's scoring
      * @param expectedFantasyPoints what his opportunities were worth on
      *        average under the same scoring
+     * @param targets the passes thrown his way
+     * @param teamTargets the passes his offence threw at any receiver that game
+     * @param carries his rushing attempts
+     * @param teamCarries his offence's rushing attempts that game
      */
     public record Line(String gsisId, String position, String team, int week, String gameId,
             Double touchdowns, Double expectedTouchdowns, Double fantasyPoints,
-            Double expectedFantasyPoints) {
+            Double expectedFantasyPoints, Double targets, Double teamTargets, Double carries,
+            Double teamCarries) {
     }
 }

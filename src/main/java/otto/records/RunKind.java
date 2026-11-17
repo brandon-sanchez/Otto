@@ -17,5 +17,7 @@ public enum RunKind {
     /** A chat answer about what one player or draft pick is worth on the trade market. */
     MARKET_VALUE,
     /** The user's team read position by position, when he asks about its weaknesses. */
-    TEAM_WEAKNESSES
+    TEAM_WEAKNESSES,
+    /** A chat answer about buy-low and sell-high players. */
+    BUY_LOW_SELL_HIGH
 }

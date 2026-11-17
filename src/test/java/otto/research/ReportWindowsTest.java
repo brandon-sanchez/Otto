@@ -15,7 +15,8 @@ class ReportWindowsTest {
     private static final Instant KICKOFF = Instant.parse("2026-11-15T18:00:00Z");
 
     private static final List<Schedule.Game> GAMES = List.of(
-            new Schedule.Game("2026_10_KC_ATL", "2026", 10, KICKOFF, "ATL", "KC", false));
+            new Schedule.Game("2026_10_KC_ATL", "2026", 10, KICKOFF, "ATL", "KC", false, null,
+                    null, null, null));
 
     @Test
     void aTeamIsWatchedCloselyFromTwoHoursBeforeItsKickoffUntilKickoff() {

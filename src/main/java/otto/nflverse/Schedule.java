@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Collectors;
 
@@ -34,9 +35,25 @@ public record Schedule(
      * One regular-season game, team codes in Sleeper's vocabulary.
      *
      * @param finished true once nflverse has written a result
+     * @param homeQuarterback the gsis id of the quarterback who started
+     *        for the home team, or null when the file has not named him
+     * @param awayQuarterback the same for the away team
+     * @param homeCoach the home team's head coach, or null when unnamed
+     * @param awayCoach the away team's head coach, or null when unnamed
      */
     public record Game(String gameId, String season, int week, Instant kickoff, String home,
-            String away, boolean finished) {
+            String away, boolean finished, String homeQuarterback, String awayQuarterback,
+            String homeCoach, String awayCoach) {
+
+        /** Returns the quarterback who started for one side, empty when unnamed. */
+        public Optional<String> quarterback(String team) {
+            return Optional.ofNullable(team.equals(home) ? homeQuarterback : awayQuarterback);
+        }
+
+        /** Returns one side's head coach, empty when unnamed. */
+        public Optional<String> coach(String team) {
+            return Optional.ofNullable(team.equals(home) ? homeCoach : awayCoach);
+        }
     }
 
     record Window(Instant start, Instant end) {
@@ -47,6 +64,15 @@ public record Schedule(
         return rows.stream()
                 .filter(game -> game.season().equals(season) && game.week() == week)
                 .sorted(Comparator.comparing(Game::kickoff).thenComparing(Game::gameId))
+                .toList();
+    }
+
+    /** Returns one team's finished games of a season, oldest first. */
+    public List<Game> playedBy(String season, String team) {
+        return rows.stream()
+                .filter(game -> game.season().equals(season) && game.finished()
+                        && (game.home().equals(team) || game.away().equals(team)))
+                .sorted(Comparator.comparingInt(Game::week))
                 .toList();
     }
 

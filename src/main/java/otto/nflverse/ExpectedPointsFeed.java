@@ -14,6 +14,8 @@ import static otto.nflverse.FeedRows.requireColumns;
 /**
  * ffverse's ffopportunity {@code ep_weekly} file, one season at a time.
  * It is published from its own repository's releases, beside nflverse's.
+ * Two copies are kept: the season being played, and last season's final
+ * file, which the buy-low and sell-high reads compare a player with.
  */
 final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, ExpectedPoints> {
 
@@ -25,16 +27,27 @@ final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, Expected
 
     private static final Set<String> COLUMNS = Set.of(
             "player_id", "position", "posteam", "week", "game_id", "total_touchdown",
-            "total_touchdown_exp", "total_fantasy_points", "total_fantasy_points_exp");
+            "total_touchdown_exp", "total_fantasy_points", "total_fantasy_points_exp",
+            "rec_attempt", "rec_attempt_team", "rush_attempt", "rush_attempt_team");
+
+    private final FeedId id;
+    private final String documentName;
+    private final SeasonRule seasonRule;
+
+    ExpectedPointsFeed(FeedId id, String documentName, SeasonRule seasonRule) {
+        this.id = id;
+        this.documentName = documentName;
+        this.seasonRule = seasonRule;
+    }
 
     @Override
     public FeedId id() {
-        return FeedId.EXPECTED_POINTS;
+        return id;
     }
 
     @Override
     public String documentName() {
-        return "ffopportunity-expected-points";
+        return documentName;
     }
 
     @Override
@@ -54,7 +67,7 @@ final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, Expected
 
     @Override
     public SeasonRule seasonRule() {
-        return SeasonRule.LAST_PLAYED;
+        return seasonRule;
     }
 
     @Override
@@ -78,9 +91,17 @@ final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, Expected
                     optionalNumber(row, "total_touchdown"),
                     optionalNumber(row, "total_touchdown_exp"),
                     optionalNumber(row, "total_fantasy_points"),
-                    optionalNumber(row, "total_fantasy_points_exp")));
+                    optionalNumber(row, "total_fantasy_points_exp"),
+                    optionalNumber(row, "rec_attempt"), optionalNumber(row, "rec_attempt_team"),
+                    optionalNumber(row, "rush_attempt"),
+                    optionalNumber(row, "rush_attempt_team")));
         });
         return lines;
+    }
+
+    @Override
+    public int contentVersion() {
+        return 2;
     }
 
     @Override
