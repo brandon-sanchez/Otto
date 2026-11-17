@@ -3,6 +3,8 @@ package otto.sleeper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -37,8 +39,10 @@ public class SleeperAdapter {
     private static final Logger log = LoggerFactory.getLogger(SleeperAdapter.class);
 
     private static final List<String> WHOLE_NUMBER_SETTINGS = Stream.concat(
-            Stream.of("waiver_budget", "trade_deadline"),
+            Stream.of("waiver_budget", "trade_deadline", "disable_trades"),
             LeagueRules.WHOLE_NUMBER_FIELDS.stream()).toList();
+
+    private static final int FIRST_WEEK_WITHOUT_DEADLINE = 18;
 
     private final SleeperClient client;
     private final SleeperCache cache;
@@ -81,14 +85,17 @@ public class SleeperAdapter {
      *        season runs to the week before it; 0 when it does not say
      * @param waiverBudget the FAAB budget each team starts the season
      *        with, empty when the league document carries no budget
-     * @param tradeDeadline the last week trades may be submitted, empty
-     *        when Sleeper omits or disables the deadline
+     * @param tradeDeadline the week trading closes in, when that week's
+     *        last game ends; empty when the league has no deadline, which
+     *        Sleeper writes as no value, 0, 99 or any week from 18 on
+     * @param tradesDisabled true when the commissioner has turned trades
+     *        off for the whole season
      * @param rules this league's own format, waiver, IR and taxi rules
      */
     public record League(String leagueId, String name, String status,
             List<String> rosterPositions, Map<String, Double> scoringSettings,
             int playoffTeams, int playoffWeekStart, Optional<Integer> waiverBudget,
-            Optional<Integer> tradeDeadline, LeagueRules rules) {
+            Optional<Integer> tradeDeadline, boolean tradesDisabled, LeagueRules rules) {
 
         /**
          * How many players a team may hold outside IR and the taxi
@@ -111,8 +118,11 @@ public class SleeperAdapter {
      *        none. It spells the regular season "reg" on the wire and
      *        "regular" in places, so readers ask what this is not
      *        rather than what it is.
+     * @param seasonStart the day of the regular season's first game,
+     *        empty when Sleeper publishes none or one that is not a date
      */
-    public record NflState(String season, int week, String seasonType) {
+    public record NflState(String season, int week, String seasonType,
+            Optional<LocalDate> seasonStart) {
 
         private static final Set<String> BEFORE_THE_SEASON =
                 Set.of("pre", "preseason", "off", "offseason");
@@ -327,7 +337,9 @@ public class SleeperAdapter {
                     settings.path("playoff_teams").asInt(0),
                     settings.path("playoff_week_start").asInt(0),
                     integer(settings.path("waiver_budget")),
-                    integer(settings.path("trade_deadline")).filter(week -> week > 0),
+                    integer(settings.path("trade_deadline"))
+                            .filter(week -> week > 0 && week < FIRST_WEEK_WITHOUT_DEADLINE),
+                    integer(settings.path("disable_trades")).orElse(0) == 1,
                     LeagueRules.fromSettings(settings)));
         });
     }
@@ -345,7 +357,8 @@ public class SleeperAdapter {
             // for: every Check needs the season and the week, and the
             // one reader of the type says what it does without one.
             return ok(new NflState(season.asText(), week.asInt(),
-                    body.path("season_type").asText("")));
+                    body.path("season_type").asText(""),
+                    date(body.path("season_start_date"))));
         });
     }
 
@@ -794,6 +807,15 @@ public class SleeperAdapter {
      */
     private static boolean unreadableNumber(JsonNode value) {
         return !value.isMissingNode() && !value.isNull() && !wholeNumber(value);
+    }
+
+    private static Optional<LocalDate> date(JsonNode value) {
+        try {
+            return value.isTextual() ? Optional.of(LocalDate.parse(value.asText()))
+                    : Optional.empty();
+        } catch (DateTimeParseException unreadable) {
+            return Optional.empty();
+        }
     }
 
     private static boolean wholeNumber(JsonNode value) {

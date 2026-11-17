@@ -61,13 +61,14 @@ final class TeamWeaknessEvidence {
      *
      * @param user the user's team, which is in {@code league}
      * @param waivers the waiver moves, suggested first
-     * @param trades the trade offers suggested after them; empty once the
-     *        trade deadline has passed
+     * @param trades the trade offers suggested after them; empty when
+     *        trades are closed
      * @param sidelined the user's IR and taxi players left out of the
      *        profile because he cannot activate them now
      * @param weeks the remaining weeks the per-game averages cover
-     * @param tradeDeadline the week trades closed after, present only
-     *        once it has passed
+     * @param tradesClosed why no trade can be made, as
+     *        {@link otto.trade.TradeDeadline#closedBecause} words it;
+     *        empty while trades are open
      * @param limits what free data cannot say that matters to this read
      * @param everyLeague true when the user asked about all his leagues
      * @param direction empty when there was nothing to measure it by
@@ -75,7 +76,7 @@ final class TeamWeaknessEvidence {
     record Facts(String leagueName, LeagueProfile league, TeamProfile user,
             List<WaiverSuggestion> waivers, List<Offer> trades, Optional<Market> market,
             List<BundlePlayer> sidelined, List<Integer> weeks,
-            Optional<Integer> tradeDeadline, List<String> limits, boolean everyLeague,
+            Optional<String> tradesClosed, List<String> limits, boolean everyLeague,
             Optional<Direction> direction) {
     }
 
@@ -114,9 +115,8 @@ final class TeamWeaknessEvidence {
                             .noneMatch(known -> known.id().equals(item.id())))
                     .forEach(evidence::add);
         }
-        facts.tradeDeadline().ifPresent(week -> evidence.add(item("trade-deadline", now,
-                Map.of("tradeDeadline", ("the trade deadline passed after week %d, so trades "
-                        + "are closed and only waiver moves are left").formatted(week)))));
+        facts.tradesClosed().ifPresent(reason -> evidence.add(item("trade-deadline", now,
+                Map.of("tradeDeadline", reason))));
         if (!facts.limits().isEmpty()) {
             Map<String, String> limits = new LinkedHashMap<>();
             for (int index = 0; index < facts.limits().size(); index++) {
