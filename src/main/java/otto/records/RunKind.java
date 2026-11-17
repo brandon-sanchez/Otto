@@ -9,5 +9,7 @@ public enum RunKind {
      */
     WAIVER_BASELINES,
     PLAYER_DECISION,
+    /** A player's ceiling and floor, explained in chat when the user asks. */
+    PLAYER_CEILING,
     ALERT
 }

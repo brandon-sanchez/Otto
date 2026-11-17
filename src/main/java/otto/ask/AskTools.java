@@ -43,13 +43,14 @@ public class AskTools {
     private final TeamUsage teamUsage;
     private final LeagueRankLookup leagueRanks;
     private final WaiverPreferences waiverPreferences;
+    private final PlayerCeiling ceilings;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
             LeagueAnalysis league, WaiverScorer waivers, TradeEvaluator trades,
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
-            WaiverPreferences waiverPreferences, Clock clock) {
+            WaiverPreferences waiverPreferences, PlayerCeiling ceilings, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -62,6 +63,7 @@ public class AskTools {
         this.teamUsage = teamUsage;
         this.leagueRanks = leagueRanks;
         this.waiverPreferences = waiverPreferences;
+        this.ceilings = ceilings;
         this.clock = clock;
     }
 
@@ -250,6 +252,19 @@ public class AskTools {
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player) {
         return players.news(player, clock.instant());
+    }
+
+    @Tool(name = "get_player_ceiling", description = """
+            How high one player can score in a big week and how low a bad
+            week usually goes: his chance of a boom week, the range most
+            of his weeks land in, and his past boom weeks as history,
+            already written and checked. Send its message word for word.
+            Call this for "what's his ceiling", "is he boom or bust",
+            "what's his floor" and "how high can he go".""")
+    public ToolAnswer<PlayerCeiling.Answer> getPlayerCeiling(
+            @ToolParam(description = "The player, by name or Sleeper player id")
+            String player) {
+        return ceilings.explain(player, clock.instant());
     }
 
     @Tool(name = "get_team_usage", description = """
