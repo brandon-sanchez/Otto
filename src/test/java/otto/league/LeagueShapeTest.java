@@ -48,9 +48,10 @@ class LeagueShapeTest {
     }
 
     @Test
-    void anUnknownPositionHasNoReplacementLevel() {
-        LeagueShape shape = new LeagueShape(12, Map.of("RB", 2), Map.of(), FALLBACK);
+    void aSlottedPositionTheLineupsDidNotCountReadsTeamsTimesSlots() {
+        LeagueShape shape = new LeagueShape(12, Map.of("RB", 2, "TE", 1), Map.of(), FALLBACK)
+                .withStarters(Map.of("RB", 30));
 
-        assertThat(shape.replacementRank(null)).isEmpty();
+        assertThat(shape.replacementRank("TE")).isEqualTo(OptionalInt.of(12));
     }
 }

@@ -1,5 +1,6 @@
 package otto.lineup;
 
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public class ProjectionTable {
 
     /** Every player the table carries a stat line for, priced or not. */
     public Set<String> playerIds() {
-        return statLines.keySet();
+        return Collections.unmodifiableSet(statLines.keySet());
     }
 
     public Optional<Double> points(String playerId, String position) {

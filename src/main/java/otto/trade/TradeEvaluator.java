@@ -198,8 +198,8 @@ public class TradeEvaluator {
 
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
-        addPlacedPlayers(positions, teams, leagueWeek, mine.get());
-        addPlacedPlayers(positions, teams, leagueWeek, partner);
+        addRosterFacts(positions, teams, leagueWeek, mine.get());
+        addRosterFacts(positions, teams, leagueWeek, partner);
         addTraded(positions, teams, resolvedIn);
         addTraded(positions, teams, resolvedOut);
         return switch (basis(leagueWeek, positions, teams)) {
@@ -223,13 +223,18 @@ public class TradeEvaluator {
      * @param replacement what Replacement Level is worth at each position
      *        over the weeks left
      * @param injured every sidelined player in the league, by Sleeper id
+     * @param positions the lineup position of every player priced, kickers
+     *        and defenses included, which is what lets a roster's own K
+     *        and DEF fill their slots
      */
     public record Basis(RestOfSeason season, LeagueShape shape,
-            Map<String, Double> replacement, Map<String, InjuredPlayer> injured) {
+            Map<String, Double> replacement, Map<String, InjuredPlayer> injured,
+            Map<String, String> positions) {
 
         public Basis {
             replacement = Map.copyOf(replacement);
             injured = Map.copyOf(injured);
+            positions = Map.copyOf(positions);
         }
     }
 
@@ -246,7 +251,8 @@ public class TradeEvaluator {
     public SourceResult<Basis> basis(LeagueWeek leagueWeek) {
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
-        leagueWeek.rosters().forEach(roster -> addPlacedPlayers(positions, teams, leagueWeek, roster));
+        leagueWeek.rosters()
+                .forEach(roster -> addRosterFacts(positions, teams, leagueWeek, roster));
         return basis(leagueWeek, positions, teams);
     }
 
@@ -297,7 +303,7 @@ public class TradeEvaluator {
                 Map<String, InjuredPlayer> injured = injuredPlayers.read(leagueWeek, ok.value());
                 yield new SourceResult.Ok<>(new Basis(InjuredPlayers.priced(ok.value(), injured),
                         shape, replacementOverTheWeeksLeft(leagueWeek, shape, positions,
-                                ok.value().weekCount()), injured));
+                                ok.value().weekCount()), injured, positions));
             }
         };
     }
@@ -386,7 +392,7 @@ public class TradeEvaluator {
         return replacement;
     }
 
-    private static void addPlacedPlayers(Map<String, String> positions, Map<String, String> teams,
+    private static void addRosterFacts(Map<String, String> positions, Map<String, String> teams,
             LeagueWeek leagueWeek, RosterSnapshot roster) {
         positions.putAll(leagueWeek.week().positions(roster));
         teams.putAll(roster.playerTeams());

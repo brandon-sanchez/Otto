@@ -156,8 +156,7 @@ public class LineupLegalityDetector {
                 .filter(playerId -> !starters.contains(playerId))
                 .filter(playerId -> !roster.reserve().contains(playerId))
                 .filter(playerId -> !roster.taxi().contains(playerId))
-                .filter(playerId -> week.positionOf(roster, playerId).filter(slot::accepts)
-                        .isPresent())
+                .filter(playerId -> week.fits(roster, playerId, slot))
                 .filter(playerId -> week.canPlay(roster, playerId))
                 .max(Comparator.comparingDouble(playerId -> week.projections()
                         .flatMap(table -> table.points(playerId,

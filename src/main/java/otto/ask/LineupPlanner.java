@@ -218,7 +218,7 @@ public class LineupPlanner {
         // the position and neither player has locked. A bye or ruled-out
         // player is a legal choice and a certain zero - the notes say so.
         Optional<String> startPosition = team.position(startId);
-        boolean fits = startPosition.filter(slot::accepts).isPresent();
+        boolean fits = team.fits(startId, slot);
         boolean startLocked = team.locked(startId, now);
         boolean sitLocked = sitId != null && team.locked(sitId, now);
 
@@ -273,8 +273,7 @@ public class LineupPlanner {
         if (sit == null || sit.isBlank()) {
             Optional<String> position = team.position(startId);
             List<Integer> accepting = IntStream.range(0, team.slots().size())
-                    .filter(index -> position.filter(team.slots().get(index)::accepts)
-                            .isPresent())
+                    .filter(index -> team.fits(startId, team.slots().get(index)))
                     .boxed()
                     .toList();
             if (accepting.isEmpty()) {

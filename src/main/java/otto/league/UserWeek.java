@@ -54,6 +54,11 @@ public record UserWeek(
         return week.positionOf(roster, playerId);
     }
 
+    /** True when Otto can place the player at a position the slot accepts. */
+    public boolean fits(String playerId, Slot slot) {
+        return week.fits(roster, playerId, slot);
+    }
+
     /** Every rostered player's lineup position that {@link #position} can read. */
     public Map<String, String> positions() {
         return week.positions(roster);

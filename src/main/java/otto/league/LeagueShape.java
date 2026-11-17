@@ -67,7 +67,8 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      */
     private static final double TWO_QUARTERBACK_SCARCITY = 1.20;
 
-    private static final List<String> FLEX_POSITIONS = List.of("QB", "RB", "WR", "TE");
+    /** Positions that share a flex or Superflex slot, so best lineups decide their rank. */
+    private static final List<String> SKILL_POSITIONS = List.of("QB", "RB", "WR", "TE");
 
     private static final List<String> SLOT_ONLY = List.of(PlayerPositions.KICKER,
             PlayerPositions.DEFENSE);
@@ -92,7 +93,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
             if (position.equals("SUPER_FLEX")) {
                 position = "QB";
             }
-            if (FLEX_POSITIONS.contains(position) || SLOT_ONLY.contains(position)) {
+            if (SKILL_POSITIONS.contains(position) || SLOT_ONLY.contains(position)) {
                 slots.merge(position, 1, Integer::sum);
             }
         }
@@ -110,7 +111,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
     public LeagueShape withStarters(Map<String, Integer> starters) {
         Map<String, Integer> kept = new LinkedHashMap<>();
         starters.forEach((position, count) -> {
-            if (FLEX_POSITIONS.contains(position)) {
+            if (SKILL_POSITIONS.contains(position)) {
                 kept.put(position, count);
             }
         });
@@ -129,7 +130,6 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      * and at least the first one. A position the league's lineup gives no
      * rank reads the fallback cutoff.
      *
-     * @param position a lineup position, or null when it is unknown
      * @return empty when neither the lineup nor the fallback ranks the
      *         position, such as a kicker in a league with no K slot
      */
@@ -172,7 +172,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      * sentence the user can read.
      */
     public String describe() {
-        String lines = FLEX_POSITIONS.stream()
+        String lines = SKILL_POSITIONS.stream()
                 .filter(this::ranks)
                 .map(position -> "%s among %ss".formatted(
                         Ordinal.of(replacementRank(position).getAsInt()), position))
@@ -192,7 +192,6 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
 
     /** True when the league's lineup gives the position a replacement rank of its own. */
     private boolean ranks(String position) {
-        return position != null
-                && (starters.containsKey(position) || slots.containsKey(position));
+        return starters.containsKey(position) || slots.containsKey(position);
     }
 }

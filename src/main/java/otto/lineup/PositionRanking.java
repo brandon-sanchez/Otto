@@ -3,11 +3,14 @@ package otto.lineup;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 
+import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 
 /**
@@ -42,18 +45,19 @@ public final class PositionRanking {
     public static PositionRanking of(ProjectionTable table, PlayerDirectory directory) {
         Map<String, Double> points = new HashMap<>();
         Map<String, List<String>> byPosition = new HashMap<>();
-        Map<String, String> positions = new HashMap<>();
-        directory.players().values()
-                .forEach(player -> positions.put(player.playerId(), player.position()));
-        table.playerIds().stream()
-                .filter(playerId -> !positions.containsKey(playerId))
-                .forEach(playerId -> table.positionOf(playerId, null)
-                        .ifPresent(position -> positions.put(playerId, position)));
-        positions.forEach((playerId, position) ->
-                table.points(playerId, position).ifPresent(projected -> {
-                    points.put(playerId, projected);
-                    byPosition.computeIfAbsent(position, key -> new ArrayList<>()).add(playerId);
-                }));
+        Set<String> everyone = new HashSet<>(directory.players().keySet());
+        everyone.addAll(table.playerIds());
+        for (String playerId : everyone) {
+            DirectoryPlayer listed = directory.players().get(playerId);
+            Optional<String> position =
+                    table.positionOf(playerId, listed == null ? null : listed.position());
+            Optional<Double> projected = position.flatMap(known -> table.points(playerId, known));
+            if (projected.isPresent()) {
+                points.put(playerId, projected.get());
+                byPosition.computeIfAbsent(position.get(), key -> new ArrayList<>())
+                        .add(playerId);
+            }
+        }
 
         Map<String, Integer> ranks = new HashMap<>();
         byPosition.forEach((position, playerIds) -> {

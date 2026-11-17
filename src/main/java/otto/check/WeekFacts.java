@@ -58,6 +58,11 @@ public record WeekFacts(
                 .orElseGet(() -> PlayerPositions.of(playerId, known, null));
     }
 
+    /** True when Otto can place the player at a position the slot accepts. */
+    public boolean fits(RosterSnapshot roster, String playerId, Slot slot) {
+        return positionOf(roster, playerId).filter(slot::accepts).isPresent();
+    }
+
     /**
      * Returns the lineup position of every roster player Otto can place,
      * as {@link #positionOf} reads it.
