@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * What the stack promises, read back off the template it produces: the
- * shape of the two functions, the schedules, the stores, the
- * alarms, and the services that are deliberately absent.
+ * shape of the functions, the schedules, the stores, the alarms, who may
+ * delete a record, and the services that are deliberately absent.
  */
 class OttoStackTest {
 
@@ -202,15 +202,17 @@ class OttoStackTest {
     void everyFunctionsLogIsWatchedForErrors() {
         assertThat(template.findResources("AWS::Logs::MetricFilter", Match.objectLike(Map.of(
                 "Properties", Match.objectLike(Map.of("FilterPattern", "\"ERROR\""))))))
-                .as("one error filter each: the scheduled function and the webhook")
-                .hasSize(2);
+                .as("one error filter each: the scheduled function, the webhook and the"
+                        + " account deletion")
+                .hasSize(3);
     }
 
     @Test
-    void onlyTheTwoApplicationFunctionsKeepALogGroup() {
+    void onlyTheThreeApplicationFunctionsKeepALogGroup() {
         assertThat(template.findResources("AWS::Logs::LogGroup").keySet())
-                .as("the scheduled function's and the webhook's, and no retired forwarder's")
-                .hasSize(2)
+                .as("the scheduled function's, the webhook's and the account deletion's,"
+                        + " and no retired forwarder's")
+                .hasSize(3)
                 .noneMatch(id -> id.startsWith("AlarmForwarderLogs"));
     }
 
@@ -277,15 +279,8 @@ class OttoStackTest {
 
     @Test
     void theEvidenceBoardIsSentUnlessTheStackRollsItBack() {
-        template.allResourcesProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
-                "Environment", Match.objectLike(Map.of(
-                        "Variables", Match.objectLike(Map.of(
-                                "OTTO_SENT_WAIVER_BOARD", "EVIDENCE")))))));
-
-        stackWith("sentWaiverBoard", "SCORED").allResourcesProperties("AWS::Lambda::Function",
-                Match.objectLike(Map.of("Environment", Match.objectLike(Map.of(
-                        "Variables", Match.objectLike(Map.of(
-                                "OTTO_SENT_WAIVER_BOARD", "SCORED")))))));
+        assertBothAppFunctionsSend(template, "EVIDENCE");
+        assertBothAppFunctionsSend(stackWith("sentWaiverBoard", "SCORED"), "SCORED");
         assertThatThrownBy(() -> stackWith("sentWaiverBoard", "OLD"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("EVIDENCE, SCORED");
@@ -338,6 +333,15 @@ class OttoStackTest {
         assertThat(template.toJSON().toString()).contains("/team-reports/*");
     }
 
+    private static void assertBothAppFunctionsSend(Template template, String board) {
+        List.of("otto.aws.ScheduledHandler", "otto.aws.WebhookHandler").forEach(handler ->
+                template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                        "Handler", handler,
+                        "Environment", Match.objectLike(Map.of(
+                                "Variables", Match.objectLike(Map.of(
+                                        "OTTO_SENT_WAIVER_BOARD", board))))))));
+    }
+
     private static Template stackWith(String key, String value) {
         return Template.fromStack(new OttoStack(
                 new App(AppProps.builder()
@@ -362,18 +366,21 @@ class OttoStackTest {
                         .build()),
                 "OttoStack", props()));
 
-        Map<?, ?> deny = bucketDeny(withReader, "s3:GetObject*");
-        assertThat(deny.get("Principal")).isEqualTo(Map.of("AWS", "*"));
-        assertThat((List<Object>) deny.get("Action"))
-                .containsExactlyInAnyOrder("s3:GetObject*", "s3:ListBucket*");
-        assertThat(deny.get("Resource").toString()).contains("DecisionRecords", "/*");
-        assertThat((List<?>) deny.get("Resource")).hasSize(2);
-        List<?> readers = (List<?>) ((Map<?, ?>) ((Map<?, ?>) deny.get("Condition"))
-                .get("ArnNotLike")).get("aws:PrincipalArn");
-        assertThat(readers).hasSize(4);
-        assertThat(readers.toString())
+        Map<?, ?> read = bucketDeny(withReader, "s3:GetObject*");
+        assertThat(read.get("Principal")).isEqualTo(Map.of("AWS", "*"));
+        assertThat(read.get("Resource").toString()).contains("DecisionRecords", "/*");
+        assertThat(exempted(read)).hasSize(4);
+        assertThat(exempted(read).toString())
                 .contains("ScheduledServiceRole", "WebhookServiceRole", ":root",
-                        "arn:aws:iam::111111111111:user/owner");
+                        "arn:aws:iam::111111111111:user/owner")
+                .doesNotContain("AccountDeletionServiceRole");
+
+        Map<?, ?> list = bucketDeny(withReader, "s3:ListBucket*");
+        assertThat(list.get("Principal")).isEqualTo(Map.of("AWS", "*"));
+        assertThat(exempted(list)).hasSize(5);
+        assertThat(exempted(list).toString())
+                .contains("ScheduledServiceRole", "WebhookServiceRole", ":root",
+                        "arn:aws:iam::111111111111:user/owner", "AccountDeletionServiceRole");
     }
 
     @Test
@@ -388,40 +395,51 @@ class OttoStackTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void onlyTheAccountRootDeletesARecordOrChangesItsLock() {
+    void onlyTheAccountRootAndTheAccountDeletionRoleDeleteARecord() {
         Map<?, ?> deny = bucketDeny(template, "s3:DeleteObject*");
 
         assertThat(deny.get("Principal")).isEqualTo(Map.of("AWS", "*"));
         assertThat((List<Object>) deny.get("Action")).containsExactlyInAnyOrder(
-                "s3:DeleteObject*", "s3:BypassGovernanceRetention",
+                "s3:DeleteObject*", "s3:BypassGovernanceRetention");
+        assertThat(exempted(deny)).hasSize(2);
+        assertThat(exempted(deny).toString())
+                .contains(":root", "AccountDeletionServiceRole")
+                .doesNotContain("ScheduledServiceRole", "WebhookServiceRole");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void onlyTheAccountRootChangesARecordsLock() {
+        Map<?, ?> deny = bucketDeny(template, "s3:PutObjectRetention");
+
+        assertThat((List<Object>) deny.get("Action")).containsExactlyInAnyOrder(
                 "s3:PutObjectRetention", "s3:PutObjectLegalHold");
-        Object allowed = ((Map<?, ?>) ((Map<?, ?>) deny.get("Condition"))
-                .get("ArnNotLike")).get("aws:PrincipalArn");
-        assertThat(allowed.toString())
+        assertThat(exempted(deny).toString())
                 .contains(":root")
                 .doesNotContain("ServiceRole");
     }
 
     @Test
-    void theFunctionsCanNeitherDeleteARecordNorBypassItsLock() {
-        List<String> granted = new ArrayList<>();
-        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
-            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
-            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
-            for (Object entry : (List<?>) document.get("Statement")) {
-                Map<?, ?> statement = (Map<?, ?>) entry;
-                if (String.valueOf(statement.get("Resource")).contains("DecisionRecords")) {
-                    granted.add(String.valueOf(statement.get("Action")));
-                }
-            }
-        }
+    void onlyTheAccountDeletionRoleMayDeleteARecordOrBypassItsLock() {
+        Map<String, List<String>> grantedByRole = recordGrantsByRole(template);
 
-        assertThat(granted)
-                .as("each function writes and reads records, and nothing more")
-                .isNotEmpty()
-                .noneMatch(actions -> actions.contains("Delete"))
-                .noneMatch(actions -> actions.contains("Bypass"))
-                .noneMatch(actions -> actions.contains("*"));
+        assertThat(grantedByRole.keySet()).anyMatch(role -> role.contains("Scheduled"))
+                .anyMatch(role -> role.contains("Webhook"));
+        grantedByRole.forEach((role, actions) -> {
+            if (role.contains("AccountDeletionServiceRole")) {
+                assertThat(actions).as(role).containsExactlyInAnyOrder(
+                        "s3:ListBucketVersions", "s3:DeleteObject", "s3:DeleteObjectVersion",
+                        "s3:BypassGovernanceRetention");
+            } else {
+                assertThat(actions).as(role)
+                        .noneMatch(action -> action.contains("Delete"))
+                        .noneMatch(action -> action.contains("Bypass"))
+                        .noneMatch(action -> action.contains("*"));
+            }
+        });
+        assertThat(grantedByRole.keySet())
+                .filteredOn(role -> role.contains("AccountDeletionServiceRole"))
+                .hasSize(1);
         template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
                 "Environment", Match.objectLike(Map.of(
                         "Variables", Match.objectLike(Map.of(
@@ -449,6 +467,64 @@ class OttoStackTest {
                 .hasSize(2)
                 .allSatisfy(resources -> assertThat(resources)
                         .contains("/records/*", "/article-text/*", "/outcomes/*"));
+    }
+
+    @Test
+    void onlyTheWebhookMayAskForADeletion() {
+        template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Handler", "otto.aws.WebhookHandler",
+                "Environment", Match.objectLike(Map.of("Variables", Match.objectLike(Map.of(
+                        "OTTO_ACCOUNT_DELETION_FUNCTION", Match.anyValue())))))));
+
+        List<String> invokers = new ArrayList<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            if (String.valueOf(properties.get("PolicyDocument")).contains("lambda:InvokeFunction")
+                    && String.valueOf(properties.get("PolicyDocument"))
+                            .contains("AccountDeletion")) {
+                invokers.add(String.valueOf(properties.get("Roles")));
+            }
+        }
+        assertThat(invokers).singleElement().asString().contains("WebhookServiceRole");
+    }
+
+    /** The app's {@code AwsConfig} waits 40 seconds for the deletion, between these two. */
+    @Test
+    void theDeletionEndsBeforeTheWebhookStopsWaitingForIt() {
+        template.hasResourceProperties("AWS::Lambda::Function", Map.of(
+                "Handler", "otto.aws.WebhookHandler",
+                "Timeout", 60));
+        template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
+                "Handler", "otto.aws.AccountDeletionHandler",
+                "Timeout", 30,
+                "Environment", Map.of("Variables", Map.of(
+                        "OTTO_RECORDS_BUCKET", Match.anyValue())))));
+    }
+
+    private static Map<String, List<String>> recordGrantsByRole(Template template) {
+        Map<String, List<String>> grantedByRole = new java.util.TreeMap<>();
+        for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {
+            Map<?, ?> properties = (Map<?, ?>) policy.get("Properties");
+            Map<?, ?> document = (Map<?, ?>) properties.get("PolicyDocument");
+            String roles = String.valueOf(properties.get("Roles"));
+            for (Object entry : (List<?>) document.get("Statement")) {
+                Map<?, ?> statement = (Map<?, ?>) entry;
+                if (!String.valueOf(statement.get("Resource")).contains("DecisionRecords")) {
+                    continue;
+                }
+                Object actions = statement.get("Action");
+                List<String> named = actions instanceof List<?> list
+                        ? list.stream().map(String::valueOf).toList()
+                        : List.of(String.valueOf(actions));
+                grantedByRole.computeIfAbsent(roles, role -> new ArrayList<>()).addAll(named);
+            }
+        }
+        return grantedByRole;
+    }
+
+    private static List<?> exempted(Map<?, ?> deny) {
+        return (List<?>) ((Map<?, ?>) ((Map<?, ?>) deny.get("Condition"))
+                .get("ArnNotLike")).get("aws:PrincipalArn");
     }
 
     @SuppressWarnings("unchecked")

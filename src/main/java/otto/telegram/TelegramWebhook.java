@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.account.AccountDeletion;
 import otto.alerts.AlertActions;
 import otto.ask.AskService;
 import otto.board.WaiverBoardOptions;
@@ -40,6 +41,12 @@ public class TelegramWebhook {
 
     private static final Pattern TAP = Pattern.compile("(done|ignore|mute|all):(\\d{1,18})");
 
+    /**
+     * Telegram appends the bot's name to a command picked from its menu
+     * in a group, so the suffix is accepted too.
+     */
+    private static final Pattern DELETE_ACCOUNT = Pattern.compile("/deleteaccount(@\\w+)?");
+
     private static final String VIEW_ALL = "all";
 
     private static final String COULD_NOT_SEND_ALL =
@@ -50,15 +57,18 @@ public class TelegramWebhook {
     private final AlertActions alertActions;
     private final WaiverBoardOptions boardOptions;
     private final AskService ask;
+    private final AccountDeletion accountDeletion;
     private final TelegramClient telegram;
 
     public TelegramWebhook(OttoProperties properties, AlertActions alertActions,
-            WaiverBoardOptions boardOptions, AskService ask, TelegramClient telegram) {
+            WaiverBoardOptions boardOptions, AskService ask, AccountDeletion accountDeletion,
+            TelegramClient telegram) {
         this.webhookSecret = properties.telegram().webhookSecret();
         this.chatId = properties.telegram().chatId();
         this.alertActions = alertActions;
         this.boardOptions = boardOptions;
         this.ask = ask;
+        this.accountDeletion = accountDeletion;
         this.telegram = telegram;
     }
 
@@ -139,11 +149,28 @@ public class TelegramWebhook {
         if (text.isBlank()) {
             return;
         }
+        if (DELETE_ACCOUNT.matcher(text.strip()).matches()) {
+            AccountDeletion.Question question = accountDeletion.ask();
+            boolean sent = telegram.sendWithButtons(question.text(), question.choices().stream()
+                    .map(choice -> new InlineButton(choice.label(), choice.callbackData()))
+                    .toList());
+            if (!sent) {
+                log.warn("The account-deletion question did not reach the chat");
+            }
+            return;
+        }
         telegram.sendMessage(ask.answer(text));
     }
 
     private void answerTap(JsonNode callback) {
-        Matcher tap = TAP.matcher(callback.path("data").asText(""));
+        String data = callback.path("data").asText("");
+        Optional<AccountDeletion.Answer> deletion = accountDeletion.answer(data);
+        if (deletion.isPresent()) {
+            acknowledge(callback, deletion.get().ack());
+            deletion.get().message().ifPresent(telegram::sendMessage);
+            return;
+        }
+        Matcher tap = TAP.matcher(data);
         if (!tap.matches()) {
             acknowledge(callback, "I don't recognize that button.");
             return;

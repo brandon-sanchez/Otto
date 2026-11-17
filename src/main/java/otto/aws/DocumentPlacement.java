@@ -56,7 +56,8 @@ public enum DocumentPlacement {
             "conversation",
             "last-check",
             "alert-id-sequence",
-            "telegram-updates");
+            "telegram-updates",
+            "account-deletion-request");
 
     private static final Set<String> SMALL_PREFIXES = Set.of(
             "alert-delivery-",

@@ -175,9 +175,8 @@ public class DecisionRecords {
      * deployed caller needs {@code s3:ListBucketVersions},
      * {@code s3:DeleteObjectVersion} and
      * {@code s3:BypassGovernanceRetention} on the records bucket, and
-     * the bucket policy must let its role delete. The caller must stop
-     * new runs for the user before deleting, or a save already in
-     * flight can recreate a record.
+     * the bucket policy must let its role delete. A save already in
+     * flight when this runs can land after it and leave that one record.
      */
     public void deleteUser(String userId) {
         objects.deleteAll(userPrefix(RECORDS, userId));

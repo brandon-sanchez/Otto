@@ -178,7 +178,7 @@ because compliance mode stops everyone, the account root included, and
 deleting an account must be able to delete its records. Governance lets
 a caller granted `s3:BypassGovernanceRetention` do it, and the bucket
 policy denies that grant, and every delete, to everyone but the account
-root.
+root and the account-deletion function's role.
 
 The app writes each object with `If-None-Match: *`, and the bucket
 policy denies any put without it, so a record can only be created, never
@@ -223,20 +223,22 @@ timestamp. The period is the `articleTextSeasons` context value, three
 seasons by default, counted as 365 days each; it sets both the expiry
 and the lock.
 
-The bucket policy enforces all of this with three denies. A deny in a
+The bucket policy enforces all of this with five denies. A deny in a
 bucket policy wins over any IAM allow, so a role in the account granted
 `s3:*` for some other job is still bound by them.
 
-- `s3:GetObject*` and `s3:ListBucket*` are denied to every principal
-  whose ARN is not one of the two function roles, the account root, or
-  an ARN listed in the `recordReaderArns` context value. Only the
-  backend and the owner read or list records.
+- `s3:GetObject*` is denied to every principal whose ARN is not the
+  scheduled or webhook function's role, the account root, or an ARN
+  listed in the `recordReaderArns` context value. Only the backend and
+  the owner read records.
+- `s3:ListBucket*` is denied to the same principals, except that the
+  account-deletion role may also list, to find each version it deletes.
 - `s3:PutObject` is denied whenever the request carries no
   `If-None-Match`, so nobody writes over a record.
-- `s3:DeleteObject*`, `s3:BypassGovernanceRetention`,
-  `s3:PutObjectRetention` and `s3:PutObjectLegalHold` are denied to
-  everyone but the account root, so nobody else deletes a record or
-  shortens its lock.
+- `s3:DeleteObject*` and `s3:BypassGovernanceRetention` are denied to
+  everyone but the account root and the account-deletion role.
+- `s3:PutObjectRetention` and `s3:PutObjectLegalHold` are denied to
+  everyone but the account root, so nobody else shortens a lock.
 
 Credentials are never stored. A model request can carry the key it was
 sent with, so before anything is written the app replaces every value it
@@ -251,14 +253,37 @@ for conversation history.
 Each function may put and get objects under the three prefixes, and list
 the bucket. The list grant is there only for what S3 answers about a
 missing key: without it, S3 answers 403 rather than 404, and expired
-article text would read as an access failure. No function may delete a
-record or bypass the lock, because no entry point deletes an account
-yet. Whatever entry point does will need `s3:ListBucketVersions`,
-`s3:DeleteObjectVersion` and `s3:BypassGovernanceRetention` on this
-bucket, and must be added on purpose to the principals the bucket
-policy lets delete. Nothing else should hold them. It must also stop new
-runs for the user before it deletes, or a save already in flight can
-recreate a record.
+article text would read as an access failure. Neither function may
+delete a record or bypass the lock.
+
+## Deleting an account runs in a function of its own
+
+The owner sends `/deleteaccount` in the chat. Otto answers with what
+will be deleted, says it cannot be undone, and shows Confirm and Cancel
+buttons. Each button carries a random token for that one question, kept
+for five minutes in the table. Only a Confirm whose token matches the
+open question, from the chat the webhook serves, before it expires,
+deletes anything. Cancel, an expired or answered question, and a token
+that matches nothing delete nothing.
+
+The deletion itself runs in a third function, `AccountDeletionHandler`,
+which the webhook invokes and waits for. Its role is the only one
+granted `s3:ListBucketVersions`, `s3:DeleteObject`,
+`s3:DeleteObjectVersion` and `s3:BypassGovernanceRetention` on the
+bucket, and the only role besides the account root that the bucket
+policy lets delete. It cannot read or write a record. The webhook gets
+only `lambda:InvokeFunction` on it, so the function that faces the
+internet can ask for one user's records to be deleted and can do
+nothing else destructive. The scheduled function can do neither.
+
+A dedicated role the webhook assumes would have been less code, but the
+webhook would then hold the full delete rights for as long as the
+session lasted. The function runs without the Spring context, so a cold
+start costs about a second, and it skips SnapStart and its alias.
+
+Deleting does not pause the Check. A run that started before the
+deletion and saves after it leaves that one record behind, and advice
+given after the deletion is saved as usual.
 
 ## Secrets are read once, at init
 

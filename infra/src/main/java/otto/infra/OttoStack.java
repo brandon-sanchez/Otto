@@ -59,7 +59,9 @@ import software.constructs.Construct;
  * Lambda function URL that Telegram posts to. Both are the same
  * deployable with a different handler, and both run on a published
  * version through an alias, because SnapStart restores versions and
- * never $LATEST.
+ * never $LATEST. A third function, from the same deployable, deletes a
+ * user's Decision Records when the webhook asks it to; it is the only
+ * role that may.
  *
  * <p>Deliberately absent, and each for a reason: API Gateway (a
  * function URL is the whole front door one bot needs), Secrets Manager
@@ -91,6 +93,10 @@ public class OttoStack extends Stack {
     /** A webhook answer is one model call and one message out. */
     private static final Duration WEBHOOK_TIMEOUT = Duration.seconds(60);
 
+    private static final Duration ACCOUNT_DELETION_TIMEOUT = Duration.seconds(30);
+
+    private static final Number ACCOUNT_DELETION_MEMORY_MB = 512;
+
     private static final RetentionDays LOG_RETENTION = RetentionDays.TWO_WEEKS;
 
     private static final String METRIC_NAMESPACE = "Otto";
@@ -119,7 +125,7 @@ public class OttoStack extends Stack {
     private static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
     /**
-     * The two key prefixes of the Decision Records bucket. The app
+     * The three key prefixes of the Decision Records bucket. The app
      * spells these too, in {@code DecisionRecords}; a drift shows up as
      * a denied write on the first run that saves a record.
      */
@@ -145,13 +151,17 @@ public class OttoStack extends Stack {
         Table records = recordsTable();
         Bucket decisionRecords = decisionRecordsBucket(articleTextDays());
 
+        LogGroup accountDeletionLogs = logGroup("AccountDeletionLogs");
+        Function accountDeletion = accountDeletionFunction(decisionRecords, accountDeletionLogs);
+
         Map<String, String> environment = Map.of(
                 "SPRING_PROFILES_ACTIVE", "aws",
                 "OTTO_BUCKET", documents.getBucketName(),
                 "OTTO_TABLE", records.getTableName(),
                 "OTTO_RECORDS_BUCKET", decisionRecords.getBucketName(),
                 "OTTO_PARAMETER_PATH", parameterPath,
-                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard());
+                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard(),
+                "OTTO_ACCOUNT_DELETION_FUNCTION", accountDeletion.getFunctionName());
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
         Function scheduled = appFunction("Scheduled", "otto.aws.ScheduledHandler",
@@ -167,7 +177,9 @@ public class OttoStack extends Stack {
         readWriteStorage(documents, records, webhook);
         writeDecisionRecords(decisionRecords, scheduled);
         writeDecisionRecords(decisionRecords, webhook);
-        guardDecisionRecords(decisionRecords, List.of(scheduled, webhook));
+        deleteDecisionRecords(decisionRecords, accountDeletion);
+        accountDeletion.grantInvoke(webhook);
+        guardDecisionRecords(decisionRecords, List.of(scheduled, webhook), accountDeletion);
         readSecrets(scheduled, parameterPath);
         readSecrets(webhook, parameterPath);
 
@@ -181,7 +193,8 @@ public class OttoStack extends Stack {
         Topic alarms = alarmTopic(alertEmail);
         errorAlarm(alarms, Map.of(
                 "Scheduled", scheduledLogs,
-                "Webhook", webhookLogs));
+                "Webhook", webhookLogs,
+                "AccountDeletion", accountDeletionLogs));
         heartbeatAlarm(alarms, scheduledLogs);
         budget(alertEmail);
 
@@ -374,6 +387,19 @@ public class OttoStack extends Stack {
                 .build();
     }
 
+    private Function accountDeletionFunction(Bucket decisionRecords, LogGroup logs) {
+        return Function.Builder.create(this, "AccountDeletion")
+                .runtime(RUNTIME)
+                .architecture(ARCHITECTURE)
+                .handler("otto.aws.AccountDeletionHandler")
+                .code(Code.fromAsset(LAMBDA_ASSET))
+                .memorySize(ACCOUNT_DELETION_MEMORY_MB)
+                .timeout(ACCOUNT_DELETION_TIMEOUT)
+                .environment(Map.of("OTTO_RECORDS_BUCKET", decisionRecords.getBucketName()))
+                .logGroup(logs)
+                .build();
+    }
+
     private Alias alias(String id, Function function) {
         return Alias.Builder.create(this, id)
                 .aliasName("live")
@@ -395,14 +421,7 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * Write and read records, and nothing more: no function deletes one
-     * or bypasses the lock. Deleting an account needs
-     * {@code s3:DeleteObjectVersion} and
-     * {@code s3:BypassGovernanceRetention}, which only an entry point
-     * that deletes accounts may hold, and only once
-     * {@link #guardDecisionRecords} lets its role through.
-     *
-     * <p>{@code s3:ListBucket} is here only for what S3 answers about a
+     * {@code s3:ListBucket} is here only for what S3 answers about a
      * missing key. Without it S3 says 403 rather than 404, and article
      * text that has expired would read as an access failure instead of
      * as gone.
@@ -423,6 +442,23 @@ public class OttoStack extends Stack {
                 .build());
     }
 
+    private void deleteDecisionRecords(Bucket bucket, Function function) {
+        function.addToRolePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.ALLOW)
+                .actions(List.of("s3:ListBucketVersions"))
+                .resources(List.of(bucket.getBucketArn()))
+                .build());
+        function.addToRolePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.ALLOW)
+                .actions(List.of("s3:DeleteObject", "s3:DeleteObjectVersion",
+                        "s3:BypassGovernanceRetention"))
+                .resources(List.of(
+                        bucket.arnForObjects(RECORDS_PREFIX + "*"),
+                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*"),
+                        bucket.arnForObjects(OUTCOMES_PREFIX + "*")))
+                .build());
+    }
+
     /**
      * The bucket enforces what a record is, whatever any IAM policy in
      * the account grants, so a role given {@code s3:*} for some other
@@ -434,12 +470,9 @@ public class OttoStack extends Stack {
      *
      * <p>A record is only ever created: a put that does not carry
      * {@code If-None-Match} is refused, so nobody writes over a key.
-     *
-     * <p>Only the account root deletes a version or changes its lock.
-     * Any role that deletes accounts is let through here by name, on
-     * purpose, or its deletes are refused.
      */
-    private void guardDecisionRecords(Bucket bucket, List<Function> backend) {
+    private void guardDecisionRecords(Bucket bucket, List<Function> backend,
+            Function accountDeletion) {
         String root = new AccountRootPrincipal().getArn();
         List<String> readers = Stream.of(
                         backend.stream().map(function -> function.getRole().getRoleArn()),
@@ -449,12 +482,21 @@ public class OttoStack extends Stack {
                                 .filter(arn -> !arn.isEmpty()))
                 .flatMap(arns -> arns)
                 .toList();
+        String deleter = accountDeletion.getRole().getRoleArn();
+        List<String> listers = Stream.concat(readers.stream(), Stream.of(deleter)).toList();
         bucket.addToResourcePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.DENY)
                 .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:GetObject*", "s3:ListBucket*"))
-                .resources(List.of(bucket.getBucketArn(), bucket.arnForObjects("*")))
+                .actions(List.of("s3:GetObject*"))
+                .resources(List.of(bucket.arnForObjects("*")))
                 .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", readers)))
+                .build());
+        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.DENY)
+                .principals(List.of(new AnyPrincipal()))
+                .actions(List.of("s3:ListBucket*"))
+                .resources(List.of(bucket.getBucketArn()))
+                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", listers)))
                 .build());
         bucket.addToResourcePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.DENY)
@@ -466,8 +508,15 @@ public class OttoStack extends Stack {
         bucket.addToResourcePolicy(PolicyStatement.Builder.create()
                 .effect(Effect.DENY)
                 .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:DeleteObject*", "s3:BypassGovernanceRetention",
-                        "s3:PutObjectRetention", "s3:PutObjectLegalHold"))
+                .actions(List.of("s3:DeleteObject*", "s3:BypassGovernanceRetention"))
+                .resources(List.of(bucket.arnForObjects("*")))
+                .conditions(Map.of("ArnNotLike",
+                        Map.of("aws:PrincipalArn", List.of(root, deleter))))
+                .build());
+        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
+                .effect(Effect.DENY)
+                .principals(List.of(new AnyPrincipal()))
+                .actions(List.of("s3:PutObjectRetention", "s3:PutObjectLegalHold"))
                 .resources(List.of(bucket.arnForObjects("*")))
                 .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", List.of(root))))
                 .build());

@@ -73,24 +73,44 @@ public class TelegramClient {
      * @return true when Telegram accepted every part
      */
     public boolean sendAlert(String text, long alertId, boolean viewAllOptions) {
+        List<InlineButton> buttons = List.of(
+                new InlineButton("Done", "done:" + alertId),
+                new InlineButton("Ignore", "ignore:" + alertId),
+                new InlineButton("Mute", "mute:" + alertId));
+        List<List<InlineButton>> rows = viewAllOptions
+                ? List.of(buttons, List.of(new InlineButton("View all options", "all:" + alertId)))
+                : List.of(buttons);
+        return sendWithKeyboard(text, rows);
+    }
+
+    /**
+     * Sends text with one row of inline buttons under it. Text too long
+     * for one message goes out as {@link #sendMessage} splits it, with
+     * the buttons on the last part.
+     *
+     * @return true when Telegram accepted every part
+     */
+    public boolean sendWithButtons(String text, List<InlineButton> buttons) {
+        return sendWithKeyboard(text, List.of(buttons));
+    }
+
+    private boolean sendWithKeyboard(String text, List<List<InlineButton>> rows) {
         List<String> parts = TelegramText.parts(text);
         for (String part : parts.subList(0, parts.size() - 1)) {
             if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
                 return false;
             }
         }
-        List<Map<String, String>> buttons = List.of(
-                Map.of("text", "Done", "callback_data", "done:" + alertId),
-                Map.of("text", "Ignore", "callback_data", "ignore:" + alertId),
-                Map.of("text", "Mute", "callback_data", "mute:" + alertId));
-        List<List<Map<String, String>>> rows = viewAllOptions
-                ? List.of(buttons, List.of(Map.of("text", "View all options",
-                        "callback_data", "all:" + alertId)))
-                : List.of(buttons);
+        List<List<Map<String, String>>> keyboard = rows.stream()
+                .map(row -> row.stream()
+                        .map(button -> Map.of("text", button.text(),
+                                "callback_data", button.callbackData()))
+                        .toList())
+                .toList();
         return post("sendMessage", Map.of(
                 "chat_id", chatId,
                 "text", parts.getLast(),
-                "reply_markup", Map.of("inline_keyboard", rows)));
+                "reply_markup", Map.of("inline_keyboard", keyboard)));
     }
 
     /**

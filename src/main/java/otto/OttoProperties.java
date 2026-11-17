@@ -51,7 +51,11 @@ public record OttoProperties(
      * to the function as environment variables, so nothing here is
      * checked in. Every field is null on a laptop, where the local file
      * storage is used instead.
+     *
+     * @param accountDeletionFunction the function that deletes a user's
+     *        Decision Records, which only the webhook's role may invoke
      */
-    public record Aws(String bucket, String table, String recordsBucket) {
+    public record Aws(String bucket, String table, String recordsBucket,
+            String accountDeletionFunction) {
     }
 }
