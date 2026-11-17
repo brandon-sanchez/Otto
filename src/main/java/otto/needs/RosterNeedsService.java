@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.lineup.LineupOptimizer;
+import otto.lineup.PlayerPositions;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.needs.RosterNeeds.Coverage;
@@ -38,7 +39,8 @@ import otto.snapshot.RosterSnapshot;
 @Component
 public class RosterNeedsService {
 
-    private static final List<String> POSITIONS = List.of("QB", "RB", "WR", "TE");
+    private static final List<String> POSITIONS = List.of("QB", "RB", "WR", "TE",
+            PlayerPositions.KICKER, PlayerPositions.DEFENSE);
 
     private static final String HYPOTHETICAL_PLAYER_ID_PREFIX = "hypothetical:";
 
@@ -234,7 +236,7 @@ public class RosterNeedsService {
                 Optional<ProjectionTable> projections) {
             WeekFacts week = league.week();
             Cover cover = Cover.of(roster, league.league(), week);
-            Map<String, String> positions = roster.playerPositions();
+            Map<String, String> positions = week.positions(roster);
             Comparator<String> best = Comparator
                     .comparing((String playerId) -> projected(projections, positions, playerId)
                             .orElse(Double.NEGATIVE_INFINITY))

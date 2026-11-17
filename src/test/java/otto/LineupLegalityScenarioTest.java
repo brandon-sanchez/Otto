@@ -1,6 +1,7 @@
 package otto;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.harness.KickerAndDefenseLeague;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -108,5 +110,56 @@ class LineupLegalityScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(3, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
+    void anEmptyKickerOrDefenseSlotPointsToTheBenchedKickerOrDefense() {
+        KickerAndDefenseLeague.stub(sleeper, "0", "0",
+                List.of(KickerAndDefenseLeague.KICKER, KickerAndDefenseLeague.DEFENSE));
+        stubOutbound();
+
+        checkRunner.runCheck();
+
+        assertThat(emptySlotReplacement(KickerAndDefenseLeague.KICKER_SLOT))
+                .isEqualTo(KickerAndDefenseLeague.KICKER + " (9.0)");
+        assertThat(emptySlotReplacement(KickerAndDefenseLeague.DEFENSE_SLOT))
+                .isEqualTo(KickerAndDefenseLeague.DEFENSE + " (3.0)");
+    }
+
+    @Test
+    void aBenchedRunningBackIsNeverCoverForAnEmptyKickerOrDefenseSlot() {
+        KickerAndDefenseLeague.stub(sleeper, "0", "0", List.of());
+        stubOutbound();
+
+        checkRunner.runCheck();
+
+        assertThat(emptySlotReplacement(KickerAndDefenseLeague.KICKER_SLOT))
+                .isEqualTo("none on the bench");
+        assertThat(emptySlotReplacement(KickerAndDefenseLeague.DEFENSE_SLOT))
+                .isEqualTo("none on the bench");
+    }
+
+    @Test
+    void aStartedKickerAndDefenseAreALegalLineup() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.DEFENSE, List.of());
+        stubOutbound();
+
+        checkRunner.runCheck();
+
+        assertThat(eventLog.all()).noneMatch(event -> event.key().startsWith("alert:legality:"));
+    }
+
+    private void stubOutbound() {
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "Your lineup needs attention before Sunday.");
+    }
+
+    private String emptySlotReplacement(int slot) {
+        return eventLog.all().stream()
+                .filter(event -> event.key().equals("alert:legality:2026-w2:slot%d:empty"
+                        .formatted(slot)))
+                .findFirst().orElseThrow()
+                .facts().get("replacement");
     }
 }

@@ -2,6 +2,7 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import otto.check.WeekFacts;
@@ -48,8 +49,14 @@ public record UserWeek(
         return roster.playerNames().getOrDefault(playerId, playerId);
     }
 
+    /** The player's lineup position, kickers and defenses included; null when unknown. */
     public String position(String playerId) {
-        return roster.playerPositions().get(playerId);
+        return week.positionOf(roster, playerId);
+    }
+
+    /** Every rostered player's lineup position that {@link #position} can read. */
+    public Map<String, String> positions() {
+        return week.positions(roster);
     }
 
     public String team(String playerId) {

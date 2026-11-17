@@ -6,8 +6,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import otto.ask.LeagueAnalysis;
+import otto.ask.LeagueWeek;
 import otto.ask.UserWeekLoader;
 import otto.check.CheckRunner;
+import otto.harness.KickerAndDefenseLeague;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
@@ -16,6 +19,7 @@ import otto.needs.RosterNeeds.SidelineReason;
 import otto.needs.RosterNeeds.SlotStanding;
 import otto.needs.RosterNeedsService;
 import otto.sleeper.SourceResult;
+import otto.snapshot.RosterSnapshot;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -60,6 +64,9 @@ class RosterNeedsScenarioTest extends WireSeamTest {
 
     @Autowired
     private RosterNeedsService needs;
+
+    @Autowired
+    private LeagueAnalysis analysis;
 
     private void aWeekThreeLeague(String rostersFixture) {
         stubWeekThreeLeague(rostersFixture);
@@ -228,5 +235,50 @@ class RosterNeedsScenarioTest extends WireSeamTest {
         assertThat(assessed.notes()).anyMatch(note -> note.contains("no projections"));
         assertThat(assessed.coverage().openSlots()).isEmpty();
         assertThat(assessed.weeksScored()).isEqualTo(2);
+    }
+
+    @Test
+    void aRosteredKickerAndDefenseCoverTheirSlots() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.DEFENSE, List.of());
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+
+        RosterNeeds assessed = assess();
+
+        assertThat(assessed.coverage().openSlots()).isEmpty();
+        assertThat(slot(assessed.weakness(), "K").points()).contains(9.0);
+        assertThat(slot(assessed.weakness(), "DEF").points()).contains(3.0);
+    }
+
+    @Test
+    void benchedRunningBacksNeverCoverAKickerOrDefenseSlot() {
+        KickerAndDefenseLeague.stub(sleeper, "0", "0", List.of());
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+
+        RosterNeeds.Coverage coverage = assess().coverage();
+
+        assertThat(coverage.openSlots()).containsExactly("K", "DEF");
+        assertThat(coverage.positionsThatFill()).containsExactlyInAnyOrder("K", "DEF");
+    }
+
+    @Test
+    void kickersAndDefensesHaveNoDepthToRead() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.DEFENSE, List.of());
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        checkRunner.runCheck();
+        LeagueWeek league = ((SourceResult.Ok<LeagueWeek>) loader.leagueWeek()).value();
+        RosterSnapshot user = league.rosters().stream()
+                .filter(RosterSnapshot::userRoster).findFirst().orElseThrow();
+
+        LeagueAnalysis.Depth depth = analysis.depthOf(league, user);
+
+        assertThat(depth.positions()).extracting(LeagueAnalysis.PositionDepth::position)
+                .containsExactly("QB", "RB", "TE", "WR");
     }
 }

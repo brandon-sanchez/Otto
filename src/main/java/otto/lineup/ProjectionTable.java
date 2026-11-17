@@ -26,6 +26,17 @@ public class ProjectionTable {
         return scoring.price(statLines.get(playerId), position);
     }
 
+    /**
+     * Returns the player's position: the known one, or kicker or defense
+     * as {@link PlayerPositions} reads them from this week's stat line;
+     * empty when neither says.
+     *
+     * @param known the position the roster or directory gives, or null
+     */
+    public Optional<String> positionOf(String playerId, String known) {
+        return PlayerPositions.of(playerId, known, statLines.get(playerId));
+    }
+
     public String display(String playerId, String position) {
         return points(playerId, position)
                 .map(points -> String.format(Locale.ROOT, "%.1f", points))

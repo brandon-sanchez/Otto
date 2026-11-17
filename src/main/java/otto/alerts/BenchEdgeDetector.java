@@ -56,18 +56,19 @@ public class BenchEdgeDetector {
         String weekKey = week.weekKey().get();
         ProjectionTable projections = week.projections().get();
         List<Slot> slots = week.startingSlots();
+        Map<String, String> positions = week.positions(roster);
 
         Map<String, Double> points = new HashMap<>();
         for (String playerId : roster.players()) {
             if (!playable(roster, week, playerId, now)) {
                 continue;
             }
-            projections.points(playerId, roster.playerPositions().get(playerId))
+            projections.points(playerId, positions.get(playerId))
                     .ifPresent(projected -> points.put(playerId, projected));
         }
 
         Map<Integer, String> optimal =
-                optimizer.assign(slots, points, roster.playerPositions(), roster.starters());
+                optimizer.assign(slots, points, positions, roster.starters());
 
         List<AlertCandidate> candidates = new ArrayList<>();
         for (LineupSwap swap : optimizer.swaps(roster.starters(), optimal.values(), points)) {

@@ -524,11 +524,12 @@ public class LeagueAnalysis {
         return gaps;
     }
 
-    /** The positions the league's starting slots can be filled with. */
-    private static List<String> rankedPositions(UserWeek team) {
+    /** The positions the league's starting slots can be filled with that have a replacement level. */
+    private List<String> rankedPositions(UserWeek team) {
         return team.slots().stream()
                 .flatMap(slot -> slot.eligible().stream())
                 .distinct()
+                .filter(position -> replacementCutoffs.forPosition(position) > 0)
                 .sorted()
                 .toList();
     }
