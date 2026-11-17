@@ -14,6 +14,7 @@ import otto.ask.LeagueWeek;
 import otto.ceiling.Ceiling;
 import otto.directory.PlayerHealth;
 import otto.lineup.LeagueScoring;
+import otto.lineup.LeagueStarters;
 import otto.lineup.LineupOptimizer;
 import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
@@ -39,9 +40,11 @@ public class TeamProfiler {
     private static final String QUARTERBACK = "QB";
 
     private final LineupOptimizer optimizer;
+    private final LeagueStarters starters;
 
-    public TeamProfiler(LineupOptimizer optimizer) {
+    public TeamProfiler(LineupOptimizer optimizer, LeagueStarters starters) {
         this.optimizer = optimizer;
+        this.starters = starters;
     }
 
     /**
@@ -61,7 +64,11 @@ public class TeamProfiler {
                 .map(roster -> team(roster, league.league(), perGame, slots, scoring))
                 .toList();
         List<Double> booms = teams.stream().map(Team::boomStarters).toList();
-        Map<Integer, Map<String, PositionProfile>> positions = positions(teams, slots);
+        Map<String, String> playerPositions = new LinkedHashMap<>();
+        league.rosters().forEach(roster -> playerPositions.putAll(roster.playerPositions()));
+        Map<String, Integer> starting = starters.startersByPosition(slots,
+                teams.stream().map(Team::points).toList(), playerPositions);
+        Map<Integer, Map<String, PositionProfile>> positions = positions(teams, slots, starting);
         return new LeagueProfile(teams.stream()
                 .map(team -> new TeamProfile(team.roster().rosterId(), team.roster().manager(),
                         team.roster().userRoster(), positions.get(team.roster().rosterId()),
@@ -85,8 +92,9 @@ public class TeamProfiler {
         return averages;
     }
 
-    private record Team(RosterSnapshot roster, List<RatedPlayer> players,
-            List<RatedPlayer> lineup) {
+    /** @param points each usable player's per-game average, which sets the best lineup */
+    private record Team(RosterSnapshot roster, Map<String, Double> points,
+            List<RatedPlayer> players, List<RatedPlayer> lineup) {
 
         List<RatedPlayer> at(String position) {
             return players.stream().filter(player -> player.position().equals(position)).toList();
@@ -116,7 +124,8 @@ public class TeamProfiler {
                 .map(entry -> rated(roster, entry.getKey(), entry.getValue(),
                         starters.contains(entry.getKey()), scoring))
                 .toList();
-        return new Team(roster, players, players.stream().filter(RatedPlayer::starter).toList());
+        return new Team(roster, points, players,
+                players.stream().filter(RatedPlayer::starter).toList());
     }
 
     private static RatedPlayer rated(RosterSnapshot roster, String playerId, double perGame,
@@ -148,7 +157,7 @@ public class TeamProfiler {
     }
 
     private static Map<Integer, Map<String, PositionProfile>> positions(List<Team> teams,
-            List<Slot> slots) {
+            List<Slot> slots, Map<String, Integer> starting) {
         Map<Integer, Map<String, PositionProfile>> byTeam = new LinkedHashMap<>();
         teams.forEach(team -> byTeam.put(team.roster().rosterId(), new LinkedHashMap<>()));
         for (String position : LeagueProfile.POSITIONS) {
@@ -167,7 +176,7 @@ public class TeamProfiler {
                     .map(team -> average(team.at(position), 0, width)).toList();
             List<Double> depthAverages = teams.stream()
                     .map(team -> average(team.at(position), width, width)).toList();
-            double line = startableLine(teams, position);
+            double line = startableLine(teams, position, starting.getOrDefault(position, 0));
             for (int index = 0; index < teams.size(); index++) {
                 Team team = teams.get(index);
                 List<RatedPlayer> players = team.at(position);
@@ -186,15 +195,15 @@ public class TeamProfiler {
 
     /**
      * The per-game average of the last rostered player at a position who
-     * still makes a best lineup, counting every team's starters there:
-     * with twelve RBs starting across the league, the twelfth-best
-     * rostered RB sets the line.
+     * still makes a best lineup, with the league's starters there counted
+     * the way every replacement level counts them: with twelve RBs
+     * starting across the league, the twelfth-best rostered RB sets the
+     * line.
+     *
+     * @param starting the players starting at the position across the
+     *        league, as {@link LeagueStarters} counts them
      */
-    private static double startableLine(List<Team> teams, String position) {
-        long starting = teams.stream()
-                .flatMap(team -> team.lineup().stream())
-                .filter(player -> player.position().equals(position))
-                .count();
+    private static double startableLine(List<Team> teams, String position, int starting) {
         List<Double> pooled = teams.stream()
                 .flatMap(team -> team.at(position).stream())
                 .map(RatedPlayer::perGame)

@@ -217,11 +217,12 @@ class WaiverScenarioTest extends WireSeamTest {
                 .contains("you roster 2 quarterbacks");
         assertThat(board.facts()).doesNotContainKey("target6");
 
-        // The TE cutoff is 12, and the fixture projects 13 tight ends,
-        // so replacement is the twelfth of them rather than the worst.
+        // The league's best lineups start 12 tight ends, and the fixture
+        // projects 13, so replacement is the twelfth of them rather than
+        // the worst. They start 25 backs: one team's flex goes to a back.
         assertThat(board.facts().get("basis"))
                 .contains("TE replacement level is 5.5 points: the TE12 projection this week")
-                .contains("only 8 RBs are projected this week, fewer than the RB24 cutoff");
+                .contains("only 8 RBs are projected this week, fewer than the RB25 cutoff");
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))

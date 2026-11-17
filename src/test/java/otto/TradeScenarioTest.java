@@ -247,13 +247,14 @@ class TradeScenarioTest extends WireSeamTest {
 
     /**
      * TE Depth 06 projects 16.0 a week, so 48.0 over the three weeks
-     * left and 31.5 of that above the tight end replacement level of
-     * 16.5. A tight end is scarce (1.10) and he walks into the user's
-     * tight end slot (1.10), so he is worth 38.1 to the user. James Cook
-     * is worth 27.0 above the running back line, carries 1.05, and is
-     * only the first back off the user's own bench (1.00), so giving him
-     * up costs 28.4. The user nets 9.8, which is 25.6% of his larger
-     * side: a clear edge, and a clear edge states itself at High.
+     * left and 34.5 of that above the tight end replacement level of
+     * 13.5: the league's best lineups start 14 tight ends, two of them in
+     * flex spots. A tight end is scarce (1.10) and he walks into the
+     * user's tight end slot (1.10), so he is worth 41.7 to the user.
+     * James Cook is worth 27.0 above the running back line, carries 1.05,
+     * and is only the first back off the user's own bench (1.00), so
+     * giving him up costs 28.4. The user nets 13.4, which is 32.1% of his
+     * larger side: a clear edge, and a clear edge states itself at High.
      */
     @Test
     void aClearEdgePricesFourNumbersAndRidesAtHighConfidence() {
@@ -267,61 +268,58 @@ class TradeScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "clear edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "25.6%")))
+                .withRequestBody(containing(field("gap", "32.1%")))
                 .withRequestBody(containing(field("confidence", "HIGH")))
                 .withRequestBody(containing(field("restOfSeasonWeeks", "weeks 12 to 14")))
                 .withRequestBody(containing(field("restOfSeasonPoints", "48.0")))
-                .withRequestBody(containing(field("aboveReplacement", "31.5")))
+                .withRequestBody(containing(field("aboveReplacement", "34.5")))
                 .withRequestBody(containing(field("scarcity", "1.10")))
                 .withRequestBody(containing(field("rosterFit", "1.10")))
                 // Cook is neither an upgrade nor buried: he is the cover.
                 .withRequestBody(containing(field("rosterFit", "1.00")))
                 .withRequestBody(containing("is the first RB off that bench"))
                 // The user's own four numbers, and the partner's.
-                .withRequestBody(containing(field("net", "9.8")))
-                .withRequestBody(containing(field("net", "-6.9")))
-                .withRequestBody(containing(field("total", "38.1")))
+                .withRequestBody(containing(field("net", "13.4")))
+                .withRequestBody(containing(field("net", "-10.6")))
+                .withRequestBody(containing(field("total", "41.7")))
                 .withRequestBody(containing(field("total", "28.4")))
                 .withRequestBody(containing(field("total", "31.2"))));
     }
 
     /**
-     * The point of the four numbers. The user's fourth running back is
-     * buried behind James Cook on his own bench, so giving him up costs
-     * little; GridironGoblin starts him. GridironGoblin's second tight
-     * end only reaches the user's flex, and he walks into the user's
-     * empty tight end slot. Both managers come out ahead, which is why
-     * a trade happens at all, and Otto says so rather than warning the
-     * user off a deal that is good for him.
+     * The point of the four numbers. James Cook is only the first back
+     * off the user's bench, so giving him up costs little;
+     * GridironGoblin starts him. GridironGoblin's second tight end only
+     * reaches the user's flex, and he walks into the user's empty tight
+     * end slot. Both managers come out ahead, which is why a trade
+     * happens at all, and Otto says so rather than warning the user off a
+     * deal that is good for him.
      */
     @Test
     void aTradeCanBeGoodForBothTeamsAndTheAnswerSaysSo() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("TE Depth 10", "Josh Jacobs"),
+                trade("TE Depth 10", "James Cook"),
                 "You both win: he needs the back, you need the tight end.");
 
-        ask("Josh Jacobs to GridironGoblin for TE Depth 10?");
+        ask("James Cook to GridironGoblin for TE Depth 10?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing(field("verdict", "slight edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "16.7%")))
-                // The user is up 4.5 and the partner is up 0.5: both nets
-                // are positive at once, which the mirror model could not
-                // ever produce.
-                .withRequestBody(containing(field("net", "4.5")))
-                .withRequestBody(containing(field("net", "0.5")))
+                .withRequestBody(containing(field("gap", "8.1%")))
+                // The user is up 2.5 and the partner is up 0.3: both nets
+                // are positive at once.
+                .withRequestBody(containing(field("net", "2.5")))
+                .withRequestBody(containing(field("net", "0.3")))
                 .withRequestBody(containing(
                         "GridironGoblin gains from this too, which is why he would agree"))
-                // Jacobs is buried on the user's bench, so he is cheap to give.
-                .withRequestBody(containing(field("rosterFit", "0.90")))
-                .withRequestBody(containing("sits behind 1 better RB on that bench")));
+                .withRequestBody(containing("is the first RB off that bench")));
     }
 
     /**
      * The verdict is the user's alone. This trade costs GridironGoblin
-     * 7.9 and gains the user 7.9, and Otto still reports it as a slight
+     * 3.5 and gains the user 3.5, and Otto still reports it as a slight
      * edge to the user with the partner's loss beside it as context. It
      * is not Otto's business to talk a user out of a trade another
      * manager is willing to make.
@@ -330,68 +328,68 @@ class TradeScenarioTest extends WireSeamTest {
     void theVerdictReadsTheUsersNetAloneAndNeverThePartners() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("QB Depth 05", "Justin Jefferson"),
+                trade("QB Depth 05", "Christian McCaffrey"),
                 "It leans your way, and he pays for it.");
 
-        ask("Jefferson for QB Depth 05, worth it?");
+        ask("McCaffrey for QB Depth 05, worth it?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "slight edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing(field("gap", "13.8%")))
+                .withRequestBody(containing(field("gap", "6.3%")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
                 // Superflex makes the quarterback the scarcest thing there is.
                 .withRequestBody(containing(field("scarcity", "1.20")))
-                .withRequestBody(containing(field("net", "7.9")))
-                .withRequestBody(containing(field("net", "-7.9")))
+                .withRequestBody(containing(field("net", "3.5")))
+                .withRequestBody(containing(field("net", "-3.5")))
                 .withRequestBody(containing(
                         "GridironGoblin loses on this, so he has a reason to say no"))
                 .withRequestBody(containing("The verdict is yours alone")));
     }
 
     /**
-     * CeeDee Lamb is worth 36.0 above the receiver line and RB Depth 08
-     * 33.6 above the running back one, and both start for the team that
-     * would hold them. A running back is scarcer, which closes the gap
-     * to 2.0%: inside the even band, so the answer is a coin flip with
-     * the lean stated and no more.
+     * Justin Jefferson for QB Depth 05: the quarterback's Superflex
+     * scarcity all but closes the gap to the best receiver in the
+     * league, leaving 1.2%. That is inside the even band, so the answer
+     * is a coin flip with the lean stated and no more.
      */
     @Test
     void anEvenTradeIsACoinFlipWithTheLeanStated() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("RB Depth 08", "CeeDee Lamb"),
+                trade("QB Depth 05", "Justin Jefferson"),
                 "It is a coin flip that leans his way.");
 
-        ask("Lamb for RB Depth 08?");
+        ask("Jefferson for QB Depth 05?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "even")))
                 .withRequestBody(containing(field("favours", "GridironGoblin")))
-                .withRequestBody(containing(field("gap", "2.0%")))
+                .withRequestBody(containing(field("gap", "1.2%")))
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
-                .withRequestBody(containing(field("net", "-0.8")))
+                .withRequestBody(containing(field("net", "-0.7")))
                 .withRequestBody(containing("which is a coin flip")));
     }
 
     /**
      * A player who projects below Replacement Level is worth nothing in
      * a trade: the manager can claim that player off the waiver wire
-     * without giving anything up. TE Depth 13 projects 15.0 over the
-     * three weeks left, under the 16.5 a free agent tight end is worth,
-     * so he prices at zero however he would fit.
+     * without giving anything up. RB Depth 25 projects 9.0 over the
+     * three weeks left, no more than the 25th running back, the last one
+     * the league's best lineups start, so he prices at zero however he
+     * would fit.
      */
     @Test
     void aPlayerBelowReplacementLevelIsWorthNothingInATrade() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
-                trade("TE Depth 13", "Tyler Lockett"),
+                trade("RB Depth 25", "Tyler Lockett"),
                 "He is free on the wire. Do not pay for him.");
 
-        ask("Lockett for TE Depth 13?");
+        ask("Lockett for RB Depth 25?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("restOfSeasonPoints", "15.0")))
+                .withRequestBody(containing(field("restOfSeasonPoints", "9.0")))
                 .withRequestBody(containing(field("aboveReplacement", "0.0")))
                 .withRequestBody(containing(field("value", "0.0")))
                 .withRequestBody(containing(field("favours", "GridironGoblin"))));
@@ -464,7 +462,7 @@ class TradeScenarioTest extends WireSeamTest {
         // money itself reaches no field of the answer. The raw words stay
         // visible only where the model quoted its own tool call back.
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(field("gap", "25.6%")))
+                .withRequestBody(containing(field("gap", "32.1%")))
                 .withRequestBody(containing(field("total", "28.4")))
                 .withRequestBody(notContaining(field("kind", "FAAB")))
                 .withRequestBody(notContaining(field("asset", "$20 FAAB")))
@@ -475,8 +473,8 @@ class TradeScenarioTest extends WireSeamTest {
      * A bye scores nothing, so a player with a bye left in the season is
      * worth less than the same player without one. Kansas City sit out
      * week 14 in this fixture, which takes Travis Kelce from 36.0 to
-     * 24.0 over the three weeks left, and from 19.5 above the tight end
-     * line to 7.5.
+     * 24.0 over the three weeks left, and from 22.5 above the tight end
+     * line to 10.5.
      */
     @Test
     void aByeWeekCountsZeroTowardsTheRestOfTheSeason() {
@@ -495,7 +493,7 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("restOfSeasonPoints", "24.0")))
-                .withRequestBody(containing(field("aboveReplacement", "7.5")))
+                .withRequestBody(containing(field("aboveReplacement", "10.5")))
                 .withRequestBody(containing(field("byes", "on bye in week 14")))
                 .withRequestBody(containing("a bye week counting zero")));
     }
@@ -547,7 +545,7 @@ class TradeScenarioTest extends WireSeamTest {
         ask("does GridironGoblin need anything I have?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("but you are no deeper there than he is"))
+                .withRequestBody(notContaining("reason to pay for"))
                 .withRequestBody(containing("Yours to spend: Deep at RB")));
     }
 
@@ -694,10 +692,10 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     /**
-     * A one-quarterback league fills one quarterback slot a team, so
-     * only ten quarterbacks start in a ten-team league. QB Depth 05 is
-     * priced against the tenth quarterback, not the twenty-fourth, and
-     * carries no Superflex premium.
+     * A one-quarterback league fills one quarterback slot a team. The
+     * snapshot holds twelve rosters, so twelve quarterbacks start and QB
+     * Depth 05 is priced against the twelfth, not the twenty-third a
+     * Superflex lineup would start, and carries no Superflex premium.
      */
     @Test
     void aOneQuarterbackLeagueDoesNotPriceQuarterbacksLikeSuperflex() {
@@ -710,18 +708,20 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(notContaining(field("scarcity", "1.20")))
-                .withRequestBody(containing("ranks 10th among QBs"))
+                .withRequestBody(containing("ranks 12th among QBs"))
                 .withRequestBody(containing("only one quarterback")));
     }
 
     /**
      * GridironGoblin holds QB Depth 05, who projects 18.0 a week, and QB
-     * Depth 20, who projects 8.0. This twelve-team Superflex league fills
-     * 24 quarterback slots, so the 24th quarterback's 3.5 is replacement
-     * and both of his quarterbacks are startable.
+     * Depth 20, who projects 8.0. In this twelve-team Superflex league
+     * every team but his starts two quarterbacks; his best lineup puts a
+     * receiver in the Superflex spot over QB Depth 20. So 23 quarterbacks
+     * start, the 23rd quarterback's 4.0 is replacement, and both of his
+     * quarterbacks are still startable.
      */
     @Test
-    void aSuperflexLeaguesQuarterbackDepthCountsTheTwentyFourthQuarterbackAsReplacement() {
+    void aSuperflexLeaguesQuarterbackDepthCountsTheQuarterbacksItsBestLineupsStart() {
         snapshotOfTheLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_roster",
                 "{\"manager\":\"GridironGoblin\"}", "He has two startable quarterbacks.");
@@ -729,16 +729,16 @@ class TradeScenarioTest extends WireSeamTest {
         ask("what does GridironGoblin have?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(quarterbackDepth("3.5", 2))));
+                .withRequestBody(containing(quarterbackDepth("4.0", 2))));
     }
 
     /**
-     * The same roster in a ten-team league that starts one quarterback a
-     * team: only ten quarterbacks start, so the tenth one's 10.5 is
-     * replacement and QB Depth 20 falls below it.
+     * The same rosters in a league that starts one quarterback a team:
+     * each of the twelve rosters starts one, so the twelfth quarterback's
+     * 9.5 is replacement and QB Depth 20 falls below it.
      */
     @Test
-    void aOneQuarterbackLeaguesQuarterbackDepthCountsTheTenthQuarterbackAsReplacement() {
+    void aOneQuarterbackLeaguesQuarterbackDepthCountsOneStartingQuarterbackATeam() {
         snapshotOfTheLeagueAs("sleeper/league-market-1qb-half-ppr.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_roster",
                 "{\"manager\":\"GridironGoblin\"}", "He has one startable quarterback.");
@@ -746,7 +746,7 @@ class TradeScenarioTest extends WireSeamTest {
         ask("what does GridironGoblin have?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(quarterbackDepth("10.5", 1))));
+                .withRequestBody(containing(quarterbackDepth("9.5", 1))));
     }
 
     /** The quarterback line of a team's depth, as it appears inside the chat request. */
@@ -937,4 +937,5 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(field("confidence", "MEDIUM")))
                 .withRequestBody(containing("isn't a trade either manager could agree to")));
     }
+
 }

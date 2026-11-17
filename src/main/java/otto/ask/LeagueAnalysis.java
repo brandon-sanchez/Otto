@@ -2,9 +2,13 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -13,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.lineup.LeagueStarters;
 import otto.lineup.PositionCutoffs;
 import otto.lineup.PositionRanking;
 import otto.lineup.PositionRankings;
@@ -35,12 +40,14 @@ public class LeagueAnalysis {
     private final LineupPlanner planner;
     private final PositionRankings rankings;
     private final PositionCutoffs replacementCutoffs;
+    private final LeagueStarters starters;
 
     public LeagueAnalysis(LineupPlanner planner, PositionRankings rankings,
-            OttoProperties properties) {
+            OttoProperties properties, LeagueStarters starters) {
         this.planner = planner;
         this.rankings = rankings;
         this.replacementCutoffs = properties.replacementCutoffs();
+        this.starters = starters;
     }
 
     /** One line of the standings table. */
@@ -379,28 +386,65 @@ public class LeagueAnalysis {
     }
 
     /**
-     * Returns the rank Replacement Level is read at for this league: one
-     * player for every starting slot only this position can fill, as
-     * {@link LeagueShape} counts them.
+     * Returns the rank Replacement Level is read at for this league: the
+     * number of players at the position who start across the league when
+     * every team starts its best lineup this week, flex and Superflex
+     * spots included, as {@link #shape} counts them.
      *
-     * <p>A team's depth and the waiver board read the rank here, and a
-     * trade reads the same {@link LeagueShape} rank, so all three agree
-     * on what a free agent is worth. Otherwise the same player is worth
-     * two different things on the same afternoon.
+     * <p>A team's depth, the waiver board and a trade all read the rank
+     * from {@link #shape}, so all three agree on what a free agent is
+     * worth. Otherwise the same player is worth two different things on
+     * the same afternoon.
      *
-     * <p>When the league document lists no starting slot only this
-     * position fills, its lineup gives no rank, and the configured
-     * {@code otto.replacement-cutoffs} rank stands in. That is 0, no
-     * rank at all, for a position the cutoffs don't name, such as a
-     * kicker.
+     * <p>When neither a best lineup nor a starting slot gives the
+     * position a rank, the configured {@code otto.replacement-cutoffs}
+     * rank stands in. That is 0, no rank at all, for a position the
+     * cutoffs don't name, such as a kicker.
      */
     public int replacementRank(LeagueWeek league, String position) {
-        LeagueShape shape = LeagueShape.of(league.league(), league.rosters().size());
-        // Map.copyOf rejects a null key lookup, and a player the
-        // directory doesn't know carries no position.
-        return position != null && shape.slots().containsKey(position)
+        return replacementRank(shape(league), position);
+    }
+
+    private int replacementRank(LeagueShape shape, String position) {
+        return shape.ranks(position)
                 ? shape.replacementRank(position)
                 : replacementCutoffs.forPosition(position);
+    }
+
+    /**
+     * Returns the league's shape with each team's best lineup filled from
+     * this week's projections: active players only, IR and taxi left out
+     * because they cannot start. A team the snapshot holds no roster for
+     * counts as filling every slot it can only fill from free agents.
+     *
+     * @return the shape from the league's slots alone when no projection
+     *         table is read yet or no team has a projected player
+     */
+    public LeagueShape shape(LeagueWeek league) {
+        LeagueShape bySlots = LeagueShape.of(league.league(), league.rosters().size());
+        if (league.week().projections().isEmpty()) {
+            return bySlots;
+        }
+        List<Slot> slots = league.week().startingSlots().stream()
+                .filter(Slot::modelledExactly)
+                .toList();
+        Map<String, String> positions = new HashMap<>();
+        List<Map<String, Double>> teams = new ArrayList<>();
+        for (RosterSnapshot roster : league.rosters()) {
+            UserWeek team = new UserWeek(league.league(), roster, league.week());
+            Map<String, Double> points = new LinkedHashMap<>();
+            team.roster().players().stream()
+                    .filter(playerId -> !roster.reserve().contains(playerId)
+                            && !roster.taxi().contains(playerId))
+                    .forEach(playerId -> team.points(playerId)
+                            .ifPresent(projected -> points.put(playerId, projected)));
+            positions.putAll(team.positions());
+            teams.add(points);
+        }
+        teams.addAll(Collections.nCopies(Math.max(0, bySlots.teams() - teams.size()),
+                Map.<String, Double>of()));
+        Map<String, Integer> starting = starters.startersByPosition(slots, teams, positions);
+        return starting.isEmpty() ? bySlots : bySlots.withStarters(starting);
     }
 
     /**
@@ -448,11 +492,12 @@ public class LeagueAnalysis {
      * by the slot so the reader can see which one to attack.
      */
     private Depth depth(LeagueWeek league, UserWeek team, PositionRanking ranking) {
+        LeagueShape shape = shape(league);
         List<PositionDepth> positions = new ArrayList<>();
         List<String> strengths = new ArrayList<>();
         List<String> gaps = new ArrayList<>();
         for (String position : rankedPositions(team)) {
-            int rank = replacementRank(league, position);
+            int rank = replacementRank(shape, position);
             Optional<Double> replacement = ranking.pointsAtRank(position, rank);
             int startingSlots = dedicatedSlots(team, position);
             List<String> theirs = team.roster().players().stream()
@@ -495,12 +540,12 @@ public class LeagueAnalysis {
                 gaps.add("No %s cover on the bench above replacement".formatted(position));
             }
         }
-        gaps.addAll(slotGaps(league, team, ranking));
+        gaps.addAll(slotGaps(shape, team, ranking));
         return new Depth(positions, strengths, gaps);
     }
 
     /** Starting slots filled by a player who projects below replacement. */
-    private List<String> slotGaps(LeagueWeek league, UserWeek team, PositionRanking ranking) {
+    private List<String> slotGaps(LeagueShape shape, UserWeek team, PositionRanking ranking) {
         List<String> gaps = new ArrayList<>();
         for (int index = 0; index < team.slots().size(); index++) {
             Slot slot = team.slots().get(index);
@@ -511,7 +556,7 @@ public class LeagueAnalysis {
             }
             String position = team.position(playerId);
             Optional<Double> replacement = ranking.pointsAtRank(position,
-                    replacementRank(league, position));
+                    replacementRank(shape, position));
             Optional<Double> projected = team.points(playerId);
             if (replacement.isEmpty() || projected.isEmpty()
                     || projected.orElseThrow() >= replacement.orElseThrow()) {

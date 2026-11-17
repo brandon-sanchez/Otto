@@ -119,8 +119,9 @@ public class TeamDirectionAnswers {
      * Labels every team in the league and has the model explain it.
      *
      * <p>Side effects: the market value reads, one or two model calls,
-     * and one Decision Record of kind {@link RunKind#TEAM_DIRECTIONS}
-     * whatever the outcome.
+     * one Decision Record of kind {@link RunKind#TEAM_DIRECTIONS}
+     * whatever the outcome, and, once an answer that asks whether the
+     * user is rebuilding reaches him, a note that the question was asked.
      *
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
@@ -135,7 +136,7 @@ public class TeamDirectionAnswers {
                         "no game has been played yet and I couldn't read market values, so "
                                 + "I have nothing to judge the teams by: " + none.reason());
                 case SourceResult.Ok<LeagueDirections> read ->
-                    explain(ok.value().league(), read.value(), now, delivery);
+                    explain(ok.value(), read.value(), now, delivery);
             };
         };
     }
@@ -171,12 +172,16 @@ public class TeamDirectionAnswers {
         };
     }
 
-    private ToolAnswer<Answer> explain(SleeperAdapter.League league, LeagueDirections read,
+    private ToolAnswer<Answer> explain(LeagueWeek leagueWeek, LeagueDirections read,
             Instant now, CheckedAnswers.Delivery delivery) {
+        SleeperAdapter.League league = leagueWeek.league();
         EvidenceBundle bundle = TeamDirectionEvidence.bundle(league.name(), read, MAX_LENGTH,
                 now);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
         Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
+        if (outcome instanceof Outcome.Sent || outcome instanceof Outcome.HandedToChat) {
+            read.user().ifPresent(user -> directions.asked(leagueWeek, user));
+        }
         return switch (outcome) {
             case Outcome.Sent sent -> ToolAnswer.of(new Answer(league.name(), sent.message()));
             case Outcome.HandedToChat handed ->

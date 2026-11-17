@@ -51,11 +51,11 @@ final class TeamDirectionEvidence {
         summary.put("teams", "%d teams with players".formatted(league.teams().size()));
         summary.put("games", "%d games played".formatted(league.gamesPlayed()));
         summary.put("basis", league.market().isPresent()
-                ? "each label weighs the team's summed market value against its record and "
-                        + "points scored, and the record and points count for more as the "
-                        + "season goes on"
-                : "I couldn't read market values, so each label rests on the team's record "
-                        + "and points scored alone");
+                ? "each label weighs the team's summed market value against how far it "
+                        + "sits from a playoff spot and its points scored, and the standings "
+                        + "and points count for more as the season goes on"
+                : "I couldn't read market values, so each label rests on how far the team "
+                        + "sits from a playoff spot and its points scored alone");
         return summary;
     }
 
@@ -65,7 +65,7 @@ final class TeamDirectionEvidence {
         facts.put("direction", switch (team.basis()) {
             case MEASURED -> team.direction().words();
             case CHOSEN -> team.direction().words() + ", as you told me";
-            case AWAITING_CONFIRMATION -> team.direction().words()
+            case AWAITING_CONFIRMATION, UNANSWERED -> team.direction().words()
                     + " until you tell me otherwise";
         });
         if (team.basis() != TeamDirection.Basis.MEASURED) {

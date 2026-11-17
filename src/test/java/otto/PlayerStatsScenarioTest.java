@@ -144,7 +144,7 @@ class PlayerStatsScenarioTest extends WireSeamTest {
                 LAST_WEEK);
 
         theEvidenceHolds("snap percentage", "week 5 of 2026", "52", "78%", "7 of BAL's 31",
-                "23%", fact("rank", "2nd"), "of 3 tight ends with at least 2 games");
+                "23%", fact("rank", "2nd"), fact("population", "of 3 tight ends"));
         theUserReadsOnly(LAST_WEEK);
 
         askAndAnswer("What about the week before?",

@@ -1,0 +1,25 @@
+player_id,player_name,player_display_name,position,position_group,season,week,season_type,team,opponent_team,completions,attempts,passing_yards,passing_tds,passing_interceptions,passing_2pt_conversions,carries,rushing_yards,rushing_tds,rushing_2pt_conversions,receptions,targets,receiving_yards,receiving_tds,receiving_2pt_conversions,fumbles_lost_total,target_share,fantasy_points,fantasy_points_ppr,air_yards_share,wopr,racr,receiving_epa
+00-0044001,Leader TE 1,Leader TE 1,TE,TE,2026,1,REG,CIN,NYJ,0,0,0,0,0,0,0,0,0,0,9,12,108,0,0,0,NA,NA,NA,0.30,0.8,NA,NA
+00-0044001,Leader TE 1,Leader TE 1,TE,TE,2026,2,REG,CIN,NYJ,0,0,0,0,0,0,0,0,0,0,9,12,108,0,0,0,NA,NA,NA,0.30,0.82,NA,NA
+00-0044002,Leader WR 2,Leader WR 2,WR,WR,2026,1,REG,KC,NYJ,0,0,0,0,0,0,0,0,0,0,9,12,108,0,0,0,NA,NA,NA,0.30,0.75,NA,NA
+00-0044002,Leader WR 2,Leader WR 2,WR,WR,2026,2,REG,KC,NYJ,0,0,0,0,0,0,0,0,0,0,9,12,108,0,0,0,NA,NA,NA,0.30,0.77,NA,NA
+00-0044003,Leader WR 3,Leader WR 3,WR,WR,2026,1,REG,BUF,NYJ,0,0,0,0,0,0,0,0,0,0,8,11,99,0,0,0,NA,NA,NA,0.30,0.7,NA,NA
+00-0044003,Leader WR 3,Leader WR 3,WR,WR,2026,2,REG,BUF,NYJ,0,0,0,0,0,0,0,0,0,0,8,11,99,0,0,0,NA,NA,NA,0.30,0.72,NA,NA
+00-0044004,Leader TE 4,Leader TE 4,TE,TE,2026,1,REG,MIA,NYJ,0,0,0,0,0,0,0,0,0,0,8,11,99,0,0,0,NA,NA,NA,0.30,0.65,NA,NA
+00-0044004,Leader TE 4,Leader TE 4,TE,TE,2026,2,REG,MIA,NYJ,0,0,0,0,0,0,0,0,0,0,8,11,99,0,0,0,NA,NA,NA,0.30,0.67,NA,NA
+00-0044005,Leader WR 5,Leader WR 5,WR,WR,2026,1,REG,DAL,NYJ,0,0,0,0,0,0,0,0,0,0,7,10,90,0,0,0,NA,NA,NA,0.30,0.6,NA,NA
+00-0044005,Leader WR 5,Leader WR 5,WR,WR,2026,2,REG,DAL,NYJ,0,0,0,0,0,0,0,0,0,0,7,10,90,0,0,0,NA,NA,NA,0.30,0.62,NA,NA
+00-0044006,Leader WR 6,Leader WR 6,WR,WR,2026,1,REG,PHI,NYJ,0,0,0,0,0,0,0,0,0,0,7,10,90,0,0,0,NA,NA,NA,0.30,0.55,NA,NA
+00-0044006,Leader WR 6,Leader WR 6,WR,WR,2026,2,REG,PHI,NYJ,0,0,0,0,0,0,0,0,0,0,7,10,90,0,0,0,NA,NA,NA,0.30,0.57,NA,NA
+00-0044007,Leader TE 7,Leader TE 7,TE,TE,2026,1,REG,CIN,NYJ,0,0,0,0,0,0,0,0,0,0,6,9,81,0,0,0,NA,NA,NA,0.30,0.5,NA,NA
+00-0044007,Leader TE 7,Leader TE 7,TE,TE,2026,2,REG,CIN,NYJ,0,0,0,0,0,0,0,0,0,0,6,9,81,0,0,0,NA,NA,NA,0.30,0.52,NA,NA
+00-0044008,Leader WR 8,Leader WR 8,WR,WR,2026,1,REG,KC,NYJ,0,0,0,0,0,0,0,0,0,0,6,9,81,0,0,0,NA,NA,NA,0.30,0.45,NA,NA
+00-0044008,Leader WR 8,Leader WR 8,WR,WR,2026,2,REG,KC,NYJ,0,0,0,0,0,0,0,0,0,0,6,9,81,0,0,0,NA,NA,NA,0.30,0.47,NA,NA
+00-0044009,Leader WR 9,Leader WR 9,WR,WR,2026,1,REG,BUF,NYJ,0,0,0,0,0,0,0,0,0,0,5,8,72,0,0,0,NA,NA,NA,0.30,0.4,NA,NA
+00-0044009,Leader WR 9,Leader WR 9,WR,WR,2026,2,REG,BUF,NYJ,0,0,0,0,0,0,0,0,0,0,5,8,72,0,0,0,NA,NA,NA,0.30,0.42,NA,NA
+00-0044010,Leader TE 10,Leader TE 10,TE,TE,2026,1,REG,MIA,NYJ,0,0,0,0,0,0,0,0,0,0,5,8,72,0,0,0,NA,NA,NA,0.30,0.35,NA,NA
+00-0044010,Leader TE 10,Leader TE 10,TE,TE,2026,2,REG,MIA,NYJ,0,0,0,0,0,0,0,0,0,0,5,8,72,0,0,0,NA,NA,NA,0.30,0.37,NA,NA
+00-0044011,Leader WR 11,Leader WR 11,WR,WR,2026,1,REG,DAL,NYJ,0,0,0,0,0,0,0,0,0,0,4,7,63,0,0,0,NA,NA,NA,0.30,0.3,NA,NA
+00-0044011,Leader WR 11,Leader WR 11,WR,WR,2026,2,REG,DAL,NYJ,0,0,0,0,0,0,0,0,0,0,4,7,63,0,0,0,NA,NA,NA,0.30,0.32,NA,NA
+00-0044012,Leader WR 12,Leader WR 12,WR,WR,2026,1,REG,PHI,NYJ,0,0,0,0,0,0,0,0,0,0,4,7,63,0,0,0,NA,NA,NA,0.30,0.25,NA,NA
+00-0044012,Leader WR 12,Leader WR 12,WR,WR,2026,2,REG,PHI,NYJ,0,0,0,0,0,0,0,0,0,0,4,7,63,0,0,0,NA,NA,NA,0.30,0.27,NA,NA

@@ -45,9 +45,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * with 1400 points, EndZoneEnvy 6-5 with 1250, WaiverWizard 5-6 with
  * 1100 and the user 2-9 with 950. On the market EndZoneEnvy's roster is
  * worth 10000, WaiverWizard's 9000, GridironGoblin's 6000 and the user's
- * 1000, his two priced players being 31.2 and 27.4 years old. With most
- * of the season played, the record and points weigh a little more than
- * the market: GridironGoblin and EndZoneEnvy are contending, WaiverWizard
+ * 1000, his two priced players being 31.2 and 27.4 years old. The
+ * eight other teams are all 6-5, and 6 of the 12 make the playoffs. With
+ * most of the season played, the playoff race and points weigh a little
+ * more than the market: GridironGoblin and EndZoneEnvy are contending, WaiverWizard
  * is in the middle, and the user's numbers say rebuilding.
  */
 class TeamDirectionScenarioTest extends WireSeamTest {
@@ -81,12 +82,17 @@ class TeamDirectionScenarioTest extends WireSeamTest {
     private OttoProperties properties;
 
     private void leagueInWeek12(String leagueFixture) {
+        leagueInWeek12(leagueFixture, "sleeper/rosters-direction.json");
+    }
+
+    private void leagueInWeek12(String leagueFixture, String rostersFixture) {
         clock.set(WEEK_12);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-team.json", "players-v1");
-        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture, "league-v1");
-        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH,
-                "sleeper/rosters-direction.json", "rosters-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, leagueFixture,
+                "league-" + leagueFixture);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, rostersFixture,
+                "rosters-" + rostersFixture);
         SleeperStubs.stubJson(sleeper, SleeperStubs.USERS_PATH,
                 "sleeper/users-league.json", "users-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.STATE_PATH,
@@ -202,20 +208,24 @@ class TeamDirectionScenarioTest extends WireSeamTest {
         assertThat(evidence.get("team-2"))
                 .containsEntry("manager", "GridironGoblin")
                 .containsEntry("direction", "contending")
-                .containsEntry("reason", "9-2 with the most points and the 3rd-most valuable "
+                .containsEntry("reason", "9-2, 3 games clear of the first team out of the 6 playoff spots, "
+                        + "with the most points and the 3rd-most valuable "
                         + "roster");
         assertThat(evidence.get("team-4"))
                 .containsEntry("direction", "contending")
-                .containsEntry("reason", "6-5 with the 2nd-most points and the most valuable "
+                .containsEntry("reason", "6-5, level on wins with the first team out of the 6 "
+                        + "playoff spots, with the 2nd-most points and the most valuable "
                         + "roster");
         assertThat(evidence.get("team-3"))
                 .containsEntry("direction", "in the middle")
-                .containsEntry("reason", "5-6 with the 3rd-most points and the 2nd-most "
+                .containsEntry("reason", "5-6, a game out of the last of the 6 playoff spots, "
+                        + "with the 3rd-most points and the 2nd-most "
                         + "valuable roster");
         assertThat(evidence.get("team-1"))
                 .containsEntry("manager", "you")
                 .containsEntry("direction", "rebuilding")
-                .containsEntry("reason", "2-9 with the fewest points and the least valuable "
+                .containsEntry("reason", "2-9, 4 games out of the last of the 6 playoff spots, "
+                        + "with the fewest points and the least valuable "
                         + "roster")
                 .containsEntry("marketValue",
                         "1000 in market value for a 12-team Superflex PPR redraft league")
@@ -250,7 +260,8 @@ class TeamDirectionScenarioTest extends WireSeamTest {
                 .containsEntry("measured", "rebuilding")
                 .containsEntry("question", "Your numbers look like a rebuilding team. Are "
                         + "you rebuilding? I won't treat you that way until you say so.")
-                .containsEntry("reason", "2-9 with the fewest points and the least valuable "
+                .containsEntry("reason", "2-9, 4 games out of the last of the 6 playoff spots, "
+                        + "with the fewest points and the least valuable "
                         + "roster, and its most valuable players average 29.3 years old")
                 .containsEntry("marketValue",
                         "1000 in market value for a 12-team Superflex PPR dynasty league");
@@ -316,7 +327,8 @@ class TeamDirectionScenarioTest extends WireSeamTest {
         assertThat(evidence(RunKind.TEAM_WEAKNESSES).get("direction"))
                 .containsEntry("direction", "contending, as you told me")
                 .containsEntry("measured", "rebuilding")
-                .containsEntry("reason", "2-9 with the fewest points and the least valuable "
+                .containsEntry("reason", "2-9, 4 games out of the last of the 6 playoff spots, "
+                        + "with the fewest points and the least valuable "
                         + "roster");
 
         nextQuestion();
@@ -336,7 +348,8 @@ class TeamDirectionScenarioTest extends WireSeamTest {
 
         assertThat(evidence(RunKind.TEAM_WEAKNESSES).get("direction"))
                 .containsEntry("direction", "rebuilding")
-                .containsEntry("reason", "2-9 with the fewest points and the least valuable "
+                .containsEntry("reason", "2-9, 4 games out of the last of the 6 playoff spots, "
+                        + "with the fewest points and the least valuable "
                         + "roster");
     }
 
@@ -354,5 +367,100 @@ class TeamDirectionScenarioTest extends WireSeamTest {
         askWhoIsContending();
         assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1"))
                 .containsEntry("direction", "rebuilding");
+    }
+
+    /**
+     * WaiverWizard is 5-5 with four games left, and no market list can be
+     * read, so his label rests on where he stands and his points, 3rd of
+     * the four teams with players. When 6 of the 12 teams make the
+     * playoffs he is a game out of the last spot and in the middle.
+     */
+    @Test
+    void fiveAndFiveAGameOutOfSixPlayoffSpotsIsInTheMiddle() {
+        leagueInWeek12("sleeper/league-in-season.json", "sleeper/rosters-direction-five-five.json");
+
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-3"))
+                .containsEntry("direction", "in the middle")
+                .containsEntry("reason", "5-5, a game out of the last of the 6 playoff spots, "
+                        + "with the 3rd-most points");
+    }
+
+    /** The same 5-5 team when only 4 teams make the playoffs is two games out and rebuilding. */
+    @Test
+    void fiveAndFiveTwoGamesOutOfFourPlayoffSpotsIsRebuilding() {
+        leagueInWeek12("sleeper/league-in-season-four-playoff-teams.json",
+                "sleeper/rosters-direction-five-five.json");
+
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-3"))
+                .containsEntry("direction", "rebuilding")
+                .containsEntry("reason", "5-5, 2 games out of the last of the 4 playoff spots, "
+                        + "with the 3rd-most points");
+    }
+
+    /** Moves on to a later question, so its Decision Record is the newest one. */
+    private void later() {
+        nextQuestion();
+        clock.advance(Duration.ofMinutes(10));
+    }
+
+    /** The league's rosters change, and a Check reads them before the next question. */
+    private void rostersBecome(String rostersFixture) {
+        SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, rostersFixture,
+                "rosters-" + rostersFixture);
+        clock.advance(Duration.ofMinutes(10));
+        OutboundStubs.llmPhrases(llm, "A quiet week.");
+        checkRunner.runCheck();
+        later();
+    }
+
+    @Test
+    void theDynastyRebuildingQuestionIsAskedOnceASeason() {
+        dynastyLeague();
+        askWhoIsContending();
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1")).containsKey("question");
+
+        later();
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1"))
+                .containsEntry("direction", "in the middle until you tell me otherwise")
+                .containsEntry("measured", "rebuilding")
+                .doesNotContainKey("question");
+
+        later();
+        askForWeaknesses();
+
+        assertThat(evidence(RunKind.TEAM_WEAKNESSES).get("direction"))
+                .containsEntry("direction", "in the middle until you tell me otherwise")
+                .doesNotContainKey("question");
+    }
+
+    /**
+     * After the question goes unanswered, the user's team swings two
+     * tiers to contending, then falls back to rebuilding: that is a big
+     * enough change to ask again.
+     */
+    @Test
+    void aSwingToContendingAndBackAsksTheRebuildingQuestionAgain() {
+        dynastyLeague();
+        askWhoIsContending();
+        later();
+
+        rostersBecome("sleeper/rosters-direction-user-on-top.json");
+        askWhoIsContending();
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1"))
+                .containsEntry("direction", "contending")
+                .doesNotContainKey("question");
+
+        rostersBecome("sleeper/rosters-direction.json");
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1"))
+                .containsEntry("measured", "rebuilding")
+                .containsKey("question");
     }
 }

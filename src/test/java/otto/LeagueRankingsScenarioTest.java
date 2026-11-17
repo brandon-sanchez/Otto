@@ -68,7 +68,7 @@ class LeagueRankingsScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void tightEndsRankByTargetsPerGameWithTheSmallSampleLeftOut() {
+    void tightEndsRankByTargetsPerGameHoweverSmallTheirSample() {
         feedsReady();
         NflverseStubs.stubCsv(nflverse, NflverseStubs.STATS_2026_PATH,
                 "nflverse/stats-player-week-rankings.csv");
@@ -77,21 +77,20 @@ class LeagueRankingsScenarioTest extends WireSeamTest {
         Ranking tightEnds = rankings().players(PlayerStat.TARGETS_PER_GAME, Position.TE).orElseThrow();
 
         assertThat(tightEnds.ranked()).extracting(Ranking.Placement::id)
-                .containsExactly(PHI_TE, SF_TE, BUF_TE, ATL_TE);
+                .containsExactly(PHI_TE, SF_TE, BUF_TE, ATL_TE, GB_TE);
         assertThat(tightEnds.placement(PHI_TE).orElseThrow().value()).isEqualTo(11.0);
         assertThat(tightEnds.placement(SF_TE).orElseThrow().rank()).isEqualTo(2);
         assertThat(tightEnds.placement(ATL_TE).orElseThrow().rank()).isEqualTo(3);
         assertThat(tightEnds.placement(BUF_TE).orElseThrow().rank()).isEqualTo(3);
-        assertThat(tightEnds.placement(BUF_TE).orElseThrow().rankFromBottom()).isEqualTo(1);
-        assertThat(tightEnds.placement(GB_TE)).isEmpty();
-        assertThat(tightEnds.unranked()).contains(new Ranking.Unranked(
-                GB_TE, "Tight End GB", Ranking.Reason.BELOW_MINIMUM, 9));
+        assertThat(tightEnds.placement(BUF_TE).orElseThrow().rankFromBottom()).isEqualTo(2);
+        assertThat(tightEnds.placement(GB_TE).orElseThrow().sample()).isEqualTo(9);
+        assertThat(tightEnds.placement(GB_TE).orElseThrow().rank()).isEqualTo(5);
         // Gadsden is in the healthy play-by-play, but his team's weeks are
         // not in these weekly stats, so his targets are unknown.
         assertThat(tightEnds.unranked()).contains(new Ranking.Unranked(
                 GADSDEN, null, Ranking.Reason.MISSING, 0));
         assertThat(tightEnds.population().describe())
-                .isEqualTo("of 4 tight ends with at least 10 targets");
+                .isEqualTo("of 5 tight ends");
         assertThat(tightEnds.weeks()).isEqualTo(new Ranking.Weeks("2026", false, 1, 3));
         assertThat(tightEnds.stat().direction()).isEqualTo(Direction.HIGHER_IS_BETTER);
     }
@@ -176,7 +175,7 @@ class LeagueRankingsScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void runningBacksRankByYardsBeforeContactPerCarryOnceTheyHaveTwentyCarries() {
+    void runningBacksRankByYardsBeforeContactPerCarryFromTheirFirstCarry() {
         feedsReady();
         feeds.updateIfDue();
 
@@ -185,14 +184,13 @@ class LeagueRankingsScenarioTest extends WireSeamTest {
 
         assertThat(backs.ranked()).extracting(Ranking.Placement::name).containsExactly(
                 "Saquon Barkley", "Bijan Robinson", "James Cook", "Christian McCaffrey",
-                "Josh Jacobs");
+                "Isaac Guerendo", "Josh Jacobs");
         assertThat(backs.placement(BARKLEY).orElseThrow().value())
                 .isCloseTo(58.0 / 22, within(1e-9));
         assertThat(backs.placement(JACOBS).orElseThrow().sample()).isEqualTo(51);
-        assertThat(backs.unranked()).containsExactly(new Ranking.Unranked(
-                GUERENDO, "Isaac Guerendo", Ranking.Reason.BELOW_MINIMUM, 6));
-        assertThat(backs.population().describe())
-                .isEqualTo("of 5 running backs with at least 20 carries");
+        assertThat(backs.placement(GUERENDO).orElseThrow().sample()).isEqualTo(6);
+        assertThat(backs.unranked()).isEmpty();
+        assertThat(backs.population().describe()).isEqualTo("of 6 running backs");
         assertThat(backs.unmatched()).as("carriers the register cannot place")
                 .hasSize(12)
                 .contains("Running Back ARI");
@@ -200,19 +198,20 @@ class LeagueRankingsScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void quarterbacksRankByPressuredRateOnceTheyHaveFiftyDropbacks() {
+    void quarterbacksRankByPressuredRateFromTheirFirstDropback() {
         feedsReady();
         feeds.updateIfDue();
 
         Ranking passers = rankings().players(PlayerStat.PRESSURED_RATE, Position.QB).orElseThrow();
 
         assertThat(passers.ranked()).extracting(Ranking.Placement::name)
-                .containsExactly("Jordan Love", "Josh Allen", "Brock Purdy");
+                .containsExactly("Jordan Love", "Matthew Stafford", "Josh Allen", "Cooper Rush",
+                        "Brock Purdy");
         assertThat(passers.placement(LOVE).orElseThrow().value())
                 .isCloseTo(37.0 / 132, within(1e-9));
         assertThat(passers.placement(PURDY).orElseThrow().sample()).isEqualTo(89);
+        assertThat(passers.placement(RUSH).orElseThrow().sample()).isEqualTo(46);
         assertThat(passers.unranked()).extracting(Ranking.Unranked::id)
-                .contains(RUSH)
                 .doesNotContain("JohnCa02");
         assertThat(passers.stat().direction()).isEqualTo(Direction.HIGHER_IS_WORSE);
         assertThat(passers.unmatched()).contains("Jared Goff").doesNotContain("Brock Purdy");

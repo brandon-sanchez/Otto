@@ -28,7 +28,9 @@ import otto.matchup.TeamNames;
  * Answers "where does he rank" for any stat {@link LeagueRankings} ranks:
  * one player among his position, one defense against a position, or one
  * team's remaining schedule for a position,
- * with the top and bottom of the table for context. Every rank is
+ * with the top and bottom of the table for context. A player's rank
+ * among every position comes with it when he is near the top of the
+ * whole league. Every rank is
  * written the way the matchup evidence writes it, so the chat and the
  * advice never disagree on which way a rank runs.
  *
@@ -59,9 +61,12 @@ public class LeagueRankLookup {
      * @param matchup the rank's tone for the fantasy player, such as
      *        "red: a hard matchup for running backs"
      * @param sample how much the value rests on, such as "41 dropbacks"
+     * @param quoted a player's rank as it is quoted, with its sample for a
+     *        per-attempt stat, such as "1st in yards before contact per
+     *        carry, on 2 carries"; null for a defense or a schedule
      */
     public record Entry(String name, String value, String rank, String rankFromBottom,
-            String matchup, String sample) {
+            String matchup, String sample, String quoted) {
     }
 
     /**
@@ -76,14 +81,17 @@ public class LeagueRankLookup {
      *        about or it has no rank
      * @param askedNote why the entry asked about has no rank, or null
      *        when it has one or none was asked about
+     * @param askedOverall where the player asked about ranks among every
+     *        position, such as "3rd of 145 players in targets per game, as
+     *        a running back"; null unless he is in the league's top 10
      * @param top the first {@value #TOP} entries
      * @param bottom the last {@value #BOTTOM} entries, the last one last
      * @param unmatched how many source entries the player register cannot
      *        place, so are in no population
      */
     public record Answer(String stat, String position, String population, String rankMeaning,
-            String weeks, Entry asked, String askedNote, List<Entry> top, List<Entry> bottom,
-            int unmatched) {
+            String weeks, Entry asked, String askedNote, String askedOverall, List<Entry> top,
+            List<Entry> bottom, int unmatched) {
 
         public Answer {
             top = List.copyOf(top);
@@ -131,14 +139,28 @@ public class LeagueRankLookup {
             return ToolAnswer.unavailable("I have no stored figures to rank %s on yet."
                     .formatted(ranked.get().label()));
         }
-        return ToolAnswer.of(answer(ranking.get(), who));
+        return ToolAnswer.of(answer(rankings, ranking.get(), who));
     }
 
-    private static Answer answer(Ranking ranking, String who) {
+    /**
+     * Lists the leaders in one player stat, by position or across every
+     * position, over the season or a span of weeks.
+     *
+     * @return the list written for the user, or why there is none
+     * @see StatLeaders#list
+     */
+    public ToolAnswer<StatLeaders.Answer> leaders(String stat, String position, Integer count,
+            Integer fromWeek, Integer toWeek) {
+        return StatLeaders.list(sources.open().rankings(), stat, position, count, fromWeek,
+                toWeek);
+    }
+
+    private static Answer answer(LeagueRankings rankings, Ranking ranking, String who) {
         RankedStat stat = ranking.stat();
         List<Ranking.Placement> placements = ranking.ranked();
         Entry asked = null;
         String note = null;
+        String overall = null;
         if (who != null && !who.isBlank()) {
             List<String> matched = matching(ranking, who);
             if (matched.size() > 1) {
@@ -151,11 +173,13 @@ public class LeagueRankLookup {
                         .findFirst();
                 asked = found.map(placement -> entry(ranking, placement)).orElse(null);
                 note = found.isPresent() ? null : note(ranking, who, matched);
+                overall = found.flatMap(placement -> overall(rankings, ranking, placement))
+                        .orElse(null);
             }
         }
         return new Answer(RankWords.stat(stat, ranking.position()), ranking.position().name(),
                 ranking.population().describe(), RankWords.rankMeaning(stat, ranking.position()),
-                RankWords.weeks(ranking.weeks()), asked, note,
+                RankWords.weeks(ranking.weeks()), asked, note, overall,
                 placements.stream().limit(TOP).map(placement -> entry(ranking, placement))
                         .toList(),
                 placements.stream().skip(Math.max(TOP, placements.size() - BOTTOM))
@@ -208,13 +232,22 @@ public class LeagueRankLookup {
                 .orElse("%s is not in this ranking.".formatted(who));
     }
 
+    private static Optional<String> overall(LeagueRankings rankings, Ranking ranking,
+            Ranking.Placement placement) {
+        if (!(ranking.stat() instanceof PlayerStat stat)) {
+            return Optional.empty();
+        }
+        return rankings.notableOverall(stat, placement.id(), ranking.position());
+    }
+
     private static Entry entry(Ranking ranking, Ranking.Placement placement) {
         RankedStat stat = ranking.stat();
         return new Entry(placement.name() == null ? placement.id() : placement.name(),
                 RankWords.value(stat, placement.value()), Ordinal.of(placement.rank()),
                 Ordinal.fromBottom(placement.rankFromBottom()),
                 RankWords.tone(stat, ranking.position(), ranking.tone(placement)),
-                RankWords.count(placement.sample(), stat.sampleUnit()));
+                RankWords.count(placement.sample(), stat.sampleUnit()),
+                stat instanceof PlayerStat player ? RankWords.placed(player, placement) : null);
     }
 
     private static Optional<RankedStat> parse(String stat) {

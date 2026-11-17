@@ -64,15 +64,16 @@ times a positional scarcity multiplier, times a roster-fit factor:
 
 - Above Replacement Level. A player is priced against what the manager
   could have for nothing, not against zero: the projection at the
-  position's cutoff rank. The rank comes from the league's own
-  `roster_positions`, one player for every dedicated starting slot in
-  the league (`LeagueShape`). A Superflex slot counts as a quarterback
-  slot, because managers fill it with a quarterback whenever they have
-  one. A plain flex slot counts toward no position, because it takes
-  whichever back, receiver or tight end is left over. A 12-team league
-  with QB, SUPER_FLEX, two RB, two WR and one TE slot reads the 24th
-  QB, RB and WR and the 12th TE; a 10-team one-quarterback league reads
-  the 10th QB. That rank is read from the current week's
+  position's cutoff rank. The rank is the number of players at the
+  position who start across the league when every team starts its best
+  lineup, flex and Superflex spots included (`LeagueShape`, counted by
+  `LeagueStarters`), the same rank team depth and the waiver board
+  read. A 12-team league with QB, SUPER_FLEX, two RB, two WR and one TE
+  slot reads the 24th QB, RB and WR and the 12th TE when every manager
+  starts a second quarterback at Superflex; a 10-team one-quarterback
+  league reads the 10th QB. Before projections are read the rank falls
+  back to one player for every dedicated starting slot, with Superflex
+  counted at quarterback. That rank is read from the current week's
   table and multiplied by the weeks that are left, rather than summed
   week by week. Replacement Level is a line, not a person - the free
   agent who fills it is a different player every week, and none of them

@@ -348,11 +348,12 @@ final class PlayerStatsEvidence {
         }
         return stats.stream()
                 .flatMap(stat -> sources.rankings().players(stat, subject.position())
-                        .map(ranking -> rankItem(subject, ranking, now)).stream())
+                        .map(ranking -> rankItem(subject, ranking, sources, now)).stream())
                 .toList();
     }
 
-    private static EvidenceItem rankItem(Subject subject, Ranking ranking, Instant now) {
+    private static EvidenceItem rankItem(Subject subject, Ranking ranking,
+            MatchupSources sources, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("subject", subject.name());
         facts.put("stat", RankWords.stat(ranking.stat(), subject.position()) + ", season to date");
@@ -367,17 +368,15 @@ final class PlayerStatsEvidence {
             facts.put("rankMeaning", RankWords.rankMeaning(ranking.stat(), subject.position()));
             facts.put("sample", RankWords.count(placement.get().sample(),
                     ranking.stat().sampleUnit()));
+            PlayerStat stat = (PlayerStat) ranking.stat();
+            facts.put("quoted", RankWords.placed(stat, placement.get()));
+            sources.rankings().notableOverall(stat, subject.gsisId(), subject.position())
+                    .ifPresent(overall -> facts.put("amongAllPlayers", overall));
         } else {
             facts.put("noRank", ranking.unranked().stream()
                     .filter(entry -> entry.id().equals(subject.gsisId()))
                     .findFirst()
-                    .map(entry -> entry.reason() == Ranking.Reason.BELOW_MINIMUM
-                            ? "he has %s, under the %d %s a %s needs to be ranked".formatted(
-                                    RankWords.count(entry.sample(),
-                                            ranking.stat().sampleUnit()),
-                                    ranking.stat().minimumSample(),
-                                    ranking.stat().sampleUnit(), singular(subject))
-                            : "no stored source holds this stat for him")
+                    .map(_ -> "no stored source holds this stat for him")
                     .orElse("no stored source lists him for this stat"));
         }
         return new EvidenceItem(PREFIX + "rank-" + slug(ranking) + "-" + subject.id(),
@@ -388,11 +387,6 @@ final class PlayerStatsEvidence {
 
     private static String slug(Ranking ranking) {
         return ranking.stat().name().toLowerCase(Locale.ROOT).replace('_', '.');
-    }
-
-    private static String singular(Subject subject) {
-        String plural = subject.position().plural();
-        return plural.substring(0, plural.length() - 1);
     }
 
     private static boolean single(Subject subject) {
