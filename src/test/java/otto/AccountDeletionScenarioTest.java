@@ -124,6 +124,29 @@ class AccountDeletionScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void theCommandPickedFromTheMenuInAGroupAsksToo() {
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("/deleteaccount@OttoBot"));
+
+        assertThat(button("Confirm")).startsWith("account:confirm:");
+    }
+
+    @Test
+    void aSecondConfirmAfterTheDeletionIsToldTheRequestIsClosed() {
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("/deleteaccount"));
+        String confirm = button("Confirm");
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(confirm));
+        telegram.resetRequests();
+
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(confirm));
+
+        telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(
+                        "That request is no longer open, so nothing was deleted."
+                                + " Send /deleteaccount to start again."))));
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
     void aForgedConfirmDeletesNothing() {
         webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("/deleteaccount"));
 
@@ -163,7 +186,9 @@ class AccountDeletionScenarioTest extends WireSeamTest {
             assertThat(records.read(OWNER, LEAGUE, run)).isPresent();
             assertThat(records.readOutcome(OWNER, LEAGUE, run, Map.class)).isPresent();
         });
-        assertThat(storedFilesOf(OWNER)).hasSize(9);
+        assertThat(storedFilesOf(OWNER))
+                .as("a record, its article text and its outcome for every run")
+                .hasSize((RUNS.size() + 1) * 3);
     }
 
     private String button(String label) {

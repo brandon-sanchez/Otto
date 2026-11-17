@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -82,12 +83,23 @@ public class AccountDeletion {
     }
 
     /**
-     * The question to send.
+     * One button under the question.
      *
-     * @param confirmData the callback data of the Confirm button
-     * @param cancelData the callback data of the Cancel button
+     * @param label the text on the button, which the question names
+     * @param callbackData what a tap on it posts back
      */
-    public record Question(String text, String confirmData, String cancelData) {
+    public record Choice(String label, String callbackData) {
+    }
+
+    /**
+     * The question to send, with its Confirm and Cancel buttons in that
+     * order.
+     */
+    public record Question(String text, List<Choice> choices) {
+
+        public Question {
+            choices = List.copyOf(choices);
+        }
     }
 
     /**
@@ -128,7 +140,9 @@ public class AccountDeletion {
         RANDOM.nextBytes(bytes);
         String token = HexFormat.of().formatHex(bytes);
         store.write(DOCUMENT, new Request(token, clock.instant().plus(EXPIRY)));
-        return new Question(QUESTION, button(CONFIRM, token), button(CANCEL, token));
+        return new Question(QUESTION, List.of(
+                new Choice("Confirm", button(CONFIRM, token)),
+                new Choice("Cancel", button(CANCEL, token))));
     }
 
     /**

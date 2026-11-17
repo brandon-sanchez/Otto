@@ -151,9 +151,12 @@ public class TelegramWebhook {
         }
         if (DELETE_ACCOUNT.matcher(text.strip()).matches()) {
             AccountDeletion.Question question = accountDeletion.ask();
-            telegram.sendWithButtons(question.text(), List.of(
-                    new InlineButton("Confirm", question.confirmData()),
-                    new InlineButton("Cancel", question.cancelData())));
+            boolean sent = telegram.sendWithButtons(question.text(), question.choices().stream()
+                    .map(choice -> new InlineButton(choice.label(), choice.callbackData()))
+                    .toList());
+            if (!sent) {
+                log.warn("The account-deletion question did not reach the chat");
+            }
             return;
         }
         telegram.sendMessage(ask.answer(text));
