@@ -29,6 +29,9 @@ public final class KickerAndDefenseLeague {
     /** A team defense's player id; its projection is 3.0 points. */
     public static final String DEFENSE = "DAL";
 
+    /** The Rams' defense, whose team the fixture schedule puts on bye in week 2. */
+    public static final String DEFENSE_ON_BYE = "LAR";
+
     /** The index of the K slot among the starting slots. */
     public static final int KICKER_SLOT = 9;
 
