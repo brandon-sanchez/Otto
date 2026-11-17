@@ -2,10 +2,13 @@ package otto.board;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -37,22 +40,34 @@ class UsageLane implements EvidenceLane {
     /** How many of a player's most recent games the evidence shows. */
     static final int RECENT_GAMES = 3;
 
-    private static final String SNAPS = "snaps";
-    private static final String VOLUME = "targets and carries";
-
     private final NflverseStore nflverse;
 
     UsageLane(NflverseStore nflverse) {
         this.nflverse = nflverse;
     }
 
+    /** A part of a game Sleeper can give in place of nflverse. */
+    private enum Part {
+        SNAPS("snaps"),
+        VOLUME("targets and carries");
+
+        private final String words;
+
+        Part(String words) {
+            this.words = words;
+        }
+
+        static String join(Set<Part> parts) {
+            return parts.stream().map(part -> part.words).collect(Collectors.joining(" and "));
+        }
+    }
+
     /**
      * One game of a player's, and the parts of it Sleeper gave.
      *
-     * @param fromSleeper {@link #SNAPS} or {@link #VOLUME}, each when
-     *        Sleeper gave it; empty for a game nflverse gave in full
+     * @param fromSleeper empty for a game nflverse gave in full
      */
-    private record Played(PlayerUsage.Game game, List<String> fromSleeper) {
+    private record Played(PlayerUsage.Game game, Set<Part> fromSleeper) {
     }
 
     @Override
@@ -125,14 +140,13 @@ class UsageLane implements EvidenceLane {
 
             private EvidenceItem sleeperItem(DirectoryPlayer player, Played played) {
                 int week = played.game().week();
-                List<String> fromNflverse = new ArrayList<>(List.of(SNAPS, VOLUME));
-                fromNflverse.removeAll(played.fromSleeper());
+                Set<Part> fromNflverse = EnumSet.complementOf(EnumSet.copyOf(played.fromSleeper()));
                 Map<String, String> facts = new LinkedHashMap<>();
                 facts.put("season", usage.get().season());
                 facts.put("week " + week, describe(played.game()));
-                facts.put("fromSleeper", String.join(" and ", played.fromSleeper()));
-                facts.put("fromNflverse", fromNflverse.isEmpty() ? "none of these"
-                        : String.join(" and ", fromNflverse) + ", and every other part");
+                facts.put("fromSleeper", Part.join(played.fromSleeper()));
+                facts.put("fromNflverse", fromNflverse.isEmpty() ? "everything else shown"
+                        : Part.join(fromNflverse) + ", and everything else shown");
                 return new EvidenceItem("usage-sleeper-" + player.playerId(),
                         SleeperFill.SOURCE, Optional.empty(), inputs.now(),
                         "role and opportunity in week %d, with what nflverse had not "
@@ -146,7 +160,7 @@ class UsageLane implements EvidenceLane {
                                 .map(held::games))
                         .orElse(List.of())
                         .stream()
-                        .map(game -> new Played(game, List.of()))
+                        .map(game -> new Played(game, Set.of()))
                         .toList());
                 filled(player, all).ifPresent(played -> {
                     all.removeIf(held -> held.game().week() == played.game().week());
@@ -178,9 +192,9 @@ class UsageLane implements EvidenceLane {
                         ? sleeper.snaps(player) : Optional.empty();
                 Optional<PlayerUsage.Volume> volume = game.volume() == null
                         ? sleeper.volume(player) : Optional.empty();
-                List<String> fromSleeper = new ArrayList<>();
-                snaps.ifPresent(ignored -> fromSleeper.add(SNAPS));
-                volume.ifPresent(ignored -> fromSleeper.add(VOLUME));
+                Set<Part> fromSleeper = EnumSet.noneOf(Part.class);
+                snaps.ifPresent(ignored -> fromSleeper.add(Part.SNAPS));
+                volume.ifPresent(ignored -> fromSleeper.add(Part.VOLUME));
                 if (fromSleeper.isEmpty()) {
                     return Optional.empty();
                 }

@@ -71,12 +71,10 @@ class ProductionLane implements EvidenceLane {
                 .map(feed -> feed.rows().stream()
                         .collect(Collectors.groupingBy(WeeklyStats.StatLine::gsisId)))
                 .orElse(Map.of());
-        int nflverseWeek = stats.flatMap(feed -> feed.rows().stream()
+        int latestWeek = Math.max(sleeper.week(), stats.flatMap(feed -> feed.rows().stream()
                         .map(WeeklyStats.StatLine::week)
                         .max(Integer::compare))
-                .orElse(0);
-        int latestWeek = sleeper.statsTeams().isEmpty() ? nflverseWeek
-                : Math.max(nflverseWeek, sleeper.week());
+                .orElse(0));
         boolean lastSeason = stats.filter(WeeklyStats::priorSeasonFinal).isPresent();
         return new Read() {
             @Override

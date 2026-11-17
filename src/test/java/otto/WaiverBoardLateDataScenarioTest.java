@@ -290,6 +290,30 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void sleeperFillsLateWeeklyStatsWithItsOwnBoxScoreLabelledAsSleepers() {
+        aWaiverWeekOnDisk(() -> NflverseStubs.waiverWeekMissingAGameAndThreeTeamsStats(nflverse));
+        sleeperHasWeekOne(SLEEPER_WEEK_ONE);
+
+        checkAt(FALLBACK);
+
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .doesNotContain("aren't all in yet"));
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.evidence())
+                .filteredOn(item -> item.id().equals("production-sleeper-10006"))
+                .singleElement()
+                .satisfies(item -> assertThat(item.source()).isEqualTo("sleeper:stats"));
+        assertThat(record.comparisons().at("/latestWeek/filledFromSleeper/0").asText())
+                .isEqualTo("the weekly stats for week 1 for MIA, DAL, ATL come from Sleeper's "
+                        + "stats, because nflverse had not published them when the board "
+                        + "was built");
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("against TB: 231 passing yards, 2 passing "
+                        + "touchdowns, 1 interceptions, 3 carries, 12 rushing yards")));
+    }
+
+    @Test
     void whenSleeperLacksTheGameTooTheFallbackBoardIsBuilt() {
         aWaiverWeekWithTheBuffaloGameMissing();
         sleeperHasWeekOne("sleeper/stats-2026-1-waivers-late.json");

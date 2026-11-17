@@ -2,15 +2,9 @@ package otto.board;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.slf4j.Logger;
@@ -22,10 +16,7 @@ import otto.league.LeagueWeek;
 import otto.nflverse.Coverage;
 import otto.nflverse.FeedId;
 import otto.nflverse.NflverseReadiness;
-import otto.nflverse.NflverseStore;
-import otto.nflverse.Schedule;
 import otto.nflverse.WeekStatus;
-import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 
 /**
@@ -45,12 +36,14 @@ import otto.sleeper.SourceResult;
  * board reads as unknown when absent, so their gaps are reported and
  * never waited for.
  *
- * <p>Once the board can wait no longer, Sleeper's stats endpoint backs
- * up the two required feeds: a team whose weekly stats or snap counts
- * nflverse lacks is filled from Sleeper when Sleeper holds that team's
- * game, so the normal board is built. nflverse stays the primary source:
- * a team it holds is never filled, and nothing from Sleeper is stored,
- * so every read after nflverse arrives uses nflverse alone.
+ * <p>Once the board can wait no longer, {@link SleeperBackup} backs up
+ * the two required feeds where nflverse holds part of the week: a feed
+ * Sleeper fills in full no longer counts as missing, so the normal board
+ * is built. nflverse stays the primary source: a team it holds is never
+ * filled, and nothing from Sleeper is stored, so every read after
+ * nflverse arrives uses nflverse alone. A feed that holds another season
+ * or was never downloaded is not filled, since Otto cannot tell which
+ * teams it lacks.
  */
 @Component
 public class LatestWeekData {
@@ -67,14 +60,11 @@ public class LatestWeekData {
             FeedId.EXPECTED_POINTS, "the expected points"));
 
     private final NflverseReadiness readiness;
-    private final NflverseStore nflverse;
-    private final SleeperAdapter sleeper;
+    private final SleeperBackup backup;
 
-    public LatestWeekData(NflverseReadiness readiness, NflverseStore nflverse,
-            SleeperAdapter sleeper) {
+    public LatestWeekData(NflverseReadiness readiness, SleeperBackup backup) {
         this.readiness = readiness;
-        this.nflverse = nflverse;
-        this.sleeper = sleeper;
+        this.backup = backup;
     }
 
     /**
@@ -86,7 +76,8 @@ public class LatestWeekData {
      *        the week in full, or the reason the week cannot be checked;
      *        the board waits while any is listed
      * @param optionalMissing one sentence per optional feed that lacks
-     *        part of the week
+     *        part of the week, and why Sleeper could not back up a late
+     *        required feed when it could not be read
      * @param filledFromSleeper one sentence per required feed whose gap
      *        Sleeper filled, naming the games or teams it filled
      * @param sleeper the lines that fill those gaps; left out of the
@@ -99,11 +90,6 @@ public class LatestWeekData {
             missing = List.copyOf(missing);
             optionalMissing = List.copyOf(optionalMissing);
             filledFromSleeper = List.copyOf(filledFromSleeper);
-        }
-
-        private static Report unchecked(List<String> missing) {
-            return new Report(OptionalInt.empty(), missing, List.of(), List.of(),
-                    SleeperFill.NONE);
         }
 
         /** Returns whether every required feed holds the week owed. */
@@ -138,10 +124,44 @@ public class LatestWeekData {
         }
     }
 
-    /** What Sleeper filled: one sentence per filled feed, and the lines. */
-    private record Fill(Map<FeedId, String> filled, SleeperFill sleeper) {
+    /**
+     * Each feed's answer for the week owed, before Sleeper fills any.
+     *
+     * @param season the season owed; null when the week cannot be checked
+     * @param missing the sentence for each required feed that does not
+     *        hold the week
+     * @param unchecked why the week as a whole cannot be checked, when it cannot
+     * @param lacking the required feeds that hold part of the week
+     */
+    private record Statuses(String season, OptionalInt week, Map<FeedId, String> missing,
+            List<String> unchecked, Map<FeedId, WeekStatus.Incomplete> lacking,
+            List<String> optionalMissing) {
 
-        static final Fill NOTHING = new Fill(Map.of(), SleeperFill.NONE);
+        static Statuses unchecked(List<String> reasons) {
+            return new Statuses(null, OptionalInt.empty(), Map.of(), reasons, Map.of(),
+                    List.of());
+        }
+
+        Report report() {
+            return filledBy(SleeperFill.NONE, List.of());
+        }
+
+        Report filledBy(SleeperFill fill, List<String> notes) {
+            List<String> stillMissing = new ArrayList<>(unchecked);
+            missing.forEach((feed, sentence) -> {
+                if (!fill.feeds().contains(feed)) {
+                    stillMissing.add(sentence);
+                }
+            });
+            List<String> optional = new ArrayList<>(optionalMissing);
+            optional.addAll(notes);
+            List<String> filled = fill.feeds().stream()
+                    .map(feed -> "%s for %s come from Sleeper's stats, because nflverse had "
+                            .formatted(REQUIRED.get(feed), units(fill.week(), lacking.get(feed)))
+                            + "not published them when the board was built")
+                    .toList();
+            return new Report(week, stillMissing, optional, filled, fill);
+        }
     }
 
     /**
@@ -152,41 +172,54 @@ public class LatestWeekData {
      * document.
      */
     public Report assess(LeagueWeek league) {
-        return assess(league, false);
+        return statuses(league).report();
     }
 
     /**
-     * Assesses the latest completed week as {@link #assess} does, then
-     * fills each required feed's gap from Sleeper's stats when Sleeper
-     * holds every game the feed lacks. A feed Sleeper cannot fill in
-     * full stays missing.
+     * Assesses the latest completed week as {@link #assess} does, with
+     * each required feed that lacks part of the week filled from
+     * Sleeper's stats where {@link SleeperBackup} can fill it in full.
      *
      * <p>Side effects: the reads {@link #assess} makes, and one Sleeper
      * stats request when a required feed lacks part of the week.
      */
     public Report assessFillingFromSleeper(LeagueWeek league) {
-        return assess(league, true);
+        Statuses statuses = statuses(league);
+        if (statuses.lacking().isEmpty()) {
+            return statuses.report();
+        }
+        int week = statuses.week().getAsInt();
+        return switch (backup.fill(statuses.season(), week, statuses.lacking())) {
+            case SourceResult.Ok<SleeperFill> ok -> statuses.filledBy(ok.value(), List.of());
+            case SourceResult.Unavailable<SleeperFill> down -> {
+                log.warn("Sleeper's week {} stats could not back up nflverse: {}", week,
+                        down.reason());
+                yield statuses.filledBy(SleeperFill.NONE, List.of(
+                        "Sleeper's stats could not stand in for the late week %d data: %s"
+                                .formatted(week, down.reason())));
+            }
+        };
     }
 
-    private Report assess(LeagueWeek league, boolean fillFromSleeper) {
+    private Statuses statuses(LeagueWeek league) {
         if (league.week().seasonWeek().isEmpty()) {
-            return Report.unchecked(List.of("Sleeper's NFL week could not be "
+            return Statuses.unchecked(List.of("Sleeper's NFL week could not be "
                     + "read, so the latest week's data cannot be checked"));
         }
         SeasonWeek current = league.week().seasonWeek().get();
         int owed = Math.max(readiness.latestCompletedWeek(current.season()).orElse(0),
                 current.number() - 1);
         if (owed < 1) {
-            return Report.unchecked(List.of());
+            return Statuses.unchecked(List.of());
         }
         Map<FeedId, String> missing = new EnumMap<>(FeedId.class);
-        Map<FeedId, WeekStatus.Incomplete> shortFeeds = new EnumMap<>(FeedId.class);
+        Map<FeedId, WeekStatus.Incomplete> lacking = new EnumMap<>(FeedId.class);
         REQUIRED.forEach((feed, name) -> {
             switch (readiness.weekStatus(feed, current.season(), owed)) {
                 case WeekStatus.Complete _ -> { }
                 case WeekStatus.Incomplete incomplete -> {
-                    missing.put(feed, lacks(name, owed, incomplete));
-                    shortFeeds.put(feed, incomplete);
+                    missing.put(feed, name + " lack " + units(owed, incomplete));
+                    lacking.put(feed, incomplete);
                 }
                 case WeekStatus.Unknown unknown -> missing.put(feed,
                         "%s cannot be checked for week %d: %s"
@@ -197,89 +230,11 @@ public class LatestWeekData {
         OPTIONAL.forEach((feed, name) -> {
             if (readiness.weekStatus(feed, current.season(), owed)
                     instanceof WeekStatus.Incomplete incomplete) {
-                optionalMissing.add(lacks(name, owed, incomplete));
+                optionalMissing.add(name + " lack " + units(owed, incomplete));
             }
         });
-        Fill fill = fillFromSleeper && !shortFeeds.isEmpty()
-                ? fill(current.season(), owed, shortFeeds)
-                : Fill.NOTHING;
-        fill.filled().keySet().forEach(missing::remove);
-        return new Report(OptionalInt.of(owed), List.copyOf(missing.values()), optionalMissing,
-                List.copyOf(fill.filled().values()), fill.sleeper());
-    }
-
-    private Fill fill(String season, int week, Map<FeedId, WeekStatus.Incomplete> shortFeeds) {
-        List<Schedule.Game> games = nflverse.schedule().map(Schedule::rows).orElse(List.of())
-                .stream()
-                .filter(game -> game.season().equals(season) && game.week() == week)
-                .toList();
-        Map<String, Map<String, Double>> lines = switch (sleeper.stats(season, week)) {
-            case SourceResult.Ok<Map<String, Map<String, Double>>> ok -> ok.value();
-            case SourceResult.Unavailable<Map<String, Map<String, Double>>> down -> {
-                log.warn("Sleeper's week {} stats could not back up nflverse: {}", week,
-                        down.reason());
-                yield Map.of();
-            }
-        };
-        Map<FeedId, String> filled = new EnumMap<>(FeedId.class);
-        Map<FeedId, Set<String>> teams = new EnumMap<>(FeedId.class);
-        shortFeeds.forEach((feed, incomplete) -> teamsLacking(incomplete, games)
-                .filter(lacking -> lacking.stream()
-                        .allMatch(team -> SleeperFill.holds(lines, team)))
-                .ifPresent(lacking -> {
-                    teams.put(feed, lacking);
-                    filled.put(feed, "%s for %s come from Sleeper's stats, because nflverse "
-                            .formatted(REQUIRED.get(feed), units(week, incomplete))
-                            + "had not published them when the board was built");
-                }));
-        if (filled.isEmpty()) {
-            return Fill.NOTHING;
-        }
-        Map<String, String> opponents = new HashMap<>();
-        games.forEach(game -> {
-            opponents.put(game.home(), game.away());
-            opponents.put(game.away(), game.home());
-        });
-        return new Fill(filled, new SleeperFill(week,
-                teams.getOrDefault(FeedId.WEEKLY_STATS, Set.of()),
-                teams.getOrDefault(FeedId.SNAP_COUNTS, Set.of()), opponents, lines));
-    }
-
-    /**
-     * Returns the teams whose games the feed lacks, empty when a missing
-     * unit names no team the schedule can place.
-     */
-    private static Optional<Set<String>> teamsLacking(WeekStatus.Incomplete incomplete,
-            List<Schedule.Game> games) {
-        Map<String, Schedule.Game> byId = games.stream()
-                .collect(Collectors.toMap(Schedule.Game::gameId, Function.identity()));
-        Set<String> teams = new LinkedHashSet<>();
-        for (Coverage.Unit unit : incomplete.missing()) {
-            switch (unit) {
-                case Coverage.Unit.Game game -> {
-                    Schedule.Game scheduled = byId.get(game.gameId());
-                    if (scheduled == null) {
-                        return Optional.empty();
-                    }
-                    teams.add(scheduled.away());
-                    teams.add(scheduled.home());
-                }
-                case Coverage.Unit.TeamWeek teamWeek -> teams.add(teamWeek.team());
-                case Coverage.Unit.Team team -> teams.add(team.team());
-                case Coverage.Unit.Week _ -> games.forEach(game -> {
-                    teams.add(game.away());
-                    teams.add(game.home());
-                });
-                case Coverage.Unit.File _ -> {
-                    return Optional.empty();
-                }
-            }
-        }
-        return teams.isEmpty() ? Optional.empty() : Optional.of(teams);
-    }
-
-    private static String lacks(String feed, int week, WeekStatus.Incomplete incomplete) {
-        return feed + " lack " + units(week, incomplete);
+        return new Statuses(current.season(), OptionalInt.of(owed), missing, List.of(),
+                lacking, optionalMissing);
     }
 
     /** Returns the units a feed lacks in words, such as "week 1's BUF at MIA game". */

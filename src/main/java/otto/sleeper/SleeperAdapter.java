@@ -369,6 +369,11 @@ public class SleeperAdapter {
         return statLines("/v1/stats/nfl/regular/%s/%d".formatted(season, week));
     }
 
+    /** The stats of {@link #stats}, split into players and team offenses. */
+    public SourceResult<PlayedWeekStats> playedWeek(String season, int week) {
+        return stats(season, week).flatMap(lines -> ok(PlayedWeekStats.of(lines)));
+    }
+
     private SourceResult<Map<String, Map<String, Double>>> statLines(String path) {
         return fetch(path).flatMap(body -> {
             if (!body.isObject()) {

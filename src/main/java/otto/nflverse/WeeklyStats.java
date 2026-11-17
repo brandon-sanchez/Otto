@@ -3,6 +3,7 @@ package otto.nflverse;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The stored, trimmed nflverse weekly player stats: one row per player
@@ -26,6 +27,13 @@ public record WeeklyStats(
         Instant checkedAt,
         Coverage coverage,
         List<StatLine> rows) implements NflverseFeed {
+
+    /**
+     * Every Sleeper stat key a {@link StatLine} can carry. A played week
+     * from another source keeps only these, so both sources price a week
+     * alike.
+     */
+    public static final Set<String> STAT_KEYS = WeeklyStatsFeed.statKeys();
 
     /**
      * One player's line from one game, and the defense that allowed it.

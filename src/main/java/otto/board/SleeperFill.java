@@ -1,13 +1,17 @@
 package otto.board;
 
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import otto.directory.DirectoryPlayer;
+import otto.nflverse.FeedId;
 import otto.nflverse.PlayerUsage;
+import otto.nflverse.WeeklyStats;
+import otto.sleeper.PlayedWeekStats;
 
 /**
  * Sleeper's stat lines for the latest completed week, standing in for
@@ -16,75 +20,53 @@ import otto.nflverse.PlayerUsage;
  * holds: a team is filled only when its nflverse week is short and
  * Sleeper holds that team's game.
  *
- * <p>Sleeper leaves a stat out of a line when it is zero, so a player
- * whose line is present had no target or carry Sleeper did not list.
- * Only Sleeper's snaps, targets, carries and box score are read; every
- * other part of a game, such as air-yards share, red-zone and end-zone
- * work or expected points, stays unknown.
+ * <p>Sleeper leaves a zero stat out of a line, so a played line counts
+ * every stat it omits as zero. Only Sleeper's snaps, targets, carries
+ * and box score are read; every other part of a game, such as air-yards
+ * share, red-zone and end-zone work or expected points, stays unknown.
  *
- * <p>A player is matched to a team by his Player Directory team, since
- * Sleeper's lines carry none.
+ * <p>A player is matched to a filled team by his Player Directory team,
+ * since Sleeper's lines carry none. A player traded since the filled
+ * week is matched to his new team, so his old team's game fills
+ * nothing of his.
  *
  * @param week the week filled; 0 when nothing is
- * @param statsTeams the teams whose weekly stats come from Sleeper
- * @param snapTeams the teams whose snap counts come from Sleeper
- * @param opponents each filled team's opponent that week
- * @param lines Sleeper's lines by Sleeper player id, plus each team's
- *        offense under {@code TEAM_} and its code
+ * @param teamsByFeed the teams each required feed takes from Sleeper
+ * @param opponents each team's opponent that week
  */
-record SleeperFill(int week, Set<String> statsTeams, Set<String> snapTeams,
-        Map<String, String> opponents, Map<String, Map<String, Double>> lines) {
+record SleeperFill(int week, Map<FeedId, Set<String>> teamsByFeed,
+        Map<String, String> opponents, PlayedWeekStats stats) {
 
     /** The evidence source every value from Sleeper is labelled with. */
     static final String SOURCE = "sleeper:stats";
 
     /** The fill of a week nflverse holds in full. */
-    static final SleeperFill NONE = new SleeperFill(0, Set.of(), Set.of(), Map.of(), Map.of());
-
-    private static final String TEAM_PREFIX = "TEAM_";
-
-    /**
-     * The stats a played line is priced and described from: the keys the
-     * nflverse weekly stats are translated to, so both sources price a
-     * week alike. Sleeper's own bonus counters are left out, because
-     * {@link otto.lineup.LeagueScoring} works out the tight-end premium
-     * itself.
-     */
-    private static final List<String> SCORED_STATS = List.of("pass_yd", "pass_td",
-            "pass_int", "pass_2pt", "rush_att", "rush_yd", "rush_td", "rush_2pt", "rec_tgt",
-            "rec", "rec_yd", "rec_td", "rec_2pt", "fum_lost");
+    static final SleeperFill NONE = new SleeperFill(0, Map.of(), Map.of(),
+            PlayedWeekStats.EMPTY);
 
     SleeperFill {
-        statsTeams = Set.copyOf(statsTeams);
-        snapTeams = Set.copyOf(snapTeams);
+        Map<FeedId, Set<String>> inFeedOrder = new EnumMap<>(FeedId.class);
+        teamsByFeed.forEach((feed, teams) -> inFeedOrder.put(feed, Set.copyOf(teams)));
+        teamsByFeed = Collections.unmodifiableMap(inFeedOrder);
         opponents = Map.copyOf(opponents);
-        lines = Map.copyOf(lines);
     }
 
-    /** Returns whether Sleeper's lines hold the team's game. */
-    static boolean holds(Map<String, Map<String, Double>> lines, String team) {
-        return lines.containsKey(TEAM_PREFIX + team);
+    /** Returns the feeds Sleeper fills, in feed order. */
+    Set<FeedId> feeds() {
+        return teamsByFeed.keySet();
     }
 
     /**
-     * Returns the player's scored stats for the filled week, empty
-     * unless his team's weekly stats are filled and Sleeper has a line
-     * for him.
+     * Returns the player's stats for the filled week in the weekly
+     * stats' vocabulary, empty unless his team's weekly stats are filled
+     * and he played.
      */
     Optional<Map<String, Double>> stats(DirectoryPlayer player) {
-        if (!statsTeams.contains(player.team())) {
+        if (!fills(FeedId.WEEKLY_STATS, player)) {
             return Optional.empty();
         }
-        return line(player).map(line -> {
-            Map<String, Double> scored = new LinkedHashMap<>();
-            SCORED_STATS.forEach(key -> {
-                Double value = line.get(key);
-                if (value != null) {
-                    scored.put(key, value);
-                }
-            });
-            return scored;
-        });
+        return stats.played(player.playerId()).map(line -> WeeklyStats.STAT_KEYS.stream()
+                .collect(Collectors.toMap(key -> key, key -> line.getOrDefault(key, 0.0))));
     }
 
     /** Returns the team the player's filled game was against, or null when unknown. */
@@ -93,46 +75,39 @@ record SleeperFill(int week, Set<String> statsTeams, Set<String> snapTeams,
     }
 
     /**
-     * Returns the player's offensive snaps, empty unless his team's
-     * snap counts are filled and his line counts his and his team's.
+     * Returns the player's offensive snaps, empty unless his team's snap
+     * counts are filled and his line counts his and his team's.
      */
     Optional<PlayerUsage.Snaps> snaps(DirectoryPlayer player) {
-        if (!snapTeams.contains(player.team())) {
+        if (!fills(FeedId.SNAP_COUNTS, player)) {
             return Optional.empty();
         }
-        return line(player).flatMap(line -> {
-            Double played = line.get("off_snp");
-            Double team = line.get("tm_off_snp");
-            if (played == null || team == null || team <= 0) {
-                return Optional.empty();
-            }
-            return Optional.of(new PlayerUsage.Snaps(played.intValue(), played / team));
-        });
+        return stats.snaps(player.playerId())
+                .map(snaps -> new PlayerUsage.Snaps(snaps.offense(), snaps.share()));
     }
 
     /**
      * Returns the player's targets and carries against his team's, empty
-     * unless his team's weekly stats are filled and Sleeper has both his
-     * line and his team's.
+     * unless his team's weekly stats are filled and he played.
      */
     Optional<PlayerUsage.Volume> volume(DirectoryPlayer player) {
-        Map<String, Double> team = lines.get(TEAM_PREFIX + player.team());
-        if (!statsTeams.contains(player.team()) || team == null) {
+        if (!fills(FeedId.WEEKLY_STATS, player)) {
             return Optional.empty();
         }
-        return line(player).map(line -> {
-            int targets = count(line, "rec_tgt");
-            int teamTargets = count(team, "rec_tgt");
-            int carries = count(line, "rush_att");
-            int teamCarries = count(team, "rush_att");
-            return new PlayerUsage.Volume(targets, teamTargets,
-                    teamTargets > 0 ? (double) targets / teamTargets : null, carries,
-                    teamCarries, teamCarries > 0 ? (double) carries / teamCarries : null);
-        });
+        return stats.played(player.playerId()).flatMap(line -> stats.team(player.team())
+                .map(team -> {
+                    int targets = count(line, "rec_tgt");
+                    int teamTargets = count(team, "rec_tgt");
+                    int carries = count(line, "rush_att");
+                    int teamCarries = count(team, "rush_att");
+                    return new PlayerUsage.Volume(targets, teamTargets,
+                            teamTargets > 0 ? (double) targets / teamTargets : null, carries,
+                            teamCarries, teamCarries > 0 ? (double) carries / teamCarries : null);
+                }));
     }
 
-    private Optional<Map<String, Double>> line(DirectoryPlayer player) {
-        return Optional.ofNullable(lines.get(player.playerId()));
+    private boolean fills(FeedId feed, DirectoryPlayer player) {
+        return teamsByFeed.getOrDefault(feed, Set.of()).contains(player.team());
     }
 
     private static int count(Map<String, Double> line, String key) {
