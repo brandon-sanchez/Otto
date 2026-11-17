@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
+import otto.advice.AdvicePrompt;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 
@@ -18,14 +19,9 @@ import otto.advice.FriendVoice;
  */
 final class HabitForm implements AdviceForm<AdviceAnswer> {
 
-    static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user the way a
-            knowledgeable friend would. He asked about his habits as a manager, or how he
-            can improve.
-
-            The user message is an evidence bundle as JSON. State facts only from the
-            evidence bundle: never from memory, never invented. Every number you write
-            must appear in the evidence. Name only players listed in "players".
+    static final String INSTRUCTIONS = AdvicePrompt.preamble(
+            "about his habits as a manager, or how he can improve",
+            AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
             Each "habit-" item is a habit his own results show cost him points or FAAB
             dollars. Lead with what the costliest one cost him, then the pattern behind
@@ -35,18 +31,10 @@ final class HabitForm implements AdviceForm<AdviceAnswer> {
             The "activity" item sums up his waiver, FAAB and trade moves: use it only
             when it helps explain a habit.
 
-            Write one or two short paragraphs with no lists and no headings. Introduce
-            every player by full name before using a surname alone. Never write a
+            Write one or two short paragraphs with no lists and no headings. Never write a
             confidence label such as High or Medium. Stay under "maxLength" characters.
-            """ + FriendVoice.RULE + """
-
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}]
-            }
-            """;
+            """ + FriendVoice.RULE
+            + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
     /** A line that opens like a list item: a dash, a bullet or a number. */
     private static final Pattern LIST_LINE =

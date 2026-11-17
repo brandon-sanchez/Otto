@@ -9,13 +9,13 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
-import otto.advice.AdviceResult;
-import otto.advice.AdviceWriter;
+import otto.advice.AdvicePrompt;
+import otto.advice.AnswerDelivery;
 import otto.advice.BundlePlayer;
+import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
@@ -27,13 +27,8 @@ import otto.offers.Offer;
 import otto.offers.TradeOffers;
 import otto.offers.TradeShape;
 import otto.records.Candidate;
-import otto.records.DecisionRecord;
-import otto.records.Outcome;
-import otto.records.RunIds;
 import otto.records.RunKind;
-import otto.records.RunOutcomes;
 import otto.sleeper.SourceResult;
-import otto.storage.OttoJson;
 import otto.trade.TradeDeadline;
 
 /**
@@ -60,16 +55,9 @@ public class TradeIdeas {
 
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
-    private static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user about trades
-            he could offer, the way a knowledgeable friend would.
-
-            The user message is an evidence bundle as JSON. State facts only from the
-            evidence bundle: never from memory, never invented. Every number you write
-            must appear in the evidence, written as the evidence writes it. Name only
-            players listed in "players", and introduce each by full name before using his
-            surname alone.
-            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble(
+            "about trades he could offer", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
+            + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             Write plain text. When "trade-deadline" is present, open with it. Then give
             each "offer-" item in order, one short paragraph each, numbered 1, 2, 3. Each
@@ -88,37 +76,28 @@ public class TradeIdeas {
             some offers fit, say so in one sentence. Never claim to send or accept a trade.
             Never write a confidence label such as High or Medium. Stay under "maxLength"
             characters.
+            """ + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": null,
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": []
-            }
-            """;
+    private static final CheckedAdvice.Fallbacks FALLBACKS = new CheckedAdvice.Fallbacks(
+            "I cannot reach my language model to explain these trade ideas right now",
+            "I found trade offers, but my explanation failed its fact check twice, so I am "
+                    + "holding it back rather than risk a wrong name or figure");
 
     private final UserWeekLoader loader;
     private final TradeOffers offers;
     private final TeamWeaknesses weaknesses;
     private final HabitService habits;
-    private final AdviceWriter writer;
+    private final CheckedAdvice advice;
     private final AdviceCheck check;
-    private final RunOutcomes runs;
-    private final String userId;
 
     public TradeIdeas(UserWeekLoader loader, TradeOffers offers, TeamWeaknesses weaknesses,
-            HabitService habits, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            OttoProperties properties) {
+            HabitService habits, CheckedAdvice advice, AdviceCheck check) {
         this.loader = loader;
         this.offers = offers;
         this.weaknesses = weaknesses;
         this.habits = habits;
-        this.writer = writer;
+        this.advice = advice;
         this.check = check;
-        this.runs = runs;
-        this.userId = properties.userId();
     }
 
     /**
@@ -154,7 +133,7 @@ public class TradeIdeas {
      * @return the checked message, or why there is none in plain words
      */
     public ToolAnswer<Answer> answer(Integer count, Integer shown, String shape, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         if (shown != null && count == null) {
             return ToolAnswer.unavailable(("he has seen %d trade ideas and asked for more "
                     + "without saying how many: ask him how many more he wants, then call "
@@ -187,7 +166,7 @@ public class TradeIdeas {
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,
-            Instant now, CheckedAnswers.Delivery delivery) {
+            Instant now, AnswerDelivery delivery) {
         Optional<TradeDeadline> deadline = TradeDeadline.assess(league.league().tradeDeadline(),
                 league.week().weekNumber());
         if (deadline.filter(TradeDeadline::passed).isPresent()) {
@@ -213,27 +192,16 @@ public class TradeIdeas {
 
     private ToolAnswer<Answer> explain(LeagueWeek league, TradeOffers.Request request,
             List<Offer> found, Optional<TradeDeadline> deadline, HabitLean lean, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         int maxLength = Math.min(LONGEST, INTRO_LENGTH + LENGTH_PER_OFFER * found.size());
         EvidenceBundle bundle = QuietHabits.add(TradeIdeaEvidence.bundle(
                 new TradeIdeaEvidence.Facts(league.league().name(), found, request.count(),
                         request.skip(), request.shape().map(TradeShape::words),
                         deadline.map(TradeDeadline::message)), maxLength, now), lean, now);
-        AdviceForm<AdviceAnswer> form = form(found);
-        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(league, found, bundle, form, result, now,
-                delivery));
-        return switch (outcome) {
-            case Outcome.Sent sent -> ToolAnswer.of(new Answer(sent.message()));
-            case Outcome.HandedToChat handed -> ToolAnswer.of(new Answer(handed.message()));
-            default -> ToolAnswer.unavailable(switch (result) {
-                case AdviceResult.Unavailable<AdviceAnswer> _ ->
-                    "I cannot reach my language model to explain these trade ideas right now";
-                default -> "I found trade offers, but my explanation failed its fact check "
-                        + "twice, so I am holding it back rather than risk a wrong name or "
-                        + "figure";
-            });
-        };
+        return advice.write(bundle, form(found), new CheckedAdvice.Run(RUN_ID_PREFIX,
+                        List.of(league.league().leagueId()), RunKind.TRADE_IDEAS,
+                        league.league(), candidates(found), "explanation"), now, delivery)
+                .answer(Answer::new, FALLBACKS);
     }
 
     /**
@@ -242,30 +210,21 @@ public class TradeIdeas {
      * an offer can never ask for a player the partner doesn't have.
      */
     private AdviceForm<AdviceAnswer> form(List<Offer> found) {
-        return new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return INSTRUCTIONS;
+        return AdviceForm.of(INSTRUCTIONS, (bundle, reply) -> {
+            AdviceCheck.Verdict<AdviceAnswer> verdict =
+                    QuietHabits.failHabitMentions(check.check(bundle, reply));
+            Optional<AdviceAnswer> answer = switch (verdict) {
+                case AdviceCheck.Verdict.Passed<AdviceAnswer> passed ->
+                    Optional.of(passed.answer());
+                case AdviceCheck.Verdict.Failed<AdviceAnswer> failed -> failed.answer();
+            };
+            if (answer.isEmpty()) {
+                return verdict;
             }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
-                    String reply) {
-                AdviceCheck.Verdict<AdviceAnswer> verdict =
-                        QuietHabits.failHabitMentions(check.check(bundle, reply));
-                Optional<AdviceAnswer> answer = switch (verdict) {
-                    case AdviceCheck.Verdict.Passed<AdviceAnswer> passed ->
-                        Optional.of(passed.answer());
-                    case AdviceCheck.Verdict.Failed<AdviceAnswer> failed -> failed.answer();
-                };
-                if (answer.isEmpty()) {
-                    return verdict;
-                }
-                List<String> failures = new ArrayList<>(verdict.failures());
-                failures.addAll(misplaced(bundle, found, answer.get().message()));
-                return AdviceCheck.Verdict.checked(answer.get(), failures);
-            }
-        };
+            List<String> failures = new ArrayList<>(verdict.failures());
+            failures.addAll(misplaced(bundle, found, answer.get().message()));
+            return AdviceCheck.Verdict.checked(answer.get(), failures);
+        });
     }
 
     private static List<String> misplaced(EvidenceBundle bundle, List<Offer> found,
@@ -295,11 +254,7 @@ public class TradeIdeas {
         return failures;
     }
 
-    private DecisionRecord record(LeagueWeek league, List<Offer> found, EvidenceBundle bundle,
-            AdviceForm<AdviceAnswer> form, AdviceResult<AdviceAnswer> result, Instant now,
-            CheckedAnswers.Delivery delivery) {
-        String leagueId = league.league().leagueId();
-        String runId = RunIds.stable(RUN_ID_PREFIX, leagueId, bundle.identity(), now.toString());
+    private static List<Candidate> candidates(List<Offer> found) {
         List<Candidate> candidates = new ArrayList<>();
         for (int index = 0; index < found.size(); index++) {
             Offer offer = found.get(index);
@@ -307,24 +262,7 @@ public class TradeIdeas {
                     offer.partner(), names(offer.gives()), names(offer.gets())), true,
                     offer.kind().name() + " " + offer.shape().words()));
         }
-        return DecisionRecord.forRun(runId, RunKind.TRADE_IDEAS, now, userId, leagueId,
-                        OttoJson.MAPPER.valueToTree(league.league()))
-                .candidates(candidates)
-                .evidence(bundle.recorded())
-                .versions(bundle.versions(form, result))
-                .exchanges(result.exchanges())
-                .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
-                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
-                        case THROUGH_CHAT_MODEL ->
-                            new Outcome.HandedToChat(approved.answer().message());
-                    };
-                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
-                            "The explanation failed its checks twice: "
-                                    + String.join(" ", rejected.failures()));
-                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                        new Outcome.Withheld(unavailable.reason());
-                });
+        return candidates;
     }
 
     private static String names(List<Offer.Piece> pieces) {

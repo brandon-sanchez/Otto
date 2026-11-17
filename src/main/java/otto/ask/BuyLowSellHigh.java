@@ -10,12 +10,12 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
-import otto.advice.AdviceResult;
-import otto.advice.AdviceWriter;
+import otto.advice.AdvicePrompt;
+import otto.advice.AnswerDelivery;
+import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.ToolAnswer;
@@ -25,15 +25,10 @@ import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
 import otto.league.LeagueWeek;
 import otto.records.Candidate;
-import otto.records.DecisionRecord;
-import otto.records.Outcome;
-import otto.records.RunIds;
 import otto.records.RunKind;
-import otto.records.RunOutcomes;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
-import otto.storage.OttoJson;
 
 /**
  * Answers "who should I buy low?", "is anyone on my team a sell-high?"
@@ -53,14 +48,9 @@ public class BuyLowSellHigh {
     private static final Set<Assessment.Call> BUYS = Set.of(Assessment.Call.BUY_LOW,
             Assessment.Call.MARKET_BUY_LOW, Assessment.Call.PARTIAL_BOUNCE_BACK);
 
-    private static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user, the way a
-            knowledgeable friend would.
-
-            The user message is an evidence bundle as JSON about buy-low and sell-high
-            players. State facts only from the evidence: never from memory, never invented.
-            Every number you write must appear in the evidence, written the same way. Name
-            only players listed in "players".
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble(
+            "about buy-low and sell-high players", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
+            + """
 
             For each player, lead with his call as the evidence names it, then explain why
             in one or two natural sentences. A buy-low is a player whose usage held while
@@ -71,50 +61,29 @@ public class BuyLowSellHigh {
             as the level to expect from here. When a market item is present, say it plainly,
             for example "his value is down 18% this month while his targets held". Explain
             xFP in plain words the first time you use it. When "rosteredBy" is present, say
-            whose team he is on. Introduce every player by full name before using his
-            surname alone. Never write a confidence label such as High or Medium. Stay under
-            "maxLength" characters. There is no lineup move, so "move" is null.
-            """ + FriendVoice.RULE + """
+            whose team he is on. Never write a confidence label such as High or Medium. Stay
+            under "maxLength" characters. There is no lineup move, so "move" is null.
+            """ + FriendVoice.RULE
+            + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": null,
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": []
-            }
-            """;
+    private static final CheckedAdvice.Fallbacks FALLBACKS = new CheckedAdvice.Fallbacks(
+            "I cannot reach my language model to explain these calls right now",
+            "I worked out the buy-low and sell-high calls, but my explanation failed its fact "
+                    + "check twice, so I am holding it back rather than risk a wrong figure");
 
     private final UserWeekLoader loader;
     private final PlayerLookup lookup;
     private final BuySellReader reader;
-    private final AdviceWriter writer;
-    private final RunOutcomes runs;
+    private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
-    private final String userId;
 
     public BuyLowSellHigh(UserWeekLoader loader, PlayerLookup lookup, BuySellReader reader,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            OttoProperties properties) {
+            CheckedAdvice advice, AdviceCheck check) {
         this.loader = loader;
         this.lookup = lookup;
         this.reader = reader;
-        this.writer = writer;
-        this.runs = runs;
-        this.userId = properties.userId();
-        this.form = new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return INSTRUCTIONS;
-            }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
-                    String reply) {
-                return check.check(bundle, reply);
-            }
-        };
+        this.advice = advice;
+        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
     }
 
     /** Which players a league-wide answer looks for. */
@@ -168,7 +137,7 @@ public class BuyLowSellHigh {
      * @return the checked message, or why there is none
      */
     public ToolAnswer<Answer> player(String reference, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> switch (loader.league()) {
@@ -181,7 +150,7 @@ public class BuyLowSellHigh {
     }
 
     private ToolAnswer<Answer> player(DirectoryPlayer player, SleeperAdapter.League league,
-            Instant now, CheckedAnswers.Delivery delivery) {
+            Instant now, AnswerDelivery delivery) {
         return switch (reader.board(league, now)) {
             case SourceResult.Unavailable<BuySellReader.Board> unavailable ->
                 unavailable(unavailable);
@@ -211,7 +180,7 @@ public class BuyLowSellHigh {
      * @return the checked message, or why there is none, including when
      *         no player fits
      */
-    public ToolAnswer<Answer> scan(Side side, Instant now, CheckedAnswers.Delivery delivery) {
+    public ToolAnswer<Answer> scan(Side side, Instant now, AnswerDelivery delivery) {
         return switch (loader.leagueWeek()) {
             case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
             case SourceResult.Ok<LeagueWeek> week -> switch (reader.board(
@@ -225,7 +194,7 @@ public class BuyLowSellHigh {
     }
 
     private ToolAnswer<Answer> scan(Side side, LeagueWeek week, BuySellReader.Board board,
-            Instant now, CheckedAnswers.Delivery delivery) {
+            Instant now, AnswerDelivery delivery) {
         List<BuySellEvidence.Judged> judged = new ArrayList<>();
         if (side != Side.SELL) {
             judged.addAll(buys(week.rosters(), board));
@@ -298,48 +267,16 @@ public class BuyLowSellHigh {
 
     private ToolAnswer<Answer> explain(SleeperAdapter.League league,
             List<BuySellEvidence.Judged> judged, String task, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         EvidenceBundle bundle = BuySellEvidence.bundle(task, judged, now);
-        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(league, judged, bundle, result, now, delivery));
-        return switch (outcome) {
-            case Outcome.Sent sent -> ToolAnswer.of(new Answer(sent.message()));
-            case Outcome.HandedToChat handed -> ToolAnswer.of(new Answer(handed.message()));
-            default -> ToolAnswer.unavailable(switch (result) {
-                case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                    "I cannot reach my language model to explain these calls right now";
-                default -> "I worked out the buy-low and sell-high calls, but my explanation "
-                        + "failed its fact check twice, so I am holding it back rather than "
-                        + "risk a wrong figure";
-            });
-        };
-    }
-
-    private DecisionRecord record(SleeperAdapter.League league,
-            List<BuySellEvidence.Judged> judged, EvidenceBundle bundle,
-            AdviceResult<AdviceAnswer> result, Instant now, CheckedAnswers.Delivery delivery) {
-        String runId = RunIds.stable(RUN_ID_PREFIX, bundle.identity(), now.toString());
-        return DecisionRecord.forRun(runId, RunKind.BUY_LOW_SELL_HIGH, now, userId,
-                        league.leagueId(), OttoJson.MAPPER.valueToTree(league))
-                .candidates(judged.stream()
-                        .map(player -> new Candidate(player.playerId(), player.name(), true,
-                                player.assessment().call().name()))
-                        .toList())
-                .evidence(bundle.recorded())
-                .versions(bundle.versions(form, result))
-                .exchanges(result.exchanges())
-                .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
-                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
-                        case THROUGH_CHAT_MODEL ->
-                            new Outcome.HandedToChat(approved.answer().message());
-                    };
-                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
-                            "The explanation failed its checks twice: "
-                                    + String.join(" ", rejected.failures()));
-                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                        new Outcome.Withheld(unavailable.reason());
-                });
+        List<Candidate> candidates = judged.stream()
+                .map(player -> new Candidate(player.playerId(), player.name(), true,
+                        player.assessment().call().name()))
+                .toList();
+        return advice.write(bundle, form, new CheckedAdvice.Run(RUN_ID_PREFIX, List.of(),
+                        RunKind.BUY_LOW_SELL_HIGH, league, candidates, "explanation"), now,
+                        delivery)
+                .answer(Answer::new, FALLBACKS);
     }
 
     private static <T> ToolAnswer<Answer> unavailable(SourceResult.Unavailable<T> unavailable) {
