@@ -87,6 +87,7 @@ public class RestOfSeasonProjections {
         Map<String, Double> points = new HashMap<>();
         Map<String, List<Integer>> byeWeeks = new LinkedHashMap<>();
         Map<String, Integer> weeksPriced = new HashMap<>();
+        Map<String, Integer> weeksProjectedToScore = new HashMap<>();
         List<Integer> weeks = new ArrayList<>();
         List<String> notes = new ArrayList<>();
 
@@ -113,6 +114,9 @@ public class RestOfSeasonProjections {
                 }
                 points.merge(playerId, projected.get(), Double::sum);
                 weeksPriced.merge(playerId, 1, Integer::sum);
+                if (projected.get() > 0) {
+                    weeksProjectedToScore.merge(playerId, 1, Integer::sum);
+                }
             }
         }
 
@@ -126,7 +130,8 @@ public class RestOfSeasonProjections {
         Map<String, List<Integer>> byes = new LinkedHashMap<>();
         byeWeeks.forEach((playerId, weeksOff) -> byes.put(playerId, List.copyOf(weeksOff)));
         return new SourceResult.Ok<>(new RestOfSeason(List.copyOf(weeks), Map.copyOf(points),
-                Map.copyOf(byes), Map.copyOf(weeksPriced), List.copyOf(notes)));
+                Map.copyOf(byes), Map.copyOf(weeksPriced), Map.copyOf(weeksProjectedToScore),
+                List.copyOf(notes)));
     }
 
     private Optional<ProjectionTable> weekTable(LeagueScoring scoring, String season, int week) {

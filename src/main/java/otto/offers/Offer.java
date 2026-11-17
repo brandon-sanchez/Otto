@@ -6,6 +6,7 @@ import java.util.Optional;
 import otto.buysell.Assessment;
 import otto.market.DraftPick;
 import otto.team.TeamDirection;
+import otto.trade.InjuredValue;
 import otto.trade.TradeEvaluator;
 
 /**
@@ -61,8 +62,11 @@ public record Offer(
      * @param pick the pick, empty for a player
      * @param call the player's buy-low or sell-high call when he has one,
      *        which is part of the pitch
+     * @param injury what an injured player on the partner's team is worth
+     *        to the user by the league's format, which is part of the pitch
      */
     public record Piece(Optional<String> playerId, String name, Optional<String> position,
-            Optional<DraftPick> pick, Optional<Assessment> call) {
+            Optional<DraftPick> pick, Optional<Assessment> call,
+            Optional<InjuredValue> injury) {
     }
 }

@@ -29,11 +29,11 @@ import otto.snapshot.RosterSnapshot;
 public class LeaguePicks {
 
     /**
-     * The rounds a held pick is counted from. Every rookie draft runs at
-     * least two rounds, so a pick in them always exists; a later round
-     * may not.
+     * The rounds a held pick is counted from when the league doesn't say
+     * how many its rookie drafts run. Every rookie draft runs at least
+     * two, so a pick in them always exists; a later round may not.
      */
-    public static final int ROUNDS = 2;
+    public static final int FALLBACK_ROUNDS = 2;
 
     /** The drafts a held pick is counted from: the next three. */
     public static final int DRAFTS = 3;
@@ -61,9 +61,10 @@ public class LeaguePicks {
     }
 
     /**
-     * Prices every pick each team holds in the first {@link #ROUNDS}
-     * rounds of the next {@link #DRAFTS} drafts. A pick the market does
-     * not price is left out.
+     * Prices every pick each team holds in every round of the next
+     * {@link #DRAFTS} rookie drafts, as many rounds as the league's
+     * {@code draft_rounds} says, or {@link #FALLBACK_ROUNDS} when it
+     * doesn't. A pick the market does not price is left out.
      *
      * <p>Side effects: Sleeper's traded picks through the cadence-gated
      * adapter, and the market value reads.
@@ -73,9 +74,10 @@ public class LeaguePicks {
      */
     public Map<Integer, List<PricedPick>> priced(LeagueWeek league, Instant now) {
         HeldPicks held = held(league, new ArrayList<>());
+        int rounds = league.league().rules().draftRounds().orElse(FALLBACK_ROUNDS);
         Map<Integer, List<PricedPick>> byTeam = new LinkedHashMap<>();
         for (RosterSnapshot team : league.rosters()) {
-            List<PricedPick> picks = held.heldBy(team, ROUNDS, DRAFTS).stream()
+            List<PricedPick> picks = held.heldBy(team, rounds, DRAFTS).stream()
                     .flatMap(pick -> value(league, pick, now)
                             .map(value -> new PricedPick(pick, value)).stream())
                     .toList();

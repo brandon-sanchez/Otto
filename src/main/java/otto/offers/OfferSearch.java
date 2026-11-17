@@ -17,6 +17,7 @@ import otto.team.LeagueProfile;
 import otto.team.PositionProfile;
 import otto.team.RatedPlayer;
 import otto.team.TeamProfile;
+import otto.trade.InjuredValue;
 import otto.trade.LeaguePicks;
 import otto.trade.TradeAsset;
 import otto.trade.TradePiece;
@@ -66,6 +67,8 @@ final class OfferSearch {
      * @param picks each team's held picks at market value, by roster id;
      *        empty outside dynasty and keeper leagues
      * @param calls each player's buy-low or sell-high call, by player id
+     * @param injured each injured player on another team who is worth
+     *        buying in the league's format, by player id
      * @param longTerm true in dynasty and keeper leagues, where market
      *        value decides a trade
      */
@@ -73,7 +76,7 @@ final class OfferSearch {
             Map<String, Double> unfitted, Map<String, Double> perGame,
             Map<String, Integer> market, Map<Integer, List<LeaguePicks.PricedPick>> picks,
             Map<String, DirectoryPlayer> players, Map<String, Assessment> calls,
-            boolean longTerm) {
+            Map<String, InjuredValue> injured, boolean longTerm) {
     }
 
     /** One player or pick as the search weighs it. */
@@ -93,8 +96,8 @@ final class OfferSearch {
             return described.position();
         }
 
-        boolean buyLow() {
-            return described.call().map(Assessment::call)
+        boolean buyTarget() {
+            return described.injury().isPresent() || described.call().map(Assessment::call)
                     .filter(call -> call != Assessment.Call.SELL_HIGH)
                     .isPresent();
         }
@@ -176,18 +179,22 @@ final class OfferSearch {
             if (unfitted <= 0 && market <= 0) {
                 continue;
             }
+            Optional<InjuredValue> injury = Optional.ofNullable(league.injured().get(playerId));
+            double perGame = injury.flatMap(InjuredValue::perGameWhenBack)
+                    .orElse(league.perGame().getOrDefault(playerId, 0.0));
             assets.add(new Asset(new TradePiece(new TradeAsset.Player(player.fullName()),
                     player), new Offer.Piece(Optional.of(playerId), player.fullName(),
                     Optional.of(player.position()), Optional.empty(),
-                    Optional.ofNullable(league.calls().get(playerId))),
-                    unfitted, market, league.perGame().getOrDefault(playerId, 0.0)));
+                    Optional.ofNullable(league.calls().get(playerId)), injury),
+                    unfitted, market, perGame));
         }
         for (LeaguePicks.PricedPick pick : league.picks().getOrDefault(roster.rosterId(),
                 List.of())) {
             DraftPick drafted = pick.pick();
             assets.add(new Asset(new TradePiece(new TradeAsset.DraftPick(pick.reference()),
                     null), new Offer.Piece(Optional.empty(), pick.reference(), Optional.empty(),
-                    Optional.of(drafted), Optional.empty()), 0, pick.value(), 0));
+                    Optional.of(drafted), Optional.empty(), Optional.empty()), 0, pick.value(),
+                    0));
         }
         return assets;
     }
@@ -200,9 +207,9 @@ final class OfferSearch {
         List<Asset> upgrades = theirs.stream()
                 .filter(asset -> asset.position().isPresent())
                 .filter(asset -> needs.starters().contains(asset.position().get())
-                        || asset.buyLow())
+                        || asset.buyTarget())
                 .filter(asset -> startsForUser(league, asset))
-                .sorted(Comparator.comparing((Asset asset) -> !asset.buyLow())
+                .sorted(Comparator.comparing((Asset asset) -> !asset.buyTarget())
                         .thenComparing(Comparator.comparingDouble(Asset::unfitted).reversed()))
                 .limit(UPGRADE_TARGETS)
                 .toList();
@@ -242,7 +249,7 @@ final class OfferSearch {
     static List<Candidate> asked(League league, Needs needs, TradeShape shape,
             RosterSnapshot partner, List<Asset> mine, List<Asset> theirs) {
         List<Asset> wanted = theirs.stream()
-                .sorted(Comparator.comparing((Asset asset) -> !asset.buyLow())
+                .sorted(Comparator.comparing((Asset asset) -> !asset.buyTarget())
                         .thenComparing(asset -> asset.position().filter(needs::any).isEmpty())
                         .thenComparing(Comparator.comparingDouble((Asset asset) ->
                                 league.longTerm() ? asset.market() : asset.unfitted())

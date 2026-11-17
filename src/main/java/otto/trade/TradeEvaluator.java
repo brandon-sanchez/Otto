@@ -62,14 +62,17 @@ public class TradeEvaluator {
     private final RosterFit rosterFit;
     private final LeagueAnalysis league;
     private final TradeMarket market;
+    private final InjuredPlayers injuredPlayers;
 
     public TradeEvaluator(PlayerLookup lookup, RestOfSeasonProjections restOfSeason,
-            RosterFit rosterFit, LeagueAnalysis league, TradeMarket market) {
+            RosterFit rosterFit, LeagueAnalysis league, TradeMarket market,
+            InjuredPlayers injuredPlayers) {
         this.lookup = lookup;
         this.restOfSeason = restOfSeason;
         this.rosterFit = rosterFit;
         this.league = league;
         this.market = market;
+        this.injuredPlayers = injuredPlayers;
     }
 
     /**
@@ -227,14 +230,19 @@ public class TradeEvaluator {
      * search over many trades prices each one exactly as
      * {@link #evaluate} would.
      *
+     * @param season every player's points over the weeks left, an
+     *        injured player's counted from his likely return when the news
+     *        gives a timeline
      * @param replacement what Replacement Level is worth at each position
      *        over the weeks left
+     * @param injured every sidelined player in the league, by Sleeper id
      */
     public record Basis(RestOfSeason season, LeagueShape shape,
-            Map<String, Double> replacement) {
+            Map<String, Double> replacement, Map<String, InjuredPlayer> injured) {
 
         public Basis {
             replacement = Map.copyOf(replacement);
+            injured = Map.copyOf(injured);
         }
     }
 
@@ -269,7 +277,8 @@ public class TradeEvaluator {
      * Reads what every trade between the user and one partner is priced
      * from.
      *
-     * <p>Side effects: the rest-of-season projection reads.
+     * <p>Side effects: the rest-of-season projection reads, and a research
+     * cache read for each sidelined player.
      *
      * @return the basis, or unavailable when the weeks left can't be
      *         priced
@@ -289,7 +298,8 @@ public class TradeEvaluator {
      * position's Replacement Level are the same whichever two teams
      * trade, so this prices a player exactly as a two-team basis does.
      *
-     * <p>Side effects: the rest-of-season projection reads.
+     * <p>Side effects: the rest-of-season projection reads, and a research
+     * cache read for each sidelined player.
      */
     public SourceResult<Basis> basis(LeagueWeek leagueWeek) {
         Map<String, String> positions = new HashMap<>();
@@ -339,9 +349,10 @@ public class TradeEvaluator {
             case SourceResult.Ok<RestOfSeason> ok -> {
                 LeagueShape shape = LeagueShape.of(leagueWeek.league(),
                         leagueWeek.rosters().size());
-                yield new SourceResult.Ok<>(new Basis(ok.value(), shape,
-                        replacementOverTheWeeksLeft(leagueWeek, shape, positions,
-                                ok.value().weekCount())));
+                Map<String, InjuredPlayer> injured = injuredPlayers.read(leagueWeek, ok.value());
+                yield new SourceResult.Ok<>(new Basis(InjuredPlayers.priced(ok.value(), injured),
+                        shape, replacementOverTheWeeksLeft(leagueWeek, shape, positions,
+                                ok.value().weekCount()), injured));
             }
         };
     }
@@ -501,6 +512,7 @@ public class TradeEvaluator {
         }
         priced.unavailable().ifPresent(notes::add);
         notes.addAll(priced.pickNotes());
+        notes.addAll(injuryNotes(basis, incoming, outgoing));
         tePremium(leagueWeek, incoming, outgoing).ifPresent(notes::add);
         if (sideUnpriced) {
             notes.add(!call.marketDecides() && gainUnpriced && costUnpriced
@@ -806,6 +818,25 @@ public class TradeEvaluator {
                         byes.stream().map(String::valueOf).collect(Collectors.joining(", "))),
                 note(season, player, line)),
                 value);
+    }
+
+    private static List<String> injuryNotes(Basis basis, Resolved incoming, Resolved outgoing) {
+        return Stream.concat(incoming.pieces().stream(), outgoing.pieces().stream())
+                .filter(piece -> piece.player() != null)
+                .flatMap(piece -> Optional.ofNullable(basis.injured()
+                        .get(piece.player().playerId())).stream())
+                .flatMap(injured -> {
+                    if (injured.seasonOver()) {
+                        return Stream.of(("The news says %s's injury ends his season, so he is "
+                                + "priced at nothing for the weeks left").formatted(
+                                        injured.name()));
+                    }
+                    return injured.returnWeek().flatMap(week -> injured.pricedGames()
+                            .map(games -> ("%s is priced from his likely return in week %d, "
+                                    + "%d of the games left").formatted(injured.name(), week,
+                                            games))).stream();
+                })
+                .toList();
     }
 
     /** What the reader must know about one player's price, when anything. */

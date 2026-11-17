@@ -12,6 +12,7 @@
   ],
   "settings": {
     "type": 2,
+    "draft_rounds": 3,
     "max_keepers": 1,
     "waiver_type": 1,
     "waiver_bid_min": 0,

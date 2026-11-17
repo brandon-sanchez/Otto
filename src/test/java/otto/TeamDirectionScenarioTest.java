@@ -276,6 +276,23 @@ class TeamDirectionScenarioTest extends WireSeamTest {
                 "marketValue", "8000 in market value for a 12-team Superflex PPR dynasty league");
     }
 
+    /**
+     * The league's rookie drafts run three rounds by Sleeper's
+     * {@code draft_rounds}, so the user's own 2027 3rd (500) counts too.
+     */
+    @Test
+    void aDynastyTeamsPicksCountInEveryRoundItsRookieDraftsRun() {
+        leagueInWeek12("sleeper/league-dynasty.json");
+        fantasyCalcAnswers("true", "fantasycalc/values-direction-dynasty-picks-3rd.json");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/traded_picks",
+                "sleeper/traded-picks-direction.json", "traded-picks-v1");
+
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1")).containsEntry(
+                "marketValue", "8500 in market value for a 12-team Superflex PPR dynasty league");
+    }
+
     @Test
     void sayingYesInADynastyLeagueMakesTheUserRebuilding() {
         dynastyLeague();

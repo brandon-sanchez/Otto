@@ -9,6 +9,8 @@ import java.util.Optional;
  *        {@code years_exp}: 0 for a rookie. Sleeper raises it only when
  *        a season ends, never mid-season. Empty when Sleeper gives no
  *        whole number, which means unknown and never zero.
+ * @param injury the body part Sleeper lists his injury under, such as
+ *        "Knee", from {@code injury_body_part}; empty when it lists none
  */
 public record DirectoryPlayer(
         String playerId,
@@ -16,10 +18,18 @@ public record DirectoryPlayer(
         String position,
         String team,
         PlayerHealth health,
-        Optional<Integer> yearsInLeague) {
+        Optional<Integer> yearsInLeague,
+        Optional<String> injury) {
 
     public DirectoryPlayer {
         yearsInLeague = yearsInLeague == null ? Optional.empty() : yearsInLeague;
+        injury = injury == null ? Optional.empty() : injury;
+    }
+
+    /** A player with no injury listed. */
+    public DirectoryPlayer(String playerId, String fullName, String position, String team,
+            PlayerHealth health, Optional<Integer> yearsInLeague) {
+        this(playerId, fullName, position, team, health, yearsInLeague, Optional.empty());
     }
 
     /**

@@ -61,8 +61,8 @@ final class TradeIdeaEvidence {
 
     /**
      * The items that state one offer: the offer itself, one per draft pick
-     * it moves, and the buy-low or sell-high read of each player who
-     * carries one.
+     * it moves, the buy-low or sell-high read of each player who carries
+     * one, and what each injured player is worth while he is hurt.
      *
      * @param id the offer item's id, which the pick items extend
      */
@@ -85,6 +85,10 @@ final class TradeIdeaEvidence {
                 .toList();
         BuySellEvidence.items(judged, now).stream()
                 .filter(item -> items.stream().noneMatch(known -> known.id().equals(item.id())))
+                .forEach(items::add);
+        pieces.stream()
+                .flatMap(piece -> piece.injury().stream())
+                .map(injury -> InjuryEvidence.item(injury, now))
                 .forEach(items::add);
         return items;
     }

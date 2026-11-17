@@ -25,5 +25,7 @@ public enum RunKind {
     /** Every team in the league labelled contending, in the middle or rebuilding. */
     TEAM_DIRECTIONS,
     /** Named trade offers, suggested in chat when the user asks. */
-    TRADE_IDEAS
+    TRADE_IDEAS,
+    /** A chat answer about whether to buy one injured player while he is hurt. */
+    INJURED_BUY_LOW
 }
