@@ -186,7 +186,7 @@ public class TeamWeaknesses {
      * explain it.
      *
      * <p>Side effects: the rest-of-season projection reads, the market
-     * value reads for every roster, the habit capture's reads and writes,
+     * value reads for every roster, the habit capture's reads,
      * one or two model calls, and one Decision Record of kind
      * {@link RunKind#TEAM_WEAKNESSES} whatever the outcome.
      *

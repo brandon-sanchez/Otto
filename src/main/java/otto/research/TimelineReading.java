@@ -17,8 +17,18 @@ final class TimelineReading {
             + "|season ending|out for the (season|year)|(miss|for) the (rest|remainder) of "
             + "the (season|year)|done for the (season|year)|season is over)\\b");
 
-    private static final Pattern HEDGED = Pattern.compile("\\b(could|may|might|possibly"
-            + "|potentially|fears?|feared|avoids?|avoided|not|isn't|unlikely)\\b");
+    private static final String UNSURE = "could|may|might|possibly|potentially|unlikely";
+
+    private static final Pattern HEDGED = Pattern.compile("\\b(" + UNSURE
+            + "|fears?|feared|avoids?|avoided|not|isn't)\\b");
+
+    /**
+     * Words that make a return week a hope instead of a plan. Denials are
+     * left out on purpose: "not expected back until Week 14" states the
+     * week firmly.
+     */
+    private static final Pattern UNSURE_OF_WEEK = Pattern.compile("\\b(" + UNSURE
+            + "|hop(es?|ing|eful)|chance)\\b");
 
     private static final Pattern NO_TIMETABLE = Pattern.compile("\\b(no (set |clear )?"
             + "(timetable|timeline)|indefinitely)\\b");
@@ -76,6 +86,9 @@ final class TimelineReading {
         }
         Matcher byWeek = BY_WEEK.matcher(lower);
         if (byWeek.find()) {
+            if (UNSURE_OF_WEEK.matcher(lower).find()) {
+                return Optional.empty();
+            }
             return Optional.of(new ReturnTimeline.ByWeek(Integer.parseInt(byWeek.group(2)), cited));
         }
         if (!ABOUT_MISSING.matcher(lower).find()) {

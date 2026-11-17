@@ -3,6 +3,7 @@ package otto;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -21,18 +22,26 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import otto.check.CheckRunner;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.habits.HabitLedger;
 import otto.harness.Fixtures;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
@@ -45,6 +54,7 @@ import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchCache;
+import otto.storage.DocumentBackend;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -103,6 +113,9 @@ class HabitsScenarioTest extends WireSeamTest {
 
     @Autowired
     private ResearchCache research;
+
+    @MockitoSpyBean
+    private DocumentBackend backend;
 
     @BeforeEach
     void aLeagueInSeason() {
@@ -332,6 +345,85 @@ class HabitsScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("review_habits")));
     }
 
+    /**
+     * Stat corrections to last week's scores land within days of its
+     * games, so the Checks a minute apart leave the week alone, a Check
+     * hours later reads it again, and one after the corrections are in
+     * never does.
+     */
+    @Test
+    void lastWeeksScoresAreReadAgainEveryFewHoursUntilCorrectionsAreIn() {
+        for (int week = 1; week <= 2; week++) {
+            stubMatchups(week, USUAL_STARTERS, points(Map.of()));
+        }
+        checkInWeek(3);
+        for (int minute = 1; minute <= 3; minute++) {
+            checkAfter(Duration.ofSeconds(61));
+        }
+        lastWeekWasRead(1);
+
+        checkAfter(Duration.ofHours(5));
+        lastWeekWasRead(2);
+
+        checkAfter(Duration.ofDays(4));
+        checkAfter(Duration.ofHours(5));
+        lastWeekWasRead(2);
+    }
+
+    /**
+     * The Check stores the capture every minute. A chat answer that
+     * stored it too would have the deployed storage refuse whichever of
+     * the two wrote second, and a refused webhook run makes Telegram send
+     * the question again.
+     */
+    @Test
+    void aHabitsQuestionReadsTheNewestWeekButLeavesStoringItToTheCheck() {
+        for (int week = 1; week <= 6; week++) {
+            stubMatchups(week, USUAL_STARTERS, points(Map.of(JACOBS, 6.0, COOK, 14.0)));
+        }
+        checkInWeek(6);
+        leagueIsInWeek(7);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "review_habits", "{}", "Here it is.");
+        Mockito.clearInvocations(backend);
+
+        ask(QUESTION);
+
+        assertThat(sentMessage()).contains("6 weeks");
+        Mockito.verify(backend, Mockito.never())
+                .store(Mockito.eq("habit-weeks"), Mockito.any());
+    }
+
+    @Test
+    void aSleeperReadTheCaptureCouldNotMakeIsLoggedAsAWarning() {
+        stubMatchups(1, USUAL_STARTERS, points(Map.of()));
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.LEAGUE_PATH + "/matchups/2"))
+                .willReturn(aResponse().withStatus(500)));
+        ListAppender<ILoggingEvent> captureLog = new ListAppender<>();
+        captureLog.start();
+        Logger ledgerLog = (Logger) LoggerFactory.getLogger(HabitLedger.class);
+        ledgerLog.addAppender(captureLog);
+        try {
+            checkInWeek(3);
+        } finally {
+            ledgerLog.detachAppender(captureLog);
+        }
+
+        assertThat(captureLog.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .anySatisfy(message -> assertThat(message).contains("week 2 matchups"));
+    }
+
+    private void checkAfter(Duration wait) {
+        clock.set(clock.instant().plus(wait));
+        checkRunner.runCheck();
+    }
+
+    private static void lastWeekWasRead(int times) {
+        sleeper.verify(times, getRequestedFor(urlEqualTo(
+                SleeperStubs.LEAGUE_PATH + "/matchups/2")));
+    }
+
     private void ask(String question) {
         assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage(question)))
                 .isEqualTo(WebhookResult.OK);
@@ -394,6 +486,12 @@ class HabitsScenarioTest extends WireSeamTest {
 
     /** Runs one Check in the given week, before any of that week's games start. */
     private void checkInWeek(int week) {
+        leagueIsInWeek(week);
+        checkRunner.runCheck();
+    }
+
+    /** Moves the clock and Sleeper to the given week, before any of its games start. */
+    private void leagueIsInWeek(int week) {
         clock.set(week(week));
         stubBody(SleeperStubs.STATE_PATH, Fixtures.read("sleeper/state-nfl.json")
                 .replace("\"week\": 2", "\"week\": " + week)
@@ -405,7 +503,6 @@ class HabitsScenarioTest extends WireSeamTest {
         for (int round = 1; round <= week; round++) {
             stubTransactionsIfUnset(round);
         }
-        checkRunner.runCheck();
     }
 
     private final Map<Integer, Boolean> transactionsStubbed = new HashMap<>();

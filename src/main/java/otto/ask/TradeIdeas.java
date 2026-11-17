@@ -132,7 +132,7 @@ public class TradeIdeas {
     /**
      * Finds trade offers and has the model explain them.
      *
-     * <p>Side effects: the habit capture's reads and writes, the reads
+     * <p>Side effects: the habit capture's reads, the reads
      * {@link TradeOffers#find} makes, one or two model calls, and one
      * Decision Record of kind {@link RunKind#TRADE_IDEAS} whatever the
      * outcome. After the deadline, the weaknesses answer's reads and its
@@ -144,7 +144,9 @@ public class TradeIdeas {
      * @param shown how many offers he has already seen when he asks for
      *        more; null otherwise
      * @param shape the shape he asked for, such as "3-for-2"; null for
-     *        the default shapes
+     *        the default shapes. A side of more than
+     *        {@link TradeShape#MOST_PIECES} pieces is answered as
+     *        unavailable
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
@@ -158,6 +160,11 @@ public class TradeIdeas {
         }
         if (count != null && count < 1) {
             return ToolAnswer.unavailable("ask for at least one trade idea");
+        }
+        if (TradeShape.tooLarge(shape)) {
+            return ToolAnswer.unavailable(("he asked for a %s trade, and I build trades of up "
+                    + "to %d players a side: tell him that plainly, and offer to build one "
+                    + "that size or smaller").formatted(shape.strip(), TradeShape.MOST_PIECES));
         }
         Optional<TradeShape> asked = Optional.ofNullable(shape).filter(text -> !text.isBlank())
                 .map(TradeShape::parse)

@@ -77,17 +77,17 @@ public class HabitService {
     }
 
     /**
-     * Brings the weekly capture up to date and answers from it.
+     * Answers from the weekly capture, brought up to date.
      *
-     * <p>Side effects: the capture's reads and writes (see
-     * {@link HabitLedger#update}), up to two model calls when a habit cost
+     * <p>Side effects: the capture's reads (see
+     * {@link HabitLedger#current}), up to two model calls when a habit cost
      * him points, and one Decision Record write unless the same evidence
      * was answered before.
      */
     public Answer answer(SleeperAdapter.League league, Snapshot snapshot, WeekFacts week,
             Instant now) {
         Function<String, String> names = names();
-        HabitReport report = Habits.measure(ledger.update(league, snapshot, week, now), names);
+        HabitReport report = Habits.measure(ledger.current(league, snapshot, week, now), names);
         EvidenceBundle bundle = HabitEvidence.bundle(report, names, league.waiverBudget(), now);
         String runId = RunIds.stable("habits-", league.leagueId(), bundle.identity());
         Optional<Outcome> earlier = runs.earlier(userId, league.leagueId(), runId);
@@ -121,15 +121,15 @@ public class HabitService {
     }
 
     /**
-     * Brings the weekly capture up to date and returns how the user's
-     * costly habits tilt team analysis and trade ideas.
+     * Returns how the user's costly habits tilt team analysis and trade
+     * ideas, from the weekly capture brought up to date.
      *
-     * <p>Side effects: the capture's reads and writes (see
-     * {@link HabitLedger#update}). No model call and no Decision Record.
+     * <p>Side effects: the capture's reads (see
+     * {@link HabitLedger#current}). No model call and no Decision Record.
      */
     public HabitLean lean(SleeperAdapter.League league, Snapshot snapshot, WeekFacts week,
             Instant now) {
-        HabitHistory history = ledger.update(league, snapshot, week, now);
+        HabitHistory history = ledger.current(league, snapshot, week, now);
         return HabitLean.of(history, Habits.measure(history, Function.identity()));
     }
 

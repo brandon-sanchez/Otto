@@ -1,5 +1,6 @@
 package otto.habits;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,13 +59,15 @@ import otto.storage.JsonStore;
  * <p>A scored week is stored once and read from storage after that, so
  * weeks Sleeper stops serving stay measurable. Weeks played before the
  * capture existed are backfilled the first time it runs, wherever
- * Sleeper still serves them. The latest scored week is always read
- * again, because stat corrections land through the Thursday after the
- * games. Designations and IR standing at kickoff can only be seen live,
- * so a week no Check saw before its games has none.
+ * Sleeper still serves them. The latest scored week is read again every
+ * {@link #CORRECTION_READ_EVERY} for {@link #CORRECTIONS_LAND_WITHIN}
+ * after its first capture, because stat corrections land through the
+ * Thursday after the games. Designations and IR standing at kickoff can
+ * only be seen live, so a week no Check saw before its games has none.
  *
  * <p>The capture never sends anything; it only keeps what the habits
- * answer measures.
+ * answer measures. Only the Check stores it: a chat answer reads it
+ * through {@link #current}, which stores nothing.
  */
 @Component
 public class HabitLedger {
@@ -82,6 +85,21 @@ public class HabitLedger {
      * rather than being read again on every Check.
      */
     private static final int SETTLE_WEEKS = 3;
+
+    /**
+     * How long the latest scored week is left alone between reads. A
+     * correction changes a score by a point or two, so the habits answer
+     * loses nothing by seeing it a few hours late.
+     */
+    private static final Duration CORRECTION_READ_EVERY = Duration.ofHours(4);
+
+    /**
+     * How long after its first capture the latest scored week is still
+     * read again. The week is first captured when Sleeper turns it over,
+     * early in the week after its games, and stat corrections land
+     * through the Thursday after the games, so three days covers them.
+     */
+    private static final Duration CORRECTIONS_LAND_WITHIN = Duration.ofDays(3);
 
     private static final Logger log = LoggerFactory.getLogger(HabitLedger.class);
 
@@ -114,16 +132,30 @@ public class HabitLedger {
      *        picks are already read into {@code calls}
      * @param drafted the league's draft, by player id; empty until Sleeper
      *        serves a completed draft for the league
+     * @param scoreReads when the latest scored week's scores were read, by
+     *        week number; a week absent here has no timed read, so it is
+     *        read on the next update
      */
     record Stored(String leagueId, String season, Map<Integer, HabitWeek> weeks,
             List<AdviceCall> calls, Set<String> boardsRead,
-            Map<String, HabitHistory.Drafted> drafted) {
+            Map<String, HabitHistory.Drafted> drafted, Map<Integer, ScoreRead> scoreReads) {
 
         Stored {
             weeks = new TreeMap<>(weeks);
             calls = List.copyOf(calls);
             boardsRead = Set.copyOf(boardsRead);
             drafted = drafted == null ? Map.of() : Map.copyOf(drafted);
+            scoreReads = scoreReads == null ? Map.of() : Map.copyOf(scoreReads);
+        }
+    }
+
+    /** When one scored week's scores were first read from Sleeper, and last. */
+    record ScoreRead(Instant first, Instant latest) {
+
+        /** True while corrections may still land and the last read is old enough. */
+        boolean dueAt(Instant now) {
+            return now.isBefore(first.plus(CORRECTIONS_LAND_WITHIN))
+                    && !now.isBefore(latest.plus(CORRECTION_READ_EVERY));
         }
     }
 
@@ -141,21 +173,13 @@ public class HabitLedger {
     }
 
     /**
-     * Brings the capture up to date and returns everything it holds for
-     * this league's season. Never throws: a failure is logged and what
-     * was stored before is returned, so the Check and the habits answer
-     * carry on.
+     * Brings the capture up to date, stores it, and returns everything it
+     * holds for this league's season. Never throws: a failure is logged
+     * and what was stored before is returned, so the Check carries on.
+     * Only the Check calls this; see {@link #current} for why.
      *
-     * <p>Side effects: Sleeper reads of the matchups, the games and the
-     * transactions for every scored week not yet stored, for the latest
-     * scored week and for this week, plus that week's projections and
-     * stats in a league that starts a kicker or defense or once the user
-     * has dropped someone, and the league's draft until one is stored;
-     * each is answered from the cache while it is younger than the
-     * cadence interval. For a recent week with a Questionable starter not
-     * yet settled, that week's games and the reads {@link Turnouts#settle}
-     * makes. One Decision Record read per waiver board not yet read; and
-     * a write of the stored document when anything in it changed.
+     * <p>Side effects: the reads {@link #current} makes, and a write of
+     * the stored document when anything in it changed.
      *
      * @param snapshot the latest Snapshot, whose user roster is the one
      *        captured
@@ -164,6 +188,46 @@ public class HabitLedger {
      */
     public HabitHistory update(SleeperAdapter.League league, Snapshot snapshot, WeekFacts week,
             Instant now) {
+        return captured(league, snapshot, week, now, true);
+    }
+
+    /**
+     * Returns everything the capture holds for this league's season,
+     * brought up to date but not stored. Never throws: a failure is
+     * logged and what was stored before is returned, so the answer that
+     * asked carries on.
+     *
+     * <p>A chat answer reads the capture this way. The Check stores the
+     * document every minute, and storage refuses the later of two entry
+     * points that both changed one document during overlapping runs. A
+     * chat answer that stored it would fail its webhook run after the
+     * reply was sent, and Telegram would deliver the question again.
+     * Whatever this read found, the next Check finds and stores.
+     *
+     * <p>Side effects: Sleeper reads of the matchups, the games and the
+     * transactions for every scored week not yet stored, for the latest
+     * scored week while its corrections are due and for this week, plus
+     * that week's projections and stats in a league that starts a kicker
+     * or defense or once the user has dropped someone, and the league's
+     * draft until one is stored; each is answered from the cache while it
+     * is younger than the cadence interval. A read Sleeper could not
+     * answer is logged as a warning and made again on the next call. For
+     * a recent week with a Questionable starter not yet settled, that
+     * week's games and the reads {@link Turnouts#settle} makes. One
+     * Decision Record read per waiver board not yet read.
+     *
+     * @param snapshot the latest Snapshot, whose user roster is the one
+     *        captured
+     * @param now the time the designations are read at; a player whose
+     *        game has started keeps the designation seen before it
+     */
+    public HabitHistory current(SleeperAdapter.League league, Snapshot snapshot, WeekFacts week,
+            Instant now) {
+        return captured(league, snapshot, week, now, false);
+    }
+
+    private HabitHistory captured(SleeperAdapter.League league, Snapshot snapshot,
+            WeekFacts week, Instant now, boolean keep) {
         Optional<SeasonWeek> current = week.seasonWeek()
                 .filter(seasonWeek -> !PRESEASON.equals(seasonWeek.seasonType()));
         Optional<RosterSnapshot> user = snapshot.rosters().stream()
@@ -176,7 +240,7 @@ public class HabitLedger {
         try {
             before = Optional.of(stored(league.leagueId(), current.get().season()));
             Stored after = updated(before.get(), league, user.get(), current.get(), week, now);
-            if (!after.equals(before.get())) {
+            if (keep && !after.equals(before.get())) {
                 store.write(DOCUMENT, after);
             }
             return history(after);
@@ -195,17 +259,24 @@ public class HabitLedger {
                 .orElse(Map.of());
         Map<Integer, HabitWeek> weeks = new TreeMap<>(before.weeks());
         int thisWeek = current.number();
+        Map<Integer, ScoreRead> scoreReads = new HashMap<>(before.scoreReads());
+        scoreReads.keySet().removeIf(number -> number != thisWeek - 1);
         for (int number = 1; number <= thisWeek; number++) {
             HabitWeek captured = weeks.getOrDefault(number, HabitWeek.empty(number));
-            if (captured.played().isPresent() && number < thisWeek - 1) {
+            ScoreRead lastRead = scoreReads.get(number);
+            if (captured.played().isPresent()
+                    && (number < thisWeek - 1 || lastRead != null && !lastRead.dueAt(now))) {
                 continue;
             }
             if (number < thisWeek) {
                 Week scoredWeek = new Week(current.season(), number, week.scoring(),
                         droppedBefore(weeks, number));
-                captured = scored(league, user, scoredWeek, players)
-                        .map(captured::withPlayed)
-                        .orElse(captured);
+                Optional<PlayedWeek> played = scored(league, user, scoredWeek, players);
+                if (played.isPresent() && number == thisWeek - 1) {
+                    scoreReads.put(number,
+                            new ScoreRead(lastRead == null ? now : lastRead.first(), now));
+                }
+                captured = played.map(captured::withPlayed).orElse(captured);
             }
             HabitWeek withoutMoves = captured;
             captured = moves(league, current.season(), number, user, players)
@@ -233,7 +304,7 @@ public class HabitLedger {
                 ? drafted(user.rosterId())
                 : before.drafted();
         return new Stored(league.leagueId(), current.season(), weeks, calls, boardsRead,
-                drafted);
+                drafted, scoreReads);
     }
 
     private static Set<String> droppedBefore(Map<Integer, HabitWeek> weeks, int number) {
@@ -300,12 +371,13 @@ public class HabitLedger {
     }
 
     private Map<String, HabitHistory.Drafted> drafted(int userRosterId) {
-        if (!(sleeper.draftPicks()
-                instanceof SourceResult.Ok<List<SleeperAdapter.DraftSelection>> picks)) {
+        Optional<List<SleeperAdapter.DraftSelection>> picks =
+                read("the draft", sleeper.draftPicks());
+        if (picks.isEmpty()) {
             return Map.of();
         }
         Map<String, HabitHistory.Drafted> drafted = new HashMap<>();
-        picks.value().forEach(pick -> drafted.put(pick.playerId(), new HabitHistory.Drafted(
+        picks.get().forEach(pick -> drafted.put(pick.playerId(), new HabitHistory.Drafted(
                 pick.round(), pick.pickNumber(), pick.rosterId() == userRosterId)));
         return drafted;
     }
@@ -325,18 +397,17 @@ public class HabitLedger {
 
     private Optional<PlayedWeek> scored(SleeperAdapter.League league, RosterSnapshot user,
             Week week, Map<String, DirectoryPlayer> players) {
-        if (!(sleeper.matchups(week.number())
-                instanceof SourceResult.Ok<List<StarterLine>> ok)) {
-            return Optional.empty();
-        }
-        Optional<StarterLine> line = ok.value().stream()
+        Optional<List<StarterLine>> lines = read("week " + week.number() + " matchups",
+                sleeper.matchups(week.number()));
+        Optional<StarterLine> line = lines.stream()
+                .flatMap(List::stream)
                 .filter(candidate -> candidate.rosterId() == user.rosterId())
                 .findFirst();
         if (line.isEmpty()) {
             return Optional.empty();
         }
         Map<String, Double> leaguePoints = new HashMap<>();
-        ok.value().forEach(other -> leaguePoints.putAll(other.playerPoints()));
+        lines.get().forEach(other -> leaguePoints.putAll(other.playerPoints()));
         Map<String, Double> points = new LinkedHashMap<>(line.get().playerPoints());
         for (int slot = 0; slot < line.get().starters().size(); slot++) {
             String starter = line.get().starters().get(slot);
@@ -382,10 +453,8 @@ public class HabitLedger {
     }
 
     private Map<String, Map<String, Double>> stats(Week week) {
-        return sleeper.stats(week.season(), week.number())
-                instanceof SourceResult.Ok<Map<String, Map<String, Double>>> read
-                ? read.value()
-                : Map.of();
+        return read("week " + week.number() + " stats",
+                sleeper.stats(week.season(), week.number())).orElse(Map.of());
     }
 
     private Set<String> byes(Week week, Map<String, String> teams) {
@@ -397,11 +466,21 @@ public class HabitLedger {
     }
 
     private Optional<GameWeek> games(String season, int week) {
-        return sleeper.games(season, week)
-                instanceof SourceResult.Ok<List<SleeperAdapter.Game>> games
-                && !games.value().isEmpty()
-                ? Optional.of(GameWeek.of(games.value()))
-                : Optional.empty();
+        return read("week " + week + " games", sleeper.games(season, week))
+                .filter(games -> !games.isEmpty())
+                .map(GameWeek::of);
+    }
+
+    /** Returns what Sleeper answered, or empty with a warning logged when it could not. */
+    private static <T> Optional<T> read(String what, SourceResult<T> result) {
+        return switch (result) {
+            case SourceResult.Ok<T> ok -> Optional.of(ok.value());
+            case SourceResult.Unavailable<T> unavailable -> {
+                log.warn("The habit capture could not read {} from {}: {}", what,
+                        unavailable.source(), unavailable.reason());
+                yield Optional.empty();
+            }
+        };
     }
 
     /**
@@ -413,12 +492,14 @@ public class HabitLedger {
         Set<String> positions = slots.stream()
                 .filter(PlayedWeek.STREAMED::contains)
                 .collect(Collectors.toSet());
-        if (positions.isEmpty() || !(sleeper.projections(week.season(), week.number())
-                instanceof SourceResult.Ok<Map<String, Map<String, Double>>> projections)) {
+        if (positions.isEmpty()) {
             return Map.of();
         }
+        Map<String, Map<String, Double>> projections = read(
+                "week " + week.number() + " projections",
+                sleeper.projections(week.season(), week.number())).orElse(Map.of());
         Map<String, PlayedWeek.FreeAgent> best = new HashMap<>();
-        projections.value().forEach((playerId, line) -> {
+        projections.forEach((playerId, line) -> {
             Optional<String> position = PlayerPositions.kickerOrDefense(playerId, line);
             if (position.isEmpty() || !positions.contains(position.get())
                     || leaguePoints.containsKey(playerId)) {
@@ -489,17 +570,21 @@ public class HabitLedger {
 
     private Optional<WeekMoves> moves(SleeperAdapter.League league, String season, int number,
             RosterSnapshot user, Map<String, DirectoryPlayer> players) {
-        if (!(sleeper.transactions(season, number)
-                instanceof SourceResult.Ok<List<SleeperAdapter.LeagueTransaction>> transactions)
-                || !(sleeper.waiverClaims(number)
-                        instanceof SourceResult.Ok<List<SleeperAdapter.WaiverClaim>> claims)) {
+        Optional<List<SleeperAdapter.LeagueTransaction>> transactions = read(
+                "week " + number + " transactions", sleeper.transactions(season, number));
+        if (transactions.isEmpty()) {
+            return Optional.empty();
+        }
+        Optional<List<SleeperAdapter.WaiverClaim>> claims = read(
+                "week " + number + " waiver claims", sleeper.waiverClaims(number));
+        if (claims.isEmpty()) {
             return Optional.empty();
         }
         int rosterId = user.rosterId();
         Map<String, Integer> bids = new HashMap<>();
-        claims.value().forEach(claim -> bids.put(claim.transactionId(), claim.bid()));
+        claims.get().forEach(claim -> bids.put(claim.transactionId(), claim.bid()));
         List<HabitWeek.Move> moves = new ArrayList<>();
-        for (SleeperAdapter.LeagueTransaction transaction : transactions.value()) {
+        for (SleeperAdapter.LeagueTransaction transaction : transactions.get()) {
             List<String> added = playersFor(transaction.adds(), rosterId);
             List<String> dropped = playersFor(transaction.drops(), rosterId);
             if (added.isEmpty() && dropped.isEmpty()) {
@@ -510,13 +595,13 @@ public class HabitLedger {
                     positions(added, dropped, user, players),
                     Optional.ofNullable(bids.get(transaction.transactionId())), true));
         }
-        claims.value().stream()
+        claims.get().stream()
                 .filter(claim -> !claim.won() && claim.rosterId() == rosterId)
                 .forEach(claim -> moves.add(new HabitWeek.Move(claim.transactionId(), "waiver",
                         claim.processed(), List.of(claim.playerId()), List.of(),
                         positions(List.of(claim.playerId()), List.of(), user, players),
                         Optional.of(claim.bid()), false)));
-        return Optional.of(new WeekMoves(moves, clearings(claims.value(),
+        return Optional.of(new WeekMoves(moves, clearings(claims.get(),
                 league.rules().minimumBid().orElse(0))));
     }
 
@@ -625,7 +710,7 @@ public class HabitLedger {
                 .filter(stored -> stored.leagueId().equals(leagueId)
                         && stored.season().equals(season))
                 .orElseGet(() -> new Stored(leagueId, season, Map.of(), List.of(), Set.of(),
-                        Map.of()));
+                        Map.of(), Map.of()));
     }
 
     private static HabitHistory history(Stored stored) {

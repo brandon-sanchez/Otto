@@ -532,8 +532,8 @@ public class AskTools {
             Integer shown,
             @ToolParam(required = false, description = """
                     The shape he asked for, as how many he gives for how
-                    many he gets, such as 3-for-2. Leave it out when he
-                    named none.""")
+                    many he gets, such as 3-for-2, however large. Leave it
+                    out when he named none.""")
             String shape, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return checked.offer(tradeIdeas.answer(count, shown, shape, clock.instant(),

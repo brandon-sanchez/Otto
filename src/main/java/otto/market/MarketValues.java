@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -142,27 +144,69 @@ public class MarketValues {
     /**
      * Measures how one entry's value moved over the window that ends with
      * the given list, from the oldest list Otto kept inside the window.
+     * To measure many entries against the same list, use
+     * {@link #history}, which loads each kept day once for all of them.
+     *
+     * <p>Side effects: up to {@code days} reads of stored lists.
      *
      * @param days the window, from 1 to {@link #LONGEST_WINDOW_DAYS}
      * @return empty when no earlier list inside the window carries the
      *         entry
      */
     public Optional<Change> change(MarketFormat format, MarketDay latest, String id, int days) {
-        if (days < 1 || days > LONGEST_WINDOW_DAYS) {
-            throw new IllegalArgumentException("A window runs 1 to 30 days, not " + days);
+        return history(format, latest).change(id, days);
+    }
+
+    /** Returns the lists Otto kept before the given one, for measuring many entries. */
+    public History history(MarketFormat format, MarketDay latest) {
+        return new History(format, latest);
+    }
+
+    /**
+     * The lists Otto kept in the days before one list. Each day's list is
+     * read from storage the first time an entry needs it and held after
+     * that, so measuring a whole league costs at most
+     * {@link #LONGEST_WINDOW_DAYS} reads. Made for one scan on one thread,
+     * and dropped with it.
+     */
+    public final class History {
+
+        private final MarketFormat format;
+        private final MarketDay latest;
+        private final Map<LocalDate, Optional<MarketDay>> kept = new HashMap<>();
+
+        private History(MarketFormat format, MarketDay latest) {
+            this.format = format;
+            this.latest = latest;
         }
-        Optional<MarketPlayer> now = latest.entry(id);
-        if (now.isEmpty()) {
+
+        /**
+         * Measures how one entry's value moved over the window that ends
+         * with this history's list, from the oldest kept list inside the
+         * window.
+         *
+         * @param days the window, from 1 to {@link #LONGEST_WINDOW_DAYS}
+         * @return empty when no earlier list inside the window carries
+         *         the entry
+         */
+        public Optional<Change> change(String id, int days) {
+            if (days < 1 || days > LONGEST_WINDOW_DAYS) {
+                throw new IllegalArgumentException("A window runs 1 to 30 days, not " + days);
+            }
+            Optional<MarketPlayer> now = latest.entry(id);
+            if (now.isEmpty()) {
+                return Optional.empty();
+            }
+            for (int back = days; back >= 1; back--) {
+                Optional<MarketPlayer> then = kept
+                        .computeIfAbsent(latest.day().minusDays(back), day -> onDay(format, day))
+                        .flatMap(list -> list.entry(id));
+                if (then.isPresent()) {
+                    return Optional.of(new Change(back, then.get().value(), now.get().value()));
+                }
+            }
             return Optional.empty();
         }
-        for (int back = days; back >= 1; back--) {
-            LocalDate earlier = latest.day().minusDays(back);
-            Optional<MarketPlayer> then = onDay(format, earlier).flatMap(list -> list.entry(id));
-            if (then.isPresent()) {
-                return Optional.of(new Change(back, then.get().value(), now.get().value()));
-            }
-        }
-        return Optional.empty();
     }
 
     private <T> Status refreshed(String statusName, LocalDate today,
