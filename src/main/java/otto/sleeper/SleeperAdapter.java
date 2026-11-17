@@ -734,9 +734,11 @@ public class SleeperAdapter {
      *
      * @param format empty when the list does not say or says something
      *        this code does not know
+     * @param bestBall true when Sleeper sets the lineups itself
+     *        ({@code settings.best_ball} is 1)
      */
     public record UserLeague(String leagueId, String name,
-            Optional<LeagueRules.LeagueFormat> format) {
+            Optional<LeagueRules.LeagueFormat> format, boolean bestBall) {
     }
 
     /**
@@ -758,9 +760,11 @@ public class SleeperAdapter {
                     return schemaDrift(path, "league_id missing");
                 }
                 String leagueId = league.get("league_id").asText();
+                JsonNode settings = league.path("settings");
                 leagues.add(new UserLeague(leagueId,
                         league.path("name").asText("League " + leagueId),
-                        LeagueRules.fromSettings(league.path("settings")).format()));
+                        LeagueRules.fromSettings(settings).format(),
+                        settings.path("best_ball").asInt(0) == 1));
             }
             return ok(leagues);
         });

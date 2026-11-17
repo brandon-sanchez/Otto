@@ -154,4 +154,38 @@ class FollowedLeaguesScenarioTest extends WireSeamTest {
 
         assertThat(store.read("watchlist", List.class)).contains(List.of("shared"));
     }
+
+    @Test
+    void aBestBallLeagueIsNotFollowedBecauseSleeperSetsItsLineups() {
+        SleeperStubs.healthyInSeason(sleeper);
+        sleeper.stubFor(get(urlEqualTo(USER_LEAGUES_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("""
+                        [{"league_id": "1389748403805650944", "name": "Raising Canes Demon",
+                          "settings": {"type": 0}},
+                         {"league_id": "1180000000000000003", "name": "Best Ball Mania",
+                          "settings": {"type": 0, "best_ball": 1}}]
+                        """)));
+
+        leagues.refreshIfDue();
+
+        assertThat(leagues.followed()).containsExactly(REDRAFT);
+    }
+
+    @Test
+    void whenEveryLeagueLeftIsOneTheOwnerLeftOutOttoFollowsThemRatherThanNone() {
+        ownerPlaysInTwoLeagues();
+        leagues.refreshIfDue();
+        leagues.leaveOut(CONFIG_LEAGUE);
+        sleeper.stubFor(get(urlEqualTo(USER_LEAGUES_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("[]")));
+        clock.advance(Duration.ofHours(7));
+
+        leagues.refreshIfDue();
+
+        assertThat(leagues.followed()).containsExactly(REDRAFT);
+    }
 }

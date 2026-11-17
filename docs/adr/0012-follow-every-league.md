@@ -12,7 +12,9 @@ Otto reads the owner's leagues from Sleeper's `/v1/user/<otto.user-id>/leagues/n
 
 The list is read again every six hours (`otto.league-discovery-interval`), so a league the owner joins mid-season is picked up the same day. The Check does the reading, so no new schedule is needed. A failed read keeps the list from the last good one, and is tried again after the same interval, so a Sleeper outage costs no extra requests. When there has never been a good read, Otto follows the config league alone, which is exactly what it did before this change.
 
-The owner can leave a league out, or bring one back, in chat. Otto keeps the leagues he left out in the same document as the list, so a later read of the list does not bring them back. He cannot leave out the last league Otto follows: an assistant that follows nothing would look broken rather than quiet.
+The owner can leave a league out, or bring one back, in chat. Otto keeps the leagues he left out in the same document as the list, so a later read of the list does not bring them back. He cannot leave out the last league Otto follows: an assistant that follows nothing would look broken rather than quiet. If a later list drops the one league he kept, Otto follows the leagues he left out again rather than none.
+
+A best-ball league is not followed unless config names it. Sleeper sets a best-ball lineup itself, so lineup and waiver Alerts there would be advice nobody can act on.
 
 The list lives in one small document, `followed-leagues`, in DynamoDB with the other small records.
 

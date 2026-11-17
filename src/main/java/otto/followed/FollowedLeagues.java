@@ -22,6 +22,10 @@ import otto.storage.JsonStore;
  * account is in this season, less the ones he left out in chat. The
  * league named in config is always first.
  *
+ * <p>A best-ball league is not followed unless config names it: Sleeper
+ * sets its lineups itself, so its lineup and waiver Alerts would be
+ * advice nobody can act on.
+ *
  * <p>The league list is read from Sleeper by {@link #refreshIfDue}, at
  * most once per {@code otto.league-discovery-interval}. A failed read
  * keeps the last good list. With no good list at all, Otto follows the
@@ -80,13 +84,17 @@ public class FollowedLeagues {
     /**
      * Returns every league Otto follows, config league first. The
      * config league is listed even when Sleeper's list leaves it out,
-     * unless the owner left it out himself.
+     * unless the owner left it out himself. Never empty: when every
+     * league left is one he left out, which a later list can cause by
+     * dropping the one he kept, Otto follows them all rather than none.
      */
     public List<FollowedLeague> followed() {
         Stored stored = stored();
-        return known(stored).stream()
+        List<FollowedLeague> known = known(stored);
+        List<FollowedLeague> kept = known.stream()
                 .filter(league -> !stored.leftOut().contains(league.leagueId()))
                 .toList();
+        return kept.isEmpty() ? known : kept;
     }
 
     /** Returns every league the owner plays in, the ones he left out included. */
@@ -133,7 +141,9 @@ public class FollowedLeagues {
                 log.warn("Cannot read the owner's league list, so the leagues stay as they "
                         + "were: {}", unavailable.reason());
         }
-        store.write(DOCUMENT, new Stored(now, leagues, stored.leftOut()));
+        // The read above can take seconds, and a league the owner left out
+        // in chat meanwhile must stay out, so the list is read again.
+        store.write(DOCUMENT, new Stored(now, leagues, stored().leftOut()));
     }
 
     /**
@@ -177,6 +187,8 @@ public class FollowedLeagues {
         return sleeper.nflState()
                 .flatMap(state -> sleeper.userLeagues(userId, state.season()))
                 .flatMap(leagues -> new SourceResult.Ok<>(configFirst(leagues.stream()
+                        .filter(league -> !league.bestBall()
+                                || league.leagueId().equals(configLeagueId))
                         .map(league -> new FollowedLeague(league.leagueId(), league.name(),
                                 league.format().orElse(null)))
                         .toList())));
