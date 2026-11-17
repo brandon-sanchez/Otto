@@ -250,12 +250,12 @@ public class LeagueActivityDetector {
         // The user moves this line by chat, so it is read per drop
         // rather than frozen at startup.
         PositionCutoffs notableCutoffs = settings.notableCutoffs();
-        int cutoff = notableCutoffs.forPosition(position);
+        OptionalInt cutoff = notableCutoffs.forPosition(position);
         String projection = ranking.pointsOf(playerId)
                 .map(points -> String.format(Locale.ROOT, "%.1f", points))
                 .orElse("no projection");
         facts.put("rank", rank.isPresent() ? String.valueOf(rank.getAsInt()) : "unranked");
-        facts.put("notableCutoff", String.valueOf(cutoff));
+        facts.put("notableCutoff", cutoff.isPresent() ? String.valueOf(cutoff.getAsInt()) : "none");
         facts.put("projection", projection);
 
         if (!ranking.inside(playerId, position, notableCutoffs)) {
@@ -279,7 +279,7 @@ public class LeagueActivityDetector {
                 List.of("%s is the %s %s in this week's projections at %s points".formatted(
                                 player, ordinal(rank.orElseThrow()), position, projection),
                         "That puts him inside the top %d at %s, the cutoff this league "
-                                .formatted(cutoff, position) + "treats as notable"),
+                                .formatted(cutoff.getAsInt(), position) + "treats as notable"),
                 List.of("It's worth finding out why %s let him go before you bid"
                                 .formatted(manager),
                         "A claim spends waiver budget you may want later in the season"));

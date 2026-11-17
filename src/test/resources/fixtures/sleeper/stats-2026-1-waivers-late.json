@@ -1,0 +1,7 @@
+{
+  "10001": {"gms_active": 1.0, "gp": 1.0, "gs": 1.0, "off_snp": 30.0, "tm_off_snp": 66.0, "tm_def_snp": 61.0, "tm_st_snp": 26.0, "rush_att": 6.0, "rush_yd": 21.0, "rec_tgt": 1.0, "rec": 1.0, "rec_yd": 4.0, "pts_ppr": 3.5, "pos_rank_ppr": 61.0},
+  "TEAM_TB": {"gp": 1.0, "pass_att": 38.0, "pass_cmp": 26.0, "rec_tgt": 38.0, "rec": 26.0, "rush_att": 28.0, "rush_yd": 117.0, "off_yd": 389.0, "pts_ppr": 98.0},
+  "TEAM_ATL": {"gp": 1.0, "pass_att": 33.0, "pass_cmp": 20.0, "rec_tgt": 33.0, "rec": 20.0, "rush_att": 24.0, "rush_yd": 96.0, "off_yd": 310.0, "pts_ppr": 70.5},
+  "TEAM_NYG": {"gp": 1.0, "pass_att": 58.0, "pass_cmp": 38.0, "rec_tgt": 58.0, "rec": 38.0, "rush_att": 19.0, "rush_yd": 70.0, "off_yd": 402.0, "pts_ppr": 104.6},
+  "TEAM_DAL": {"gp": 1.0, "pass_att": 30.0, "pass_cmp": 18.0, "rec_tgt": 30.0, "rec": 18.0, "rush_att": 25.0, "rush_yd": 102.0, "off_yd": 298.0, "pts_ppr": 72.3}
+}

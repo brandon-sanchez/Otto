@@ -21,6 +21,9 @@ public final class SleeperStubs {
     public static final String SCORES_PATH = "/scores/nfl/regular/2026/2";
     public static final String TRANSACTIONS_PATH = LEAGUE_PATH + "/transactions/2";
 
+    /** Sleeper's played stat lines for 2026 week 1, the waiver week's latest completed week. */
+    public static final String STATS_WEEK_1_PATH = "/v1/stats/nfl/regular/2026/1";
+
     /**
      * The most-added players. The Watchlist watcher and the waiver
      * board read the same list at the same limit, so one poll and one

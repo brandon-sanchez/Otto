@@ -29,6 +29,9 @@ public final class KickerAndDefenseLeague {
     /** A team defense's player id; its projection is 3.0 points. */
     public static final String DEFENSE = "DAL";
 
+    /** The Rams' defense, whose team the fixture schedule puts on bye in week 2. */
+    public static final String DEFENSE_ON_BYE = "LAR";
+
     /** The index of the K slot among the starting slots. */
     public static final int KICKER_SLOT = 9;
 
@@ -75,6 +78,39 @@ public final class KickerAndDefenseLeague {
             projections.putObject(KICKER).put("xpa", 3).put("xpm", 3).put("fga", 2).put("fgm", 2);
             projections.putObject(WEAK_KICKER).put("xpa", 1).put("xpm", 1);
             projections.putObject(DEFENSE).put("sack", 3);
+            stubBody(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                    OttoJson.MAPPER.writeValueAsString(projections));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Stubs the league as {@link #stub} does, with a projection table
+     * deep enough to price a kicker and a defense at the twelfth rank,
+     * one for each of the twelve teams' K and DEF slots. Eleven more
+     * kickers project 2 to 12 points, so the 12th kicker projects 2.0;
+     * twelve more defenses project 4 to 15 points, so the 12th defense
+     * projects 4.0.
+     */
+    public static void stubDeepTable(WireMockServer sleeper, String kickerStarter,
+            String defenseStarter) {
+        stub(sleeper, kickerStarter, defenseStarter, List.of());
+        try {
+            ObjectNode projections = (ObjectNode) OttoJson.MAPPER.readTree(
+                    Fixtures.read("sleeper/projections-2026-2.json"));
+            projections.putObject(KICKER).put("xpa", 3).put("xpm", 3).put("fga", 2).put("fgm", 2);
+            projections.putObject(WEAK_KICKER).put("xpa", 1).put("xpm", 1);
+            projections.putObject(DEFENSE).put("sack", 3);
+            for (int points = 2; points <= 12; points++) {
+                projections.putObject(String.valueOf(9100 + points))
+                        .put("xpa", points).put("xpm", points);
+            }
+            List<String> teams = List.of("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
+                    "DEN", "DET", "GB", "HOU");
+            for (int index = 0; index < teams.size(); index++) {
+                projections.putObject(teams.get(index)).put("sack", 4 + index);
+            }
             stubBody(sleeper, SleeperStubs.PROJECTIONS_PATH,
                     OttoJson.MAPPER.writeValueAsString(projections));
         } catch (Exception e) {

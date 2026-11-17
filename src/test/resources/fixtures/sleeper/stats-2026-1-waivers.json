@@ -1,0 +1,15 @@
+{
+  "10001": {"gms_active": 1.0, "gp": 1.0, "gs": 1.0, "off_snp": 30.0, "tm_off_snp": 66.0, "tm_def_snp": 61.0, "tm_st_snp": 26.0, "rush_att": 6.0, "rush_yd": 21.0, "rec_tgt": 1.0, "rec": 1.0, "rec_yd": 4.0, "pts_ppr": 3.5, "pos_rank_ppr": 61.0},
+  "10005": {"gms_active": 1.0, "gp": 1.0, "gs": 1.0, "off_snp": 41.0, "tm_off_snp": 60.0, "tm_def_snp": 58.0, "tm_st_snp": 27.0, "st_snp": 6.0, "rush_att": 12.0, "rush_yd": 58.0, "rush_ypa": 4.83, "rush_rz_att": 2.0, "rec_tgt": 3.0, "rec": 2.0, "rec_yd": 15.0, "rec_air_yd": 4.0, "bonus_rec_rb": 2.0, "pts_ppr": 9.3, "pts_half_ppr": 8.3, "pts_std": 7.3, "pos_rank_ppr": 31.0},
+  "8138": {"gms_active": 1.0, "gp": 1.0, "off_snp": 19.0, "tm_off_snp": 60.0, "tm_def_snp": 58.0, "tm_st_snp": 27.0, "rush_att": 9.0, "rush_yd": 31.0, "rush_td": 1.0, "pts_ppr": 9.1, "pos_rank_ppr": 33.0},
+  "10006": {"gms_active": 1.0, "gp": 1.0, "gs": 1.0, "off_snp": 64.0, "tm_off_snp": 64.0, "tm_def_snp": 70.0, "tm_st_snp": 25.0, "pass_att": 33.0, "pass_cmp": 20.0, "pass_yd": 231.0, "pass_td": 2.0, "pass_int": 1.0, "rush_att": 3.0, "rush_yd": 12.0, "bonus_fd_qb": 11.0, "pts_ppr": 16.4, "pos_rank_ppr": 19.0},
+  "11533": {"fga": 1.0, "fgm": 1.0, "gms_active": 1.0, "gp": 1.0, "st_snp": 14.0, "tm_def_snp": 58.0, "tm_off_snp": 60.0, "tm_st_snp": 27.0, "xpa": 4.0, "xpm": 4.0},
+  "TEAM_BUF": {"gp": 1.0, "pass_att": 29.0, "pass_cmp": 18.0, "rec_tgt": 29.0, "rec": 18.0, "rush_att": 27.0, "rush_yd": 131.0, "off_yd": 352.0, "pts_ppr": 101.4},
+  "TEAM_MIA": {"gp": 1.0, "pass_att": 35.0, "pass_cmp": 22.0, "rec_tgt": 35.0, "rec": 22.0, "rush_att": 21.0, "rush_yd": 88.0, "off_yd": 301.0, "pts_ppr": 74.2},
+  "TEAM_TB": {"gp": 1.0, "pass_att": 38.0, "pass_cmp": 26.0, "rec_tgt": 38.0, "rec": 26.0, "rush_att": 28.0, "rush_yd": 117.0, "off_yd": 389.0, "pts_ppr": 98.0},
+  "TEAM_ATL": {"gp": 1.0, "pass_att": 33.0, "pass_cmp": 20.0, "rec_tgt": 33.0, "rec": 20.0, "rush_att": 24.0, "rush_yd": 96.0, "off_yd": 310.0, "pts_ppr": 70.5},
+  "TEAM_NYG": {"gp": 1.0, "pass_att": 58.0, "pass_cmp": 38.0, "rec_tgt": 58.0, "rec": 38.0, "rush_att": 19.0, "rush_yd": 70.0, "off_yd": 402.0, "pts_ppr": 104.6},
+  "TEAM_DAL": {"gp": 1.0, "pass_att": 30.0, "pass_cmp": 18.0, "rec_tgt": 30.0, "rec": 18.0, "rush_att": 25.0, "rush_yd": 102.0, "off_yd": 298.0, "pts_ppr": 72.3},
+  "BUF": {"gp": 1.0, "pts_allow": 21.0, "sack": 3.0, "int": 1.0, "yds_allow": 301.0, "tkl": 52.0},
+  "MIA": {"gp": 1.0, "pts_allow": 31.0, "sack": 1.0, "yds_allow": 352.0, "tkl": 49.0}
+}

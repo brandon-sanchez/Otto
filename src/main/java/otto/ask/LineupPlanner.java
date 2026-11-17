@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -117,7 +117,7 @@ public class LineupPlanner {
         return playerIds.stream()
                 .map(playerId -> new BenchLine(
                         team.name(playerId),
-                        team.position(playerId),
+                        team.position(playerId).orElse(null),
                         team.team(playerId),
                         team.health(playerId).name(),
                         team.projection(playerId),
@@ -217,14 +217,15 @@ public class LineupPlanner {
         // Legal means Sleeper would take the change: the slot accepts
         // the position and neither player has locked. A bye or ruled-out
         // player is a legal choice and a certain zero - the notes say so.
-        boolean fits = slot.accepts(team.position(startId));
+        Optional<String> startPosition = team.position(startId);
+        boolean fits = team.fits(startId, slot);
         boolean startLocked = team.locked(startId, now);
         boolean sitLocked = sitId != null && team.locked(sitId, now);
 
         List<String> notes = new ArrayList<>();
         if (!fits) {
-            notes.add("Sleeper will not take a %s in the %s slot"
-                    .formatted(team.position(startId), slot.name()));
+            notes.add("Sleeper will not take %s in the %s slot"
+                    .formatted(aPlayerAt(startPosition), slot.name()));
         }
         if (startLocked) {
             notes.add("%s has already locked this week".formatted(team.name(startId)));
@@ -270,14 +271,14 @@ public class LineupPlanner {
      */
     private SlotChoice slotToFree(UserWeek team, String startId, Instant now, String sit) {
         if (sit == null || sit.isBlank()) {
-            String position = team.position(startId);
+            Optional<String> position = team.position(startId);
             List<Integer> accepting = IntStream.range(0, team.slots().size())
-                    .filter(index -> team.slots().get(index).accepts(position))
+                    .filter(index -> team.fits(startId, team.slots().get(index)))
                     .boxed()
                     .toList();
             if (accepting.isEmpty()) {
                 return new SlotChoice.Rejected(
-                        "no starting slot of yours accepts a %s".formatted(position));
+                        "no starting slot of yours accepts %s".formatted(aPlayerAt(position)));
             }
             return accepting.stream()
                     .filter(index -> !starterLocked(team, index, now))
@@ -285,8 +286,8 @@ public class LineupPlanner {
                             index -> slotPoints(team, team.starterAt(index))))
                     .<SlotChoice>map(SlotChoice.Found::new)
                     .orElseGet(() -> new SlotChoice.Rejected(
-                            "every slot that takes a %s has already locked this week"
-                                    .formatted(position)));
+                            "every slot that takes %s has already locked this week"
+                                    .formatted(aPlayerAt(position))));
         }
 
         List<String> matches = resolve(team, sit);
@@ -378,9 +379,10 @@ public class LineupPlanner {
         List<String> leaving = new ArrayList<>(swaps.stream().map(LineupSwap::sitting).toList());
         Map<String, String> outgoingFor = new LinkedHashMap<>();
         for (LineupSwap swap : swaps) {
-            String position = team.position(swap.starting());
+            Optional<String> position = team.position(swap.starting());
             leaving.stream()
-                    .filter(playerId -> Objects.equals(team.position(playerId), position))
+                    .filter(playerId -> position.isPresent()
+                            && team.position(playerId).equals(position))
                     .findFirst()
                     .ifPresent(outgoing -> {
                         outgoingFor.put(swap.starting(), outgoing);
@@ -418,6 +420,11 @@ public class LineupPlanner {
         }
     }
 
+    private static String aPlayerAt(Optional<String> position) {
+        return position.map(known -> "a " + known)
+                .orElse("a player whose position I can't tell");
+    }
+
     private SlotLine slotLine(UserWeek team, Instant now, String slotName, String playerId) {
         if (playerId == null) {
             return new SlotLine(slotName, null, null, null, points(0.0), "empty slot");
@@ -425,7 +432,7 @@ public class LineupPlanner {
         return new SlotLine(
                 slotName,
                 team.name(playerId),
-                team.position(playerId),
+                team.position(playerId).orElse(null),
                 team.team(playerId),
                 team.projection(playerId),
                 note(team, now, playerId));

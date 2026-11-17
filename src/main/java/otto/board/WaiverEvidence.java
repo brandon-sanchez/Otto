@@ -153,7 +153,8 @@ public class WaiverEvidence {
                 .filter(preference::screens)
                 .toList();
 
-        EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now);
+        EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now,
+                latestWeek.sleeper());
         List<LaneRead> reads = lanes.stream()
                 .map(lane -> new LaneRead(lane, lane.read(inputs)))
                 .toList();
@@ -177,7 +178,7 @@ public class WaiverEvidence {
         }
 
         List<EvidenceItem> evidence = new ArrayList<>();
-        evidence.add(boardItem(league, deadline, now, gaps));
+        evidence.add(boardItem(league, deadline, now, gaps, latestWeek.filledFromSleeper()));
         preference.stated().ifPresent(stated -> evidence.add(preferenceItem(stated)));
         if (rosterNeeds instanceof SourceResult.Ok<RosterNeeds> ok) {
             evidence.add(needsItem(league, ok.value(), now));
@@ -308,7 +309,7 @@ public class WaiverEvidence {
     }
 
     private static EvidenceItem boardItem(LeagueWeek league, ZonedDateTime deadline,
-            Instant now, List<String> gaps) {
+            Instant now, List<String> gaps, List<String> filledFromSleeper) {
         Map<String, String> facts = new LinkedHashMap<>();
         league.week().weekNumber().ifPresent(week -> facts.put("week", String.valueOf(week)));
         facts.put("claimDeadline", deadline.toString());
@@ -319,6 +320,9 @@ public class WaiverEvidence {
                 .map(Slot::name)
                 .collect(Collectors.joining(", ")));
         facts.put("missingData", gaps.isEmpty() ? "none" : String.join("; ", gaps));
+        if (!filledFromSleeper.isEmpty()) {
+            facts.put("filledFromSleeper", String.join("; ", filledFromSleeper));
+        }
         return new EvidenceItem("board", "otto:waiver-board", Optional.empty(), now,
                 "the claim round this board is for", facts);
     }

@@ -174,6 +174,15 @@ public final class NflverseStubs {
     }
 
     /**
+     * The waiver week missing a game, whose weekly stats also lack week
+     * 1 for Dallas, Atlanta and Miami.
+     */
+    public static void waiverWeekMissingAGameAndThreeTeamsStats(WireMockServer nflverse) {
+        waiverWeekMissingAGame(nflverse);
+        stubCsv(nflverse, STATS_2026_PATH, "nflverse/stats-player-week-waivers.csv");
+    }
+
+    /**
      * The board-ready waiver week under a schedule that has not yet
      * recorded week 1's results, though Sleeper has moved on to week 2.
      */

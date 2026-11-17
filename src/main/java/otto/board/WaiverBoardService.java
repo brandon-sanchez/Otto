@@ -48,7 +48,9 @@ import otto.storage.OttoJson;
  * <p>The board waits for the latest completed week's data, as
  * {@link LatestWeekData} judges it: while that week is short, each Check
  * records nothing and tries again. From {@link ClaimRound#FALLBACK_BUFFER} before
- * the claim deadline it builds a fallback board instead, from what has
+ * the claim deadline it fills the gap from Sleeper's stats where Sleeper
+ * holds the missing games, and builds the normal board when that fills
+ * every gap. Otherwise it builds a fallback board from what has
  * arrived, which opens by saying what is missing and what the advice
  * rests on, and labels any free agent only popularity names as
  * {@link WaiverEvidence#TRENDING_ONLY}.
@@ -178,8 +180,9 @@ public class WaiverBoardService {
 
     /** Returns the round's Decision Record, not yet saved, or empty while it waits. */
     private Optional<DecisionRecord> build(ClaimRound round, LeagueWeek league) {
-        LatestWeekData.Report data = latestWeek.assess(league);
         boolean inBuffer = round.inFallbackBuffer();
+        LatestWeekData.Report data = inBuffer ? latestWeek.assessFillingFromSleeper(league)
+                : latestWeek.assess(league);
         if (!data.complete() && !inBuffer) {
             log.info("The waiver board waits for the latest week's data: {}",
                     String.join("; ", data.missing()));

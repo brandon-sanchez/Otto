@@ -54,6 +54,10 @@ final class WeeklyStatsFeed implements FeedSpec<WeeklyStats.StatLine, WeeklyStat
             "opponent_team", "week", TARGET_SHARE, "air_yards_share", "wopr", "racr",
             "receiving_epa");
 
+    static Set<String> statKeys() {
+        return Set.copyOf(SLEEPER_STAT_KEYS.values());
+    }
+
     @Override
     public FeedId id() {
         return FeedId.WEEKLY_STATS;

@@ -150,6 +150,24 @@ class LineupLegalityScenarioTest extends WireSeamTest {
         assertThat(eventLog.all()).noneMatch(event -> event.key().startsWith("alert:legality:"));
     }
 
+    @Test
+    void aDefenseStartedOnByeAlertsLikeAnyByeStarter() {
+        KickerAndDefenseLeague.stub(sleeper, KickerAndDefenseLeague.KICKER,
+                KickerAndDefenseLeague.DEFENSE_ON_BYE, List.of(KickerAndDefenseLeague.DEFENSE));
+        stubOutbound();
+
+        checkRunner.runCheck();
+
+        Event byeAlert = eventLog.all().stream()
+                .filter(event -> event.key().equals("alert:legality:2026-w2:slot%d:%s:on-bye"
+                        .formatted(KickerAndDefenseLeague.DEFENSE_SLOT,
+                                KickerAndDefenseLeague.DEFENSE_ON_BYE)))
+                .findFirst().orElseThrow();
+        assertThat(byeAlert.facts())
+                .containsEntry("reason", "bye starter")
+                .containsEntry("replacement", KickerAndDefenseLeague.DEFENSE + " (3.0)");
+    }
+
     private void stubOutbound() {
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "Your lineup needs attention before Sunday.");

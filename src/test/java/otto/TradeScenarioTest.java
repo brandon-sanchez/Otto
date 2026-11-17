@@ -187,7 +187,7 @@ class TradeScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aTradeInTheDeadlineWeekSaysTimeIsNearlyUp() {
+    void aTradeInTheDeadlineWeekSaysWhenTradesClose() {
         snapshotInWeek("sleeper/state-nfl-week13.json", 13);
         OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
                 trade("TE Depth 06", "James Cook"),
@@ -197,8 +197,10 @@ class TradeScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("tradeDeadline",
-                        "The trade deadline is this week, week 13. This trade is still legal, "
-                                + "but it is nearly out of time.")))
+                        "The trade deadline is this week. Trades close when week 13's last "
+                                + "game ends, usually Monday night. A trade has to be proposed "
+                                + "and accepted before then, and its review period can finish "
+                                + "afterward.")))
                 .withRequestBody(containing("leverage")));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo(
@@ -224,6 +226,41 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", equalTo(
                         "The deadline passed after week 13. Here is what it would have been "
                                 + "worth."))));
+    }
+
+    @Test
+    void aTradeOnTuesdayMorningOfTheDeadlineWeekIsMarkedAsTooLate() {
+        snapshotInWeek("sleeper/state-nfl-week13.json", 13);
+        clock.set(Instant.parse("2026-12-08T14:00:00Z"));
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "The deadline passed after week 13. Here is what it would have been worth.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("tradeDeadline",
+                        "The trade deadline passed after week 13. This trade can no longer be "
+                                + "submitted, but here is what it would have been worth.")))
+                .withRequestBody(containing("\\\"leverage\\\":[]")));
+    }
+
+    @Test
+    void aTradeInALeagueWithTradesTurnedOffIsPricedButMarkedAsImpossible() {
+        snapshotOfTheLeagueAs("sleeper/league-in-season-trades-disabled.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "evaluate_trade",
+                trade("TE Depth 06", "James Cook"),
+                "Trades are off in this league, but you would win that one.");
+
+        ask("should I trade James Cook to GridironGoblin for TE Depth 06?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(field("tradeDeadline",
+                        "Trades are turned off in this league for the whole season. This "
+                                + "trade can't be submitted, but here is what it would be "
+                                + "worth.")))
+                .withRequestBody(containing(field("verdict", "clear edge")))
+                .withRequestBody(containing("\\\"leverage\\\":[]")));
     }
 
     @Test
