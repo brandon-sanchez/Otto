@@ -43,6 +43,10 @@ public record ModelProperties(List<String> order, Breaker breaker, Budgets budge
     public record Budget(Duration deadline, Duration reserve) {
 
         public Budget {
+            if (!reserve.isPositive()) {
+                throw new IllegalArgumentException("A reserve of " + reserve
+                        + " holds back no time for a later provider");
+            }
             if (reserve.compareTo(deadline) >= 0) {
                 throw new IllegalArgumentException("A reserve of " + reserve
                         + " leaves no time inside a deadline of " + deadline);

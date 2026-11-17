@@ -28,7 +28,11 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Each run has one deadline, set by its {@link CallSite}. A provider
  * gets the time left minus a reserve for each later provider that may
- * still be asked, so one that hangs cannot use up the whole run.
+ * still be asked, so one that hangs cannot use up the whole run. Time is
+ * held back only for as many later providers as the run's time holds
+ * whole reserves for, after one for the first provider asked. A run too
+ * short for that gives the first provider all of it, and a later one is
+ * asked only when time is left.
  *
  * <p>A run started inside another run's model call, such as a chat tool
  * that asks a model of its own while the chat reply is being written,
@@ -252,20 +256,23 @@ public class ModelChain {
      */
     public <T> Result<T> call(CallSite site, ProviderCall<T> call) {
         ModelProperties.Budget budget = budget(site);
-        long deadline = System.nanoTime() + budget.deadline().toNanos();
+        long started = System.nanoTime();
+        long deadline = started + budget.deadline().toNanos();
         if (NESTED_RUN_ENDS.isBound() && NESTED_RUN_ENDS.get() - deadline < 0) {
             deadline = NESTED_RUN_ENDS.get();
         }
         if (CHECK_ENDS.isBound() && CHECK_ENDS.get() - deadline < 0) {
             throw new OutOfCheckTime();
         }
+        long reserve = budget.reserve().toNanos();
+        long reservedFallbacks = Math.max(0, (deadline - started) / reserve - 1);
         List<Skip> skipped = new ArrayList<>();
         for (int index = 0; index < providers.size(); index++) {
             ChatProvider provider = providers.get(index);
             long later = providers.subList(index + 1, providers.size()).stream()
                     .filter(next -> breakers.refusal(next.name()).isEmpty())
                     .count();
-            long until = deadline - later * budget.reserve().toNanos();
+            long until = deadline - Math.min(later, reservedFallbacks) * reserve;
             Optional<String> refusal = until > System.nanoTime()
                     ? breakers.admit(provider.name())
                     : Optional.of("Not called: no time was left for it.");
@@ -274,9 +281,9 @@ public class ModelChain {
                 call.passedOver(provider, refusal.get());
                 continue;
             }
+            reservedFallbacks = Math.max(0, reservedFallbacks - 1);
             try {
-                T value = call.call(new Turn(provider, until,
-                        until - budget.reserve().toNanos(), later > 0));
+                T value = call.call(new Turn(provider, until, until - reserve, later > 0));
                 breakers.succeeded(provider.name());
                 return new Result.Answered<>(provider, value, skipped);
             } catch (UnusableReply e) {
