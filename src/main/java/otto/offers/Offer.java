@@ -24,6 +24,10 @@ import otto.trade.TradeEvaluator;
  *        each, every number computed
  * @param partnerDirection his team's direction; empty when there was
  *        nothing to measure it by
+ * @param playoffWeeks one more reason for a manager playing for a title,
+ *        drawn from the league's playoff weeks, every number computed;
+ *        empty when he isn't, or those weeks give him no reason. It is
+ *        never part of the price.
  */
 public record Offer(
         String partner,
@@ -35,12 +39,19 @@ public record Offer(
         List<Piece> gives,
         TradeEvaluator.PricedTrade priced,
         List<String> reasons,
-        Optional<TeamDirection> partnerDirection) {
+        Optional<TeamDirection> partnerDirection,
+        Optional<String> playoffWeeks) {
 
     public Offer {
         gets = List.copyOf(gets);
         gives = List.copyOf(gives);
         reasons = List.copyOf(reasons);
+    }
+
+    /** Returns this offer carrying the playoff-weeks line. */
+    Offer withPlayoffWeeks(String line) {
+        return new Offer(partner, partnerRosterId, kind, shape, need, gets, gives, priced,
+                reasons, partnerDirection, Optional.of(line));
     }
 
     /** Why a trade is shaped the way it is. */

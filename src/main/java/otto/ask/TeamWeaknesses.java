@@ -99,9 +99,9 @@ public class TeamWeaknesses {
             3. One sentence on the lineup's ceiling from "ceiling".
             4. Each suggestion in the "suggestion-" items, in order, with its reason. For a
                trade, say which manager to send it to ("sendTo"), what he gives and gets,
-               and why the other manager would say yes from its "why" facts. Offer none
-               that the evidence lacks. When "trade-deadline" is present, say trades are
-               closed and point to waivers.
+               and why the other manager would say yes from its "why" facts and its
+               "playoffWeeks" fact when it has one. Offer none that the evidence lacks.
+               When "trade-deadline" is present, say trades are closed and point to waivers.
             When "direction" has a "question", end the message by asking it.
             When "limits" is present, say each limit plainly in one sentence where it
             matters. Never write a confidence label such as High or Medium. Stay under

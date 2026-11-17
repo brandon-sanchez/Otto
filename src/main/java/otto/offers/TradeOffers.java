@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import org.springframework.stereotype.Component;
@@ -21,11 +22,15 @@ import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.habits.HabitLean;
 import otto.market.MarketValuation;
+import otto.matchup.MatchupSourcesFactory;
+import otto.nflverse.NflverseStore;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
+import otto.team.Direction;
 import otto.team.LeagueDirections;
 import otto.team.LeagueProfile;
+import otto.team.PlayoffRace;
 import otto.team.TeamDirection;
 import otto.team.TeamDirections;
 import otto.team.TeamProfile;
@@ -33,6 +38,7 @@ import otto.team.TeamProfiler;
 import otto.trade.InjuredValue;
 import otto.trade.InjuredValues;
 import otto.trade.LeaguePicks;
+import otto.trade.TradeDeadline;
 import otto.trade.TradeEvaluator;
 import otto.trade.TradePiece;
 
@@ -48,6 +54,11 @@ import otto.trade.TradePiece;
  * in dynasty and keeper leagues where the market decides, and one the
  * partner would plausibly accept by {@link Acceptance}. No player is held
  * back: the user's best player can be offered if the deal is right.
+ *
+ * <p>An offer to a manager playing for a title may carry one line about
+ * the league's playoff weeks from {@link PlayoffPitch}. It is a reason to
+ * give him, added after the search, and never changes a price, a verdict
+ * or which offers are found.
  */
 @Component
 public class TradeOffers {
@@ -75,11 +86,12 @@ public class TradeOffers {
     private final BuySellReader buySell;
     private final PlayerDirectoryStore directory;
     private final InjuredValues injuredValues;
+    private final MatchupSourcesFactory sources;
 
     public TradeOffers(TradeEvaluator evaluator, TeamProfiler profiler,
             TeamDirections directions, ManagerActivity activity, LeaguePicks picks,
             MarketValuation valuation, BuySellReader buySell, PlayerDirectoryStore directory,
-            InjuredValues injuredValues) {
+            InjuredValues injuredValues, MatchupSourcesFactory sources) {
         this.evaluator = evaluator;
         this.profiler = profiler;
         this.directions = directions;
@@ -89,6 +101,7 @@ public class TradeOffers {
         this.buySell = buySell;
         this.directory = directory;
         this.injuredValues = injuredValues;
+        this.sources = sources;
     }
 
     /**
@@ -133,7 +146,8 @@ public class TradeOffers {
      *
      * <p>Side effects: the rest-of-season projection reads, the market
      * value reads, Sleeper's traded picks and transactions, and the
-     * buy-low and sell-high reads, all through their cached adapters.
+     * buy-low and sell-high reads, all through their cached adapters, and
+     * the stored schedule and defense-versus-position table.
      *
      * @return the offers, which may be none, or unavailable when the user
      *         has no team or the rest of the season can't be priced
@@ -183,7 +197,52 @@ public class TradeOffers {
         List<Offer> accepted = judge.offers(candidates,
                 Math.max(FEWEST_PRICED, PRICED_PER_OFFER * wanted));
         List<Offer> ranked = distinct(accepted).stream().limit(wanted).toList();
-        return new Ideas(ranked.subList(Math.min(request.skip(), ranked.size()), ranked.size()));
+        List<Offer> asked = ranked.subList(Math.min(request.skip(), ranked.size()),
+                ranked.size());
+        return new Ideas(playoffPitch(league)
+                .map(pitch -> asked.stream()
+                        .map(offer -> pitched(pitch, league, read.players(), offer))
+                        .toList())
+                .orElse(asked));
+    }
+
+    private Optional<PlayoffPitch> playoffPitch(LeagueWeek league) {
+        OptionalInt lastWeek = league.lastPlayoffWeek();
+        boolean closed = TradeDeadline.assess(league.league().tradeDeadline(),
+                league.week().weekNumber()).filter(TradeDeadline::passed).isPresent();
+        if (lastWeek.isEmpty() || closed) {
+            return Optional.empty();
+        }
+        NflverseStore store = sources.open().store();
+        return store.schedule().flatMap(schedule -> store.defenseVersusPosition()
+                .flatMap(defenses -> PlayoffPitch.of(league.league().playoffWeekStart(),
+                        lastWeek.getAsInt(), schedule, defenses)));
+    }
+
+    private static Offer pitched(PlayoffPitch pitch, LeagueWeek league,
+            Map<String, DirectoryPlayer> players, Offer offer) {
+        boolean contending = offer.partnerDirection()
+                .filter(team -> team.direction() == Direction.CONTENDING).isPresent();
+        boolean inTheRace = PlayoffRace.of(league).flatMap(race -> league.rosters().stream()
+                        .filter(roster -> roster.rosterId() == offer.partnerRosterId())
+                        .findFirst()
+                        .map(race::inTheRace))
+                .orElse(false);
+        return pitch.line(new PlayoffPitch.Partner(offer.partner(), contending, inTheRace),
+                        pitchPlayers(offer.gives(), players), pitchPlayers(offer.gets(), players))
+                .map(offer::withPlayoffWeeks)
+                .orElse(offer);
+    }
+
+    private static List<PlayoffPitch.Player> pitchPlayers(List<Offer.Piece> pieces,
+            Map<String, DirectoryPlayer> players) {
+        return pieces.stream()
+                .flatMap(piece -> piece.playerId().flatMap(playerId -> piece.position()
+                        .map(position -> new PlayoffPitch.Player(piece.name(), position,
+                                Optional.ofNullable(players.get(playerId))
+                                        .map(DirectoryPlayer::team).orElse(null))))
+                        .stream())
+                .toList();
     }
 
     private OfferSearch.League read(LeagueWeek league, RosterSnapshot mine, TeamProfile user,
@@ -362,7 +421,7 @@ public class TradeOffers {
                             partner.rosterId(), candidate.kind(), candidate.shape(),
                             candidate.need(), described(candidate.gets()),
                             described(candidate.gives()), priced, acceptance.reasons(),
-                            direction), acceptance));
+                            direction, Optional.empty()), acceptance));
         }
 
         private Optional<TradeEvaluator.Basis> basis(RosterSnapshot partner) {

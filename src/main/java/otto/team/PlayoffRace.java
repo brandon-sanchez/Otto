@@ -17,9 +17,9 @@ import otto.snapshot.RosterSnapshot;
  * @param seeded every roster in seed order, as the standings seed them
  * @param playoffTeams how many teams make the playoffs, fewer than the league holds
  */
-record PlayoffRace(List<RosterSnapshot> seeded, int playoffTeams) {
+public record PlayoffRace(List<RosterSnapshot> seeded, int playoffTeams) {
 
-    PlayoffRace {
+    public PlayoffRace {
         seeded = List.copyOf(seeded);
     }
 
@@ -28,7 +28,7 @@ record PlayoffRace(List<RosterSnapshot> seeded, int playoffTeams) {
      * that leaves somebody out; empty otherwise, since a field of every
      * team says nothing about contention.
      */
-    static Optional<PlayoffRace> of(LeagueWeek league) {
+    public static Optional<PlayoffRace> of(LeagueWeek league) {
         int playoffTeams = league.league().playoffTeams();
         if (playoffTeams <= 0 || playoffTeams >= league.rosters().size()) {
             return Optional.empty();
@@ -36,6 +36,15 @@ record PlayoffRace(List<RosterSnapshot> seeded, int playoffTeams) {
         return Optional.of(new PlayoffRace(
                 league.rosters().stream().sorted(LeagueAnalysis.BY_SEED).toList(),
                 playoffTeams));
+    }
+
+    /**
+     * Returns true when the team holds a playoff spot or is level on wins
+     * with the last one, once it has played a game. Before any game every
+     * team is level, which says nothing about its chances.
+     */
+    public boolean inTheRace(RosterSnapshot team) {
+        return team.teamRecord().games() > 0 && margin(team) >= 0;
     }
 
     /**

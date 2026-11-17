@@ -75,6 +75,8 @@ public class TradeIdeas {
             ("youGive") and what he gets ("youGet"), in those words, then why it works for
             him ("yourEdge", and "yourLineup" when it adds something) and why the other
             manager would say yes, drawn from the "why" facts and "partnerDirection". When
+            an offer has "playoffWeeks", give it as one more reason he would say yes, in
+            one sentence, with its weeks, opponents and ranks exactly as written. When
             a player in the offer has a buy-low or sell-high item, say so in a clause and
             why. When a player in the offer has an "injury-" item, say what he is worth
             while hurt from its "worth", give his timeline exactly as its "timeline" states

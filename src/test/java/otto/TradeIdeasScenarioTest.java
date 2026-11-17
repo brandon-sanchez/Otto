@@ -14,16 +14,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
+import otto.harness.NflverseStubs;
 import otto.harness.Fixtures;
 import otto.harness.LineupHistory;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.StoredRecords;
 import otto.harness.WireSeamTest;
+import otto.nflverse.DefenseVersusPosition;
+import otto.nflverse.NflverseFeedService;
+import otto.nflverse.NflverseStore;
 import otto.records.DecisionRecord;
 import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
+import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 import otto.telegram.WebhookResult;
@@ -86,6 +91,16 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     private static final String TIGHT_END_DEPTH ="a 1-for-2: one of yours for two of his, "
             + "for depth at TE";
 
+    private static final String PLAYOFF_WEEKS = "GridironGoblin is contending, and Justin "
+            + "Jefferson gets a soft playoff run, facing CHI, DET and GB in weeks 15 to 17, "
+            + "defenses that rank 25th of 32, 30th of 32 and 22nd of 32 against wide "
+            + "receivers";
+
+    private static final String CHECKED_WITH_PLAYOFF_WEEKS = CHECKED + " GridironGoblin is "
+            + "contending, and Justin Jefferson gets a soft playoff run, facing CHI, DET and "
+            + "GB in weeks 15 to 17, defenses that rank 25th of 32, 30th of 32 and 22nd of 32 "
+            + "against wide receivers.";
+
     private static final String CLOSED = "Trades are closed for the season, so the waiver "
             + "wire is where your team gets better now.";
 
@@ -100,6 +115,12 @@ class TradeIdeasScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
+
+    @Autowired
+    private NflverseFeedService feeds;
+
+    @Autowired
+    private JsonStore store;
 
     /** The league's week 6 transactions, none unless a test sets them before the league loads. */
     private String weekSixTransactions = "sleeper/transactions-none.json";
@@ -348,11 +369,71 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         assertThat(evidence).containsKey("offer-1");
     }
 
+    private void playoffWeeksStored() {
+        NflverseStubs.healthy(nflverse);
+        NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH,
+                "nflverse/games-playoff-weeks.csv");
+        feeds.updateIfDue();
+        Map<String, DefenseVersusPosition.TeamDefense> byTeam = new HashMap<>();
+        Map.of("CHI", Map.entry("WR", 25), "DET", Map.entry("WR", 30), "GB",
+                Map.entry("WR", 22), "DAL", Map.entry("TE", 10), "NYG", Map.entry("TE", 20),
+                "WAS", Map.entry("TE", 28)).forEach((team, rank) -> byTeam.put(team,
+                new DefenseVersusPosition.TeamDefense(11, Map.of(rank.getKey(),
+                        new DefenseVersusPosition.Allowed(10.0 + rank.getValue(),
+                                rank.getValue())),
+                        new DefenseVersusPosition.Allowed(100.0, 16))));
+        new NflverseStore(store).writeDefenseVersusPosition(new DefenseVersusPosition("2026",
+                "2026 season to date through week 11", false, 11, WEEK_12, 32, byTeam));
+    }
+
+    private static Map<String, String> withoutPlayoffWeeks(Map<String, String> offer) {
+        Map<String, String> priced = new HashMap<>(offer);
+        priced.remove("playoffWeeks");
+        return priced;
+    }
+
+    @Test
+    void aContenderHearsAboutASoftPlayoffRunAndNoPriceOrVerdictMoves() {
+        redraftLeague("sleeper/rosters-offers.json");
+        Map<String, Map<String, String>> unpitched = askForTrades("{}");
+        assertThat(unpitched.values()).noneSatisfy(facts -> assertThat(facts)
+                .containsKey("playoffWeeks"));
+
+        nextQuestion();
+        playoffWeeksStored();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(CHECKED_WITH_PLAYOFF_WEEKS, GOEDERT, JEFFERSON,
+                BARKLEY));
+        ask("what trades should I make and why?");
+        Map<String, Map<String, String>> pitched = evidence(RunKind.TRADE_IDEAS);
+
+        assertThat(pitched.get("offer-1")).containsEntry("playoffWeeks", PLAYOFF_WEEKS);
+        for (String offer : List.of("offer-1", "offer-2", "offer-3")) {
+            assertThat(withoutPlayoffWeeks(pitched.get(offer))).isEqualTo(unpitched.get(offer));
+        }
+        theUserReads(CHECKED_WITH_PLAYOFF_WEEKS);
+    }
+
+    @Test
+    void noPlayoffWeeksLineWhenTheLeaguesPlayoffWeeksAreUnknown() {
+        leagueInWeek("sleeper/league-in-season-no-playoff-weeks.json",
+                "sleeper/rosters-offers.json", "sleeper/state-nfl-week12.json", 12);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+        playoffWeeksStored();
+
+        Map<String, Map<String, String>> evidence = askForTrades("{}");
+
+        assertThat(evidence).containsKey("offer-1");
+        assertThat(evidence.values()).noneSatisfy(facts -> assertThat(facts)
+                .containsKey("playoffWeeks"));
+    }
+
     @Test
     void afterTheDeadlineThereAreNoOffersButTheWeaknessesAnswerPointsToWaivers() {
         leagueInWeek("sleeper/league-in-season.json", "sleeper/rosters-offers.json",
                 "sleeper/state-nfl-week14.json", 14);
         fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+        playoffWeeksStored();
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
         OutboundStubs.llmAdvises(llm, answer(CLOSED));
 
@@ -364,6 +445,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .startsWith("the trade deadline passed after week 13");
         assertThat(evidence.values()).noneSatisfy(facts ->
                 assertThat(facts).containsKey("sendTo"));
+        assertThat(evidence.values()).noneSatisfy(facts ->
+                assertThat(facts).containsKey("playoffWeeks"));
         theUserReads(CLOSED);
     }
 

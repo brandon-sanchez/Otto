@@ -145,6 +145,7 @@ final class TradeIdeaEvidence {
         offer.partnerDirection().ifPresent(direction -> facts.put("partnerDirection",
                 "%s is %s: %s".formatted(offer.partner(), direction.direction().words(),
                         direction.reason())));
+        offer.playoffWeeks().ifPresent(line -> facts.put("playoffWeeks", line));
         return facts;
     }
 
