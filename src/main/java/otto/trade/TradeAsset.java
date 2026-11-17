@@ -27,10 +27,7 @@ public sealed interface TradeAsset {
     record Player(String reference) implements TradeAsset {
     }
 
-    /**
-     * A rookie draft pick. Otto prices no pick, so the round and season
-     * are carried only to name it back in the answer.
-     */
+    /** A rookie draft pick, as the user wrote it: a season, a round and maybe its place. */
     record DraftPick(String reference) implements TradeAsset {
     }
 
@@ -40,14 +37,16 @@ public sealed interface TradeAsset {
 
     /**
      * A pick reads as a round with or without a season: "2027 1st",
-     * "a 2028 2nd", "first round pick". The word "pick" or "round"
-     * alone is enough, because no player Otto knows is called either,
-     * and the bare season-and-round form is allowed a leading article
-     * because that is how a user writes one out.
+     * "a 2028 2nd", "2027 early 1st", "first round pick". The word
+     * "pick" or "round" alone is enough, because no player Otto knows is
+     * called either, and the bare season-and-round form is allowed a
+     * leading article and a place in the round because that is how a
+     * user writes one out.
      */
     Pattern DRAFT_PICK = Pattern.compile(
             "(?i).*\\b(pick|picks|round|rounder|rd)\\b.*"
-                    + "|(?i)\\s*(an?\\s+)?(19|20)\\d\\d\\s+(1st|2nd|3rd|[4-9]th|first|second"
+                    + "|(?i)\\s*(an?\\s+)?((early|mid|late)\\s+)?(19|20)\\d\\d\\s+"
+                    + "((early|mid|late)\\s+)?(1st|2nd|3rd|[4-9]th|first|second"
                     + "|third|fourth|fifth|sixth|seventh)\\s*");
 
     /** FAAB reads as an amount of money, with or without the word. */

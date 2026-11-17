@@ -293,6 +293,20 @@ public class SleeperAdapter {
     public record TrendingPlayer(String playerId, int adds) {
     }
 
+    /**
+     * A future rookie pick that has changed hands. Sleeper lists only the
+     * picks that moved, so a pick missing from the list is still held by
+     * the team it was issued to.
+     *
+     * @param season the draft year, such as "2027"
+     * @param originalRosterId the team the pick was issued to, whose
+     *        finish sets where it falls in the round
+     * @param ownerRosterId the team that holds it now
+     */
+    public record TradedPick(String season, int round, int originalRosterId,
+            int ownerRosterId) {
+    }
+
     public SourceResult<League> league() {
         return fetch(leaguePath).flatMap(body -> {
             if (!body.hasNonNull("league_id") || !body.hasNonNull("status")) {
@@ -673,6 +687,28 @@ public class SleeperAdapter {
                         user.path("display_name").asText(null)));
             }
             return ok(users);
+        });
+    }
+
+    /** Every future rookie pick in this league that has changed hands. */
+    public SourceResult<List<TradedPick>> tradedPicks() {
+        String path = leaguePath + "/traded_picks";
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "traded_picks is not an array");
+            }
+            List<TradedPick> picks = new ArrayList<>();
+            for (JsonNode pick : body) {
+                if (!pick.hasNonNull("season") || !wholeNumber(pick.path("round"))
+                        || !wholeNumber(pick.path("roster_id"))
+                        || !wholeNumber(pick.path("owner_id"))) {
+                    return schemaDrift(path, "a traded pick's season, round, roster_id or "
+                            + "owner_id is missing or malformed");
+                }
+                picks.add(new TradedPick(pick.get("season").asText(), pick.get("round").asInt(),
+                        pick.get("roster_id").asInt(), pick.get("owner_id").asInt()));
+            }
+            return ok(picks);
         });
     }
 

@@ -65,12 +65,12 @@ public record MarketQuote(
      *        league does not say, in which case nobody is a likely keeper
      * @param likely true when he is one of his team's most valuable
      *        players by dynasty value, inside the keeper limit, and worth
-     *        more than the keeper line
+     *        more than keeping him costs
      * @param dynastyValue his dynasty value, empty when neither source
      *        prices him
      * @param dynastySource where {@code dynastyValue} comes from
-     * @param bonus his dynasty value minus the keeper line, 0 when he is
-     *        not a likely keeper
+     * @param bonus his dynasty value minus his cost from
+     *        {@link KeeperCosts}, 0 when he is not a likely keeper
      */
     public record Keeper(
             Optional<Integer> keeperLimit,

@@ -374,15 +374,17 @@ public class AskTools {
     }
 
     @Tool(name = "evaluate_trade", description = """
-            Prices a proposed trade with one league mate: both sides in
-            league scoring over the rest of the season, read from both
-            teams' points of view, with a verdict, a confidence level,
-            and a leverage note saying what the partner is short of. Both
-            teams can come out ahead, and the verdict is always the
-            user's own. If tradeDeadline is present, start the answer
-            with it. Then describe the valuation. Draft picks count zero,
-            and the answer says so. This league does not trade FAAB, so
-            the tool ignores it. Call this for "should I trade X for Y",
+            Prices a proposed trade with one league mate two ways: what
+            the players do for each team's roster over the rest of the
+            season in league scoring, and what both sides are worth at
+            market value in this league's format, draft picks included.
+            It gives a verdict, a confidence level, which of the two
+            measures decides the call and why, and a leverage note saying
+            what the partner is short of. Both teams can come out ahead,
+            and the verdict is always the user's own. If tradeDeadline is
+            present, start the answer with it. Then say which measure
+            decides and describe the valuation. FAAB in a trade is
+            ignored. Call this for "should I trade X for Y",
             "is this trade fair", and any trade offer the user wants
             judged.""")
     public ToolAnswer<TradeEvaluator.TradeEvaluation> evaluateTrade(

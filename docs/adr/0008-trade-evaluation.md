@@ -1,6 +1,7 @@
 # ADR-0008: Trade evaluation
 
-Status: accepted (2026-08-09, issue #18)
+Status: accepted (2026-08-09, issue #18); amended 2026-11-16 (issue #222) for
+league shape, market values and draft picks
 
 The spec pins the valuation formula, the verdict bands and the leverage
 note. It leaves the shape of each open: what "rest of season" reads
@@ -61,9 +62,16 @@ A player is worth his rest-of-season points above Replacement Level,
 times a positional scarcity multiplier, times a roster-fit factor:
 
 - Above Replacement Level. A player is priced against what the manager
-  could have for nothing, not against zero, and it is the same
-  Replacement Level the waiver board already uses: the projection at the
-  position's cutoff rank. That rank is read from the current week's
+  could have for nothing, not against zero: the projection at the
+  position's cutoff rank. The rank comes from the league's own
+  `roster_positions`, one player for every dedicated starting slot in
+  the league (`LeagueShape`). A Superflex slot counts as a quarterback
+  slot, because managers fill it with a quarterback whenever they have
+  one. A plain flex slot counts toward no position, because it takes
+  whichever back, receiver or tight end is left over. A 12-team league
+  with QB, SUPER_FLEX, two RB, two WR and one TE slot reads the 24th
+  QB, RB and WR and the 12th TE; a 10-team one-quarterback league reads
+  the 10th QB. That rank is read from the current week's
   table and multiplied by the weeks that are left, rather than summed
   week by week. Replacement Level is a line, not a person - the free
   agent who fills it is a different player every week, and none of them
@@ -75,15 +83,19 @@ times a positional scarcity multiplier, times a roster-fit factor:
   agent are the only points he can sell. A player under the line prices
   at zero and never below it, because the buyer can have that player for
   a waiver claim.
-- Scarcity: QB 1.20, TE 1.10, RB 1.05, WR 1.00. The receiver is the
-  yardstick because the receiver is the position the waiver wire answers
-  best - a league of this size always has a startable one free. The
-  quarterback multiplier is the largest because this league is
-  Superflex: two of nine starting slots take a quarterback, so a
-  quarterback lost is a starting slot that cannot be refilled. Tight end
-  sits next because the position runs dry below its first dozen, which
-  is the same fact the replacement-level ranks record (TE 12 where the
-  other three sit at 24).
+- Scarcity: TE 1.10, RB 1.05, WR 1.00, and QB 1.20 in a league that can
+  start two quarterbacks (Superflex or two QB slots) or 1.00 in a league
+  that starts one. The receiver is the yardstick because the receiver is
+  the position the waiver wire answers best: a league always has a
+  startable one free. A second quarterback slot makes every quarterback
+  lost a starting slot that can't be refilled, which is the only reason
+  the quarterback carries a premium. In a one-quarterback league a
+  starter is always on the wire, so he carries none. Tight end sits next
+  because the position runs dry below its first dozen.
+- TE premium is not a scarcity factor. A league's `bonus_rec_te` reaches
+  the value through `LeagueScoring`, which scores a tight end's projected
+  catches with the bonus. The market values below don't model TE premium,
+  so the answer says the rest-of-season numbers carry it.
 - Roster fit: 1.10 when he walks into the optimal lineup of the roster
   reading him, 0.90 when somebody better at his position is already on
   that bench ahead of him, and 1.00 otherwise, which is the first man
@@ -132,6 +144,34 @@ The leverage note reads both rosters through the same replacement-level
 depth `get_team_roster` gives, rather than growing a second yardstick
 for the team on the other side of the deal.
 
+## Two measures: rest-of-season fit and market value
+
+Everything above prices a trade by what the players do for each roster
+over the weeks left. That is the rest-of-season fit. It can't say what
+the other manager would accept, and it can't see past this season. The
+market value (ADR-0011) answers both: what managers pay for each player
+and pick in real trades, in the league's format. `TradeMarket` prices
+both sides at market value through `MarketValuation`, so a keeper
+league's keeper bonus and a dynasty league's dynasty values and pick
+values are the same numbers `get_market_value` gives.
+
+One measure decides the call, by the league's format, and the answer
+names it (`drivenBy`) and says what the other measure shows
+(`otherMeasure`):
+
+- Redraft: the rest-of-season fit decides, because a redraft league
+  plays for this season alone. The market value says whether the partner
+  would likely accept.
+- Dynasty and keeper: the market value decides, because a player's worth
+  runs past this season and the rest-of-season numbers only see the
+  weeks left. The fit says what the trade does for the user's lineup
+  this year.
+
+Both measures are banded by the same rule (`VerdictBand`), so they can
+be read side by side. When the deciding measure is missing, for example
+because FantasyCalc has never answered for this format, the other one
+decides and the answer says so.
+
 ## The verdict is the user's, and only the user's
 
 The Verdict Band is computed from the user's net alone. The partner's
@@ -148,19 +188,33 @@ is not this assistant's business to protect him from a deal he offered.
 The trade is the user's decision, so the verdict answers his question
 and no one else's.
 
-## Otto prices no draft pick, and the answer says so
+## Draft picks are priced at market value from the pick the team holds
 
-Otto holds no dynasty rankings, no pick-value chart and no view of next
-year's class, and a number invented for one would be the model's guess
-dressed as arithmetic.
+A draft pick scores nothing this season, so the rest-of-season fit
+prices it at zero and says why. Its price is its market value: FantasyCalc's
+dynasty list, with DynastyProcess behind it. A redraft league starts over
+every year, so the market puts no value on a pick there, and the answer
+says so.
 
-The alternative to a zero is not a better number, it is silence - and
-silence is worse. A pick-for-player trade with the pick quietly dropped
-reads as a robbery in whichever direction the players fall. So the pick
-is carried through the answer as an asset priced at zero, with a note
-saying the verdict cannot see it, and the narration says the same.
+The pick a trade names is matched to a pick the giving team actually
+holds (`HeldPicks`). Sleeper's `/v1/league/{id}/traded_picks` lists only
+the picks that changed hands, so every other pick is still held by the
+team it was issued to. When the team holds several picks of that year
+and round, a pick the user placed ("2027 early 1st") selects the one that
+falls there; otherwise the team's own pick wins and the answer names the
+others. A pick the team doesn't hold is still priced, like a player
+named on the wrong side, but the verdict drops to Medium and the answer
+says whose pick it is now.
 
-## FAAB is not part of a trade in this league
+A pick falls where the team it was issued to finishes. A pick in next
+year's draft is placed early, mid or late in its round from that team's
+place in the standings today: the bottom third picks early and the top
+third late. Picks further out, and any pick before a game is played,
+carry no place, because the standings say nothing about them yet. When
+the market has no price for the placed pick, the pick is priced without
+its place.
+
+## FAAB is not part of a trade
 
 The user's league does not allow bidding money to move in a trade, and
 his reason is a good one: whoever gives up more players replaces them
@@ -169,8 +223,8 @@ off the waiver wire for about a dollar, so FAAB in a trade is noise.
 `TradeAsset.Faab` stays, because a user may still type "and $20 FAAB"
 and the parser must not read that as a player it cannot find. It is
 recognized and dropped. It is priced at nothing, carries no note, and
-appears nowhere in the answer - unlike a draft pick, which is a real
-thing this league trades and Otto simply cannot price.
+appears nowhere in the answer, unlike a draft pick, which is a real
+thing leagues trade and Otto prices at market value.
 
 ## The band is a share of the user's larger side
 
@@ -252,11 +306,12 @@ it knows. A side that names the same player twice, or a player who
 appears on both sides, is refused outright: there is only one of him,
 and no arithmetic over two copies of him means anything. A side that
 holds nothing priceable at all is still reported, but never at High,
-because the verdict is blind to half of it. That covers a side holding
-only a draft pick, only the bidding money this league does not trade,
-and a side whose only player is one the remaining weeks do not project.
-A player Otto cannot put a number on is as invisible to a verdict as a
-pick is, whatever the reason.
+because the verdict is blind to half of it. On the rest-of-season fit
+that covers a side holding only a draft pick, only bidding money, and a
+side whose only player is one the remaining weeks do not project. On
+market value it covers a side holding nothing the market lists. A
+player Otto cannot put a number on is invisible to a verdict, whatever
+the reason.
 
 A player named on the wrong side - one the partner does not roster, or
 one the user does not - is still priced, with a note saying whose roster

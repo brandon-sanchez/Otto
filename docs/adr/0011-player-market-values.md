@@ -47,4 +47,4 @@ A chat question about a player's worth goes to the `get_market_value` tool. Code
 ## Consequences
 
 - If FantasyCalc disappears or blocks Otto, dynasty values still come from DynastyProcess, but redraft leagues lose market values.
-- Keeper bonuses depend on the keeper line as defined above. A league whose keepers cost draft rounds may want the real cost. Sleeper doesn't expose it, so that waits for a source that does.
+- Keeper bonuses depend on the keeper line as defined above. A league whose keepers cost draft rounds may want the real cost. Sleeper doesn't expose it, so `KeeperCosts` is the one place a real source plugs in; `KeeperLineCosts` prices every keeper at the keeper line.
