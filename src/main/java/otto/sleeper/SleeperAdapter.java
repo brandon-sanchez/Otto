@@ -47,7 +47,9 @@ public class SleeperAdapter {
     private final SleeperClient client;
     private final SleeperCache cache;
     private final Clock clock;
-    private final String leaguePath;
+
+    /** The league read when no other is bound in {@link LeagueScope}. */
+    private final String configLeagueId;
 
     /** How stale a cached body may be before this reader refetches. */
     private final Duration maxAge;
@@ -55,16 +57,21 @@ public class SleeperAdapter {
     @Autowired
     public SleeperAdapter(SleeperClient client, SleeperCache cache, Clock clock,
             OttoProperties properties) {
-        this(client, cache, clock, "/v1/league/" + properties.leagueId(), Duration.ZERO);
+        this(client, cache, clock, properties.leagueId(), Duration.ZERO);
     }
 
     private SleeperAdapter(SleeperClient client, SleeperCache cache, Clock clock,
-            String leaguePath, Duration maxAge) {
+            String configLeagueId, Duration maxAge) {
         this.client = client;
         this.cache = cache;
         this.clock = clock;
-        this.leaguePath = leaguePath;
+        this.configLeagueId = configLeagueId;
         this.maxAge = maxAge;
+    }
+
+    /** Returns the path of the league this work is for, see {@link LeagueScope}. */
+    private String leaguePath() {
+        return "/v1/league/" + LeagueScope.bound().orElse(configLeagueId);
     }
 
     /**
@@ -75,7 +82,7 @@ public class SleeperAdapter {
      * costs no requests.
      */
     public SleeperAdapter cachedWithin(Duration maxAge) {
-        return new SleeperAdapter(client, cache, clock, leaguePath, maxAge);
+        return new SleeperAdapter(client, cache, clock, configLeagueId, maxAge);
     }
 
     /**
@@ -318,14 +325,15 @@ public class SleeperAdapter {
     }
 
     public SourceResult<League> league() {
-        return fetch(leaguePath).flatMap(body -> {
+        String path = leaguePath();
+        return fetch(path).flatMap(body -> {
             if (!body.hasNonNull("league_id") || !body.hasNonNull("status")) {
-                return schemaDrift(leaguePath, "league_id or status missing");
+                return schemaDrift(path, "league_id or status missing");
             }
             JsonNode settings = body.path("settings");
             for (String field : WHOLE_NUMBER_SETTINGS) {
                 if (unreadableNumber(settings.path(field))) {
-                    return schemaDrift(leaguePath, "settings." + field + " is not a whole number");
+                    return schemaDrift(path, "settings." + field + " is not a whole number");
                 }
             }
             return ok(new League(
@@ -432,7 +440,7 @@ public class SleeperAdapter {
     }
 
     public SourceResult<List<Roster>> rosters() {
-        String path = leaguePath + "/rosters";
+        String path = leaguePath() + "/rosters";
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "rosters is not an array");
@@ -481,7 +489,7 @@ public class SleeperAdapter {
      * would leave a Sleeper change nobody could find.
      */
     public SourceResult<List<LeagueTransaction>> transactions(String season, int week) {
-        String path = leaguePath + "/transactions/" + week;
+        String path = leaguePath() + "/transactions/" + week;
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "transactions is not an array");
@@ -530,7 +538,7 @@ public class SleeperAdapter {
      * transaction with no bid is a priority claim and is left out.
      */
     public SourceResult<List<WaiverClaim>> waiverClaims(int week) {
-        String path = leaguePath + "/transactions/" + week;
+        String path = leaguePath() + "/transactions/" + week;
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "transactions is not an array");
@@ -572,7 +580,7 @@ public class SleeperAdapter {
      * carries his earlier points to his new roster.
      */
     public SourceResult<List<StarterLine>> matchups(int week) {
-        String path = leaguePath + "/matchups/" + week;
+        String path = leaguePath() + "/matchups/" + week;
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "matchups is not an array");
@@ -703,7 +711,7 @@ public class SleeperAdapter {
     }
 
     public SourceResult<List<LeagueUser>> users() {
-        String path = leaguePath + "/users";
+        String path = leaguePath() + "/users";
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "users is not an array");
@@ -721,9 +729,50 @@ public class SleeperAdapter {
         });
     }
 
+    /**
+     * One league a Sleeper user is in, as the user's league list names it.
+     *
+     * @param format empty when the list does not say or says something
+     *        this code does not know
+     * @param bestBall true when Sleeper sets the lineups itself
+     *        ({@code settings.best_ball} is 1)
+     */
+    public record UserLeague(String leagueId, String name,
+            Optional<LeagueRules.LeagueFormat> format, boolean bestBall) {
+    }
+
+    /**
+     * Every NFL league the user is in for the season, in the order
+     * Sleeper lists them. This reads no league of its own, so it is the
+     * same whichever league is bound.
+     *
+     * @param season the season as {@link NflState#season()} names it
+     */
+    public SourceResult<List<UserLeague>> userLeagues(String userId, String season) {
+        String path = "/v1/user/" + userId + "/leagues/nfl/" + season;
+        return fetch(path).flatMap(body -> {
+            if (!body.isArray()) {
+                return schemaDrift(path, "the league list is not an array");
+            }
+            List<UserLeague> leagues = new ArrayList<>();
+            for (JsonNode league : body) {
+                if (!league.hasNonNull("league_id")) {
+                    return schemaDrift(path, "league_id missing");
+                }
+                String leagueId = league.get("league_id").asText();
+                JsonNode settings = league.path("settings");
+                leagues.add(new UserLeague(leagueId,
+                        league.path("name").asText("League " + leagueId),
+                        LeagueRules.fromSettings(settings).format(),
+                        settings.path("best_ball").asInt(0) == 1));
+            }
+            return ok(leagues);
+        });
+    }
+
     /** Every future rookie pick in this league that has changed hands. */
     public SourceResult<List<TradedPick>> tradedPicks() {
-        String path = leaguePath + "/traded_picks";
+        String path = leaguePath() + "/traded_picks";
         return fetch(path).flatMap(body -> {
             if (!body.isArray()) {
                 return schemaDrift(path, "traded_picks is not an array");

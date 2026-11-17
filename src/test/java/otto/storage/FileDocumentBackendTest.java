@@ -38,6 +38,7 @@ class FileDocumentBackendTest {
 
     private static OttoProperties properties(Path storageDirectory) {
         return new OttoProperties(null, null, storageDirectory.toString(), null, null, null, null,
+                null,
                 null, null, null, 0.0, null, null);
     }
 }

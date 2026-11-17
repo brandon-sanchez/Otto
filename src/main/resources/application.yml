@@ -22,6 +22,9 @@ otto:
     url-template: "https://www.{host}"
   directory-check-interval: 60s
   pre-draft-check-interval: 24h
+  # How often the Check reads the owner's league list again, so a league
+  # he joins mid-season is followed the same day.
+  league-discovery-interval: 6h
   # How stale a cached Sleeper read may be before a reader that is not
   # the Check goes back to the wire. It matches the Check's poll
   # interval: the Check keeps the cache filled, and the Freshness

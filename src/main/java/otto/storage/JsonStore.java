@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.JavaType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,20 +23,32 @@ import org.springframework.stereotype.Component;
  * version: reading it again at the same version returns the value
  * parsed before. Stored documents are immutable values, so sharing one
  * parsed copy between readers is safe.
+ *
+ * <p>Every name passes through a {@link DocumentNaming} first, which is
+ * how one league's copy of a document is kept apart from another's.
  */
 @Component
 public class JsonStore {
 
     private final DocumentBackend backend;
 
-    /** The last value parsed for each versioned document, by name. */
+    private final DocumentNaming naming;
+
+    /** The last value parsed for each versioned document, by stored name. */
     private final Map<String, Parsed> parsed = new ConcurrentHashMap<>();
 
     private record Parsed(String version, JavaType type, Object value) {
     }
 
+    /** Returns a store that keeps every document under the name its caller gives. */
     public JsonStore(DocumentBackend backend) {
+        this(backend, DocumentNaming.AS_GIVEN);
+    }
+
+    @Autowired
+    public JsonStore(DocumentBackend backend, DocumentNaming naming) {
         this.backend = backend;
+        this.naming = naming;
     }
 
     public <T> Optional<T> read(String name, Class<T> type) {
@@ -43,7 +56,8 @@ public class JsonStore {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> Optional<T> read(String name, JavaType type) {
+    public <T> Optional<T> read(String given, JavaType type) {
+        String name = naming.stored(given);
         Optional<DocumentBackend.Versioned> stored = backend.loadVersioned(name);
         if (stored.isEmpty()) {
             parsed.remove(name);
@@ -68,7 +82,8 @@ public class JsonStore {
         }
     }
 
-    public void write(String name, Object value) {
+    public void write(String given, Object value) {
+        String name = naming.stored(given);
         parsed.remove(name);
         try {
             backend.store(name,
@@ -83,13 +98,15 @@ public class JsonStore {
      *
      * @return false when another holder's lease is still live
      */
-    public boolean lease(String name, Lease lease, Instant now) {
+    public boolean lease(String given, Lease lease, Instant now) {
+        String name = naming.stored(given);
         parsed.remove(name);
         return backend.lease(name, lease, now);
     }
 
     /** Ends the holder's lease on {@code name}, see {@link DocumentBackend#release}. */
-    public void release(String name, String holder) {
+    public void release(String given, String holder) {
+        String name = naming.stored(given);
         parsed.remove(name);
         backend.release(name, holder);
     }
@@ -134,14 +151,15 @@ public class JsonStore {
         private final Map<Key, Optional<?>> read = new HashMap<>();
 
         Snapshot(JsonStore source) {
-            super(source.backend);
+            super(source.backend, source.naming);
             this.source = source;
         }
 
         @Override
         @SuppressWarnings("unchecked")
         public <T> Optional<T> read(String name, JavaType type) {
-            return (Optional<T>) read.computeIfAbsent(new Key(name, type),
+            return (Optional<T>) read.computeIfAbsent(
+                    new Key(source.naming.stored(name), type),
                     key -> source.read(name, type));
         }
 

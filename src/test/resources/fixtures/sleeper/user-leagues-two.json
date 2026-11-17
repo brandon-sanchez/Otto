@@ -1,0 +1,18 @@
+[
+  {
+    "league_id": "1180000000000000002",
+    "name": "Dynasty Bros",
+    "status": "in_season",
+    "settings": {
+      "type": 2
+    }
+  },
+  {
+    "league_id": "1389748403805650944",
+    "name": "Raising Canes Demon",
+    "status": "in_season",
+    "settings": {
+      "type": 0
+    }
+  }
+]
