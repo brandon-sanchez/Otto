@@ -158,11 +158,8 @@ public class TradeIdeas {
         TradeOffers.Request request = new TradeOffers.Request(
                 count == null ? TradeOffers.DEFAULT_COUNT : count,
                 shown == null ? 0 : Math.max(0, shown), asked);
-        return switch (loader.leagueWeek()) {
-            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
-            case SourceResult.Ok<LeagueWeek> ok -> answer(ok.value(), request, now, delivery);
-        };
+        return ToolAnswer.from(loader.leagueWeek(),
+                league -> answer(league, request, now, delivery));
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,

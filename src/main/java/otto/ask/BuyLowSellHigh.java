@@ -140,12 +140,8 @@ public class BuyLowSellHigh {
             AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
-            case PlayerLookup.Match.Found found -> switch (loader.league()) {
-                case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
-                    unavailable(unavailable);
-                case SourceResult.Ok<SleeperAdapter.League> league ->
-                    player(found.player(), league.value(), now, delivery);
-            };
+            case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
+                    league -> player(found.player(), league, now, delivery));
         };
     }
 
@@ -153,7 +149,7 @@ public class BuyLowSellHigh {
             Instant now, AnswerDelivery delivery) {
         return switch (reader.board(league, now)) {
             case SourceResult.Unavailable<BuySellReader.Board> unavailable ->
-                unavailable(unavailable);
+                ToolAnswer.unavailable(unavailable);
             case SourceResult.Ok<BuySellReader.Board> board -> board.value()
                     .assess(player.playerId())
                     .map(assessment -> explain(league, List.of(new BuySellEvidence.Judged(
@@ -181,16 +177,9 @@ public class BuyLowSellHigh {
      *         no player fits
      */
     public ToolAnswer<Answer> scan(Side side, Instant now, AnswerDelivery delivery) {
-        return switch (loader.leagueWeek()) {
-            case SourceResult.Unavailable<LeagueWeek> unavailable -> unavailable(unavailable);
-            case SourceResult.Ok<LeagueWeek> week -> switch (reader.board(
-                    week.value().league(), now)) {
-                case SourceResult.Unavailable<BuySellReader.Board> unavailable ->
-                    unavailable(unavailable);
-                case SourceResult.Ok<BuySellReader.Board> board ->
-                    scan(side, week.value(), board.value(), now, delivery);
-            };
-        };
+        return ToolAnswer.from(loader.leagueWeek(), week -> ToolAnswer.from(
+                reader.board(week.league(), now),
+                board -> scan(side, week, board, now, delivery)));
     }
 
     private ToolAnswer<Answer> scan(Side side, LeagueWeek week, BuySellReader.Board board,
@@ -277,10 +266,5 @@ public class BuyLowSellHigh {
                         RunKind.BUY_LOW_SELL_HIGH, league, candidates, "explanation"), now,
                         delivery)
                 .answer(Answer::new, FALLBACKS);
-    }
-
-    private static <T> ToolAnswer<Answer> unavailable(SourceResult.Unavailable<T> unavailable) {
-        return ToolAnswer.unavailable("%s: %s".formatted(unavailable.source(),
-                unavailable.reason()));
     }
 }

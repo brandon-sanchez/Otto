@@ -175,12 +175,8 @@ public class TeamWeaknesses {
      */
     public ToolAnswer<Answer> answer(String leagueReference, Instant now,
             AnswerDelivery delivery) {
-        return switch (loader.leagueWeek()) {
-            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
-            case SourceResult.Ok<LeagueWeek> ok -> answer(ok.value(), leagueReference, now,
-                    delivery);
-        };
+        return ToolAnswer.from(loader.leagueWeek(),
+                league -> answer(league, leagueReference, now, delivery));
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,

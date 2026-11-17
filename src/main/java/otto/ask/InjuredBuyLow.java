@@ -116,12 +116,8 @@ public class InjuredBuyLow {
             AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
-            case PlayerLookup.Match.Found found -> switch (loader.leagueWeek()) {
-                case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
-                        "%s: %s".formatted(unavailable.source(), unavailable.reason()));
-                case SourceResult.Ok<LeagueWeek> league ->
-                    answer(found.player(), league.value(), now, delivery);
-            };
+            case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.leagueWeek(),
+                    league -> answer(found.player(), league, now, delivery));
         };
     }
 
@@ -136,8 +132,8 @@ public class InjuredBuyLow {
                 Map.of(player.playerId(), player.position()),
                 player.team() == null ? Map.of()
                         : Map.of(player.playerId(), player.team()))) {
-            case SourceResult.Unavailable<RestOfSeason> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
+            case SourceResult.Unavailable<RestOfSeason> unavailable ->
+                ToolAnswer.unavailable(unavailable);
             case SourceResult.Ok<RestOfSeason> season -> {
                 InjuredPlayer injured = injuredPlayers.refreshed(league, season.value(), player)
                         .orElseThrow();

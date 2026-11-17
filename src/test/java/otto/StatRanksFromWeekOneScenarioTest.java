@@ -3,8 +3,8 @@ package otto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import otto.ask.AskTools;
 import otto.ask.LeagueRankLookup;
+import otto.ask.PlayerTools;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
@@ -26,7 +26,7 @@ class StatRanksFromWeekOneScenarioTest extends WireSeamTest {
     private NflverseFeedService feeds;
 
     @Autowired
-    private AskTools tools;
+    private PlayerTools tools;
 
     private void weekOneStored() {
         SleeperStubs.healthyInSeason(sleeper);

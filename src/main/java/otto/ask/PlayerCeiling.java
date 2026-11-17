@@ -31,7 +31,6 @@ import otto.nflverse.WeeklyStats;
 import otto.records.Candidate;
 import otto.records.RunKind;
 import otto.sleeper.SleeperAdapter;
-import otto.sleeper.SourceResult;
 
 /**
  * The deterministic core behind the ceiling question: how often one
@@ -104,16 +103,9 @@ public class PlayerCeiling {
             AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
-            case PlayerLookup.Match.Found found -> switch (loader.league()) {
-                case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
-                    unavailable(unavailable);
-                case SourceResult.Ok<SleeperAdapter.League> league -> switch (loader.week()) {
-                    case SourceResult.Unavailable<WeekFacts> unavailable ->
-                        unavailable(unavailable);
-                    case SourceResult.Ok<WeekFacts> week ->
-                        explain(found.player(), league.value(), week.value(), now, delivery);
-                };
-            };
+            case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
+                    league -> ToolAnswer.from(loader.week(),
+                            week -> explain(found.player(), league, week, now, delivery)));
         };
     }
 
@@ -138,11 +130,6 @@ public class PlayerCeiling {
                                 "the player the user asked about")), "explanation"), now,
                         delivery)
                 .answer(message -> new Answer(player.fullName(), message), fallbacks(player));
-    }
-
-    private static <T> ToolAnswer<Answer> unavailable(SourceResult.Unavailable<T> unavailable) {
-        return ToolAnswer.unavailable("%s: %s".formatted(unavailable.source(),
-                unavailable.reason()));
     }
 
     private static String noProjection(DirectoryPlayer player, WeekFacts week) {

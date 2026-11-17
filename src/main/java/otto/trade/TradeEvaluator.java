@@ -203,8 +203,8 @@ public class TradeEvaluator {
         addTraded(positions, teams, resolvedIn);
         addTraded(positions, teams, resolvedOut);
         return switch (basis(leagueWeek, positions, teams)) {
-            case SourceResult.Unavailable<Basis> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
+            case SourceResult.Unavailable<Basis> unavailable ->
+                ToolAnswer.unavailable(unavailable);
             case SourceResult.Ok<Basis> ok -> ToolAnswer.of(narration.evaluation(leagueWeek,
                     ok.value(), mine.get(), partner, resolvedIn.pieces(), resolvedOut.pieces(),
                     price(leagueWeek, ok.value(), mine.get(), partner, resolvedIn.pieces(),
