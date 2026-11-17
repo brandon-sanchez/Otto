@@ -22,7 +22,14 @@ public final class Habits {
             AdviceHabits::overrides,
             LineupHabits::questionable,
             LineupHabits::chasing,
-            LineupHabits::favouredTeam);
+            LineupHabits::favouredTeam,
+            RosterHabits::missedSwaps,
+            RosterHabits::byePileUps,
+            RosterHabits::clogging,
+            MoveHabits::drops,
+            LoyaltyHabits::loyalty,
+            LoyaltyHabits::streaming,
+            MoveHabits::faab);
 
     private Habits() {
     }

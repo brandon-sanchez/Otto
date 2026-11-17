@@ -32,7 +32,7 @@ final class AdviceHabits {
     }
 
     /** One start/sit call the user either followed or overrode. */
-    private record Judged(AdviceCall call, boolean followed, double started, double sat) {
+    record Judged(AdviceCall call, boolean followed, double started, double sat) {
 
         /** What starting Otto's pick gained over the player Otto said to sit. */
         double margin() {
@@ -83,7 +83,11 @@ final class AdviceHabits {
         return Optional.of(new HabitReport.Habit("overrides", facts, List.copyOf(players)));
     }
 
-    private static Optional<Judged> judge(HabitHistory history, AdviceCall call) {
+    /**
+     * Returns the start/sit call as the user acted on it, or empty when
+     * he started both players or neither, or either has no score.
+     */
+    static Optional<Judged> judge(HabitHistory history, AdviceCall call) {
         Optional<PlayedWeek> played = history.week(call.week()).flatMap(HabitWeek::played);
         if (played.isEmpty() || call.over().isEmpty()) {
             return Optional.empty();
