@@ -179,9 +179,17 @@ starts two of them; in a one-quarterback league a dropped QB12 is a
 replacement-level body, and here he starts for most of the field.
 
 The Superflex number the spec spells out is the replacement rank rather
-than the Notable one: replacement level sits at QB 24, RB 24, WR 24 and
-TE 12, because a Superflex league makes about 24 quarterbacks startable.
-Both sets of ranks live in Settings, which is where the spec puts them,
+than the Notable one. Replacement level is not a fixed rank, though: it
+is read from the league's own starting slots, one player for every slot
+only that position can fill, with a Superflex slot counted at
+quarterback. A twelve-team Superflex league puts it at QB 24, RB 24,
+WR 24 and TE 12; a ten-team league that starts one quarterback puts the
+quarterback line at QB 10. Team depth, the trade tools and the waiver
+board all read the same rank, so a free agent is worth one thing
+wherever the user asks. Team depth and the waiver board fall back to the
+configured `replacement-cutoffs` only at a position the league document
+gives no dedicated slot.
+The Notable ranks live in Settings, which is where the spec puts them,
 so the Settings-by-chat work can move them without touching this code.
 
 ## A rank the table cannot reach is not a replacement level of zero

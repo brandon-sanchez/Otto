@@ -461,6 +461,29 @@ class WaiverScenarioTest extends WireSeamTest {
                 .withRequestBody(notContaining("Ray Davis")));
     }
 
+    /**
+     * A ten-team league that starts one tight end a team fills ten tight
+     * end slots, so the board reads replacement at the tenth tight end
+     * rather than the twelfth the default league uses.
+     */
+    @Test
+    void theBoardReadsReplacementLevelFromTheLeaguesOwnStartingSlots() {
+        aWaiverWeekOnDisk(server -> {
+            NflverseStubs.waiverWeek(server);
+            SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH,
+                    "sleeper/league-market-1qb-half-ppr.json", "league-1qb");
+        });
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmCallsToolThenPhrases(llm, "rank_waiver_targets",
+                "{\"position\":\"TE\"}", "Cade Otton first.");
+
+        ask("best tight ends on waivers?");
+
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("the TE10 projection this week"))
+                .withRequestBody(notContaining("TE12")));
+    }
+
     @Test
     void twoStraightWeeksOfHalfABackfieldIsABreakoutWithoutAnyDepthChartMove() {
         aWaiverWeekOnDisk(NflverseStubs::waiverWeekWithAGrowingRole);

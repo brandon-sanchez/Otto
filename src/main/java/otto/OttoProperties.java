@@ -9,8 +9,9 @@ import otto.lineup.PositionCutoffs;
 /**
  * @param notableCutoffs the ranks that make a dropped player league
  *        news, part of the Settings document the spec names
- * @param replacementCutoffs the ranks that price replacement level for
- *        a starting slot
+ * @param replacementCutoffs the ranks that price replacement level at a
+ *        position the league document gives no dedicated starting slot;
+ *        every other position reads its rank from the league's lineup
  */
 @ConfigurationProperties(prefix = "otto")
 public record OttoProperties(

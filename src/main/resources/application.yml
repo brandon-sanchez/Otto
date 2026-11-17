@@ -68,9 +68,10 @@ otto:
     rb: 24
     wr: 24
     te: 12
-  # What a startable player is worth, by the rank a league of this shape
-  # can fill. Superflex makes about 24 quarterbacks startable, so the
-  # quarterback line sits with the running backs and receivers.
+  # The fallback replacement rank for a position the league document
+  # gives no dedicated starting slot. Every other position reads its rank
+  # from the league's own lineup: one player for every dedicated starting
+  # slot, Superflex counted at quarterback.
   replacement-cutoffs:
     qb: 24
     rb: 24

@@ -8,9 +8,9 @@ package otto.lineup;
  * top-12 TE) mark the players whose drop is league news.
  *
  * <p>The replacement-level ranks (QB 24, RB 24, WR 24, TE 12) mark what
- * a startable player is worth. The quarterback rank is the Superflex
- * one: two of this league's nine starting slots take a quarterback, so
- * about 24 of them start every week rather than 12.
+ * a startable player is worth at a position the league document gives
+ * no dedicated starting slot. Every other position reads its rank from
+ * the league's own lineup instead.
  */
 public record PositionCutoffs(int qb, int rb, int wr, int te) {
 

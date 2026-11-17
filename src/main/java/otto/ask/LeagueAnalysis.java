@@ -19,6 +19,7 @@ import otto.lineup.PositionRankings;
 import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
 import otto.snapshot.RosterSnapshot;
+import otto.trade.LeagueShape;
 
 /**
  * The deterministic core behind the Ask lane's league tools: the
@@ -353,31 +354,53 @@ public class LeagueAnalysis {
      */
     public Depth depthOf(LeagueWeek league, RosterSnapshot roster) {
         UserWeek team = new UserWeek(league.league(), roster, league.week());
-        return ranking(league).map(ranked -> depth(team, ranked)).orElseGet(Depth::unpriced);
+        return ranking(league).map(ranked -> depth(league, team, ranked))
+                .orElseGet(Depth::unpriced);
     }
 
     /**
      * What a week of Replacement Level is worth at one position: the
-     * projection of the player at the position's cutoff rank. Empty when
-     * the table does not reach that far down, which is a shallow table
-     * rather than a replacement level of zero.
-     *
-     * <p>The trade tools price a player above this line, so the cutoff
-     * ranks stay in one place. A trade and the waiver board must agree
-     * on what a free agent is worth, or the same player is worth two
-     * different things on the same afternoon.
+     * projection of the player at the position's {@link #replacementRank
+     * replacement rank}. Empty when the table does not reach that far
+     * down, which is a shallow table rather than a replacement level of
+     * zero.
      */
     public Optional<Double> replacementLevel(LeagueWeek league, String position) {
-        return replacementLevel(league, position, replacementCutoffs.forPosition(position));
+        return replacementLevel(league, position, replacementRank(league, position));
     }
 
     /**
      * What a week of Replacement Level is worth at one position when the
-     * caller sets the cutoff rank, as a trade does from the league's own
-     * starting slots. Empty when the table does not reach that rank.
+     * caller sets the cutoff rank, as a trade does from its own
+     * {@link LeagueShape}. Empty when the table does not reach that rank.
      */
     public Optional<Double> replacementLevel(LeagueWeek league, String position, int rank) {
         return ranking(league).flatMap(ranked -> ranked.pointsAtRank(position, rank));
+    }
+
+    /**
+     * Returns the rank Replacement Level is read at for this league: one
+     * player for every starting slot only this position can fill, as
+     * {@link LeagueShape} counts them.
+     *
+     * <p>A team's depth and the waiver board read the rank here, and a
+     * trade reads the same {@link LeagueShape} rank, so all three agree
+     * on what a free agent is worth. Otherwise the same player is worth
+     * two different things on the same afternoon.
+     *
+     * <p>When the league document lists no starting slot only this
+     * position fills, its lineup gives no rank, and the configured
+     * {@code otto.replacement-cutoffs} rank stands in. That is 0, no
+     * rank at all, for a position the cutoffs don't name, such as a
+     * kicker.
+     */
+    public int replacementRank(LeagueWeek league, String position) {
+        LeagueShape shape = LeagueShape.of(league.league(), league.rosters().size());
+        // Map.copyOf rejects a null key lookup, and a player the
+        // directory doesn't know carries no position.
+        return position != null && shape.slots().containsKey(position)
+                ? shape.replacementRank(position)
+                : replacementCutoffs.forPosition(position);
     }
 
     /**
@@ -393,7 +416,8 @@ public class LeagueAnalysis {
         LineupPlanner.RosterStatus status = planner.rosterStatus(team, now);
 
         Optional<PositionRanking> ranking = ranking(league);
-        Depth depth = ranking.map(ranked -> depth(team, ranked)).orElseGet(Depth::unpriced);
+        Depth depth = ranking.map(ranked -> depth(league, team, ranked))
+                .orElseGet(Depth::unpriced);
 
         List<String> notes = new ArrayList<>();
         if (ranking.isEmpty()) {
@@ -423,13 +447,13 @@ public class LeagueAnalysis {
      * starting slot filled below replacement is a gap of its own, named
      * by the slot so the reader can see which one to attack.
      */
-    private Depth depth(UserWeek team, PositionRanking ranking) {
+    private Depth depth(LeagueWeek league, UserWeek team, PositionRanking ranking) {
         List<PositionDepth> positions = new ArrayList<>();
         List<String> strengths = new ArrayList<>();
         List<String> gaps = new ArrayList<>();
         for (String position : rankedPositions(team)) {
-            Optional<Double> replacement = ranking.pointsAtRank(position,
-                    replacementCutoffs.forPosition(position));
+            int rank = replacementRank(league, position);
+            Optional<Double> replacement = ranking.pointsAtRank(position, rank);
             int startingSlots = dedicatedSlots(team, position);
             List<String> theirs = team.roster().players().stream()
                     .filter(playerId -> position.equals(team.position(playerId)))
@@ -449,8 +473,7 @@ public class LeagueAnalysis {
                     position,
                     replacement.map(LeagueAnalysis::points)
                             .orElse("the table ranks only %d %s, so it does not reach rank %d"
-                                    .formatted(ranking.ranked(position), position,
-                                            replacementCutoffs.forPosition(position))),
+                                    .formatted(ranking.ranked(position), position, rank)),
                     startable.size(),
                     startingSlots,
                     (int) benchCover,
@@ -472,12 +495,12 @@ public class LeagueAnalysis {
                 gaps.add("No %s cover on the bench above replacement".formatted(position));
             }
         }
-        gaps.addAll(slotGaps(team, ranking));
+        gaps.addAll(slotGaps(league, team, ranking));
         return new Depth(positions, strengths, gaps);
     }
 
     /** Starting slots filled by a player who projects below replacement. */
-    private List<String> slotGaps(UserWeek team, PositionRanking ranking) {
+    private List<String> slotGaps(LeagueWeek league, UserWeek team, PositionRanking ranking) {
         List<String> gaps = new ArrayList<>();
         for (int index = 0; index < team.slots().size(); index++) {
             Slot slot = team.slots().get(index);
@@ -488,7 +511,7 @@ public class LeagueAnalysis {
             }
             String position = team.position(playerId);
             Optional<Double> replacement = ranking.pointsAtRank(position,
-                    replacementCutoffs.forPosition(position));
+                    replacementRank(league, position));
             Optional<Double> projected = team.points(playerId);
             if (replacement.isEmpty() || projected.isEmpty()
                     || projected.orElseThrow() >= replacement.orElseThrow()) {

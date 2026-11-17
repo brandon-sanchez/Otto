@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.ask.LeagueAnalysis;
 import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;
@@ -28,7 +29,6 @@ import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.lineup.GameWeek;
-import otto.lineup.PositionCutoffs;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.needs.Cover;
@@ -93,18 +93,16 @@ public class WaiverScorer {
     private final NflverseStore nflverse;
     private final SleeperAdapter sleeper;
     private final SleeperAdapter withinCadence;
-    private final PositionCutoffs replacementCutoffs;
+    private final LeagueAnalysis leagueAnalysis;
 
     public WaiverScorer(PlayerDirectoryStore directoryStore, NflverseStore nflverse,
-            SleeperAdapter sleeper, OttoProperties properties) {
+            SleeperAdapter sleeper, LeagueAnalysis leagueAnalysis, OttoProperties properties) {
         this.directoryStore = directoryStore;
         this.nflverse = nflverse;
         this.sleeper = sleeper;
         // Trending is a poll like any other; only news is always live.
         this.withinCadence = sleeper.cachedWithin(properties.sleeperCadence());
-        // One definition of what a startable player is worth, shared
-        // with the league-analysis tools rather than restated here.
-        this.replacementCutoffs = properties.replacementCutoffs();
+        this.leagueAnalysis = leagueAnalysis;
     }
 
     public SourceResult<WaiverBoard> rank(LeagueWeek league, Instant now, WaiverQuery query) {
@@ -344,7 +342,8 @@ public class WaiverScorer {
             // whatever the question narrowed to: a player's score must
             // not move because the user asked about his position alone.
             WaiverQuery.ALL_POSITIONS.forEach(position ->
-                    replacements.put(position, replacementFor(position)));
+                    replacements.put(position, replacementFor(position,
+                            leagueAnalysis.replacementRank(league, position))));
             this.scale = scale();
             this.needPositions = needPositions();
             this.positionsThatFixASlot = positionsThatFixASlot();
@@ -1155,24 +1154,23 @@ public class WaiverScorer {
         // -- the user's own team --------------------------------------------
 
         /**
-         * Replacement level: the projection of the position's cutoff
+         * Replacement level: the projection at the league's replacement
          * rank across every player this system knows of, rostered or
-         * not. A table thinner than the cutoff has no rank-24 player to
-         * read, so the lowest projected one sets the line and the basis
-         * says so - a replacement level of zero would price every
+         * not. A table thinner than the cutoff has no player at that rank
+         * to read, so the lowest projected one sets the line and the
+         * basis says so - a replacement level of zero would price every
          * scrub as a starter.
+         *
+         * @param rank the league's replacement rank, 0 when it has none
          */
-        private Replacement replacementFor(String position) {
+        private Replacement replacementFor(String position, int rank) {
             List<Double> ranked = directory.players().values().stream()
                     .filter(player -> position.equals(player.position()))
                     .map(player -> projections.points(player.playerId(), position))
                     .flatMap(Optional::stream)
                     .sorted(Comparator.reverseOrder())
                     .toList();
-            // A position the cutoffs do not name reads as the whole
-            // table rather than as rank zero, which is no rank at all.
-            int named = replacementCutoffs.forPosition(position);
-            int cutoff = named > 0 ? named : ranked.size();
+            int cutoff = rank > 0 ? rank : ranked.size();
             if (ranked.isEmpty()) {
                 return new Replacement(position, 0.0,
                         "no %s is projected this week, so I have no %s replacement level"
