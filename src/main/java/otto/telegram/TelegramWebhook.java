@@ -17,6 +17,7 @@ import otto.account.AccountDeletion;
 import otto.alerts.AlertActions;
 import otto.ask.AskService;
 import otto.board.WaiverBoardOptions;
+import otto.sleeper.LeagueScope;
 import otto.storage.OttoJson;
 
 /**
@@ -176,10 +177,11 @@ public class TelegramWebhook {
             return;
         }
         long alertId = Long.parseLong(tap.group(2));
-        String ack = VIEW_ALL.equals(tap.group(1))
-                ? viewAllOptions(alertId)
-                : alertActions.apply(tap.group(1), alertId)
-                        .orElse("That alert is no longer on my log.");
+        String ack = LeagueScope.call(alertActions.leagueOf(alertId), () ->
+                VIEW_ALL.equals(tap.group(1))
+                        ? viewAllOptions(alertId)
+                        : alertActions.apply(tap.group(1), alertId)
+                                .orElse("That alert is no longer on my log."));
         acknowledge(callback, ack);
     }
 
