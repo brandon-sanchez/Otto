@@ -50,8 +50,10 @@ public interface EvidenceLane {
      * What one board is built for.
      *
      * @param user the user's roster in the league's latest Snapshot
+     * @param sleeper the teams Sleeper's stats fill for the latest week
+     *        nflverse lacks, {@link SleeperFill#NONE} when none
      */
-    record Inputs(LeagueWeek league, RosterSnapshot user, Instant now) {
+    record Inputs(LeagueWeek league, RosterSnapshot user, Instant now, SleeperFill sleeper) {
     }
 
     /** One lane's sources, as read for one board. */

@@ -23,12 +23,15 @@ import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
 import otto.records.DecisionRecord;
 import otto.records.DecisionRecords;
+import otto.records.Evidence;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -73,6 +76,14 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
             "trending, but this week's usage numbers aren't in yet";
 
     private static final String MISSING_GAME = "the snap counts lack week 1's BUF at MIA game";
+
+    private static final String SLEEPER_WEEK_ONE = "sleeper/stats-2026-1-waivers.json";
+
+    private static final String FILLED_GAME = "the snap counts for week 1's BUF at MIA game "
+            + "come from Sleeper's stats, because nflverse had not published them when the "
+            + "board was built";
+
+    private static final String RAY_DAVIS_FROM_SLEEPER = "68% of offensive snaps (41 snaps)";
 
     @Autowired
     private CheckRunner checkRunner;
@@ -243,6 +254,108 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .filteredOn(candidate -> candidate.playerId().equals("20103"))
                 .singleElement()
                 .satisfies(receiver -> assertThat(receiver.included()).isTrue());
+    }
+
+    @Test
+    void sleeperFillsTheMissingGameSoTheNormalBoardGoesOutNamingItsSource() {
+        aWaiverWeekWithTheBuffaloGameMissing();
+        sleeperHasWeekOne(SLEEPER_WEEK_ONE);
+
+        checkAt(BOARD_DUE);
+        assertThat(boardRecords()).isEmpty();
+        sleeper.verify(0, getRequestedFor(urlEqualTo(SleeperStubs.STATS_WEEK_1_PATH)));
+
+        checkAt(FALLBACK);
+
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .startsWith("Your waiver options\n\n" + OPENING)
+                .doesNotContain("aren't all in yet"));
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.evidence())
+                .filteredOn(item -> item.id().equals("usage-sleeper-10005"))
+                .singleElement()
+                .satisfies(item -> assertThat(item.source()).isEqualTo("sleeper:stats"));
+        assertThat(record.evidence()).extracting(Evidence::id)
+                .doesNotContain("usage-sleeper-10001", "production-sleeper-10001");
+        assertThat(record.comparisons().at("/latestWeek/filledFromSleeper/0").asText())
+                .isEqualTo(FILLED_GAME);
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing(RAY_DAVIS_FROM_SLEEPER))
+                .withRequestBody(containing("air-yards share unknown"))
+                .withRequestBody(containing(FILLED_GAME))
+                .withRequestBody(containing("71% of offensive snaps (47 snaps)")));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("45% of offensive snaps (30 snaps)")));
+    }
+
+    @Test
+    void sleeperFillsLateWeeklyStatsWithItsOwnBoxScoreLabelledAsSleepers() {
+        aWaiverWeekOnDisk(() -> NflverseStubs.waiverWeekMissingAGameAndThreeTeamsStats(nflverse));
+        sleeperHasWeekOne(SLEEPER_WEEK_ONE);
+
+        checkAt(FALLBACK);
+
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .doesNotContain("aren't all in yet"));
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.evidence())
+                .filteredOn(item -> item.id().equals("production-sleeper-10006"))
+                .singleElement()
+                .satisfies(item -> assertThat(item.source()).isEqualTo("sleeper:stats"));
+        assertThat(record.comparisons().at("/latestWeek/filledFromSleeper/0").asText())
+                .isEqualTo("the weekly stats for week 1 for MIA, DAL, ATL come from Sleeper's "
+                        + "stats, because nflverse had not published them when the board "
+                        + "was built");
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("against TB: 231 passing yards, 2 passing "
+                        + "touchdowns, 1 interceptions, 3 carries, 12 rushing yards")));
+    }
+
+    @Test
+    void whenSleeperLacksTheGameTooTheFallbackBoardIsBuilt() {
+        aWaiverWeekWithTheBuffaloGameMissing();
+        sleeperHasWeekOne("sleeper/stats-2026-1-waivers-late.json");
+
+        checkAt(FALLBACK);
+
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .startsWith("Your waiver options\n\nWeek 1's numbers aren't all in yet, "
+                        + "because " + MISSING_GAME + "."));
+        assertThat(onlyBoardRecord().evidence()).extracting(Evidence::id)
+                .noneMatch(id -> id.contains("sleeper"));
+    }
+
+    @Test
+    void nflverseArrivingLaterReplacesTheValuesSleeperFilled() {
+        aWaiverWeekWithTheBuffaloGameMissing();
+        sleeperHasWeekOne(SLEEPER_WEEK_ONE);
+        OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST, BOARD, BOARD);
+        checkAt(FALLBACK);
+
+        NflverseStubs.lateSnapCountsArrive(nflverse);
+        clock.set(BOARD_DUE.plus(Duration.ofDays(7)));
+        feeds.updateIfDue();
+        checkRunner.runCheck();
+
+        List<DecisionRecord> rounds = boardRecords();
+        assertThat(rounds).hasSize(2);
+        assertThat(rounds.getFirst().evidence()).extracting(Evidence::id)
+                .contains("usage-sleeper-10005");
+        DecisionRecord nextRound = rounds.getLast();
+        assertThat(nextRound.evidence()).extracting(Evidence::id)
+                .contains("usage-10005")
+                .noneMatch(id -> id.contains("sleeper"));
+        assertThat(nextRound.comparisons().at("/latestWeek/filledFromSleeper").size()).isZero();
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("65% of offensive snaps (40 snaps)"))
+                .withRequestBody(notContaining(RAY_DAVIS_FROM_SLEEPER)));
+    }
+
+    private void sleeperHasWeekOne(String fixture) {
+        SleeperStubs.stubJson(sleeper, SleeperStubs.STATS_WEEK_1_PATH, fixture, "stats-w1");
     }
 
     private List<String> boardMessages() {
