@@ -14,6 +14,7 @@ import otto.advice.RankConvention;
 import otto.board.WaiverPreferences;
 import otto.check.WeekFacts;
 import otto.habits.HabitService;
+import otto.keeper.KeeperRuleChat;
 import otto.settings.SettingsService;
 import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;
@@ -48,6 +49,7 @@ public class AskTools {
     private final PlayerCeiling ceilings;
     private final HabitService habits;
     private final MarketValueAnswers marketValues;
+    private final KeeperRuleChat keeperRules;
     private final TeamWeaknesses weaknesses;
     private final BuyLowSellHigh buySell;
     private final Clock clock;
@@ -57,8 +59,8 @@ public class AskTools {
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
-            MarketValueAnswers marketValues, TeamWeaknesses weaknesses,
-            BuyLowSellHigh buySell, Clock clock) {
+            MarketValueAnswers marketValues, KeeperRuleChat keeperRules,
+            TeamWeaknesses weaknesses, BuyLowSellHigh buySell, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -74,6 +76,7 @@ public class AskTools {
         this.ceilings = ceilings;
         this.habits = habits;
         this.marketValues = marketValues;
+        this.keeperRules = keeperRules;
         this.weaknesses = weaknesses;
         this.buySell = buySell;
         this.clock = clock;
@@ -490,6 +493,47 @@ public class AskTools {
                         checked.delivery()), BuyLowSellHigh.Answer::message))
                 .orElseGet(() -> ToolAnswer.unavailable(
                         "side must be buy, sell or both, not \"%s\"".formatted(side)));
+    }
+
+    @Tool(name = "manage_keeper_rule", description = """
+            How the user's keeper league prices keeping a player for next
+            season. Sleeper never records it, so until he says, Otto reads
+            it off the league's drafts or assumes the round a keeper was
+            drafted in. Call this to show the rule in force, to set the
+            rule he states, to confirm the rule Otto read off his drafts
+            when he says yes to it, or to clear his rule.""")
+    public ToolAnswer<KeeperRuleChat.View> manageKeeperRule(
+            @ToolParam(description = "show, set, confirm or clear")
+            String action,
+            @ToolParam(required = false, description = """
+                    The rule to set: same (the round he was drafted in,
+                    or last season's auction price), rounds_earlier,
+                    fixed_round, free (no cost up to the keeper limit),
+                    plus_dollars or plus_percent.""")
+            String rule,
+            @ToolParam(required = false, description = """
+                    The rule's number: rounds earlier per year kept, the
+                    fixed round, or the dollars or percent on top of last
+                    season's price.""")
+            Integer amount,
+            @ToolParam(required = false, description = """
+                    The cheapest a keeper may cost: a dollar floor in an
+                    auction, or the latest round he may cost.""")
+            Integer minimum,
+            @ToolParam(required = false, description = """
+                    What an undrafted player costs: a round, or dollars in
+                    an auction. Leave it out for the last round or $1.""")
+            Integer undrafted,
+            @ToolParam(required = false, description = """
+                    The most seasons in a row a player may be kept.""")
+            Integer yearLimit) {
+        return switch (loader.league()) {
+            case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
+                unavailable(unavailable);
+            case SourceResult.Ok<SleeperAdapter.League> ok -> keeperRules.apply(ok.value(),
+                    action, new KeeperRuleChat.Stated(rule, amount, minimum, undrafted,
+                            yearLimit));
+        };
     }
 
     @Tool(name = "get_team_weaknesses", description = """

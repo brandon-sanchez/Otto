@@ -1,20 +1,42 @@
 package otto.market;
 
+import otto.sleeper.SleeperAdapter;
+
 /**
- * Where a keeper league's cost of keeping one player comes from. A
- * keeper's bonus is his dynasty value minus this cost, so a source of
- * real keeper costs, such as the draft round a keeper uses up, plugs in
- * here and nowhere else.
+ * Where a keeper league's cost of keeping a player comes from. A
+ * keeper's bonus is his dynasty value minus this cost, so how the
+ * league prices keepers plugs in here and nowhere else.
  */
 public interface KeeperCosts {
 
     /**
-     * Returns what keeping the player costs his team, in the same dynasty
-     * value points as his own value.
+     * Returns how the league prices its keepers, read once for one
+     * valuation and then asked about each player.
      *
-     * @param keeperLine the dynasty value of the best rostered player who
-     *        falls outside every team's likely keepers, which is what a
-     *        keeper spot gives up
+     * <p>Side effects: reads the league's past drafts from Sleeper and
+     * its stored keeper rule.
      */
-    int costOf(String playerId, int keeperLine);
+    Pricing pricing(SleeperAdapter.League league);
+
+    /**
+     * Records that an answer has asked the owner how his league prices
+     * keepers, so later answers state the assumption without asking
+     * again.
+     *
+     * <p>Side effects: writes the stored keeper rules.
+     */
+    void asked(String leagueId);
+
+    /** One league's keeper prices. */
+    @FunctionalInterface
+    interface Pricing {
+
+        /**
+         * Returns what keeping the player costs his team next season.
+         *
+         * @param scale what draft picks, auction dollars and a keeper
+         *        spot are worth in dynasty value points
+         */
+        KeeperCost costOf(String playerId, KeeperScale scale);
+    }
 }

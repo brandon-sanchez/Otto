@@ -1,0 +1,128 @@
+[
+  {
+    "round": 1,
+    "roster_id": 1,
+    "player_id": "9509",
+    "picked_by": "777001",
+    "pick_no": 1,
+    "metadata": {
+      "first_name": "Bijan",
+      "last_name": "Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "player_id": "9509",
+      "amount": "30"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 1,
+    "roster_id": 1,
+    "player_id": "4034",
+    "picked_by": "777001",
+    "pick_no": 2,
+    "metadata": {
+      "first_name": "Christian",
+      "last_name": "McCaffrey",
+      "position": "RB",
+      "team": "SF",
+      "player_id": "4034",
+      "amount": "26"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 2,
+    "roster_id": 1,
+    "player_id": "6794",
+    "picked_by": "777001",
+    "pick_no": 3,
+    "metadata": {
+      "first_name": "Justin",
+      "last_name": "Jefferson",
+      "position": "WR",
+      "team": "MIN",
+      "player_id": "6794",
+      "amount": "19"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 9,
+    "roster_id": 1,
+    "player_id": "1466",
+    "picked_by": "777001",
+    "pick_no": 4,
+    "metadata": {
+      "first_name": "Travis",
+      "last_name": "Kelce",
+      "position": "TE",
+      "team": "KC",
+      "player_id": "1466",
+      "amount": "4"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 10,
+    "roster_id": 1,
+    "player_id": "5850",
+    "picked_by": "777001",
+    "pick_no": 5,
+    "metadata": {
+      "first_name": "Josh",
+      "last_name": "Jacobs",
+      "position": "RB",
+      "team": "GB",
+      "player_id": "5850",
+      "amount": "2"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 1,
+    "roster_id": 1,
+    "player_id": "6786",
+    "picked_by": "777001",
+    "pick_no": 6,
+    "metadata": {
+      "first_name": "CeeDee",
+      "last_name": "Lamb",
+      "position": "WR",
+      "team": "DAL",
+      "player_id": "6786",
+      "amount": "61"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1250031856205725697"
+  },
+  {
+    "round": 3,
+    "roster_id": 2,
+    "player_id": "2216",
+    "picked_by": "777002",
+    "pick_no": 7,
+    "metadata": {
+      "first_name": "Mike",
+      "last_name": "Evans",
+      "position": "WR",
+      "team": "TB",
+      "player_id": "2216",
+      "amount": "22"
+    },
+    "is_keeper": null,
+    "draft_slot": 2,
+    "draft_id": "1250031856205725697"
+  }
+]

@@ -1,0 +1,172 @@
+[
+  {
+    "round": 1,
+    "roster_id": 1,
+    "player_id": "9509",
+    "picked_by": "777001",
+    "pick_no": 1,
+    "metadata": {
+      "first_name": "Bijan",
+      "last_name": "Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "player_id": "9509"
+    },
+    "is_keeper": true,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 1,
+    "roster_id": 2,
+    "player_id": "4866",
+    "picked_by": "777002",
+    "pick_no": 2,
+    "metadata": {
+      "first_name": "Saquon",
+      "last_name": "Barkley",
+      "position": "RB",
+      "team": "PHI",
+      "player_id": "4866"
+    },
+    "is_keeper": null,
+    "draft_slot": 2,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 1,
+    "roster_id": 1,
+    "player_id": "6786",
+    "picked_by": "777001",
+    "pick_no": 3,
+    "metadata": {
+      "first_name": "CeeDee",
+      "last_name": "Lamb",
+      "position": "WR",
+      "team": "DAL",
+      "player_id": "6786"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 2,
+    "roster_id": 1,
+    "player_id": "4034",
+    "picked_by": "777001",
+    "pick_no": 4,
+    "metadata": {
+      "first_name": "Christian",
+      "last_name": "McCaffrey",
+      "position": "RB",
+      "team": "SF",
+      "player_id": "4034"
+    },
+    "is_keeper": true,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 2,
+    "roster_id": 1,
+    "player_id": "6794",
+    "picked_by": "777001",
+    "pick_no": 5,
+    "metadata": {
+      "first_name": "Justin",
+      "last_name": "Jefferson",
+      "position": "WR",
+      "team": "MIN",
+      "player_id": "6794"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 3,
+    "roster_id": 1,
+    "player_id": "4046",
+    "picked_by": "777001",
+    "pick_no": 6,
+    "metadata": {
+      "first_name": "Patrick",
+      "last_name": "Mahomes",
+      "position": "QB",
+      "team": "KC",
+      "player_id": "4046"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 4,
+    "roster_id": 1,
+    "player_id": "8138",
+    "picked_by": "777001",
+    "pick_no": 7,
+    "metadata": {
+      "first_name": "James",
+      "last_name": "Cook",
+      "position": "RB",
+      "team": "BUF",
+      "player_id": "8138"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 5,
+    "roster_id": 1,
+    "player_id": "8112",
+    "picked_by": "777001",
+    "pick_no": 8,
+    "metadata": {
+      "first_name": "Garrett",
+      "last_name": "Wilson",
+      "position": "WR",
+      "team": "NYJ",
+      "player_id": "8112"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 6,
+    "roster_id": 1,
+    "player_id": "6813",
+    "picked_by": "777001",
+    "pick_no": 9,
+    "metadata": {
+      "first_name": "Dallas",
+      "last_name": "Goedert",
+      "position": "TE",
+      "team": "PHI",
+      "player_id": "6813"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  },
+  {
+    "round": 8,
+    "roster_id": 1,
+    "player_id": "1466",
+    "picked_by": "777001",
+    "pick_no": 10,
+    "metadata": {
+      "first_name": "Travis",
+      "last_name": "Kelce",
+      "position": "TE",
+      "team": "KC",
+      "player_id": "1466"
+    },
+    "is_keeper": null,
+    "draft_slot": 1,
+    "draft_id": "1389748403805650945"
+  }
+]

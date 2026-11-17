@@ -134,8 +134,8 @@ public class MarketValuation {
                         .formatted(player.name(), redraft.describe()));
             }
             DynastyValues dynastyValues = new DynastyValues(dynasty, now);
-            MarketQuote.Keeper blend = blend(league.rules().keeperLimit(), rosters, player.id(),
-                    row.get().value(), dynastyValues);
+            MarketQuote.Keeper blend = blend(league, rosters, player.id(), row.get().value(),
+                    dynastyValues);
             return new SourceResult.Ok<>(fromFantasyCalc(redraft, listing, row.get(),
                     player.name(), described,
                     row.get().value() + blend.bonus(), Optional.of(blend)));
@@ -152,15 +152,16 @@ public class MarketValuation {
         };
     }
 
-    private MarketQuote.Keeper blend(Optional<Integer> keeperLimit,
+    private MarketQuote.Keeper blend(SleeperAdapter.League league,
             List<RosterSnapshot> rosters, String playerId, int redraftValue,
             DynastyValues dynasty) {
+        Optional<Integer> keeperLimit = league.rules().keeperLimit();
         Optional<Valued> own = dynasty.of(playerId);
         Optional<Integer> ownValue = own.map(Valued::value);
         Optional<MarketQuote.Source> ownSource = own.map(Valued::source);
         if (keeperLimit.isEmpty() || keeperLimit.get() < 1 || own.isEmpty()) {
             return new MarketQuote.Keeper(keeperLimit, false, redraftValue, ownValue, ownSource,
-                    0, 0);
+                    0, 0, Optional.empty());
         }
         int limit = keeperLimit.get();
         List<Integer> rostered = rosters.stream()
@@ -172,19 +173,35 @@ public class MarketValuation {
                 .toList();
         int keepers = rosters.size() * limit;
         int line = rostered.size() > keepers ? rostered.get(keepers) : 0;
-        boolean topOfHisTeam = rosters.stream()
+        KeeperScale scale = new KeeperScale(line, dynasty.ranked());
+        KeeperCosts.Pricing pricing = keeperCosts.pricing(league);
+        KeeperCost cost = pricing.costOf(playerId, scale);
+        boolean likely = rosters.stream()
                 .filter(roster -> everyPlayer(roster).contains(playerId))
                 .findFirst()
-                .map(roster -> everyPlayer(roster).stream()
-                        .map(id -> Map.entry(id, dynasty.of(id).map(Valued::value).orElse(0)))
-                        .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                        .limit(limit)
-                        .anyMatch(entry -> entry.getKey().equals(playerId)))
+                .map(roster -> likelyKeepers(roster, limit, dynasty, pricing, scale)
+                        .contains(playerId))
                 .orElse(false);
-        int bonus = ownValue.get() - keeperCosts.costOf(playerId, line);
-        boolean likely = topOfHisTeam && bonus > 0;
         return new MarketQuote.Keeper(keeperLimit, likely, redraftValue, ownValue, ownSource,
-                line, likely ? bonus : 0);
+                line, likely ? ownValue.get() - cost.value() : 0, Optional.of(cost));
+    }
+
+    private static List<String> likelyKeepers(RosterSnapshot roster, int limit,
+            DynastyValues dynasty, KeeperCosts.Pricing pricing, KeeperScale scale) {
+        record Surplus(String playerId, int value) {
+        }
+        return everyPlayer(roster).stream()
+                .flatMap(id -> dynasty.of(id).stream().flatMap(valued -> {
+                    KeeperCost cost = pricing.costOf(id, scale);
+                    return cost.keepable()
+                            ? Stream.of(new Surplus(id, valued.value() - cost.value()))
+                            : Stream.empty();
+                }))
+                .filter(surplus -> surplus.value() > 0)
+                .sorted(Comparator.comparingInt(Surplus::value).reversed())
+                .limit(limit)
+                .map(Surplus::playerId)
+                .toList();
     }
 
     private static List<String> everyPlayer(RosterSnapshot roster) {
@@ -214,6 +231,18 @@ public class MarketValuation {
 
         Optional<Valued> of(String playerId) {
             return known.computeIfAbsent(playerId, this::read);
+        }
+
+        List<Integer> ranked() {
+            Stream<Integer> values = fantasyCalc
+                    .map(list -> list.players().stream()
+                            .filter(row -> !row.pick())
+                            .map(MarketPlayer::value))
+                    .orElseGet(() -> dynastyProcess.stream()
+                            .flatMap(table -> table.rows().stream())
+                            .filter(row -> !MarketPlayer.PICK.equals(row.position()))
+                            .map(row -> row.value(quarterbacks)));
+            return values.sorted(Comparator.reverseOrder()).toList();
         }
 
         private Optional<Valued> read(String playerId) {
