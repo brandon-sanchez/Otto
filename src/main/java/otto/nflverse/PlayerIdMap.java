@@ -18,6 +18,8 @@ public final class PlayerIdMap {
     private final Map<String, String> gsisBySleeper;
     @JsonProperty("sleeperToPfr")
     private final Map<String, String> pfrBySleeper;
+    @JsonProperty("sleeperToFantasyPros")
+    private final Map<String, String> fantasyProsBySleeper;
     private final Map<String, String> sleeperByGsis;
     private final Map<String, String> sleeperByPfr;
 
@@ -25,11 +27,13 @@ public final class PlayerIdMap {
     public PlayerIdMap(@JsonProperty("etag") String etag,
             @JsonProperty("checkedAt") Instant checkedAt,
             @JsonProperty("sleeperToGsis") Map<String, String> gsisBySleeper,
-            @JsonProperty("sleeperToPfr") Map<String, String> pfrBySleeper) {
+            @JsonProperty("sleeperToPfr") Map<String, String> pfrBySleeper,
+            @JsonProperty("sleeperToFantasyPros") Map<String, String> fantasyProsBySleeper) {
         this.etag = etag;
         this.checkedAt = checkedAt;
         this.gsisBySleeper = copy(gsisBySleeper);
         this.pfrBySleeper = copy(pfrBySleeper);
+        this.fantasyProsBySleeper = copy(fantasyProsBySleeper);
         this.sleeperByGsis = invert(this.gsisBySleeper);
         this.sleeperByPfr = invert(this.pfrBySleeper);
     }
@@ -58,8 +62,23 @@ public final class PlayerIdMap {
         return Optional.ofNullable(sleeperByPfr.get(pfrId));
     }
 
+    /**
+     * Returns the id FantasyPros knows this Sleeper player by. DynastyProcess
+     * keys its value table by that id, so this is how its values reach a
+     * Sleeper roster.
+     */
+    public Optional<String> fantasyProsFor(String sleeperId) {
+        return Optional.ofNullable(fantasyProsBySleeper.get(sleeperId));
+    }
+
+    /** True when the map carries FantasyPros ids. */
+    public boolean hasFantasyProsIds() {
+        return !fantasyProsBySleeper.isEmpty();
+    }
+
     public PlayerIdMap withCheckedAt(Instant newCheckedAt) {
-        return new PlayerIdMap(etag, newCheckedAt, gsisBySleeper, pfrBySleeper);
+        return new PlayerIdMap(etag, newCheckedAt, gsisBySleeper, pfrBySleeper,
+                fantasyProsBySleeper);
     }
 
     private static Map<String, String> copy(Map<String, String> mapping) {

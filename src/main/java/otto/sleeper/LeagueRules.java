@@ -38,6 +38,7 @@ import static otto.sleeper.SleeperAdapter.integer;
  * @param claimDay the day Sleeper runs this league's weekly waivers,
  *        empty for a league on custom daily waivers
  * @param waiverClearDays how many days a dropped player stays on waivers
+ * @param teams how many teams the league holds, from {@code num_teams}
  */
 public record LeagueRules(
         Optional<LeagueFormat> format,
@@ -47,7 +48,8 @@ public record LeagueRules(
         Optional<DayOfWeek> claimDay,
         Optional<Integer> waiverClearDays,
         Reserve reserve,
-        Taxi taxi) {
+        Taxi taxi,
+        Optional<Integer> teams) {
 
     /**
      * Sleeper publishes no league timezone. Its weekly waiver run starts
@@ -66,7 +68,7 @@ public record LeagueRules(
             Stream.of("type", "max_keepers", "waiver_type", "waiver_bid_min",
                     "daily_waivers", "waiver_day_of_week", "waiver_clear_days",
                     "reserve_slots", "taxi_slots", "taxi_years", "taxi_allow_vets",
-                    "taxi_deadline"),
+                    "taxi_deadline", "num_teams"),
             Arrays.stream(ReserveDesignation.values()).map(ReserveDesignation::settingsField))
             .toList();
 
@@ -168,7 +170,8 @@ public record LeagueRules(
                         count(settings.path("taxi_slots")),
                         count(settings.path("taxi_years")),
                         flag(settings.path("taxi_allow_vets")),
-                        count(settings.path("taxi_deadline"))));
+                        count(settings.path("taxi_deadline"))),
+                count(settings.path("num_teams")).filter(teams -> teams > 0));
     }
 
     /**

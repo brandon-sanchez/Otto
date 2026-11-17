@@ -46,6 +46,7 @@ public class AskTools {
     private final WaiverPreferences waiverPreferences;
     private final PlayerCeiling ceilings;
     private final HabitService habits;
+    private final MarketValueAnswers marketValues;
     private final Clock clock;
 
     public AskTools(UserWeekLoader loader, LineupPlanner planner, PlayerAnalysis players,
@@ -53,7 +54,7 @@ public class AskTools {
             WatchlistService watchlist, SettingsService settings, SettingsStore settingsStore,
             TeamUsage teamUsage, LeagueRankLookup leagueRanks,
             WaiverPreferences waiverPreferences, PlayerCeiling ceilings, HabitService habits,
-            Clock clock) {
+            MarketValueAnswers marketValues, Clock clock) {
         this.loader = loader;
         this.planner = planner;
         this.players = players;
@@ -68,6 +69,7 @@ public class AskTools {
         this.waiverPreferences = waiverPreferences;
         this.ceilings = ceilings;
         this.habits = habits;
+        this.marketValues = marketValues;
         this.clock = clock;
     }
 
@@ -422,6 +424,24 @@ public class AskTools {
                 case HabitService.Answer.Unavailable none -> ToolAnswer.unavailable(none.reason());
             };
         };
+    }
+
+    @Tool(name = "get_market_value", description = """
+            What one player or future draft pick is worth on the trade
+            market in this league's format (redraft or dynasty, 1QB or
+            Superflex, team count and PPR): his market value, where he
+            ranks and his tier, and how his value has moved over the last
+            30 days, already written up and fact-checked. Send its message
+            to the user exactly as written, adding nothing. Call this for
+            "what's X worth", "what's his trade value", "has his value
+            dropped" and the value of a pick such as a 2027 1st.""")
+    public ToolAnswer<MarketValueAnswers.Reply> getMarketValue(
+            @ToolParam(description = """
+                    The player, by name or Sleeper player id, or a future
+                    draft pick written with its year and round, such as
+                    2027 1st or 2027 early 2nd.""")
+            String subject) {
+        return marketValues.answer(subject);
     }
 
     @Tool(name = "manage_watchlist", description = """

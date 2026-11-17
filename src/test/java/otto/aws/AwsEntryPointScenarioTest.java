@@ -50,6 +50,7 @@ class AwsEntryPointScenarioTest {
                 .isEqualTo(ScheduledJob.DEFENSE_VERSUS_POSITION);
         assertThat(ScheduledJob.of("research")).isEqualTo(ScheduledJob.RESEARCH);
         assertThat(ScheduledJob.of("team-reports")).isEqualTo(ScheduledJob.TEAM_REPORTS);
+        assertThat(ScheduledJob.of("market-values")).isEqualTo(ScheduledJob.MARKET_VALUES);
     }
 
     @Test

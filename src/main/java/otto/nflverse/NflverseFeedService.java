@@ -365,7 +365,8 @@ public class NflverseFeedService {
         }
 
         SourceResult<NflverseClient.Downloaded<PlayerMappings>> result =
-                client.downloadPlayerIds(stored.map(PlayerIdMap::etag).orElse(null),
+                client.downloadPlayerIds(stored.filter(PlayerIdMap::hasFantasyProsIds)
+                                .map(PlayerIdMap::etag).orElse(null),
                         NflverseFeedService::playerMappings);
         return switch (result) {
             case SourceResult.Unavailable<NflverseClient.Downloaded<PlayerMappings>> unavailable ->
@@ -381,24 +382,28 @@ public class NflverseFeedService {
                 }
                 PlayerMappings mappings = ok.value().value();
                 store.writePlayerIds(new PlayerIdMap(ok.value().etag(), now,
-                        mappings.sleeperToGsis(), mappings.sleeperToPfr()));
+                        mappings.sleeperToGsis(), mappings.sleeperToPfr(),
+                        mappings.sleeperToFantasyPros()));
                 yield new Update.Downloaded(mappings.retainedPlayers(), List.of());
             }
         };
     }
 
     private record PlayerMappings(Map<String, String> sleeperToGsis,
-            Map<String, String> sleeperToPfr, int retainedPlayers) { }
+            Map<String, String> sleeperToPfr, Map<String, String> sleeperToFantasyPros,
+            int retainedPlayers) { }
 
     private static PlayerMappings playerMappings(Stream<Csv.Row> rows) {
         Map<String, String> gsis = new HashMap<>();
         Map<String, String> pfr = new HashMap<>();
+        Map<String, String> fantasyPros = new HashMap<>();
         Set<String> retained = new HashSet<>();
         rows.forEach(row -> {
             requireColumns(row, PLAYER_ID_COLUMNS);
             String sleeperId = row.text("sleeper_id");
             String gsisId = row.text("gsis_id");
             String pfrId = row.text("pfr_id");
+            String fantasyProsId = row.text("fantasypros_id");
             String position = row.text("position");
             if (blankOrNa(sleeperId) || !(KEPT_POSITIONS.contains(position)
                     || DEFENSIVE_ID_POSITIONS.contains(position))) {
@@ -411,7 +416,11 @@ public class NflverseFeedService {
             if (!blankOrNa(pfrId)) {
                 pfr.put(sleeperId, pfrId);
             }
+            if (!blankOrNa(fantasyProsId)) {
+                fantasyPros.put(sleeperId, fantasyProsId);
+            }
         });
-        return new PlayerMappings(Map.copyOf(gsis), Map.copyOf(pfr), retained.size());
+        return new PlayerMappings(Map.copyOf(gsis), Map.copyOf(pfr), Map.copyOf(fantasyPros),
+                retained.size());
     }
 }

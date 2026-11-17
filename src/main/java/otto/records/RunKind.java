@@ -13,5 +13,7 @@ public enum RunKind {
     PLAYER_CEILING,
     ALERT,
     /** The answer to the user asking about his management habits. */
-    HABITS
+    HABITS,
+    /** A chat answer about what one player or draft pick is worth on the trade market. */
+    MARKET_VALUE
 }

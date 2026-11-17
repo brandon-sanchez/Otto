@@ -27,7 +27,9 @@ import java.util.Set;
  * its newest turns, three markers, each Alert delivery record, where
  * each waiver board's full list resumes, and the research cache: one
  * player's stories, capped at a fixed count, and the index of when
- * each player was last read. Big means everything that grows with the
+ * each player was last read. The market values are small too: one day
+ * of one format's list is a few hundred players, and the days are kept
+ * in a fixed ring of slots. Big means everything that grows with the
  * league, the roster of players or the season - the Snapshots, the
  * Player Directory, defense-versus-position and the Event Log.
  */
@@ -59,7 +61,8 @@ public enum DocumentPlacement {
     private static final Set<String> SMALL_PREFIXES = Set.of(
             "alert-delivery-",
             "board-options-sent-",
-            "research-");
+            "research-",
+            "market-values-");
 
     /** Returns where the document with this name is stored. */
     public static DocumentPlacement of(String name) {

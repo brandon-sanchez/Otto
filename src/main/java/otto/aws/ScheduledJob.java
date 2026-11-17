@@ -9,7 +9,7 @@ import java.util.Arrays;
  * <p>The stack spells the same names in its schedule payloads and
  * cannot import them: the deployable must not carry the CDK libraries,
  * so the two builds are separate. Each side pins its own spelling in a
- * test - {@code OttoStackTest.thereAreFiveSchedules} for the payloads,
+ * test - {@code OttoStackTest.thereAreSixSchedules} for the payloads,
  * {@code AwsEntryPointScenarioTest.everyScheduleNamesAJobTheBuildHas}
  * for these - so a rename that reaches only one side fails a build
  * rather than a schedule.
@@ -20,7 +20,8 @@ public enum ScheduledJob {
     NFLVERSE_FEEDS("nflverse-feeds"),
     DEFENSE_VERSUS_POSITION("defense-versus-position"),
     RESEARCH("research"),
-    TEAM_REPORTS("team-reports");
+    TEAM_REPORTS("team-reports"),
+    MARKET_VALUES("market-values");
 
     private final String jobName;
 
