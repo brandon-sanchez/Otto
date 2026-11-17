@@ -433,7 +433,8 @@ class HiddenHabitsScenarioTest extends WireSeamTest {
 
     private void stubDraftAllPickedByUser(Map<String, Integer> rounds) {
         stubBody(SleeperStubs.LEAGUE_PATH + "/drafts", """
-                [{"draft_id": "%s", "status": "complete", "season": "2026", "type": "snake"}]
+                [{"draft_id": "%s", "status": "complete", "season": "2026", "type": "snake",
+                  "settings": {"teams": 12, "rounds": 15}}]
                 """.formatted(DRAFT_ID));
         stubBody("/v1/draft/" + DRAFT_ID + "/picks", rounds.entrySet().stream()
                 .map(pick -> """

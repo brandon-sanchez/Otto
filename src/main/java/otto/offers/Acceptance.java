@@ -10,7 +10,8 @@ import otto.team.Direction;
 import otto.team.PositionProfile;
 import otto.team.TeamDirection;
 import otto.team.TeamProfile;
-import otto.trade.TradeEvaluator;
+import otto.trade.PricedTrade;
+import otto.trade.TradeMarket;
 
 /**
  * Judges whether the other manager would plausibly say yes to a trade,
@@ -54,7 +55,7 @@ record Acceptance(int points, List<String> reasons) {
      * @param spends the partner's positions among the players he gives
      * @param picksIn true when the partner receives a draft pick
      */
-    record Signals(TradeEvaluator.PricedTrade priced, String partner,
+    record Signals(PricedTrade priced, String partner,
             Optional<TeamProfile> profile, Optional<TeamDirection> direction, int trades,
             int moves, boolean activityComplete, List<String> receives, List<String> spends,
             boolean picksIn) {
@@ -62,8 +63,7 @@ record Acceptance(int points, List<String> reasons) {
 
     /** Judges one trade. Empty when the market calls it clearly in the user's favour. */
     static Optional<Acceptance> of(Signals signals) {
-        TradeEvaluator.PricedTrade priced = signals.priced();
-        TradeEvaluator.TradeEvaluation evaluation = priced.evaluation();
+        PricedTrade priced = signals.priced();
         String partner = signals.partner();
         int points = 0;
         List<String> reasons = new ArrayList<>();
@@ -73,8 +73,9 @@ record Acceptance(int points, List<String> reasons) {
             if (userAhead && gap > CLEAR_GAP) {
                 return Optional.empty();
             }
-            int gets = evaluation.market().youGive().total();
-            int gives = evaluation.market().youGet().total();
+            TradeMarket.MarketRead market = priced.market().orElseThrow();
+            int gets = market.youGive().total();
+            int gives = market.youGet().total();
             if (!userAhead || gap < EVEN_GAP) {
                 points += 2;
                 reasons.add("On market value %s gets %d for the %d he gives".formatted(partner,
@@ -91,7 +92,7 @@ record Acceptance(int points, List<String> reasons) {
         if (priced.theirStartersDelta() > NO_CHANGE) {
             points += 1;
             reasons.add("%s's starting lineup gains %s points over %s".formatted(partner,
-                    evaluation.theirs().startersDelta(), evaluation.restOfSeasonWeeks()));
+                    priced.theirs().startersDelta(), priced.restOfSeasonWeeks()));
         }
         Optional<String> need = need(signals);
         if (need.isPresent()) {

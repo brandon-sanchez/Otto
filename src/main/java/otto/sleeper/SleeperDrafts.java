@@ -62,11 +62,28 @@ public class SleeperDrafts {
     /**
      * One draft pick.
      *
+     * @param rosterId the roster that made the pick, 0 when Sleeper did
+     *        not say
+     * @param pickNumber the pick's place in the whole draft, from 1
      * @param keeper true when the commissioner placed a kept player on
      *        this pick, so its round or price is what keeping him cost
      * @param price what an auction paid in dollars, empty in a rounds draft
      */
-    public record Pick(String playerId, int round, boolean keeper, Optional<Integer> price) {
+    public record Pick(String playerId, int rosterId, int round, int pickNumber, boolean keeper,
+            Optional<Integer> price) {
+    }
+
+    /**
+     * Returns the league's own newest completed draft.
+     *
+     * <p>Side effects: up to two Sleeper requests.
+     *
+     * @return the draft, empty when the league has not finished one, or
+     *         unavailable when Sleeper can't be read or its answer has
+     *         drifted
+     */
+    public SourceResult<Optional<Draft>> latest(String leagueId) {
+        return completedDraft(leagueId);
     }
 
     /**
@@ -103,7 +120,7 @@ public class SleeperDrafts {
     }
 
     private SourceResult<Optional<String>> previousLeague(String leagueId) {
-        return sleeper.fetch("/v1/league/" + leagueId).flatMap(body -> {
+        return sleeper.leagueDocument(leagueId).flatMap(body -> {
             JsonNode previous = body.path("previous_league_id");
             // Sleeper writes "0" as well as null on a league's first season.
             boolean none = !previous.isTextual() || previous.asText().isBlank()
@@ -112,18 +129,28 @@ public class SleeperDrafts {
         });
     }
 
+    /**
+     * Reads the league's newest completed draft by season. A league lists
+     * one draft a season, so the newest season is this one's.
+     */
     private SourceResult<Optional<Draft>> completedDraft(String leagueId) {
         String path = "/v1/league/" + leagueId + "/drafts";
-        return sleeper.fetch(path).flatMap(body -> {
+        return sleeper.drafts(leagueId).flatMap(body -> {
             if (!body.isArray()) {
                 return drift(path, "drafts is not an array");
             }
+            Optional<JsonNode> newest = Optional.empty();
             for (JsonNode draft : body) {
-                if (COMPLETE.equals(draft.path("status").asText()) && draft.hasNonNull("draft_id")) {
-                    return draft(draft);
+                boolean complete = COMPLETE.equals(draft.path("status").asText())
+                        && !draft.path("draft_id").asText("").isBlank();
+                if (complete && draft.path("season").asText("").compareTo(newest
+                        .map(found -> found.path("season").asText("")).orElse("")) >= 0) {
+                    newest = Optional.of(draft);
                 }
             }
-            return new SourceResult.Ok<>(Optional.empty());
+            return newest.isEmpty()
+                    ? new SourceResult.Ok<>(Optional.<Draft>empty())
+                    : draft(newest.get());
         });
     }
 
@@ -141,17 +168,19 @@ public class SleeperDrafts {
         Optional<Integer> budget = type == DraftType.AUCTION
                 ? Optional.of(settings.get("budget").asInt()) : Optional.empty();
         String path = "/v1/draft/" + id + "/picks";
-        return sleeper.fetch(path).flatMap(body -> {
+        return sleeper.draftPicks(id).flatMap(body -> {
             if (!body.isArray()) {
                 return drift(path, "picks is not an array");
             }
             List<Pick> picks = new ArrayList<>();
             for (JsonNode pick : body) {
-                if (!pick.hasNonNull("player_id") || !whole(pick.path("round"))) {
-                    return drift(path, "a pick's player_id or round is missing");
+                if (!pick.hasNonNull("player_id") || !whole(pick.path("round"))
+                        || !whole(pick.path("pick_no"))) {
+                    return drift(path, "a pick's player_id, round or pick_no is missing");
                 }
-                picks.add(new Pick(pick.get("player_id").asText(), pick.get("round").asInt(),
-                        pick.path("is_keeper").asBoolean(false),
+                picks.add(new Pick(pick.get("player_id").asText(),
+                        pick.path("roster_id").asInt(0), pick.get("round").asInt(),
+                        pick.get("pick_no").asInt(), pick.path("is_keeper").asBoolean(false),
                         price(pick.path("metadata").path("amount"))));
             }
             return new SourceResult.Ok<>(Optional.of(new Draft(draft.path("season").asText(),

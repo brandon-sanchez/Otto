@@ -7,7 +7,7 @@ import otto.buysell.Assessment;
 import otto.market.DraftPick;
 import otto.team.TeamDirection;
 import otto.trade.InjuredValue;
-import otto.trade.TradeEvaluator;
+import otto.trade.PricedTrade;
 
 /**
  * One named trade idea: what the user gets, what he gives, which
@@ -37,7 +37,7 @@ public record Offer(
         Optional<String> need,
         List<Piece> gets,
         List<Piece> gives,
-        TradeEvaluator.PricedTrade priced,
+        PricedTrade priced,
         List<String> reasons,
         Optional<TeamDirection> partnerDirection,
         Optional<String> playoffWeeks) {

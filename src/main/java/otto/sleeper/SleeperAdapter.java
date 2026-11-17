@@ -245,16 +245,6 @@ public class SleeperAdapter {
             boolean won, Instant processed) {
     }
 
-    /**
-     * One pick of the league's draft.
-     *
-     * @param rosterId the roster that made the pick, 0 when Sleeper did
-     *        not say
-     * @param pickNumber the pick's place in the whole draft, from 1
-     */
-    public record DraftSelection(String playerId, int rosterId, int round, int pickNumber) {
-    }
-
     public record LeagueUser(String userId, String displayName) {
     }
 
@@ -558,52 +548,6 @@ public class SleeperAdapter {
     }
 
     /**
-     * The picks of this league's own draft for the season: the newest
-     * completed draft Sleeper lists for the league. Empty when the league
-     * has not drafted, or drafted somewhere Sleeper does not list.
-     */
-    public SourceResult<List<DraftSelection>> draftPicks() {
-        String draftsPath = leaguePath + "/drafts";
-        return fetch(draftsPath).flatMap(drafts -> {
-            if (!drafts.isArray()) {
-                return schemaDrift(draftsPath, "drafts is not an array");
-            }
-            Optional<String> draftId = Optional.empty();
-            String newestSeason = "";
-            for (JsonNode draft : drafts) {
-                String season = draft.path("season").asText("");
-                String id = draft.path("draft_id").asText("");
-                if ("complete".equals(draft.path("status").asText()) && !id.isBlank()
-                        && season.compareTo(newestSeason) >= 0) {
-                    draftId = Optional.of(id);
-                    newestSeason = season;
-                }
-            }
-            if (draftId.isEmpty()) {
-                return ok(List.of());
-            }
-            String picksPath = "/v1/draft/" + draftId.get() + "/picks";
-            return fetch(picksPath).flatMap(picks -> {
-                if (!picks.isArray()) {
-                    return schemaDrift(picksPath, "picks is not an array");
-                }
-                List<DraftSelection> selections = new ArrayList<>();
-                for (JsonNode pick : picks) {
-                    if (!pick.hasNonNull("player_id") || !pick.path("pick_no").isIntegralNumber()
-                            || !pick.path("round").isIntegralNumber()) {
-                        return schemaDrift(picksPath, "a pick's player, number or round is "
-                                + "missing");
-                    }
-                    selections.add(new DraftSelection(pick.get("player_id").asText(),
-                            pick.path("roster_id").asInt(0), pick.get("round").asInt(),
-                            pick.get("pick_no").asInt()));
-                }
-                return ok(selections);
-            });
-        });
-    }
-
-    /**
      * Every team's starters for one week and the points each scored for
      * that team. Sleeper credits a player's points to the roster that
      * started him that week, so a player who changed teams later never
@@ -781,7 +725,22 @@ public class SleeperAdapter {
         });
     }
 
-    SourceResult<JsonNode> fetch(String path) {
+    /** Returns any league's document as Sleeper sends it, for {@link SleeperDrafts}. */
+    SourceResult<JsonNode> leagueDocument(String leagueId) {
+        return fetch("/v1/league/" + leagueId);
+    }
+
+    /** Returns the list of any league's drafts as Sleeper sends it, for {@link SleeperDrafts}. */
+    SourceResult<JsonNode> drafts(String leagueId) {
+        return fetch("/v1/league/" + leagueId + "/drafts");
+    }
+
+    /** Returns one draft's picks as Sleeper sends them, for {@link SleeperDrafts}. */
+    SourceResult<JsonNode> draftPicks(String draftId) {
+        return fetch("/v1/draft/" + draftId + "/picks");
+    }
+
+    private SourceResult<JsonNode> fetch(String path) {
         Instant now = clock.instant();
         Optional<JsonNode> cached = cache.fresh(path, maxAge, now);
         if (cached.isPresent()) {
