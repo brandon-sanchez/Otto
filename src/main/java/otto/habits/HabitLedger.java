@@ -5,13 +5,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -31,17 +29,10 @@ import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.lineup.GameWeek;
-import otto.lineup.LeagueScoring;
-import otto.lineup.LineupOptimizer;
-import otto.lineup.PlayerPositions;
-import otto.lineup.Slot;
 import otto.records.DecisionRecords;
 import otto.records.Outcome;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
-import otto.sleeper.SleeperAdapter.StarterLine;
 import otto.sleeper.SleeperDrafts;
-import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
 import otto.storage.JsonStore;
@@ -104,26 +95,26 @@ public class HabitLedger {
 
     private static final Logger log = LoggerFactory.getLogger(HabitLedger.class);
 
-    private final SleeperAdapter sleeper;
+    private final PlayedWeekReader playedWeeks;
+    private final MoveReader moves;
     private final SleeperDrafts drafts;
     private final JsonStore store;
     private final EventLog eventLog;
     private final DecisionRecords records;
     private final PlayerDirectoryStore directory;
-    private final LineupOptimizer optimizer;
     private final Turnouts turnouts;
     private final String userId;
 
-    public HabitLedger(SleeperAdapter sleeper, SleeperDrafts drafts, JsonStore store,
-            EventLog eventLog, DecisionRecords records, PlayerDirectoryStore directory,
-            LineupOptimizer optimizer, Turnouts turnouts, OttoProperties properties) {
-        this.sleeper = sleeper.cachedWithin(properties.sleeperCadence());
+    HabitLedger(PlayedWeekReader playedWeeks, MoveReader moves, SleeperDrafts drafts,
+            JsonStore store, EventLog eventLog, DecisionRecords records,
+            PlayerDirectoryStore directory, Turnouts turnouts, OttoProperties properties) {
+        this.playedWeeks = playedWeeks;
+        this.moves = moves;
         this.drafts = drafts;
         this.store = store;
         this.eventLog = eventLog;
         this.records = records;
         this.directory = directory;
-        this.optimizer = optimizer;
         this.turnouts = turnouts;
         this.userId = properties.userId();
     }
@@ -160,19 +151,6 @@ public class HabitLedger {
             return now.isBefore(first.plus(CORRECTIONS_LAND_WITHIN))
                     && !now.isBefore(latest.plus(CORRECTION_READ_EVERY));
         }
-    }
-
-    /** One week's transactions: the user's own, and every FAAB claim the league won. */
-    private record WeekMoves(List<HabitWeek.Move> moves, List<HabitWeek.Clearing> clearings) {
-    }
-
-    /**
-     * One scored week to read.
-     *
-     * @param letGo the players the user dropped in earlier weeks, whose
-     *        scores off any roster the drop habit compares
-     */
-    private record Week(String season, int number, LeagueScoring scoring, Set<String> letGo) {
     }
 
     /**
@@ -272,9 +250,10 @@ public class HabitLedger {
                 continue;
             }
             if (number < thisWeek) {
-                Week scoredWeek = new Week(current.season(), number, week.scoring(),
-                        droppedBefore(weeks, number));
-                Optional<PlayedWeek> played = scored(league, user, scoredWeek, players);
+                PlayedWeekReader.Week scoredWeek = new PlayedWeekReader.Week(current.season(),
+                        number, week.scoring(), droppedBefore(weeks, number));
+                Optional<PlayedWeek> played = playedWeeks.read(league, user, scoredWeek,
+                        players);
                 if (played.isPresent() && number == thisWeek - 1) {
                     scoreReads.put(number,
                             new ScoreRead(lastRead == null ? now : lastRead.first(), now));
@@ -282,7 +261,7 @@ public class HabitLedger {
                 captured = played.map(captured::withPlayed).orElse(captured);
             }
             HabitWeek withoutMoves = captured;
-            captured = moves(league, current.season(), number, user, players)
+            captured = moves.read(league, current.season(), number, user, players)
                     .map(read -> withoutMoves.withMoves(read.moves(), read.clearings()))
                     .orElse(captured);
             weeks.put(number, captured);
@@ -291,13 +270,13 @@ public class HabitLedger {
         week.games().ifPresent(games -> weeks.put(thisWeek, thisWeeks.withKickoff(
                 kickoff(thisWeeks.kickoff(), user, games, now),
                 beforeKickoff(thisWeeks.reserve(), Set.copyOf(user.reserve()), user, games, now),
-                beforeKickoff(thisWeeks.couldGoOnIr(), couldGoOnIr(league, user), user, games,
-                        now))));
+                beforeKickoff(thisWeeks.couldGoOnIr(), IrEligibility.couldGoOnIr(league, user),
+                        user, games, now))));
         for (int number = Math.max(1, thisWeek - SETTLE_WEEKS); number < thisWeek; number++) {
             HabitWeek captured = weeks.get(number);
             if (!captured.unsettledQuestionableStarters().isEmpty()) {
                 weeks.put(number, captured.withTurnout(turnouts.settle(current.season(),
-                        captured, games(current.season(), number))));
+                        captured, playedWeeks.games(current.season(), number))));
             }
         }
         List<AdviceCall> calls = new ArrayList<>(before.calls());
@@ -341,41 +320,9 @@ public class HabitLedger {
         return kept;
     }
 
-    /**
-     * The user's bench players his league would let onto IR, when he has
-     * an IR slot open; empty when every slot is taken or the league has
-     * none.
-     */
-    private static Set<String> couldGoOnIr(SleeperAdapter.League league, RosterSnapshot user) {
-        LeagueRules.Reserve reserve = league.rules().reserve();
-        if (user.reserve().size() >= reserve.slots().orElse(0)) {
-            return Set.of();
-        }
-        return user.players().stream()
-                .filter(playerId -> !user.starters().contains(playerId)
-                        && !user.reserve().contains(playerId) && !user.taxi().contains(playerId))
-                .filter(playerId -> irAllows(reserve,
-                        user.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE)))
-                .collect(Collectors.toSet());
-    }
-
-    /** Whether the league lets a player with this designation onto IR; unstated reads as no. */
-    private static boolean irAllows(LeagueRules.Reserve reserve, PlayerHealth health) {
-        Optional<Boolean> allowed = switch (health) {
-            case IR, PUP -> Optional.of(true);
-            case OUT -> reserve.allows(LeagueRules.ReserveDesignation.OUT);
-            case DOUBTFUL -> reserve.allows(LeagueRules.ReserveDesignation.DOUBTFUL);
-            case SUSPENDED -> reserve.allows(LeagueRules.ReserveDesignation.SUSPENDED);
-            case NOT_ACTIVE -> reserve.allows(LeagueRules.ReserveDesignation.NOT_ACTIVE);
-            case DID_NOT_REPORT -> reserve.allows(LeagueRules.ReserveDesignation.DID_NOT_REPORT);
-            case ACTIVE, PROBABLE, QUESTIONABLE, UNKNOWN -> Optional.of(false);
-        };
-        return allowed.orElse(false);
-    }
-
     private Map<String, HabitHistory.Drafted> drafted(String leagueId, int userRosterId) {
         Optional<SleeperDrafts.Draft> draft =
-                read("the draft", drafts.latest(leagueId)).flatMap(found -> found);
+                HabitReads.read("the draft", drafts.latest(leagueId)).flatMap(found -> found);
         if (draft.isEmpty()) {
             return Map.of();
         }
@@ -397,260 +344,6 @@ public class HabitLedger {
             }
         }
         return kickoff;
-    }
-
-    private Optional<PlayedWeek> scored(SleeperAdapter.League league, RosterSnapshot user,
-            Week week, Map<String, DirectoryPlayer> players) {
-        Optional<List<StarterLine>> lines = read("week " + week.number() + " matchups",
-                sleeper.matchups(week.number()));
-        Optional<StarterLine> line = lines.stream()
-                .flatMap(List::stream)
-                .filter(candidate -> candidate.rosterId() == user.rosterId())
-                .findFirst();
-        if (line.isEmpty()) {
-            return Optional.empty();
-        }
-        Map<String, Double> leaguePoints = new HashMap<>();
-        lines.get().forEach(other -> leaguePoints.putAll(other.playerPoints()));
-        Map<String, Double> points = new LinkedHashMap<>(line.get().playerPoints());
-        for (int slot = 0; slot < line.get().starters().size(); slot++) {
-            String starter = line.get().starters().get(slot);
-            if (!StarterLine.EMPTY_SLOT.equals(starter)) {
-                points.putIfAbsent(starter, line.get().points().get(slot));
-            }
-        }
-        List<String> slots = league.rosterPositions().stream()
-                .filter(position -> !"BN".equals(position))
-                .toList();
-        Map<String, Map<String, Double>> stats = needsStats(slots, week, leaguePoints)
-                ? stats(week)
-                : Map.of();
-        Map<String, String> positions = new HashMap<>();
-        Map<String, String> teams = new HashMap<>();
-        for (String playerId : points.keySet()) {
-            String listed = known(user.playerPositions().get(playerId), players.get(playerId),
-                    DirectoryPlayer::position).orElse(null);
-            PlayerPositions.of(playerId, listed, stats.get(playerId))
-                    .ifPresent(value -> positions.put(playerId, value));
-            known(user.playerTeams().get(playerId), players.get(playerId),
-                    DirectoryPlayer::team).ifPresent(value -> teams.put(playerId, value));
-        }
-        // Sleeper only lets a kicker or defense start in its own slot, so
-        // one with no kicks in his stat line is still placed.
-        List<String> starters = line.get().starters();
-        for (int slot = 0; slot < Math.min(slots.size(), starters.size()); slot++) {
-            if (PlayedWeek.STREAMED.contains(slots.get(slot))
-                    && !StarterLine.EMPTY_SLOT.equals(starters.get(slot))) {
-                positions.putIfAbsent(starters.get(slot), slots.get(slot));
-            }
-        }
-        return Optional.of(new PlayedWeek(slots, line.get().starters(), points, leaguePoints,
-                positions, teams, optimal(slots, line.get().starters(), points, positions),
-                byes(week, teams), freeAgents(slots, week, leaguePoints, stats),
-                elsewhere(week, leaguePoints, players, stats)));
-    }
-
-    private static boolean needsStats(List<String> slots, Week week,
-            Map<String, Double> leaguePoints) {
-        return slots.stream().anyMatch(PlayedWeek.STREAMED::contains)
-                || week.letGo().stream().anyMatch(playerId -> !leaguePoints.containsKey(playerId));
-    }
-
-    private Map<String, Map<String, Double>> stats(Week week) {
-        return read("week " + week.number() + " stats",
-                sleeper.stats(week.season(), week.number())).orElse(Map.of());
-    }
-
-    private Set<String> byes(Week week, Map<String, String> teams) {
-        return games(week.season(), week.number())
-                .map(gameWeek -> teams.values().stream()
-                        .filter(gameWeek::onBye)
-                        .collect(Collectors.toSet()))
-                .orElse(Set.of());
-    }
-
-    private Optional<GameWeek> games(String season, int week) {
-        return read("week " + week + " games", sleeper.games(season, week))
-                .filter(games -> !games.isEmpty())
-                .map(GameWeek::of);
-    }
-
-    /** Returns what Sleeper answered, or empty with a warning logged when it could not. */
-    private static <T> Optional<T> read(String what, SourceResult<T> result) {
-        return switch (result) {
-            case SourceResult.Ok<T> ok -> Optional.of(ok.value());
-            case SourceResult.Unavailable<T> unavailable -> {
-                log.warn("The habit capture could not read {} from {}: {}", what,
-                        unavailable.source(), unavailable.reason());
-                yield Optional.empty();
-            }
-        };
-    }
-
-    /**
-     * For each K and DEF slot the league starts, the free agent projected
-     * highest that week: a player at the position on no roster.
-     */
-    private Map<String, PlayedWeek.FreeAgent> freeAgents(List<String> slots, Week week,
-            Map<String, Double> leaguePoints, Map<String, Map<String, Double>> stats) {
-        Set<String> positions = slots.stream()
-                .filter(PlayedWeek.STREAMED::contains)
-                .collect(Collectors.toSet());
-        if (positions.isEmpty()) {
-            return Map.of();
-        }
-        Map<String, Map<String, Double>> projections = read(
-                "week " + week.number() + " projections",
-                sleeper.projections(week.season(), week.number())).orElse(Map.of());
-        Map<String, PlayedWeek.FreeAgent> best = new HashMap<>();
-        projections.forEach((playerId, line) -> {
-            Optional<String> position = PlayerPositions.kickerOrDefense(playerId, line);
-            if (position.isEmpty() || !positions.contains(position.get())
-                    || leaguePoints.containsKey(playerId)) {
-                return;
-            }
-            week.scoring().price(line, position.get()).ifPresent(projected -> {
-                PlayedWeek.FreeAgent leader = best.get(position.get());
-                if (leader == null || projected > leader.projected()) {
-                    double scored = week.scoring().price(stats.get(playerId), position.get())
-                            .orElse(0.0);
-                    best.put(position.get(),
-                            new PlayedWeek.FreeAgent(playerId, projected, scored));
-                }
-            });
-        });
-        return best;
-    }
-
-    /** What the players the user let go scored that week while on no roster. */
-    private static Map<String, Double> elsewhere(Week week, Map<String, Double> leaguePoints,
-            Map<String, DirectoryPlayer> players, Map<String, Map<String, Double>> stats) {
-        Map<String, Double> scored = new HashMap<>();
-        for (String playerId : week.letGo()) {
-            DirectoryPlayer player = players.get(playerId);
-            if (leaguePoints.containsKey(playerId) || player == null) {
-                continue;
-            }
-            week.scoring().price(stats.get(playerId), player.position())
-                    .ifPresent(points -> scored.put(playerId, points));
-        }
-        return scored;
-    }
-
-    private static Optional<String> known(String fromRoster, DirectoryPlayer fromDirectory,
-            Function<DirectoryPlayer, String> field) {
-        if (fromRoster != null && !fromRoster.isBlank()) {
-            return Optional.of(fromRoster);
-        }
-        return Optional.ofNullable(fromDirectory).map(field).filter(value -> !value.isBlank());
-    }
-
-    private List<String> optimal(List<String> slotNames, List<String> starters,
-            Map<String, Double> points, Map<String, String> positions) {
-        List<Slot> all = Slot.startingSlots(slotNames);
-        List<Integer> open = new ArrayList<>();
-        Map<String, Double> movable = new HashMap<>(points);
-        for (int index = 0; index < all.size(); index++) {
-            if (all.get(index).modelledExactly()) {
-                open.add(index);
-            } else if (index < starters.size()) {
-                movable.remove(starters.get(index));
-            }
-        }
-        movable.keySet().removeIf(playerId -> !positions.containsKey(playerId));
-        Map<Integer, String> assigned = optimizer.assign(open.stream().map(all::get).toList(),
-                movable, positions, starters);
-        List<String> optimal = new ArrayList<>();
-        for (int index = 0; index < all.size(); index++) {
-            int openIndex = open.indexOf(index);
-            if (openIndex < 0) {
-                optimal.add(index < starters.size() ? starters.get(index) : StarterLine.EMPTY_SLOT);
-            } else {
-                optimal.add(assigned.getOrDefault(openIndex, StarterLine.EMPTY_SLOT));
-            }
-        }
-        return optimal;
-    }
-
-    private Optional<WeekMoves> moves(SleeperAdapter.League league, String season, int number,
-            RosterSnapshot user, Map<String, DirectoryPlayer> players) {
-        Optional<List<SleeperAdapter.LeagueTransaction>> transactions = read(
-                "week " + number + " transactions", sleeper.transactions(season, number));
-        if (transactions.isEmpty()) {
-            return Optional.empty();
-        }
-        Optional<List<SleeperAdapter.WaiverClaim>> claims = read(
-                "week " + number + " waiver claims", sleeper.waiverClaims(number));
-        if (claims.isEmpty()) {
-            return Optional.empty();
-        }
-        int rosterId = user.rosterId();
-        Map<String, Integer> bids = new HashMap<>();
-        claims.get().forEach(claim -> bids.put(claim.transactionId(), claim.bid()));
-        List<HabitWeek.Move> moves = new ArrayList<>();
-        for (SleeperAdapter.LeagueTransaction transaction : transactions.get()) {
-            List<String> added = playersFor(transaction.adds(), rosterId);
-            List<String> dropped = playersFor(transaction.drops(), rosterId);
-            if (added.isEmpty() && dropped.isEmpty()) {
-                continue;
-            }
-            moves.add(new HabitWeek.Move(transaction.transactionId(), transaction.type(),
-                    transaction.statusUpdated(), added, dropped,
-                    positions(added, dropped, user, players),
-                    Optional.ofNullable(bids.get(transaction.transactionId())), true));
-        }
-        claims.get().stream()
-                .filter(claim -> !claim.won() && claim.rosterId() == rosterId)
-                .forEach(claim -> moves.add(new HabitWeek.Move(claim.transactionId(), "waiver",
-                        claim.processed(), List.of(claim.playerId()), List.of(),
-                        positions(List.of(claim.playerId()), List.of(), user, players),
-                        Optional.of(claim.bid()), false)));
-        return Optional.of(new WeekMoves(moves, clearings(claims.get(),
-                league.rules().minimumBid().orElse(0))));
-    }
-
-    /**
-     * Each won claim with the highest bid that lost to it: a losing bid on
-     * the same player in the same run. A losing bid above the winner lost
-     * for another reason, such as a full roster, so it never counts.
-     */
-    private static List<HabitWeek.Clearing> clearings(List<SleeperAdapter.WaiverClaim> claims,
-            int minimumBid) {
-        List<HabitWeek.Clearing> clearings = new ArrayList<>();
-        for (SleeperAdapter.WaiverClaim won : claims) {
-            if (!won.won()) {
-                continue;
-            }
-            Optional<Integer> runnerUp = claims.stream()
-                    .filter(lost -> !lost.won() && lost.playerId().equals(won.playerId())
-                            && lost.processed().equals(won.processed())
-                            && lost.bid() <= won.bid())
-                    .map(SleeperAdapter.WaiverClaim::bid)
-                    .max(Integer::compare);
-            int price = Math.min(won.bid(), runnerUp.map(bid -> bid + 1).orElse(minimumBid));
-            clearings.add(new HabitWeek.Clearing(won.transactionId(), won.playerId(),
-                    won.bid(), runnerUp, price));
-        }
-        return clearings;
-    }
-
-    private static List<String> playersFor(Map<String, Integer> byPlayer, int rosterId) {
-        return byPlayer.entrySet().stream()
-                .filter(entry -> entry.getValue() == rosterId)
-                .map(Map.Entry::getKey)
-                .sorted()
-                .toList();
-    }
-
-    private static Map<String, String> positions(List<String> added, List<String> dropped,
-            RosterSnapshot user, Map<String, DirectoryPlayer> players) {
-        Map<String, String> positions = new HashMap<>();
-        for (List<String> group : List.of(added, dropped)) {
-            group.forEach(playerId -> known(user.playerPositions().get(playerId),
-                    players.get(playerId), DirectoryPlayer::position)
-                    .ifPresent(position -> positions.put(playerId, position)));
-        }
-        return positions;
     }
 
     /**
