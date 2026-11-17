@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -33,7 +34,10 @@ public final class StoredRecords {
             return List.of();
         }
         try (Stream<Path> files = Files.list(league)) {
+            // Tests run on a fixed clock, so records of one conversation share a
+            // start time; the order they were written in breaks the tie.
             return files
+                    .sorted(Comparator.comparing(StoredRecords::writtenAt))
                     .map(file -> file.getFileName().toString())
                     .map(name -> name.substring(RUN_PREFIX.length(),
                             name.length() - RUN_SUFFIX.length()))
@@ -41,6 +45,14 @@ public final class StoredRecords {
                     .filter(record -> record.kind() == kind)
                     .sorted(Comparator.comparing(DecisionRecord::startedAt))
                     .toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static FileTime writtenAt(Path file) {
+        try {
+            return Files.getLastModifiedTime(file);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
