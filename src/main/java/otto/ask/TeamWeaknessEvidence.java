@@ -21,6 +21,7 @@ import otto.team.LeagueProfile;
 import otto.team.PositionProfile;
 import otto.team.RatedPlayer;
 import otto.team.Suggestion;
+import otto.team.TeamDirection;
 import otto.team.TeamProfile;
 
 /**
@@ -47,6 +48,14 @@ final class TeamWeaknessEvidence {
     }
 
     /**
+     * The user's own direction and the market list its values come from.
+     *
+     * @param market empty when no list could be read
+     */
+    record Direction(TeamDirection user, Optional<String> market) {
+    }
+
+    /**
      * Everything the bundle is written from.
      *
      * @param user the user's team, which is in {@code league}
@@ -57,11 +66,13 @@ final class TeamWeaknessEvidence {
      *        once it has passed
      * @param limits what free data cannot say that matters to this read
      * @param everyLeague true when the user asked about all his leagues
+     * @param direction empty when there was nothing to measure it by
      */
     record Facts(String leagueName, LeagueProfile league, TeamProfile user,
             List<Suggestion> suggestions, Optional<Market> market,
             List<BundlePlayer> sidelined, List<Integer> weeks,
-            Optional<Integer> tradeDeadline, List<String> limits, boolean everyLeague) {
+            Optional<Integer> tradeDeadline, List<String> limits, boolean everyLeague,
+            Optional<Direction> direction) {
     }
 
     static EvidenceBundle bundle(Facts facts, int maxLength, Instant now) {
@@ -71,6 +82,8 @@ final class TeamWeaknessEvidence {
             evidence.add(item("leagues", now, Map.of("leagues", ("I follow one league, %s, so "
                     + "this answer covers that league only").formatted(facts.leagueName()))));
         }
+        facts.direction().ifPresent(direction -> evidence.add(
+                TeamDirectionEvidence.userItem(direction.user(), direction.market(), now)));
         for (String position : LeagueProfile.POSITIONS) {
             facts.user().at(position).ifPresent(profile -> evidence.add(item(
                     "position-" + position, now, position(profile, facts.market()))));

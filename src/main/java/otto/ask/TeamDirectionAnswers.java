@@ -1,0 +1,216 @@
+package otto.ask;
+
+import java.time.Instant;
+import java.util.Locale;
+
+import org.springframework.stereotype.Component;
+
+import otto.OttoProperties;
+import otto.advice.AdviceAnswer;
+import otto.advice.AdviceCheck;
+import otto.advice.AdviceForm;
+import otto.advice.AdviceResult;
+import otto.advice.AdviceWriter;
+import otto.advice.EvidenceBundle;
+import otto.advice.FriendVoice;
+import otto.advice.RankConvention;
+import otto.records.DecisionRecord;
+import otto.records.Outcome;
+import otto.records.RunIds;
+import otto.records.RunKind;
+import otto.records.RunOutcomes;
+import otto.sleeper.SleeperAdapter;
+import otto.sleeper.SourceResult;
+import otto.storage.OttoJson;
+import otto.team.Direction;
+import otto.team.DirectionChoices;
+import otto.team.LeagueDirections;
+import otto.team.TeamDirections;
+
+/**
+ * Answers "who's contending in my league?" in chat, and lets the user
+ * set or clear his own team's direction. Code labels every team; the
+ * model explains the labels in one message, and {@link AdviceCheck}
+ * holds every number and rank in it to the evidence first.
+ */
+@Component
+public class TeamDirectionAnswers {
+
+    private static final int MAX_LENGTH = 1800;
+
+    private static final String RUN_ID_PREFIX = "team-directions-";
+
+    private static final String INSTRUCTIONS = """
+            You are Otto, a fantasy football assistant texting your one user about the
+            teams in his league, the way a knowledgeable friend would.
+
+            The user message is an evidence bundle as JSON. State facts only from the
+            evidence bundle: never from memory, never invented. Every number you write
+            must appear in the evidence, written as the evidence writes it. Name no player.
+            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
+
+            Write plain text. Say which teams are contending, which are in the middle and
+            which are rebuilding, using each "team-" item's "direction", and give each team
+            its reason in a short clause drawn from its "reason". The item whose manager is
+            "you" is the user's own team: call it "your team". When "basis" says market
+            values could not be read, say so in one sentence. When the user's item has a
+            "question", end the message by asking it. Stay under "maxLength" characters.
+
+            Answer with only this JSON object:
+            {
+              "message": "the text the user receives",
+              "move": null,
+              "players": [],
+              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
+              "comparisons": []
+            }
+            """;
+
+    private final UserWeekLoader loader;
+    private final TeamDirections directions;
+    private final DirectionChoices choices;
+    private final AdviceWriter writer;
+    private final RunOutcomes runs;
+    private final AdviceForm<AdviceAnswer> form;
+    private final String userId;
+
+    public TeamDirectionAnswers(UserWeekLoader loader, TeamDirections directions,
+            DirectionChoices choices, AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
+            OttoProperties properties) {
+        this.loader = loader;
+        this.directions = directions;
+        this.choices = choices;
+        this.writer = writer;
+        this.runs = runs;
+        this.userId = properties.userId();
+        this.form = new AdviceForm<>() {
+            @Override
+            public String instructions() {
+                return INSTRUCTIONS;
+            }
+
+            @Override
+            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
+                    String reply) {
+                return check.check(bundle, reply);
+            }
+        };
+    }
+
+    /**
+     * The checked read of every team's direction.
+     *
+     * @param message the checked text, which the user receives word for
+     *        word unless the chat model gathered other tool results for
+     *        the same question
+     */
+    public record Answer(String league, String message) {
+    }
+
+    /**
+     * What a change to the user's own direction did.
+     *
+     * @param outcome what the change did, in a sentence
+     */
+    public record Changed(String outcome) {
+    }
+
+    /**
+     * Labels every team in the league and has the model explain it.
+     *
+     * <p>Side effects: the market value reads, one or two model calls,
+     * and one Decision Record of kind {@link RunKind#TEAM_DIRECTIONS}
+     * whatever the outcome.
+     *
+     * @param delivery how a checked message reaches the user, which the
+     *        Decision Record keeps as its outcome
+     * @return the checked message, or why there is none in plain words
+     */
+    public ToolAnswer<Answer> answer(Instant now, CheckedAnswers.Delivery delivery) {
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
+                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
+            case SourceResult.Ok<LeagueWeek> ok -> switch (directions.read(ok.value(), now)) {
+                case SourceResult.Unavailable<LeagueDirections> none -> ToolAnswer.unavailable(
+                        "no game has been played yet and I couldn't read market values, so "
+                                + "I have nothing to judge the teams by: " + none.reason());
+                case SourceResult.Ok<LeagueDirections> read ->
+                    explain(ok.value().league(), read.value(), now, delivery);
+            };
+        };
+    }
+
+    /**
+     * Sets or clears the direction the user gives his own team.
+     *
+     * <p>Side effects: writes the stored choice.
+     *
+     * @param action set or clear
+     * @param direction contending, middle or rebuilding; read only by set
+     * @return unavailable for an unknown action or direction
+     */
+    public ToolAnswer<Changed> change(SleeperAdapter.League league, String action,
+            String direction) {
+        String verb = action == null ? "" : action.strip().toLowerCase(Locale.ROOT);
+        return switch (verb) {
+            case "set" -> Direction.named(direction)
+                    .map(named -> {
+                        choices.set(league.leagueId(), named);
+                        return ToolAnswer.of(new Changed(("Got it, I'll treat your team as %s "
+                                + "until you tell me otherwise.").formatted(named.words())));
+                    })
+                    .orElseGet(() -> ToolAnswer.unavailable(("\"%s\" isn't a direction I use; "
+                            + "say contending, middle or rebuilding").formatted(direction)));
+            case "clear" -> {
+                choices.clear(league.leagueId());
+                yield ToolAnswer.of(new Changed("Done, I'll go back to judging your team's "
+                        + "direction from its record, points and market value."));
+            }
+            default -> ToolAnswer.unavailable(
+                    "unknown action \"%s\"; use set or clear".formatted(action));
+        };
+    }
+
+    private ToolAnswer<Answer> explain(SleeperAdapter.League league, LeagueDirections read,
+            Instant now, CheckedAnswers.Delivery delivery) {
+        EvidenceBundle bundle = TeamDirectionEvidence.bundle(league.name(), read, MAX_LENGTH,
+                now);
+        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
+        Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
+        return switch (outcome) {
+            case Outcome.Sent sent -> ToolAnswer.of(new Answer(league.name(), sent.message()));
+            case Outcome.HandedToChat handed ->
+                ToolAnswer.of(new Answer(league.name(), handed.message()));
+            default -> ToolAnswer.unavailable(switch (result) {
+                case AdviceResult.Unavailable<AdviceAnswer> _ ->
+                    "I cannot reach my language model to explain the teams' directions right now";
+                default -> "I worked out where every team is headed, but I could not check my "
+                        + "explanation against the numbers, so I am holding it back rather "
+                        + "than risk a wrong figure";
+            });
+        };
+    }
+
+    private DecisionRecord record(SleeperAdapter.League league, EvidenceBundle bundle,
+            AdviceResult<AdviceAnswer> result, Instant now, CheckedAnswers.Delivery delivery) {
+        String runId = RunIds.stable(RUN_ID_PREFIX, league.leagueId(), bundle.identity(),
+                now.toString());
+        return DecisionRecord.forRun(runId, RunKind.TEAM_DIRECTIONS, now, userId,
+                        league.leagueId(), OttoJson.MAPPER.valueToTree(league))
+                .evidence(bundle.recorded())
+                .versions(bundle.versions(form, result))
+                .exchanges(result.exchanges())
+                .outcome(switch (result) {
+                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
+                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
+                        case THROUGH_CHAT_MODEL ->
+                            new Outcome.HandedToChat(approved.answer().message());
+                    };
+                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
+                            "The explanation failed its checks twice: "
+                                    + String.join(" ", rejected.failures()));
+                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
+                        new Outcome.Withheld(unavailable.reason());
+                });
+    }
+}
