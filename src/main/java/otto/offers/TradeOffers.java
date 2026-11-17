@@ -38,6 +38,7 @@ import otto.trade.InjuredValues;
 import otto.trade.LeaguePicks;
 import otto.trade.PricedTrade;
 import otto.trade.TradeDeadline;
+import otto.trade.TradeDeadlines;
 import otto.trade.TradeEvaluator;
 import otto.trade.TradePiece;
 
@@ -86,11 +87,13 @@ public class TradeOffers {
     private final PlayerDirectoryStore directory;
     private final InjuredValues injuredValues;
     private final MatchupSourcesFactory sources;
+    private final TradeDeadlines deadlines;
 
     public TradeOffers(TradeEvaluator evaluator, TeamProfiler profiler,
             TeamDirections directions, ManagerActivity activity, LeaguePicks picks,
             MarketValuation valuation, BuySellReader buySell, PlayerDirectoryStore directory,
-            InjuredValues injuredValues, MatchupSourcesFactory sources) {
+            InjuredValues injuredValues, MatchupSourcesFactory sources,
+            TradeDeadlines deadlines) {
         this.evaluator = evaluator;
         this.profiler = profiler;
         this.directions = directions;
@@ -101,6 +104,7 @@ public class TradeOffers {
         this.directory = directory;
         this.injuredValues = injuredValues;
         this.sources = sources;
+        this.deadlines = deadlines;
     }
 
     /**
@@ -206,8 +210,7 @@ public class TradeOffers {
 
     private Optional<PlayoffPitch> playoffPitch(LeagueWeek league) {
         OptionalInt lastWeek = league.lastPlayoffWeek();
-        boolean closed = TradeDeadline.passedWeek(league.league().tradeDeadline(),
-                league.week().weekNumber()).isPresent();
+        boolean closed = deadlines.assess(league).filter(TradeDeadline::closed).isPresent();
         if (lastWeek.isEmpty() || closed) {
             return Optional.empty();
         }

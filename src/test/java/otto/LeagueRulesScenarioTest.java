@@ -28,12 +28,44 @@ class LeagueRulesScenarioTest extends WireSeamTest {
     private SleeperAdapter adapter;
 
     private LeagueRules rulesOf(String fixture, String etag) {
+        return leagueOf(fixture, etag).rules();
+    }
+
+    private SleeperAdapter.League leagueOf(String fixture, String etag) {
         SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, fixture, etag);
         return switch (adapter.league()) {
-            case SourceResult.Ok<SleeperAdapter.League> ok -> ok.value().rules();
+            case SourceResult.Ok<SleeperAdapter.League> ok -> ok.value();
             case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
                 throw new AssertionError("league unavailable: " + unavailable.reason());
         };
+    }
+
+    @Test
+    void aTradeDeadlineInsideTheRegularSeasonIsRead() {
+        SleeperAdapter.League league = leagueOf("sleeper/league-in-season.json", "week-13");
+
+        assertThat(league.tradeDeadline()).contains(13);
+        assertThat(league.tradesDisabled()).isFalse();
+    }
+
+    @Test
+    void aTradeDeadlineOfWeek99OrWeek18IsNoDeadline() {
+        assertThat(leagueOf("sleeper/league-in-season-trade-deadline-99.json", "week-99")
+                .tradeDeadline()).isEmpty();
+        assertThat(leagueOf("sleeper/league-in-season-trade-deadline-18.json", "week-18")
+                .tradeDeadline()).isEmpty();
+    }
+
+    @Test
+    void aLeagueWithNoTradeDeadlineSettingHasNoDeadline() {
+        assertThat(leagueOf("sleeper/league-in-season-no-trade-deadline.json", "none")
+                .tradeDeadline()).isEmpty();
+    }
+
+    @Test
+    void disableTradesTurnsTradesOff() {
+        assertThat(leagueOf("sleeper/league-in-season-trades-disabled.json", "disabled")
+                .tradesDisabled()).isTrue();
     }
 
     @Test

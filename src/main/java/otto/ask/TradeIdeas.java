@@ -30,6 +30,7 @@ import otto.records.Candidate;
 import otto.records.RunKind;
 import otto.sleeper.SourceResult;
 import otto.trade.TradeDeadline;
+import otto.trade.TradeDeadlines;
 
 /**
  * Answers "what trades should I make and why?" in chat with named
@@ -37,9 +38,10 @@ import otto.trade.TradeDeadline;
  * explains them in one message, and {@link AdviceCheck} holds every name
  * and number to the evidence first. A message that pins a player on the
  * wrong manager's offer fails the check too, and so does one that names
- * the user's habits, which only tilt the search. After the trade deadline
- * there are no offers: the answer is the weaknesses read, which says
- * trades are closed and points to waivers.
+ * the user's habits, which only tilt the search. Once trades are closed,
+ * by the deadline or by the commissioner, there are no offers: the answer
+ * is the weaknesses read, which says trades are closed and points to
+ * waivers.
  */
 @Component
 public class TradeIdeas {
@@ -87,15 +89,18 @@ public class TradeIdeas {
     private final TradeOffers offers;
     private final TeamWeaknesses weaknesses;
     private final HabitService habits;
+    private final TradeDeadlines deadlines;
     private final CheckedAdvice advice;
     private final AdviceCheck check;
 
     public TradeIdeas(UserWeekLoader loader, TradeOffers offers, TeamWeaknesses weaknesses,
-            HabitService habits, CheckedAdvice advice, AdviceCheck check) {
+            HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
+            AdviceCheck check) {
         this.loader = loader;
         this.offers = offers;
         this.weaknesses = weaknesses;
         this.habits = habits;
+        this.deadlines = deadlines;
         this.advice = advice;
         this.check = check;
     }
@@ -116,8 +121,8 @@ public class TradeIdeas {
      * <p>Side effects: the habit capture's reads, the reads
      * {@link TradeOffers#find} makes, one or two model calls, and one
      * Decision Record of kind {@link RunKind#TRADE_IDEAS} whatever the
-     * outcome. After the deadline, the weaknesses answer's reads and its
-     * Decision Record instead.
+     * outcome. Once trades are closed, the weaknesses answer's reads and
+     * its Decision Record instead.
      *
      * @param count how many offers he asked for; null for the default of
      *        {@link TradeOffers#DEFAULT_COUNT}, or when he asked for more
@@ -164,9 +169,8 @@ public class TradeIdeas {
 
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,
             Instant now, AnswerDelivery delivery) {
-        Optional<TradeDeadline> deadline = TradeDeadline.assess(league.league().tradeDeadline(),
-                league.week().weekNumber());
-        if (deadline.filter(TradeDeadline::passed).isPresent()) {
+        Optional<TradeDeadline> deadline = deadlines.assess(league);
+        if (deadline.filter(TradeDeadline::closed).isPresent()) {
             ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null, now, delivery);
             return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
                     : ToolAnswer.of(new Answer(read.facts().message()));
