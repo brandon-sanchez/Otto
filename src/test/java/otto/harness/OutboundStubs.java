@@ -249,7 +249,7 @@ public final class OutboundStubs {
                 """.formatted(jsonString(phrase));
     }
 
-    private static String toolCallBody(String... calls) {
+    static String toolCallBody(String... calls) {
         StringBuilder toolCalls = new StringBuilder();
         for (int index = 0; index < calls.length; index += 2) {
             toolCalls.append(index == 0 ? "" : ",").append("""
