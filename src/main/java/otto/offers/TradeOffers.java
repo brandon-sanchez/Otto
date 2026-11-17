@@ -23,7 +23,6 @@ import otto.league.LeagueWeek;
 import otto.market.MarketValuation;
 import otto.matchup.MatchupSourcesFactory;
 import otto.nflverse.NflverseStore;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
 import otto.team.Direction;
@@ -153,10 +152,8 @@ public class TradeOffers {
      *         has no team or the rest of the season can't be priced
      */
     public SourceResult<Ideas> find(LeagueWeek league, Request request, Instant now) {
-        Optional<RosterSnapshot> mine = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .filter(roster -> !roster.players().isEmpty())
-                .findFirst();
+        Optional<RosterSnapshot> mine = league.userRoster()
+                .filter(roster -> !roster.players().isEmpty());
         if (mine.isEmpty()) {
             return new SourceResult.Unavailable<>("otto:offers",
                     "no team in this league is yours, so I have no side of a trade to build");
@@ -209,8 +206,8 @@ public class TradeOffers {
 
     private Optional<PlayoffPitch> playoffPitch(LeagueWeek league) {
         OptionalInt lastWeek = league.lastPlayoffWeek();
-        boolean closed = TradeDeadline.assess(league.league().tradeDeadline(),
-                league.week().weekNumber()).filter(TradeDeadline::passed).isPresent();
+        boolean closed = TradeDeadline.passedWeek(league.league().tradeDeadline(),
+                league.week().weekNumber()).isPresent();
         if (lastWeek.isEmpty() || closed) {
             return Optional.empty();
         }
@@ -260,8 +257,7 @@ public class TradeOffers {
             case SourceResult.Ok<MarketValuation.LeagueValues> ok -> ok.value().values();
             case SourceResult.Unavailable<MarketValuation.LeagueValues> _ -> Map.of();
         };
-        boolean longTerm = league.league().rules().format()
-                .filter(format -> format != LeagueRules.LeagueFormat.REDRAFT).isPresent();
+        boolean longTerm = league.league().rules().longTerm();
         return new OfferSearch.League(user, unfitted, perGame, market,
                 longTerm ? picks.priced(league, now) : Map.of(), players,
                 calls(league, mine, now), injuredWorthBuying(league, basis, now), longTerm);

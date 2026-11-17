@@ -2,7 +2,6 @@ package otto.offers;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import otto.advice.Ordinal;
@@ -128,8 +127,8 @@ record Acceptance(int points, List<String> reasons) {
                 .findFirst()
                 .map(profile -> ("%s is thin at %s, where his starters rank %s and his depth "
                         + "ranks %s").formatted(signals.partner(), profile.position(),
-                        standing(profile.starterRank(), profile.teams()),
-                        standing(profile.depthRank(), profile.teams())));
+                        Ordinal.standing(profile.starterRank(), profile.teams()),
+                        Ordinal.standing(profile.depthRank(), profile.teams())));
         if (hole.isPresent()) {
             return hole;
         }
@@ -159,9 +158,5 @@ record Acceptance(int points, List<String> reasons) {
             }
             return Optional.empty();
         });
-    }
-
-    private static String standing(int rank, int teams) {
-        return "%s of %d".formatted(Ordinal.of(rank), teams).toLowerCase(Locale.ROOT);
     }
 }

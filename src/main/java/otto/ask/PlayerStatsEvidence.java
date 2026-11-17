@@ -26,6 +26,7 @@ import otto.nflverse.NextGenColumn;
 import otto.nflverse.NextGenStats;
 import otto.nflverse.PlayerUsage;
 import otto.nflverse.RushingAdvancedStats;
+import otto.nflverse.UsageTotals;
 
 /**
  * Writes one player's stats over a span as the evidence bundle the
@@ -88,7 +89,7 @@ final class PlayerStatsEvidence {
 
     static EvidenceBundle bundle(Subject subject, MatchupSources sources, String season,
             Instant now) {
-        StatTotals totals = StatTotals.of(subject.games());
+        UsageTotals totals = UsageTotals.of(subject.games());
         List<EvidenceItem> items = new ArrayList<>();
         items.add(span(subject, now));
         items.add(snaps(subject, totals, now));
@@ -130,9 +131,9 @@ final class PlayerStatsEvidence {
         return item("span", subject, "the games these stats cover", now, facts);
     }
 
-    private static EvidenceItem snaps(Subject subject, StatTotals totals, Instant now) {
+    private static EvidenceItem snaps(Subject subject, UsageTotals totals, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
-        StatTotals.Part<StatTotals.Snaps> part = totals.snaps();
+        UsageTotals.Part<UsageTotals.Snaps> part = totals.snaps();
         if (part.value() == null) {
             facts.put("snaps", unknown("nflverse's snap-count file", subject, part));
             facts.put("snapShare", unknown("nflverse's snap-count file", subject, part));
@@ -152,14 +153,14 @@ final class PlayerStatsEvidence {
         return item("snaps", subject, "his share of his team's offensive snaps", now, facts);
     }
 
-    private static EvidenceItem volume(Subject subject, StatTotals totals, Instant now) {
+    private static EvidenceItem volume(Subject subject, UsageTotals totals, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
-        StatTotals.Part<StatTotals.Volume> part = totals.volume();
+        UsageTotals.Part<UsageTotals.Volume> part = totals.volume();
         if (part.value() == null) {
             facts.put("targets", unknown("nflverse's weekly stats file", subject, part));
             facts.put("carries", unknown("nflverse's weekly stats file", subject, part));
         } else {
-            StatTotals.Volume volume = part.value();
+            UsageTotals.Volume volume = part.value();
             facts.put("targets", "%d of %s's %d".formatted(volume.targets(), subject.team(),
                     volume.teamTargets()));
             facts.put("targetShare", share(volume.targets(), volume.teamTargets()));
@@ -174,17 +175,17 @@ final class PlayerStatsEvidence {
                 facts);
     }
 
-    private static EvidenceItem airYards(Subject subject, StatTotals totals, Instant now) {
+    private static EvidenceItem airYards(Subject subject, UsageTotals totals, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
-        StatTotals.Part<StatTotals.Looks> looks = totals.looks();
+        UsageTotals.Part<UsageTotals.Looks> looks = totals.looks();
         facts.put("airYards", looks.value() == null
                 ? unknown("the play-by-play", subject, looks)
                 : String.valueOf(looks.value().airYards()));
         String averaged = single(subject) ? "" : "average of his weekly ";
         facts.put(single(subject) ? "airYardsShare" : "averageAirYardsShare",
-                percentOr(totals.airYardsShare(), "nflverse's weekly stats give no air-yards "
-                        + "share for him over " + subject.window().label()));
-        facts.put(single(subject) ? "wopr" : "averageWopr", decimalOr(totals.wopr(), 2,
+                percentOr(totals.airYardsShare().value(), "nflverse's weekly stats give no "
+                        + "air-yards share for him over " + subject.window().label()));
+        facts.put(single(subject) ? "wopr" : "averageWopr", decimalOr(totals.wopr().value(), 2,
                 "nflverse's weekly stats give no WOPR for him over "
                         + subject.window().label()));
         facts.put("meaning", ("air yards are how far his targets travelled past the line; the "
@@ -193,9 +194,9 @@ final class PlayerStatsEvidence {
         return item("air-yards", subject, "how far downfield he is targeted", now, facts);
     }
 
-    private static EvidenceItem looks(Subject subject, StatTotals totals, Instant now) {
+    private static EvidenceItem looks(Subject subject, UsageTotals totals, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
-        StatTotals.Part<StatTotals.Looks> part = totals.looks();
+        UsageTotals.Part<UsageTotals.Looks> part = totals.looks();
         if (part.value() == null) {
             String unknown = unknown("the play-by-play", subject, part);
             facts.put("redZoneTargets", unknown);
@@ -208,7 +209,7 @@ final class PlayerStatsEvidence {
             }
             missingWeeks(facts, part);
         }
-        StatTotals.Part<Integer> reads = totals.firstReads();
+        UsageTotals.Part<Integer> reads = totals.firstReads();
         facts.put("firstReadTargets", reads.value() == null
                 ? unknown("FTN's charting", subject, reads)
                 : String.valueOf(reads.value()));
@@ -221,9 +222,9 @@ final class PlayerStatsEvidence {
         return item("looks", subject, "where his work comes", now, facts);
     }
 
-    private static EvidenceItem expected(Subject subject, StatTotals totals, Instant now) {
+    private static EvidenceItem expected(Subject subject, UsageTotals totals, Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
-        StatTotals.Part<StatTotals.Expected> part = totals.expected();
+        UsageTotals.Part<UsageTotals.Expected> part = totals.expected();
         if (part.value() == null) {
             String unknown = unknown("ffopportunity", subject, part);
             facts.put("fantasyPoints", unknown);
@@ -397,12 +398,12 @@ final class PlayerStatsEvidence {
         return subject.position() == Position.RB || subject.position() == Position.QB;
     }
 
-    private static String unknown(String source, Subject subject, StatTotals.Part<?> part) {
+    private static String unknown(String source, Subject subject, UsageTotals.Part<?> part) {
         return UNKNOWN + "%s does not hold %s's %s".formatted(source, subject.team(),
                 part.missing().isEmpty() ? subject.window().label() : weeks(part.missing()));
     }
 
-    private static void missingWeeks(Map<String, String> facts, StatTotals.Part<?> part) {
+    private static void missingWeeks(Map<String, String> facts, UsageTotals.Part<?> part) {
         if (!part.missing().isEmpty()) {
             facts.put("countedWeeks", weeks(part.counted()));
             facts.put("weeksNotHeld", weeks(part.missing()));

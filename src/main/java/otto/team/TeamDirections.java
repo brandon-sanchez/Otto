@@ -16,7 +16,6 @@ import otto.advice.Ordinal;
 import otto.check.SeasonWeek;
 import otto.league.LeagueWeek;
 import otto.market.MarketValuation;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
@@ -104,8 +103,7 @@ public class TeamDirections {
         Optional<MarketValuation.LeagueValues> market =
                 values instanceof SourceResult.Ok<MarketValuation.LeagueValues> ok
                         ? Optional.of(ok.value()) : Optional.empty();
-        boolean dynasty = league.league().rules().format()
-                .filter(LeagueRules.LeagueFormat.DYNASTY::equals).isPresent();
+        boolean dynasty = league.league().rules().dynasty();
         double progress = Math.min(1.0, (double) games / league.lastRegularWeek()
                 .orElse(USUAL_REGULAR_SEASON_GAMES));
         Map<Integer, Integer> pickValues = dynasty && market.isPresent()
@@ -221,10 +219,8 @@ public class TeamDirections {
         }
 
         private int rank(RosterSnapshot team, ToDoubleFunction<RosterSnapshot> measure) {
-            double own = measure.applyAsDouble(team);
-            return 1 + (int) teams.stream()
-                    .filter(other -> measure.applyAsDouble(other) > own)
-                    .count();
+            return Ordinal.rankAmong(measure.applyAsDouble(team),
+                    teams.stream().map(measure::applyAsDouble).toList());
         }
 
         private static double winShare(RosterSnapshot team) {

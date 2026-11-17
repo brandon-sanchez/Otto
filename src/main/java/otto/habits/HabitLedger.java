@@ -211,9 +211,7 @@ public class HabitLedger {
             WeekFacts week, Instant now, boolean keep) {
         Optional<SeasonWeek> current = week.seasonWeek()
                 .filter(seasonWeek -> !PRESEASON.equals(seasonWeek.seasonType()));
-        Optional<RosterSnapshot> user = snapshot.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> user = snapshot.userRoster();
         if (current.isEmpty() || user.isEmpty()) {
             return new HabitHistory("", List.of(), List.of(), Map.of());
         }

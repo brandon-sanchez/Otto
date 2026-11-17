@@ -6,13 +6,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
+import otto.advice.Prose;
 import otto.offers.Offer;
 import otto.trade.PricedTrade;
 
@@ -169,12 +169,7 @@ final class TradeIdeaEvidence {
     }
 
     private static String names(List<Offer.Piece> pieces) {
-        List<String> names = pieces.stream().map(Offer.Piece::name).toList();
-        if (names.size() <= 1) {
-            return String.join("", names);
-        }
-        return names.subList(0, names.size() - 1).stream().collect(Collectors.joining(", "))
-                + " and " + names.getLast();
+        return Prose.listed(pieces.stream().map(Offer.Piece::name).toList());
     }
 
     private static EvidenceItem item(String id, Instant now, Map<String, String> facts) {

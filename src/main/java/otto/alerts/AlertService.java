@@ -123,9 +123,7 @@ public class AlertService {
         Snapshot snapshot = leagueWeek.snapshot();
         WeekFacts week = leagueWeek.week();
         Instant now = clock.instant();
-        Optional<RosterSnapshot> userRoster = snapshot.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> userRoster = snapshot.userRoster();
 
         List<Event> diffEvents = recentDiffEvents(now);
         List<AlertCandidate> candidates = new ArrayList<>(diffEvents.stream()

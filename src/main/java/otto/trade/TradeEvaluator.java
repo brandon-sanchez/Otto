@@ -161,9 +161,7 @@ public class TradeEvaluator {
      */
     public ToolAnswer<TradeEvaluation> evaluate(LeagueWeek leagueWeek, RosterSnapshot partner,
             String gets, String gives) {
-        Optional<RosterSnapshot> mine = leagueWeek.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> mine = leagueWeek.userRoster();
         if (mine.isEmpty()) {
             return ToolAnswer.unavailable(
                     "no team in this league is yours, so I have no side of a trade to judge");

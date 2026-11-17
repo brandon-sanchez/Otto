@@ -107,9 +107,6 @@ public class UserWeekLoader {
 
     private Optional<RosterSnapshot> userRoster() {
         return snapshotStore.current()
-                .map(Snapshot::rosters)
-                .flatMap(rosters -> rosters.stream()
-                        .filter(RosterSnapshot::userRoster)
-                        .findFirst());
+                .flatMap(Snapshot::userRoster);
     }
 }

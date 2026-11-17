@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import otto.advice.Prose;
 import otto.directory.PlayerHealth;
 import otto.sleeper.SleeperAdapter.StarterLine;
 
@@ -170,7 +171,7 @@ final class RosterHabits {
         facts.put("usualScore", HabitReport.points(usualScore));
         facts.put("pointsBelowUsual", HabitReport.points(below));
         facts.put("example", "In week %d, %s were all on bye the same week.".formatted(
-                first.getKey(), joined(first.getValue().stream().map(names).toList())));
+                first.getKey(), Prose.listed(first.getValue().stream().map(names).toList())));
         facts.put("fix", "When you add or trade for a starter, check his bye against your other "
                 + "starters' so no single week takes out several at once.");
         Set<String> players = pileUps.values().stream().flatMap(List::stream)
@@ -246,7 +247,7 @@ final class RosterHabits {
         facts.put("emptyStartsWithNoBackup", String.valueOf(holes.size()));
         facts.put("weeks", String.join(", ", new LinkedHashSet<>(holes)));
         facts.put("pointsLost", HabitReport.points(lost));
-        facts.put("cloggedBy", joined(players.stream().map(names).sorted().toList()));
+        facts.put("cloggedBy", Prose.listed(players.stream().map(names).sorted().toList()));
         facts.put("fix", "Move anyone eligible to IR when a slot is open, and cut a player "
                 + "who keeps scoring nothing, so a playable backup has a spot.");
         return Optional.of(new HabitReport.Habit("clogging", facts, List.copyOf(players)));
@@ -292,13 +293,5 @@ final class RosterHabits {
                 .filter(points -> points > 0)
                 .average()
                 .orElse(0);
-    }
-
-    /** Joins names the way a sentence lists them: "A", "A and B", "A, B and C". */
-    static String joined(List<String> names) {
-        if (names.size() < 2) {
-            return String.join("", names);
-        }
-        return String.join(", ", names.subList(0, names.size() - 1)) + " and " + names.getLast();
     }
 }

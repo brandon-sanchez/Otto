@@ -1,6 +1,7 @@
 package otto.advice;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -75,6 +76,22 @@ public final class Ordinal {
     private static final int TEENS_END = 13;
 
     private Ordinal() {
+    }
+
+    /** Returns a rank out of a field, such as "3rd of 12". */
+    public static String standing(int rank, int of) {
+        return "%s of %d".formatted(of(rank), of);
+    }
+
+    /**
+     * Returns where a value ranks among others, highest first: one more
+     * than the number of values above it, so values that tie share a
+     * rank and the next value skips past them.
+     *
+     * @param values the field, which may include the value itself
+     */
+    public static int rankAmong(double value, Collection<Double> values) {
+        return 1 + (int) values.stream().filter(other -> other > value).count();
     }
 
     /** Returns the rank as an ordinal: 1st, 2nd, 3rd, 4th, 11th, 12th, 13th, 21st. */

@@ -145,6 +145,24 @@ public record LeagueRules(
     }
 
     /**
+     * True in a dynasty or keeper league, where a player's worth runs past
+     * this season. An unknown format counts as redraft.
+     */
+    public boolean longTerm() {
+        return format.filter(league -> league != LeagueFormat.REDRAFT).isPresent();
+    }
+
+    /** True when Sleeper says the league is dynasty. */
+    public boolean dynasty() {
+        return format.equals(Optional.of(LeagueFormat.DYNASTY));
+    }
+
+    /** True when Sleeper says the league is keeper. */
+    public boolean keeper() {
+        return format.equals(Optional.of(LeagueFormat.KEEPER));
+    }
+
+    /**
      * The next time this league's waiver claims are due after now,
      * empty when the claim day is unknown.
      */

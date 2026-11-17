@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.advice.Prose;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;
 import otto.directory.NameMatch;
@@ -115,9 +116,7 @@ public class WaiverScorer {
             return unavailable("I have no projections for this week, so I cannot price a "
                     + "waiver board - half of a waiver score is points above replacement");
         }
-        Optional<RosterSnapshot> userRoster = league.snapshot().rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> userRoster = league.userRoster();
         if (userRoster.isEmpty()) {
             return unavailable("I cannot see your roster in the latest Snapshot, so I cannot "
                     + "tell which positions you need or what FAAB you have left");
@@ -1397,15 +1396,6 @@ public class WaiverScorer {
      * board actually makes; "and" there would read as beating both.
      */
     private static String joined(Collection<String> items, String conjunction) {
-        List<String> values = List.copyOf(items);
-        if (values.isEmpty()) {
-            return "nobody";
-        }
-        if (values.size() == 1) {
-            return values.getFirst();
-        }
-        return "%s %s %s".formatted(
-                String.join(", ", values.subList(0, values.size() - 1)), conjunction,
-                values.getLast());
+        return items.isEmpty() ? "nobody" : Prose.listed(items, conjunction);
     }
 }

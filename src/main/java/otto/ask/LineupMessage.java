@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import otto.advice.Prose;
 import otto.league.UserWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.ProjectionTable;
@@ -91,7 +92,7 @@ final class LineupMessage {
         List<String> sentences = new ArrayList<>();
         if (!playing.isEmpty()) {
             sentences.add("%s %s being played now.".formatted(
-                    and(playing.stream().map(LineupMessage::matchup).toList()),
+                    Prose.listed(playing.stream().map(LineupMessage::matchup).toList()),
                     playing.size() == 1 ? "is" : "are"));
         }
         if (toPlay.size() == 1) {
@@ -100,7 +101,7 @@ final class LineupMessage {
                     when(game), matchup(game)));
         } else if (toPlay.size() > 1) {
             sentences.add("%d games are still to play, %s.".formatted(toPlay.size(),
-                    and(toPlay.stream().map(LineupMessage::matchup).toList())));
+                    Prose.listed(toPlay.stream().map(LineupMessage::matchup).toList())));
         }
         return sentences;
     }
@@ -119,7 +120,7 @@ final class LineupMessage {
                     + ", and nobody you could swap in is still to play, so your lineup is set.");
         }
         return Optional.of("%s, so the only players you can still move are %s."
-                .formatted(lockedPart, and(movable.stream().map(team::name).toList())));
+                .formatted(lockedPart, Prose.listed(movable.stream().map(team::name).toList())));
     }
 
     private static Optional<String> cannotPlay(UserWeek team, Instant now, int week) {
@@ -138,13 +139,13 @@ final class LineupMessage {
         }
         List<String> parts = new ArrayList<>();
         if (!onBye.isEmpty()) {
-            parts.add("%s %s on bye in week %d".formatted(and(onBye),
+            parts.add("%s %s on bye in week %d".formatted(Prose.listed(onBye),
                     onBye.size() == 1 ? "is" : "are", week));
         }
         parts.addAll(ruledOut);
         return parts.isEmpty()
                 ? Optional.empty()
-                : Optional.of(capitalized(and(parts)) + ", so they can't score for you.");
+                : Optional.of(capitalized(Prose.listed(parts)) + ", so they can't score for you.");
     }
 
     private static List<String> recommendation(LineupPlanner.LineupPlan plan,
@@ -257,14 +258,6 @@ final class LineupMessage {
         ZonedDateTime kickoff = game.startTime().atZone(NFL_ZONE);
         String day = kickoff.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.US);
         return kickoff.getHour() >= NIGHT_KICKOFF_HOUR ? day + " night" : day;
-    }
-
-    private static String and(List<String> items) {
-        if (items.size() <= 1) {
-            return String.join("", items);
-        }
-        return String.join(", ", items.subList(0, items.size() - 1))
-                + " and " + items.getLast();
     }
 
     private static String capitalized(String text) {
