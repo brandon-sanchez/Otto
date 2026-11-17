@@ -1,7 +1,6 @@
 package otto.infra;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -152,28 +151,26 @@ public class OttoStack extends Stack {
         Table records = recordsTable();
         Bucket decisionRecords = decisionRecordsBucket(articleTextDays());
 
+        LogGroup accountDeletionLogs = logGroup("AccountDeletionLogs");
+        Function accountDeletion = accountDeletionFunction(decisionRecords, accountDeletionLogs);
+
         Map<String, String> environment = Map.of(
                 "SPRING_PROFILES_ACTIVE", "aws",
                 "OTTO_BUCKET", documents.getBucketName(),
                 "OTTO_TABLE", records.getTableName(),
                 "OTTO_RECORDS_BUCKET", decisionRecords.getBucketName(),
                 "OTTO_PARAMETER_PATH", parameterPath,
-                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard());
+                "OTTO_SENT_WAIVER_BOARD", sentWaiverBoard(),
+                "OTTO_ACCOUNT_DELETION_FUNCTION", accountDeletion.getFunctionName());
 
         LogGroup scheduledLogs = logGroup("ScheduledLogs");
         Function scheduled = appFunction("Scheduled", "otto.aws.ScheduledHandler",
                 SCHEDULED_TIMEOUT, scheduledLogs, environment, scheduledConcurrency());
         Alias scheduledLive = alias("ScheduledLive", scheduled);
 
-        LogGroup accountDeletionLogs = logGroup("AccountDeletionLogs");
-        Function accountDeletion = accountDeletionFunction(decisionRecords, accountDeletionLogs);
-
-        Map<String, String> webhookEnvironment = new HashMap<>(environment);
-        webhookEnvironment.put("OTTO_ACCOUNT_DELETION_FUNCTION",
-                accountDeletion.getFunctionName());
         LogGroup webhookLogs = logGroup("WebhookLogs");
         Function webhook = appFunction("Webhook", "otto.aws.WebhookHandler",
-                WEBHOOK_TIMEOUT, webhookLogs, webhookEnvironment, null);
+                WEBHOOK_TIMEOUT, webhookLogs, environment, null);
         Alias webhookLive = alias("WebhookLive", webhook);
 
         readWriteStorage(documents, records, scheduled);

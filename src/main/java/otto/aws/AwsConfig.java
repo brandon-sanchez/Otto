@@ -30,11 +30,12 @@ public class AwsConfig {
     private static final Duration ATTEMPT_TIMEOUT = Duration.ofSeconds(5);
 
     /**
-     * Longer than the account-deletion function's 30-second timeout and
-     * shorter than the webhook's 60, both in {@code OttoStack}, which
-     * OttoStackTest pins.
+     * Covers the account-deletion function's 30-second timeout in
+     * {@code OttoStack} plus a cold start, which Lambda does not count
+     * against it, and stays under the webhook's 60. OttoStackTest pins
+     * both.
      */
-    private static final Duration DELETION_TIMEOUT = Duration.ofSeconds(40);
+    private static final Duration DELETION_TIMEOUT = Duration.ofSeconds(50);
 
     static S3Client newS3Client() {
         return S3Client.builder()

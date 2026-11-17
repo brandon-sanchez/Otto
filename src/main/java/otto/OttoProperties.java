@@ -53,8 +53,7 @@ public record OttoProperties(
      * storage is used instead.
      *
      * @param accountDeletionFunction the function that deletes a user's
-     *        Decision Records; blank in a function the stack does not let
-     *        invoke it
+     *        Decision Records, which only the webhook's role may invoke
      */
     public record Aws(String bucket, String table, String recordsBucket,
             String accountDeletionFunction) {

@@ -475,10 +475,6 @@ class OttoStackTest {
                 "Handler", "otto.aws.WebhookHandler",
                 "Environment", Match.objectLike(Map.of("Variables", Match.objectLike(Map.of(
                         "OTTO_ACCOUNT_DELETION_FUNCTION", Match.anyValue())))))));
-        template.hasResourceProperties("AWS::Lambda::Function", Match.objectLike(Map.of(
-                "Handler", "otto.aws.ScheduledHandler",
-                "Environment", Match.objectLike(Map.of("Variables", Match.objectLike(Map.of(
-                        "OTTO_ACCOUNT_DELETION_FUNCTION", Match.absent())))))));
 
         List<String> invokers = new ArrayList<>();
         for (Map<String, Object> policy : template.findResources("AWS::IAM::Policy").values()) {

@@ -85,15 +85,9 @@ class AccountDeletionScenarioOnS3Test {
 
         assertThatThrownBy(() -> new LambdaRecordsEraser(failing, FUNCTION).eraseUser(OWNER))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("denied");
-    }
-
-    @Test
-    void aFunctionTheStackDidNotLetDeleteRefusesToTry() {
-        assertThatThrownBy(() -> new LambdaRecordsEraser(invoking(deleter), "")
-                .eraseUser(OWNER))
-                .isInstanceOf(IllegalStateException.class);
-        assertThat(s3.versionsUnder("records/user=777001/")).hasSize(3);
+                .hasMessageContaining("Unhandled")
+                .as("what the function stored stays in its own log")
+                .hasMessageNotContaining("denied");
     }
 
     @Test

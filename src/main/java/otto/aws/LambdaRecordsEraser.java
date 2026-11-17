@@ -23,10 +23,7 @@ public class LambdaRecordsEraser implements RecordsEraser {
     private final LambdaClient lambda;
     private final String functionName;
 
-    /**
-     * Invokes {@code functionName}, which is blank in a function the
-     * stack does not let invoke it.
-     */
+    /** Invokes {@code functionName}, the account-deletion function. */
     public LambdaRecordsEraser(LambdaClient lambda, String functionName) {
         this.lambda = lambda;
         this.functionName = functionName;
@@ -36,23 +33,19 @@ public class LambdaRecordsEraser implements RecordsEraser {
      * Side effects: one synchronous Lambda invocation, which deletes
      * objects in the records bucket.
      *
-     * @throws IllegalStateException when this function was given no
-     *         deletion function, or the deletion function failed
+     * @throws IllegalStateException when the deletion function failed;
+     *         its own log holds the detail
      */
     @Override
     public void eraseUser(String userId) {
-        if (functionName == null || functionName.isBlank()) {
-            throw new IllegalStateException(
-                    "This function was not given an account-deletion function to invoke");
-        }
         InvokeResponse response = lambda.invoke(InvokeRequest.builder()
                 .functionName(functionName)
                 .invocationType(InvocationType.REQUEST_RESPONSE)
                 .payload(SdkBytes.fromByteArray(payload(userId)))
                 .build());
         if (response.functionError() != null) {
-            throw new IllegalStateException("The account-deletion function failed ("
-                    + response.functionError() + "): " + response.payload().asUtf8String());
+            throw new IllegalStateException(
+                    "The account-deletion function failed: " + response.functionError());
         }
     }
 
