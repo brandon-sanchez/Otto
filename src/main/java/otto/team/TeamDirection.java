@@ -17,8 +17,9 @@ import otto.sleeper.SleeperAdapter;
  *        the 3rd-most valuable roster"
  * @param pointsRank 1 for the most points scored in the league
  * @param marketValue the summed market value of every player on the
- *        roster, IR and taxi included; empty when no market list could
- *        be read
+ *        roster, IR and taxi included, plus the rookie picks the team
+ *        holds in a dynasty league; empty when no market list could be
+ *        read
  * @param valueRank 1 for the most valuable roster; empty with
  *        {@code marketValue}
  */

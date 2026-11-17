@@ -2,6 +2,7 @@ package otto.team;
 
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,6 +19,7 @@ import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
+import otto.trade.LeaguePicks;
 
 /**
  * Labels every team in a league contending, in the middle or
@@ -31,7 +33,9 @@ import otto.snapshot.RosterSnapshot;
  * a third of the weight to the end, because it prices the weeks still
  * to come. The market already prices age in dynasty and injuries in
  * redraft, so neither is counted again; in a dynasty league the age of
- * a team's most valuable players appears in the reason only.
+ * a team's most valuable players appears in the reason only. A dynasty
+ * team's value also counts the rookie picks it holds, because a
+ * rebuilding team keeps much of its value in picks.
  */
 @Component
 public class TeamDirections {
@@ -48,10 +52,13 @@ public class TeamDirections {
     private static final int CORE_PLAYERS = 5;
 
     private final MarketValuation valuation;
+    private final LeaguePicks picks;
     private final DirectionChoices choices;
 
-    public TeamDirections(MarketValuation valuation, DirectionChoices choices) {
+    public TeamDirections(MarketValuation valuation, LeaguePicks picks,
+            DirectionChoices choices) {
         this.valuation = valuation;
+        this.picks = picks;
         this.choices = choices;
     }
 
@@ -84,7 +91,9 @@ public class TeamDirections {
                 .filter(LeagueRules.LeagueFormat.DYNASTY::equals).isPresent();
         double progress = Math.min(1.0, (double) games / league.lastRegularWeek()
                 .orElse(USUAL_REGULAR_SEASON_GAMES));
-        Measures measures = new Measures(teams, market);
+        Map<Integer, Integer> pickValues = dynasty && market.isPresent()
+                ? pickValues(league, now) : Map.of();
+        Measures measures = new Measures(teams, market, pickValues);
         Optional<Direction> chosen = choices.chosen(league.league().leagueId());
         List<TeamDirection> directions = teams.stream()
                 .map(team -> direction(team, measures, progress, dynasty, chosen))
@@ -96,8 +105,24 @@ public class TeamDirections {
                 market.map(MarketValuation.LeagueValues::league), games));
     }
 
+    /**
+     * Each team's held picks at market value. A rebuilding dynasty team
+     * holds its value in picks, so leaving them out would read it lower
+     * than the market does.
+     */
+    private Map<Integer, Integer> pickValues(LeagueWeek league, Instant now) {
+        Map<Integer, Integer> values = new HashMap<>();
+        picks.priced(league, now).forEach((rosterId, held) -> values.put(rosterId,
+                held.stream().mapToInt(LeaguePicks.PricedPick::value).sum()));
+        return values;
+    }
+
+    /**
+     * @param pickValues each team's held picks at market value, by roster
+     *        id; empty outside dynasty
+     */
     private record Measures(List<RosterSnapshot> teams,
-            Optional<MarketValuation.LeagueValues> market) {
+            Optional<MarketValuation.LeagueValues> market, Map<Integer, Integer> pickValues) {
 
         int recordRank(RosterSnapshot team) {
             return rank(team, Measures::winShare);
@@ -109,7 +134,8 @@ public class TeamDirections {
 
         Optional<Integer> value(RosterSnapshot team) {
             return market.map(values -> players(team)
-                    .mapToInt(id -> values.values().getOrDefault(id, 0)).sum());
+                    .mapToInt(id -> values.values().getOrDefault(id, 0)).sum()
+                    + pickValues.getOrDefault(team.rosterId(), 0));
         }
 
         Optional<Integer> valueRank(RosterSnapshot team) {

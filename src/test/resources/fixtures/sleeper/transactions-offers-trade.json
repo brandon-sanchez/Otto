@@ -1,0 +1,27 @@
+[
+  {
+    "type": "trade",
+    "transaction_id": "1205000000000000001",
+    "status": "complete",
+    "status_updated": 1791216000000,
+    "created": 1791216000000,
+    "roster_ids": [
+      2,
+      4
+    ],
+    "consenter_ids": [
+      2,
+      4
+    ],
+    "adds": {
+      "92019": 2,
+      "93010": 4
+    },
+    "drops": {
+      "92019": 4,
+      "93010": 2
+    },
+    "draft_picks": [],
+    "waiver_budget": []
+  }
+]

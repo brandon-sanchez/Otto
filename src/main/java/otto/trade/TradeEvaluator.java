@@ -188,9 +188,6 @@ public class TradeEvaluator {
                     + "cannot tell who would start for either team");
         }
 
-        Optional<TradeDeadline> deadline = TradeDeadline.assess(
-                leagueWeek.league().tradeDeadline(), leagueWeek.week().weekNumber());
-
         List<TradeAsset> incoming = TradeAsset.parse(gets);
         List<TradeAsset> outgoing = TradeAsset.parse(gives);
         if (incoming.isEmpty() || outgoing.isEmpty()) {
@@ -211,7 +208,142 @@ public class TradeEvaluator {
             return ToolAnswer.unavailable(named);
         }
 
-        return priced(leagueWeek, mine.get(), partner, resolvedIn, resolvedOut, deadline);
+        Map<String, String> positions = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
+        addRoster(positions, teams, mine.get());
+        addRoster(positions, teams, partner);
+        addTraded(positions, teams, resolvedIn);
+        addTraded(positions, teams, resolvedOut);
+        return switch (basis(leagueWeek, positions, teams)) {
+            case SourceResult.Unavailable<Basis> unavailable -> ToolAnswer.unavailable(
+                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
+            case SourceResult.Ok<Basis> ok -> ToolAnswer.of(priced(leagueWeek, ok.value(),
+                    mine.get(), partner, resolvedIn, resolvedOut).evaluation());
+        };
+    }
+
+    /**
+     * What every trade between two teams is priced from, read once so a
+     * search over many trades prices each one exactly as
+     * {@link #evaluate} would.
+     *
+     * @param replacement what Replacement Level is worth at each position
+     *        over the weeks left
+     */
+    public record Basis(RestOfSeason season, LeagueShape shape,
+            Map<String, Double> replacement) {
+
+        public Basis {
+            replacement = Map.copyOf(replacement);
+        }
+    }
+
+    /**
+     * One priced trade: the answer {@link #evaluate} gives, and the exact
+     * figures behind its rounded strings.
+     *
+     * @param favoursYou true when the deciding measure leans the user's way
+     * @param marketDecides true when market value decides the call
+     * @param gap the deciding measure's gap, in percent
+     * @param verdict the deciding measure's band: even, slight edge or
+     *        clear edge
+     * @param yourNet the user's rest-of-season fit net
+     * @param theirNet the partner's rest-of-season fit net
+     * @param theirStartersDelta what the trade does to the partner's
+     *        starting lineup over the weeks left, in points
+     * @param marketNet the user's net at market value; empty when the
+     *        market prices neither side
+     * @param marketGap that net as a share of the larger side, in percent
+     * @param marketBothSides true when the market prices something on
+     *        each side
+     * @param deliverable false when a side names a player or pick its
+     *        team doesn't hold
+     */
+    public record PricedTrade(TradeEvaluation evaluation, boolean favoursYou,
+            boolean marketDecides, double gap, String verdict, double yourNet,
+            double theirNet, double theirStartersDelta, Optional<Integer> marketNet,
+            Optional<Double> marketGap, boolean marketBothSides, boolean deliverable) {
+    }
+
+    /**
+     * Reads what every trade between the user and one partner is priced
+     * from.
+     *
+     * <p>Side effects: the rest-of-season projection reads.
+     *
+     * @return the basis, or unavailable when the weeks left can't be
+     *         priced
+     */
+    public SourceResult<Basis> basis(LeagueWeek leagueWeek, RosterSnapshot mine,
+            RosterSnapshot partner) {
+        Map<String, String> positions = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
+        addRoster(positions, teams, mine);
+        addRoster(positions, teams, partner);
+        return basis(leagueWeek, positions, teams);
+    }
+
+    /**
+     * Reads what any trade in the league is priced from, every rostered
+     * player included. A player's rest-of-season points and each
+     * position's Replacement Level are the same whichever two teams
+     * trade, so this prices a player exactly as a two-team basis does.
+     *
+     * <p>Side effects: the rest-of-season projection reads.
+     */
+    public SourceResult<Basis> basis(LeagueWeek leagueWeek) {
+        Map<String, String> positions = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
+        leagueWeek.rosters().forEach(roster -> addRoster(positions, teams, roster));
+        return basis(leagueWeek, positions, teams);
+    }
+
+    /**
+     * Returns what one player is worth over the rest of the season before
+     * any roster reads him: his points above Replacement Level times his
+     * position's scarcity. Roster fit is left out because it depends on
+     * the roster that would hold him.
+     *
+     * @return empty when no week left projects him
+     */
+    public static Optional<Double> unfitted(Basis basis, String playerId, String position) {
+        return basis.season().points(playerId).map(points -> {
+            Double line = basis.replacement().get(position);
+            return Math.max(0, points - (line == null ? 0 : line))
+                    * basis.shape().scarcity(position);
+        });
+    }
+
+    /**
+     * Prices one trade exactly as {@link #evaluate} prices it, from
+     * players and picks already resolved. Nothing is refused: the caller
+     * builds each side from the two rosters, so no name is ambiguous or
+     * repeated.
+     *
+     * <p>Side effects: the market value reads, and Sleeper's traded picks
+     * when a pick moves.
+     *
+     * @param basis read for the same two teams
+     */
+    public PricedTrade price(LeagueWeek leagueWeek, Basis basis, RosterSnapshot mine,
+            RosterSnapshot partner, List<TradePiece> gets, List<TradePiece> gives) {
+        return priced(leagueWeek, basis, mine, partner, new Resolved(List.copyOf(gets), null),
+                new Resolved(List.copyOf(gives), null));
+    }
+
+    private SourceResult<Basis> basis(LeagueWeek leagueWeek, Map<String, String> positions,
+            Map<String, String> teams) {
+        return switch (restOfSeason.restOfSeason(leagueWeek, positions, teams)) {
+            case SourceResult.Unavailable<RestOfSeason> unavailable ->
+                new SourceResult.Unavailable<>(unavailable.source(), unavailable.reason());
+            case SourceResult.Ok<RestOfSeason> ok -> {
+                LeagueShape shape = LeagueShape.of(leagueWeek.league(),
+                        leagueWeek.rosters().size());
+                yield new SourceResult.Ok<>(new Basis(ok.value(), shape,
+                        replacementOverTheWeeksLeft(leagueWeek, shape, positions,
+                                ok.value().weekCount())));
+            }
+        };
     }
 
     // -- resolving what the user typed --------------------------------------
@@ -285,27 +417,20 @@ public class TradeEvaluator {
 
     // -- the valuation ------------------------------------------------------
 
-    private ToolAnswer<TradeEvaluation> priced(LeagueWeek leagueWeek, RosterSnapshot mine,
-            RosterSnapshot partner, Resolved incoming, Resolved outgoing,
-            Optional<TradeDeadline> deadline) {
+    private PricedTrade priced(LeagueWeek leagueWeek, Basis basis, RosterSnapshot mine,
+            RosterSnapshot partner, Resolved incoming, Resolved outgoing) {
+        Optional<TradeDeadline> deadline = TradeDeadline.assess(
+                leagueWeek.league().tradeDeadline(), leagueWeek.week().weekNumber());
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
         addRoster(positions, teams, mine);
         addRoster(positions, teams, partner);
         addTraded(positions, teams, incoming);
         addTraded(positions, teams, outgoing);
-
-        SourceResult<RestOfSeason> season =
-                restOfSeason.restOfSeason(leagueWeek, positions, teams);
-        if (season instanceof SourceResult.Unavailable<RestOfSeason> unavailable) {
-            return ToolAnswer.unavailable("%s: %s".formatted(
-                    unavailable.source(), unavailable.reason()));
-        }
-        RestOfSeason points = ((SourceResult.Ok<RestOfSeason>) season).value();
+        RestOfSeason points = basis.season();
         List<Slot> slots = leagueWeek.week().startingSlots();
-        LeagueShape shape = LeagueShape.of(leagueWeek.league(), leagueWeek.rosters().size());
-        Map<String, Double> replacement = replacementOverTheWeeksLeft(leagueWeek, shape,
-                positions, points.weekCount());
+        LeagueShape shape = basis.shape();
+        Map<String, Double> replacement = basis.replacement();
 
         // Four numbers, not two. Each team prices what it gains against
         // the roster it would then hold, and what it loses against the
@@ -390,7 +515,7 @@ public class TradeEvaluator {
             notes.addAll(offRoster);
         }
 
-        return ToolAnswer.of(new TradeEvaluation(
+        TradeEvaluation evaluation = new TradeEvaluation(
                 deadline.map(TradeDeadline::message).orElse(null),
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
@@ -411,7 +536,13 @@ public class TradeEvaluator {
                         : leverage(leagueWeek, mine, partner),
                 postTradeRoster(mine, myAfter, outgoing, incoming, slots),
                 postTradeRoster(partner, theirAfter, incoming, outgoing, slots),
-                notes));
+                notes);
+        return new PricedTrade(evaluation, YOU.equals(call.favours()), call.marketDecides(),
+                call.band().gap(), call.band().verdict(), myNet, theirNet,
+                rosterFit.startingPoints(slots, theirAfter.pool())
+                        - rosterFit.startingPoints(slots, theirNow.pool()),
+                priced.market().map(TradeMarket.MarketRead::net),
+                priced.band().map(VerdictBand::gap), priced.bothSidesPriced(), deliverable);
     }
 
     private PostTradeRoster postTradeRoster(RosterSnapshot before, Roster after,

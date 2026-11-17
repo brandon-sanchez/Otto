@@ -101,10 +101,20 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
     }
 
     private void theThirdWeekIsOnDisk(String directory, String depthCharts) {
+        theThirdWeekIsOnDisk(directory, depthCharts, () -> { });
+    }
+
+    /**
+     * @param sleeperStubs stubs that replace the default Sleeper ones
+     *        before the Check reads them
+     */
+    private void theThirdWeekIsOnDisk(String directory, String depthCharts,
+            Runnable sleeperStubs) {
         SleeperStubs.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH, directory, "players-v1");
         SleeperStubs.stubJson(sleeper, SleeperStubs.ROSTERS_PATH, "sleeper/rosters-buy-sell.json",
                 "rosters-v1");
+        sleeperStubs.run();
         NflverseStubs.healthy(nflverse);
         NflverseStubs.stubCsv(nflverse, NflverseStubs.DEPTH_2026_PATH, depthCharts);
         NflverseStubs.stubCsv(nflverse, NflverseStubs.SCHEDULE_PATH,
@@ -152,7 +162,12 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
     }
 
     private Map<String, Map<String, String>> evidence() {
-        JsonNode messages = records().getLast().exchanges().getFirst().request()
+        return evidence(RunKind.BUY_LOW_SELL_HIGH);
+    }
+
+    private Map<String, Map<String, String>> evidence(RunKind kind) {
+        JsonNode messages = StoredRecords.of(decisionRecords, properties.storageDir(), USER_ID,
+                        LEAGUE_ID, kind).getLast().exchanges().getFirst().request()
                 .path("messages");
         try {
             JsonNode bundle = OttoJson.MAPPER.readTree(messages.get(1).path("content").asText());
@@ -349,5 +364,39 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("15.0")));
         assertThat(records().getLast().outcome()).isInstanceOf(Outcome.Withheld.class);
+    }
+
+    /**
+     * The same week with every player projected and GridironGoblin's
+     * week-1 trade on record, so a trade with him can be priced.
+     */
+    private void theThirdWeekIsOnDiskWithProjections() {
+        theThirdWeekIsOnDisk("sleeper/players-nfl-buy-sell.json",
+                "nflverse/depth-charts-2026.csv", () -> {
+                    SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                            "sleeper/projections-buy-sell-trades.json", "projections-trades");
+                    SleeperStubs.stubJson(sleeper, SleeperStubs.TRANSACTIONS_WEEK_1_PATH,
+                            "sleeper/transactions-offers-trade.json", "transactions-trade");
+                });
+    }
+
+    @Test
+    void aBuyLowIsATradeTargetAndASellHighIsTheChipThatPaysForHim() {
+        theThirdWeekIsOnDiskWithProjections();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades",
+                "{\"shape\":\"1-for-1\",\"count\":1}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer("x"));
+
+        ask("find me a 1-for-1 trade");
+
+        Map<String, Map<String, String>> evidence = evidence(RunKind.TRADE_IDEAS);
+        assertThat(evidence.get("offer-1"))
+                .containsEntry("sendTo", "GridironGoblin")
+                .containsEntry("youGet", "George Pickens")
+                .containsEntry("youGive", "Jaxon Smith-Njigba");
+        assertThat(evidence.get("buysell-" + PICKENS))
+                .containsEntry("call", "buy-low")
+                .containsEntry("rosteredBy", "GridironGoblin");
+        assertThat(evidence.get("buysell-" + SMITH_NJIGBA)).containsEntry("call", "sell-high");
     }
 }

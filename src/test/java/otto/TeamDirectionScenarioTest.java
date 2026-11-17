@@ -2,6 +2,7 @@ package otto;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -257,6 +258,24 @@ class TeamDirectionScenarioTest extends WireSeamTest {
                 .endsWith("and its most valuable players average 23.9 years old");
     }
 
+    /**
+     * Every team holds its own 2027 1st (3000) and 2nd (1000), and the
+     * user also holds GridironGoblin's 1st, so the user's 1000 in players
+     * is 8000 with his picks and GridironGoblin's picks add only 1000.
+     */
+    @Test
+    void aDynastyTeamsValueCountsTheDraftPicksItHolds() {
+        leagueInWeek12("sleeper/league-dynasty.json");
+        fantasyCalcAnswers("true", "fantasycalc/values-direction-dynasty-picks.json");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH + "/traded_picks",
+                "sleeper/traded-picks-direction.json", "traded-picks-v1");
+
+        askWhoIsContending();
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-1")).containsEntry(
+                "marketValue", "8000 in market value for a 12-team Superflex PPR dynasty league");
+    }
+
     @Test
     void sayingYesInADynastyLeagueMakesTheUserRebuilding() {
         dynastyLeague();
@@ -284,6 +303,7 @@ class TeamDirectionScenarioTest extends WireSeamTest {
                         + "roster");
 
         nextQuestion();
+        clock.advance(Duration.ofSeconds(1));
         tellOtto("forget what I said about contending", "{\"action\":\"clear\"}");
         askForWeaknesses();
 

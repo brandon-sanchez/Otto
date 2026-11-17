@@ -1,6 +1,7 @@
 package otto.trade;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -101,6 +102,43 @@ record HeldPicks(List<SleeperAdapter.TradedPick> traded, List<RosterSnapshot> se
                         Ordinal.of(seeded.indexOf(original) + 1), seeded.size(),
                         slot.name().toLowerCase(Locale.ROOT))));
         return new Held(priced, true, notes);
+    }
+
+    /**
+     * Every pick the team holds in the first {@code rounds} rounds of the
+     * next {@code drafts} drafts, its own and those it got in trades,
+     * each placed in its round when the standings say where. Two picks
+     * that read the same, such as two unplaced 2028 1sts, are listed
+     * once, because a trade could not tell them apart by name.
+     *
+     * @return empty when the season, and so the next draft, is unknown
+     */
+    List<DraftPick> heldBy(RosterSnapshot team, int rounds, int drafts) {
+        if (nextDraft.isEmpty()) {
+            return List.of();
+        }
+        List<DraftPick> held = new ArrayList<>();
+        for (int year = nextDraft.getAsInt(); year < nextDraft.getAsInt() + drafts; year++) {
+            for (int round = 1; round <= rounds; round++) {
+                DraftPick unplaced = new DraftPick(year, round, Optional.empty());
+                seeded.stream()
+                        .filter(original -> holder(unplaced, original) == team.rosterId())
+                        .sorted(ownPickFirst(team))
+                        .map(original -> placed(unplaced, original))
+                        .filter(pick -> held.stream()
+                                .noneMatch(other -> other.describe().equals(pick.describe())))
+                        .forEach(held::add);
+            }
+        }
+        return held;
+    }
+
+    /**
+     * Orders the team's own pick before picks it got in trades, the pick
+     * {@link #resolve} chooses when a pick is named without its place.
+     */
+    private static Comparator<RosterSnapshot> ownPickFirst(RosterSnapshot team) {
+        return Comparator.comparing(original -> original.rosterId() != team.rosterId());
     }
 
     private DraftPick placed(DraftPick named, RosterSnapshot original) {

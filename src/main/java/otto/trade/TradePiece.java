@@ -7,5 +7,5 @@ import otto.directory.DirectoryPlayer;
  *
  * @param player null for a draft pick or FAAB
  */
-record TradePiece(TradeAsset asset, DirectoryPlayer player) {
+public record TradePiece(TradeAsset asset, DirectoryPlayer player) {
 }
