@@ -115,7 +115,9 @@ public class PlayerCeiling {
     /**
      * The checked explanation of one player's ceiling and floor.
      *
-     * @param message the text the user receives, word for word
+     * @param message the checked text, which the user receives word for
+     *        word unless the chat model gathered other tool results for
+     *        the same question
      */
     public record Answer(String player, String message) {
     }
@@ -127,11 +129,14 @@ public class PlayerCeiling {
      * kind {@link RunKind#PLAYER_CEILING} whatever the outcome.
      *
      * @param reference the player, by name or Sleeper player id
+     * @param delivery how a checked message reaches the user, which the
+     *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none: the player is
      *         unknown, has no projection this week, plays a position
      *         without a boom line, or the explanation failed its checks
      */
-    public ToolAnswer<Answer> explain(String reference, Instant now) {
+    public ToolAnswer<Answer> explain(String reference, Instant now,
+            CheckedAnswers.Delivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> switch (loader.league()) {
@@ -141,14 +146,14 @@ public class PlayerCeiling {
                     case SourceResult.Unavailable<WeekFacts> unavailable ->
                         unavailable(unavailable);
                     case SourceResult.Ok<WeekFacts> week ->
-                        explain(found.player(), league.value(), week.value(), now);
+                        explain(found.player(), league.value(), week.value(), now, delivery);
                 };
             };
         };
     }
 
     private ToolAnswer<Answer> explain(DirectoryPlayer player, SleeperAdapter.League league,
-            WeekFacts week, Instant now) {
+            WeekFacts week, Instant now, CheckedAnswers.Delivery delivery) {
         Optional<Double> projection = week.projections()
                 .flatMap(table -> table.points(player.playerId(), player.position()));
         if (projection.isEmpty()) {
@@ -163,10 +168,13 @@ public class PlayerCeiling {
         }
         EvidenceBundle bundle = bundle(player, ceiling.get(), week.scoring(), now);
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(player, league, bundle, result, now));
-        return outcome instanceof Outcome.Sent sent
-                ? ToolAnswer.of(new Answer(player.fullName(), sent.message()))
-                : ToolAnswer.unavailable(withheld(player, result));
+        Outcome outcome = runs.record(record(player, league, bundle, result, now, delivery));
+        return switch (outcome) {
+            case Outcome.Sent sent -> ToolAnswer.of(new Answer(player.fullName(), sent.message()));
+            case Outcome.HandedToChat handed ->
+                ToolAnswer.of(new Answer(player.fullName(), handed.message()));
+            default -> ToolAnswer.unavailable(withheld(player, result));
+        };
     }
 
     private static <T> ToolAnswer<Answer> unavailable(SourceResult.Unavailable<T> unavailable) {
@@ -260,7 +268,8 @@ public class PlayerCeiling {
     }
 
     private DecisionRecord record(DirectoryPlayer player, SleeperAdapter.League league,
-            EvidenceBundle bundle, AdviceResult<AdviceAnswer> result, Instant now) {
+            EvidenceBundle bundle, AdviceResult<AdviceAnswer> result, Instant now,
+            CheckedAnswers.Delivery delivery) {
         String runId = RunIds.stable(RUN_ID_PREFIX, player.playerId(), bundle.identity(),
                 now.toString());
         return DecisionRecord.forRun(runId, RunKind.PLAYER_CEILING, now, userId,
@@ -271,8 +280,11 @@ public class PlayerCeiling {
                 .versions(bundle.versions(form, result))
                 .exchanges(result.exchanges())
                 .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved ->
-                        new Outcome.Sent(approved.answer().message());
+                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
+                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
+                        case THROUGH_CHAT_MODEL ->
+                            new Outcome.HandedToChat(approved.answer().message());
+                    };
                     case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
                             "The explanation failed its checks twice: "
                                     + String.join(" ", rejected.failures()));

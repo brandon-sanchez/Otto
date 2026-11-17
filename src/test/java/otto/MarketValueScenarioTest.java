@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import otto.ask.AskTools;
 import otto.ask.MarketValueAnswers;
 import otto.ask.ToolAnswer;
 import otto.check.CheckRunner;
@@ -50,6 +49,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -78,7 +78,7 @@ class MarketValueScenarioTest extends WireSeamTest {
     private static final String NUMBERLESS_ANSWER = answer("Here is what the market says.");
 
     @Autowired
-    private AskTools tools;
+    private MarketValueAnswers marketValues;
 
     @Autowired
     private TelegramWebhook webhook;
@@ -212,11 +212,8 @@ class MarketValueScenarioTest extends WireSeamTest {
                 .containsEntry("nflSeasonsPlayed", "3")
                 .containsEntry("rosteredIn", "100% of leagues")
                 .containsEntry("tradeShare", "4.1% of the trades FantasyCalc logged include him");
-        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("get_market_value"))
-                .withRequestBody(containing("down 58% over the last 30 days")));
         telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing("Puka Nacua is worth 3972")));
+                .withRequestBody(matchingJsonPath("$.text", equalTo(NACUA_MESSAGE))));
         assertThat(marketRecords()).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isEqualTo(new Outcome.Sent(NACUA_MESSAGE)));
     }
@@ -227,16 +224,16 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(false, 2, 12, "1"), "fantasycalc/values-redraft.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        tools.getMarketValue("Puka Nacua");
-        tools.getMarketValue("Bijan Robinson");
+        marketValues.answer("Puka Nacua");
+        marketValues.answer("Bijan Robinson");
         refresh.refresh();
         clock.advance(Duration.ofHours(5));
-        tools.getMarketValue("Puka Nacua");
+        marketValues.answer("Puka Nacua");
 
         assertThat(fantasyCalcRequests()).isEqualTo(1);
 
         clock.advance(Duration.ofDays(1));
-        tools.getMarketValue("Puka Nacua");
+        marketValues.answer("Puka Nacua");
 
         assertThat(fantasyCalcRequests()).isEqualTo(2);
     }
@@ -268,7 +265,7 @@ class MarketValueScenarioTest extends WireSeamTest {
                 "fantasycalc/values-redraft-next-day.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        tools.getMarketValue("Puka Nacua");
+        marketValues.answer("Puka Nacua");
 
         MarketDay latest = values.onDay(REDRAFT_SUPERFLEX,
                 TEST_START.plus(Duration.ofDays(3)).atZone(ZoneOffset.UTC).toLocalDate())
@@ -297,8 +294,8 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcIsDown();
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        ToolAnswer<MarketValueAnswers.Reply> answer = tools.getMarketValue("Puka Nacua");
-        tools.getMarketValue("Puka Nacua");
+        ToolAnswer<MarketValueAnswers.Reply> answer = marketValues.answer("Puka Nacua");
+        marketValues.answer("Puka Nacua");
 
         assertThat(answer.facts().source()).isEqualTo("FantasyCalc");
         assertThat(lastEvidence().get("market-value-9493"))
@@ -315,7 +312,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         redraftSuperflexLeague();
         fantasyCalcIsDown();
 
-        ToolAnswer<MarketValueAnswers.Reply> answer = tools.getMarketValue("Puka Nacua");
+        ToolAnswer<MarketValueAnswers.Reply> answer = marketValues.answer("Puka Nacua");
 
         assertThat(answer.unavailable()).isEqualTo("FantasyCalc has not answered today and I "
                 + "have no earlier list of its values for a 12-team Superflex PPR redraft "
@@ -329,7 +326,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(false, 1, 10, "0.5"), "fantasycalc/values-redraft.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        tools.getMarketValue("Puka Nacua");
+        marketValues.answer("Puka Nacua");
 
         assertThat(fantasyCalcRequests()).isEqualTo(1);
         assertThat(lastEvidence().get("market-value-9493"))
@@ -343,13 +340,13 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(true, 2, 12, "1"), "fantasycalc/values-dynasty.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        assertThat(tools.getMarketValue("Puka Nacua").facts().source()).isEqualTo("FantasyCalc");
+        assertThat(marketValues.answer("Puka Nacua").facts().source()).isEqualTo("FantasyCalc");
         assertThat(lastEvidence().get("market-value-9493"))
                 .containsEntry("value", "7146")
                 .containsEntry("league", "12-team Superflex PPR dynasty");
 
         clock.advance(Duration.ofMinutes(1));
-        assertThat(tools.getMarketValue("Garrett Wilson").facts().source())
+        assertThat(marketValues.answer("Garrett Wilson").facts().source())
                 .isEqualTo("DynastyProcess");
         assertThat(lastEvidence().get("market-value-8112"))
                 .containsEntry("value", "4602")
@@ -364,7 +361,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(true, 2, 12, "1"), "fantasycalc/values-dynasty.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        tools.getMarketValue("an early 2027 first");
+        marketValues.answer("an early 2027 first");
         assertThat(lastEvidence().get("market-value-pick"))
                 .containsEntry("subject", "2027 early 1st-round pick")
                 .containsEntry("value", "4982")
@@ -372,7 +369,7 @@ class MarketValueScenarioTest extends WireSeamTest {
                 .containsEntry("nflDraft", "1st round");
 
         clock.advance(Duration.ofMinutes(1));
-        tools.getMarketValue("2027 5th");
+        marketValues.answer("2027 5th");
         assertThat(lastEvidence().get("market-value-pick"))
                 .containsEntry("subject", "2027 5th-round pick")
                 .containsEntry("value", "7")
@@ -386,7 +383,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcIsDown();
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        assertThat(tools.getMarketValue("Puka Nacua").facts().source())
+        assertThat(marketValues.answer("Puka Nacua").facts().source())
                 .isEqualTo("DynastyProcess");
         assertThat(lastEvidence().get("market-value-9493")).containsEntry("value", "7700");
     }
@@ -396,7 +393,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         redraftSuperflexLeague();
         fantasyCalcAnswers(valuesFor(false, 2, 12, "1"), "fantasycalc/values-redraft.json");
 
-        assertThat(tools.getMarketValue("2027 1st").unavailable())
+        assertThat(marketValues.answer("2027 1st").unavailable())
                 .contains("redraft league");
     }
 
@@ -411,7 +408,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(true, 2, 12, "1"), "fantasycalc/values-dynasty.json");
         OutboundStubs.llmAdvises(llm, NUMBERLESS_ANSWER);
 
-        assertThat(tools.getMarketValue("Bijan Robinson").unavailable()).isNull();
+        assertThat(marketValues.answer("Bijan Robinson").unavailable()).isNull();
         assertThat(lastEvidence().get("market-value-9509"))
                 .containsEntry("value", "13990")
                 .containsEntry("league", "12-team Superflex PPR keeper");
@@ -423,7 +420,7 @@ class MarketValueScenarioTest extends WireSeamTest {
                 .containsEntry("keeperBonus", "5045");
 
         clock.advance(Duration.ofMinutes(1));
-        tools.getMarketValue("Patrick Mahomes");
+        marketValues.answer("Patrick Mahomes");
         assertThat(lastEvidence().get("market-value-4046")).containsEntry("value", "4184");
         assertThat(lastEvidence().get("market-keeper-4046"))
                 .containsEntry("likelyKeeper", "no")
@@ -437,7 +434,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         String wrong = NACUA_MESSAGE.replace("3972", "4100");
         OutboundStubs.llmAdvises(llm, answer(wrong, "9493"), answer(NACUA_MESSAGE, "9493"));
 
-        ToolAnswer<MarketValueAnswers.Reply> answer = tools.getMarketValue("Puka Nacua");
+        ToolAnswer<MarketValueAnswers.Reply> answer = marketValues.answer("Puka Nacua");
 
         assertThat(answer.facts().message()).isEqualTo(NACUA_MESSAGE);
         assertThat(marketRecords().getLast().exchanges()).hasSize(2);
@@ -449,7 +446,7 @@ class MarketValueScenarioTest extends WireSeamTest {
         fantasyCalcAnswers(valuesFor(false, 2, 12, "1"), "fantasycalc/values-redraft.json");
         OutboundStubs.llmAdvises(llm, answer(NACUA_MESSAGE.replace("35th", "3rd"), "9493"));
 
-        ToolAnswer<MarketValueAnswers.Reply> answer = tools.getMarketValue("Puka Nacua");
+        ToolAnswer<MarketValueAnswers.Reply> answer = marketValues.answer("Puka Nacua");
 
         assertThat(answer.facts()).isNull();
         assertThat(answer.unavailable()).contains("failed its fact check twice");

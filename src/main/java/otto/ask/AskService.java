@@ -5,14 +5,24 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.AdvisorParams;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.model.tool.ToolCallingManager;
+import org.springframework.ai.model.tool.ToolExecutionResult;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
 import otto.advice.FriendVoice;
@@ -140,14 +150,16 @@ public class AskService {
     private static final Logger log = LoggerFactory.getLogger(AskService.class);
 
     private final ModelChain chain;
-    private final AskTools tools;
+    private final List<ToolCallback> toolCallbacks;
+    private final ToolCallingManager toolCalling;
     private final ConversationStore conversation;
     private final Clock clock;
 
-    public AskService(ModelChain chain, AskTools tools,
+    public AskService(ModelChain chain, AskTools tools, ToolCallingManager toolCalling,
             ConversationStore conversation, Clock clock) {
         this.chain = chain;
-        this.tools = tools;
+        this.toolCallbacks = List.of(ToolCallbacks.from(tools));
+        this.toolCalling = toolCalling;
         this.conversation = conversation;
         this.clock = clock;
     }
@@ -190,15 +202,12 @@ public class AskService {
     private Outcome run(String question, Instant now) {
         List<Message> messages = prompt(question, now);
         return switch (chain.call(ModelChain.CallSite.ASK, turn -> {
-            String content = turn.timed(() -> turn.provider().chat().prompt()
-                    .messages(messages)
-                    .tools(tools)
-                    .call()
-                    .content());
-            if (content == null || content.isBlank()) {
+            Optional<String> content = turn.timed(() -> converse(turn.provider().chat(), messages))
+                    .filter(text -> !text.isBlank());
+            if (content.isEmpty()) {
                 throw new ModelChain.UnusableReply("The model answered with no content.");
             }
-            return content;
+            return content.get();
         })) {
             case ModelChain.Result.Answered<String> answered ->
                     new Outcome.Answered(answered.value());
@@ -207,6 +216,50 @@ public class AskService {
                 yield new Outcome.Failed(exhausted.anyReached() ? EMPTY_ANSWER : UNREACHABLE);
             }
         };
+    }
+
+    /**
+     * Spring AI's tool-calling advisor can return a tool's result without
+     * a second model reply only for a tool marked {@code returnDirect},
+     * a fixed setting that applies to every round. Whether a checked
+     * answer goes out as it is depends on what else the model called, so
+     * the loop runs here.
+     */
+    private Optional<String> converse(ChatClient chat, List<Message> start) {
+        List<Message> history = start;
+        boolean firstRound = true;
+        while (true) {
+            ChatResponse response = chat.prompt()
+                    .messages(history)
+                    .tools(toolCallbacks)
+                    .advisors(AdvisorParams.toolCallingAdvisorAutoRegister(false))
+                    .call()
+                    .chatResponse();
+            if (response == null || !response.hasToolCalls()) {
+                return Optional.ofNullable(response)
+                        .map(reply -> reply.getResult().getOutput().getText());
+            }
+            CheckedAnswers round = CheckedAnswers.forRound(
+                    firstRound && toolCallCount(response) == 1);
+            ToolExecutionResult executed = toolCalling.executeToolCalls(
+                    new Prompt(history, ToolCallingChatOptions.builder()
+                            .toolCallbacks(toolCallbacks)
+                            .toolContext(round.toolContext())
+                            .build()),
+                    response);
+            Optional<String> checked = round.answerToSendAsIs();
+            if (checked.isPresent()) {
+                return checked;
+            }
+            history = executed.conversationHistory();
+            firstRound = false;
+        }
+    }
+
+    private static long toolCallCount(ChatResponse response) {
+        return response.getResults().stream()
+                .mapToLong(generation -> generation.getOutput().getToolCalls().size())
+                .sum();
     }
 
     private List<Message> prompt(String question, Instant now) {

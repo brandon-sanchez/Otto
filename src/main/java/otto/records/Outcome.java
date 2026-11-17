@@ -16,14 +16,16 @@ import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * How the run ended: one message sent, a waiver board sent, a message
- * built for a dry run and kept unsent, a message held for the next
- * waiver board, nothing sent and why, nothing sent but a notice saying
- * so, or a run that never had a message to send.
+ * How the run ended: one message sent, a checked chat answer handed to
+ * the chat model, a waiver board sent, a message built for a dry run and
+ * kept unsent, a message held for the next waiver board, nothing sent
+ * and why, nothing sent but a notice saying so, or a run that never had
+ * a message to send.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "result")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Outcome.Sent.class, name = "sent"),
+        @JsonSubTypes.Type(value = Outcome.HandedToChat.class, name = "handed-to-chat"),
         @JsonSubTypes.Type(value = Outcome.SentBoard.class, name = "sent-board"),
         @JsonSubTypes.Type(value = Outcome.DryRun.class, name = "dry-run"),
         @JsonSubTypes.Type(value = Outcome.HeldForBoard.class, name = "held-for-board"),
@@ -33,9 +35,26 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @JsonDeserialize(using = Outcome.Reader.class)
 public sealed interface Outcome {
 
-    /** @param message the text the user received */
+    /**
+     * One message sent. A chat tool's checked answer recorded this way
+     * reached the user unchanged, with no chat model reply written over it.
+     *
+     * @param message the text the user received, word for word
+     */
     @JsonDeserialize(using = JsonDeserializer.None.class)
     record Sent(String message) implements Outcome {
+    }
+
+    /**
+     * A chat tool's checked answer given to the chat model as a tool
+     * result, because the model called other tools for the same
+     * question. The user read the model's own reply, which no check
+     * covered and which this record does not hold.
+     *
+     * @param message the checked text the model was given
+     */
+    @JsonDeserialize(using = JsonDeserializer.None.class)
+    record HandedToChat(String message) implements Outcome {
     }
 
     /**
@@ -162,6 +181,7 @@ public sealed interface Outcome {
             }
             Class<? extends Outcome> type = switch (result) {
                 case "sent" -> Sent.class;
+                case "handed-to-chat" -> HandedToChat.class;
                 case "sent-board" -> SentBoard.class;
                 case "dry-run" -> DryRun.class;
                 case "held-for-board" -> HeldForBoard.class;

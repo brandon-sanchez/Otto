@@ -6,6 +6,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -131,8 +133,8 @@ class HabitsScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("pointsLeftOnBench\\\":\\\"30.0"))
                 .withRequestBody(containing("waiverClaimsWon\\\":\\\"1"))
                 .withRequestBody(containing("faabSpent\\\":\\\"$12")));
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("You've given away 30.0 points")));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(answer))));
         DecisionRecord record = onlyHabitsRecord();
         assertThat(record.outcome()).isEqualTo(new Outcome.Sent(answer));
         assertThat(record.evidence()).extracting(evidence -> evidence.id())
@@ -156,8 +158,8 @@ class HabitsScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(HABITS_REQUEST)));
         String message = sentMessage();
         assertThat(message).contains("6 weeks").doesNotContain("overr").doesNotContain("bench");
-        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing(message.substring(0, 40))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(message))));
     }
 
     @Test
