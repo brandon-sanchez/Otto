@@ -56,7 +56,9 @@ public class BuySellReader {
      *
      * <p>Side effects: at most one FantasyCalc request a day for the
      * league's format, through {@link MarketValues}. Without a market
-     * list, players are judged on usage alone.
+     * list, players are judged on usage alone. Judging a player whose
+     * listing carries no 30-day trend reads the lists Otto kept, each
+     * day's at most once for the whole board.
      *
      * @return the board, or unavailable before any game of this season
      *         has expected points or without the player-id map
@@ -76,7 +78,8 @@ public class BuySellReader {
         Optional<Market> market = formats.isEmpty() ? Optional.empty()
                 : switch (values.fantasyCalc(formats.getFirst(), now)) {
                     case SourceResult.Ok<MarketValues.Listing<MarketDay>> ok ->
-                            Optional.of(new Market(formats.getFirst(), ok.value().values()));
+                            Optional.of(new Market(ok.value().values(),
+                                    values.history(formats.getFirst(), ok.value().values())));
                     case SourceResult.Unavailable<MarketValues.Listing<MarketDay>> none ->
                             Optional.empty();
                 };
@@ -86,7 +89,13 @@ public class BuySellReader {
                 directory.read().map(PlayerDirectory::players).orElse(Map.of()), market));
     }
 
-    private record Market(MarketFormat format, MarketDay day) {
+    /**
+     * The league format's list, and the lists kept before it.
+     *
+     * @param history shared by every player the board judges, so each
+     *        kept day is read from storage once for the whole league
+     */
+    private record Market(MarketDay day, MarketValues.History history) {
     }
 
     /** This season's snap shares by Pro Football Reference id, oldest game first. */
@@ -172,8 +181,7 @@ public class BuySellReader {
             if (trend.isPresent() || market.isEmpty()) {
                 return trend;
             }
-            return values.change(market.get().format(), market.get().day(), sleeperId,
-                            TREND_DAYS)
+            return market.get().history().change(sleeperId, TREND_DAYS)
                     .map(change -> new MarketMove((int) change.percent(), change.days(),
                             "Otto's daily record of FantasyCalc's values"));
         }
