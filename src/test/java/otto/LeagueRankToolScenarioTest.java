@@ -3,13 +3,13 @@ package otto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import otto.advice.ToolAnswer;
 import otto.ask.AskTools;
-import otto.ask.ToolAnswer;
+import otto.ask.LeagueRankLookup;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
-import otto.ask.LeagueRankLookup;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
 import otto.telegram.TelegramWebhook;

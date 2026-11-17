@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import otto.ask.LeagueAnalysis;
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
+import otto.league.Seeding;
 import otto.snapshot.RosterSnapshot;
 
 /**
@@ -34,7 +34,7 @@ public record PlayoffRace(List<RosterSnapshot> seeded, int playoffTeams) {
             return Optional.empty();
         }
         return Optional.of(new PlayoffRace(
-                league.rosters().stream().sorted(LeagueAnalysis.BY_SEED).toList(),
+                league.rosters().stream().sorted(Seeding.BY_SEED).toList(),
                 playoffTeams));
     }
 

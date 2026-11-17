@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
 import otto.market.MarketQuote;
 import otto.market.MarketValuation;
 import otto.sleeper.LeagueRules;

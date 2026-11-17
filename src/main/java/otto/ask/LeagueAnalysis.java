@@ -2,29 +2,23 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
-import otto.lineup.LeagueStarters;
-import otto.lineup.PositionCutoffs;
+import otto.advice.ToolAnswer;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
+import otto.league.Seeding;
+import otto.league.TeamDepth;
+import otto.league.UserWeek;
 import otto.lineup.PositionRanking;
-import otto.lineup.PositionRankings;
-import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
 import otto.snapshot.RosterSnapshot;
-import otto.trade.LeagueShape;
 
 /**
  * The deterministic core behind the Ask lane's league tools: the
@@ -38,16 +32,11 @@ import otto.trade.LeagueShape;
 public class LeagueAnalysis {
 
     private final LineupPlanner planner;
-    private final PositionRankings rankings;
-    private final PositionCutoffs replacementCutoffs;
-    private final LeagueStarters starters;
+    private final LeagueShapes shapes;
 
-    public LeagueAnalysis(LineupPlanner planner, PositionRankings rankings,
-            OttoProperties properties, LeagueStarters starters) {
+    public LeagueAnalysis(LineupPlanner planner, LeagueShapes shapes) {
         this.planner = planner;
-        this.rankings = rankings;
-        this.replacementCutoffs = properties.replacementCutoffs();
-        this.starters = starters;
+        this.shapes = shapes;
     }
 
     /** One line of the standings table. */
@@ -64,20 +53,8 @@ public class LeagueAnalysis {
             List<TeamStanding> teams, Integer yourSeed, List<String> notes) {
     }
 
-    /**
-     * Sleeper seeds on wins, and settles a tie on points scored. Ties
-     * count as half a win, which is the same order without needing a
-     * second sort key for them.
-     */
-    public static final Comparator<RosterSnapshot> BY_SEED = Comparator
-            .comparingDouble((RosterSnapshot roster) ->
-                    roster.teamRecord().wins() + 0.5 * roster.teamRecord().ties())
-            .thenComparingDouble(roster -> roster.teamRecord().pointsFor())
-            .reversed()
-            .thenComparing(RosterSnapshot::manager);
-
     public Standings standings(LeagueWeek league) {
-        List<RosterSnapshot> seeded = league.rosters().stream().sorted(BY_SEED).toList();
+        List<RosterSnapshot> seeded = league.rosters().stream().sorted(Seeding.BY_SEED).toList();
         int playoffTeams = league.league().playoffTeams();
 
         List<TeamStanding> teams = new ArrayList<>();
@@ -173,7 +150,7 @@ public class LeagueAnalysis {
                             + "ends, so I cannot work out clinch and elimination conditions");
         }
         int lastWeek = league.lastRegularWeek().getAsInt();
-        List<RosterSnapshot> seeded = league.rosters().stream().sorted(BY_SEED).toList();
+        List<RosterSnapshot> seeded = league.rosters().stream().sorted(Seeding.BY_SEED).toList();
 
         List<TeamOutlook> outlooks = new ArrayList<>();
         String yourStatus = null;
@@ -291,160 +268,12 @@ public class LeagueAnalysis {
 
     // -- get_team_roster ----------------------------------------------------
 
-    /**
-     * How one team stands at one position.
-     *
-     * @param replacement what the player at the replacement rank
-     *        projects, or why that rank has no price
-     * @param aboveReplacement how many of this team's players beat it
-     * @param startingSlots how many slots only this position can fill
-     * @param benchCover how many of the above-replacement players are on
-     *        the bench
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record PositionDepth(String position, String replacement, int aboveReplacement,
-            int startingSlots, int benchCover, String best) {
-    }
-
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record TeamRoster(String manager, String record, String week, int seed,
             String startersProjected, List<LineupPlanner.SlotLine> starters,
             List<LineupPlanner.BenchLine> bench, List<LineupPlanner.BenchLine> reserve,
-            List<LineupPlanner.BenchLine> taxi, List<PositionDepth> positions,
+            List<LineupPlanner.BenchLine> taxi, List<TeamDepth.PositionDepth> positions,
             List<String> strengths, List<String> gaps, List<String> notes) {
-    }
-
-    /** A position with this many spare startable players is a surplus. */
-    private static final int SURPLUS_FOR_A_STRENGTH = 2;
-
-    /**
-     * What replacement level says about one team, read position by
-     * position. The trade tools read the same shape for both sides of a
-     * deal, so it is public: ADR-0004 fixed that a team is judged the
-     * same way whichever team it is, and a second yardstick for a trade
-     * partner would break that.
-     */
-    public record Depth(List<PositionDepth> positions, List<String> strengths,
-            List<String> gaps) {
-
-        public static Depth unpriced() {
-            return new Depth(List.of(), List.of(), List.of());
-        }
-
-        /** True when this position holds fewer startable players than slots only it can fill. */
-        public boolean shortAt(String position) {
-            return positions.stream()
-                    .filter(depth -> depth.position().equals(position))
-                    .anyMatch(depth -> depth.aboveReplacement() < depth.startingSlots()
-                            || depth.benchCover() == 0);
-        }
-
-        /** True when this position holds enough spare startable players to trade one. */
-        public boolean deepAt(String position) {
-            return positions.stream()
-                    .filter(depth -> depth.position().equals(position))
-                    .anyMatch(depth -> depth.aboveReplacement() - depth.startingSlots()
-                            >= SURPLUS_FOR_A_STRENGTH);
-        }
-
-        public Optional<PositionDepth> at(String position) {
-            return positions.stream()
-                    .filter(depth -> depth.position().equals(position))
-                    .findFirst();
-        }
-    }
-
-    /**
-     * The same replacement-level read {@code get_team_roster} gives,
-     * for any roster in the league. The trade tools call it for both
-     * sides of a deal.
-     */
-    public Depth depthOf(LeagueWeek league, RosterSnapshot roster) {
-        UserWeek team = new UserWeek(league.league(), roster, league.week());
-        return ranking(league).map(ranked -> depth(league, team, ranked))
-                .orElseGet(Depth::unpriced);
-    }
-
-    /**
-     * What a week of Replacement Level is worth at one position: the
-     * projection of the player at the position's {@link #replacementRank
-     * replacement rank}. Empty when the table does not reach that far
-     * down, which is a shallow table rather than a replacement level of
-     * zero.
-     */
-    public Optional<Double> replacementLevel(LeagueWeek league, String position) {
-        return replacementLevel(league, position, replacementRank(league, position));
-    }
-
-    /**
-     * What a week of Replacement Level is worth at one position when the
-     * caller sets the cutoff rank, as a trade does from its own
-     * {@link LeagueShape}. Empty when the table does not reach that rank.
-     */
-    public Optional<Double> replacementLevel(LeagueWeek league, String position, int rank) {
-        return ranking(league).flatMap(ranked -> ranked.pointsAtRank(position, rank));
-    }
-
-    /**
-     * Returns the rank Replacement Level is read at for this league: the
-     * number of players at the position who start across the league when
-     * every team starts its best lineup this week, flex and Superflex
-     * spots included, as {@link #shape} counts them.
-     *
-     * <p>A team's depth, the waiver board and a trade all read the rank
-     * from {@link #shape}, so all three agree on what a free agent is
-     * worth. Otherwise the same player is worth two different things on
-     * the same afternoon.
-     *
-     * <p>When neither a best lineup nor a starting slot gives the
-     * position a rank, the configured {@code otto.replacement-cutoffs}
-     * rank stands in. That is 0, no rank at all, for a position the
-     * cutoffs don't name, such as a kicker.
-     */
-    public int replacementRank(LeagueWeek league, String position) {
-        return replacementRank(shape(league), position);
-    }
-
-    private int replacementRank(LeagueShape shape, String position) {
-        return shape.ranks(position)
-                ? shape.replacementRank(position)
-                : replacementCutoffs.forPosition(position);
-    }
-
-    /**
-     * Returns the league's shape with each team's best lineup filled from
-     * this week's projections: active players only, IR and taxi left out
-     * because they cannot start. A team the snapshot holds no roster for
-     * counts as filling every slot it can only fill from free agents.
-     *
-     * @return the shape from the league's slots alone when no projection
-     *         table is read yet or no team has a projected player
-     */
-    public LeagueShape shape(LeagueWeek league) {
-        LeagueShape bySlots = LeagueShape.of(league.league(), league.rosters().size());
-        if (league.week().projections().isEmpty()) {
-            return bySlots;
-        }
-        List<Slot> slots = league.week().startingSlots().stream()
-                .filter(Slot::modelledExactly)
-                .toList();
-        Map<String, String> positions = new HashMap<>();
-        List<Map<String, Double>> teams = new ArrayList<>();
-        for (RosterSnapshot roster : league.rosters()) {
-            UserWeek team = new UserWeek(league.league(), roster, league.week());
-            Map<String, Double> points = new LinkedHashMap<>();
-            team.roster().players().stream()
-                    .filter(playerId -> !roster.reserve().contains(playerId)
-                            && !roster.taxi().contains(playerId))
-                    .forEach(playerId -> team.points(playerId)
-                            .ifPresent(projected -> points.put(playerId, projected)));
-            positions.putAll(team.positions());
-            teams.add(points);
-        }
-        teams.addAll(Collections.nCopies(Math.max(0, bySlots.teams() - teams.size()),
-                Map.<String, Double>of()));
-        Map<String, Integer> starting = starters.startersByPosition(slots, teams, positions);
-        return starting.isEmpty() ? bySlots : bySlots.withStarters(starting);
     }
 
     /**
@@ -459,9 +288,8 @@ public class LeagueAnalysis {
         UserWeek team = new UserWeek(league.league(), roster, league.week());
         LineupPlanner.RosterStatus status = planner.rosterStatus(team, now);
 
-        Optional<PositionRanking> ranking = ranking(league);
-        Depth depth = ranking.map(ranked -> depth(league, team, ranked))
-                .orElseGet(Depth::unpriced);
+        Optional<PositionRanking> ranking = shapes.ranking(league);
+        TeamDepth depth = TeamDepth.of(league, shapes.shape(league), ranking, roster);
 
         List<String> notes = new ArrayList<>();
         if (ranking.isEmpty()) {
@@ -484,123 +312,8 @@ public class LeagueAnalysis {
                 notes));
     }
 
-    /**
-     * Every position this team can start, with what it holds above
-     * replacement level. A position short of its own starting slots is a
-     * gap; two spare startable players over them is a strength. A
-     * starting slot filled below replacement is a gap of its own, named
-     * by the slot so the reader can see which one to attack.
-     */
-    private Depth depth(LeagueWeek league, UserWeek team, PositionRanking ranking) {
-        LeagueShape shape = shape(league);
-        List<PositionDepth> positions = new ArrayList<>();
-        List<String> strengths = new ArrayList<>();
-        List<String> gaps = new ArrayList<>();
-        for (String position : rankedPositions(team)) {
-            int rank = replacementRank(shape, position);
-            Optional<Double> replacement = ranking.pointsAtRank(position, rank);
-            int startingSlots = dedicatedSlots(team, position);
-            List<String> theirs = team.roster().players().stream()
-                    .filter(playerId -> position.equals(team.position(playerId)))
-                    .toList();
-            List<String> startable = replacement
-                    .map(level -> theirs.stream()
-                            .filter(playerId -> team.points(playerId)
-                                    .filter(projected -> projected >= level)
-                                    .isPresent())
-                            .toList())
-                    .orElseGet(List::of);
-            long benchCover = startable.stream()
-                    .filter(playerId -> !team.starters().contains(playerId))
-                    .count();
-
-            positions.add(new PositionDepth(
-                    position,
-                    replacement.map(LeagueAnalysis::points)
-                            .orElse("the table ranks only %d %s, so it does not reach rank %d"
-                                    .formatted(ranking.ranked(position), position, rank)),
-                    startable.size(),
-                    startingSlots,
-                    (int) benchCover,
-                    best(team, theirs)));
-
-            if (replacement.isEmpty()) {
-                continue;
-            }
-            if (startable.size() < startingSlots) {
-                gaps.add("Short at %s: %d startable for %d starting slot%s".formatted(
-                        position, startable.size(), startingSlots,
-                        startingSlots == 1 ? "" : "s"));
-            } else if (startable.size() - startingSlots >= SURPLUS_FOR_A_STRENGTH) {
-                strengths.add("Deep at %s: %d players above the %s replacement level of %s"
-                        .formatted(position, startable.size(), position,
-                                points(replacement.orElseThrow())));
-            }
-            if (benchCover == 0) {
-                gaps.add("No %s cover on the bench above replacement".formatted(position));
-            }
-        }
-        gaps.addAll(slotGaps(shape, team, ranking));
-        return new Depth(positions, strengths, gaps);
-    }
-
-    /** Starting slots filled by a player who projects below replacement. */
-    private List<String> slotGaps(LeagueShape shape, UserWeek team, PositionRanking ranking) {
-        List<String> gaps = new ArrayList<>();
-        for (int index = 0; index < team.slots().size(); index++) {
-            Slot slot = team.slots().get(index);
-            String playerId = team.starterAt(index);
-            if (playerId == null) {
-                gaps.add("The %s slot is empty".formatted(slot.name()));
-                continue;
-            }
-            String position = team.position(playerId);
-            Optional<Double> replacement = ranking.pointsAtRank(position,
-                    replacementRank(shape, position));
-            Optional<Double> projected = team.points(playerId);
-            if (replacement.isEmpty() || projected.isEmpty()
-                    || projected.orElseThrow() >= replacement.orElseThrow()) {
-                continue;
-            }
-            gaps.add("%s: %s projects %s, below the %s replacement level of %s".formatted(
-                    slot.name(), team.name(playerId), points(projected.orElseThrow()),
-                    position, points(replacement.orElseThrow())));
-        }
-        return gaps;
-    }
-
-    /** The positions the league's starting slots can be filled with that have a replacement level. */
-    private List<String> rankedPositions(UserWeek team) {
-        return team.slots().stream()
-                .flatMap(slot -> slot.eligible().stream())
-                .distinct()
-                .filter(position -> replacementCutoffs.forPosition(position) > 0)
-                .sorted()
-                .toList();
-    }
-
-    /** Slots only this position can fill; a flex belongs to nobody. */
-    private static int dedicatedSlots(UserWeek team, String position) {
-        return (int) team.slots().stream()
-                .filter(slot -> slot.eligible().equals(Set.of(position)))
-                .count();
-    }
-
-    private static String best(UserWeek team, List<String> playerIds) {
-        return playerIds.stream()
-                .filter(playerId -> team.points(playerId).isPresent())
-                .max(Comparator.comparingDouble(playerId -> team.points(playerId).orElseThrow()))
-                .map(playerId -> "%s (%s)".formatted(team.name(playerId),
-                        points(team.points(playerId).orElseThrow())))
-                .orElse(null);
-    }
-
-    private Optional<PositionRanking> ranking(LeagueWeek league) {
-        return league.week().projections().flatMap(rankings::rank);
-    }
-
     private static int seedOf(LeagueWeek league, RosterSnapshot roster) {
-        List<RosterSnapshot> seeded = league.rosters().stream().sorted(BY_SEED).toList();
+        List<RosterSnapshot> seeded = league.rosters().stream().sorted(Seeding.BY_SEED).toList();
         for (int index = 0; index < seeded.size(); index++) {
             if (seeded.get(index).rosterId() == roster.rosterId()) {
                 return index + 1;

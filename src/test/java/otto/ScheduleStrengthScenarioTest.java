@@ -5,21 +5,21 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import otto.advice.ToolAnswer;
 import otto.ask.AskTools;
-import otto.ask.ToolAnswer;
+import otto.ask.LeagueRankLookup;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
-import otto.ask.LeagueRankLookup;
 import otto.matchup.MatchupSourcesFactory;
 import otto.matchup.Position;
 import otto.matchup.Ranking;
 import otto.matchup.ScheduleStat;
+import otto.matchup.ScheduleStrength;
 import otto.matchup.Tone;
 import otto.nflverse.DefenseVersusPositionBuilder;
 import otto.nflverse.NflverseFeedService;
-import otto.matchup.ScheduleStrength;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;

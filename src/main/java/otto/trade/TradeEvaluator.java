@@ -19,12 +19,15 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 
+import otto.advice.ToolAnswer;
 import otto.alerts.Confidence;
-import otto.ask.LeagueAnalysis;
-import otto.ask.LeagueWeek;
-import otto.ask.ToolAnswer;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
+import otto.league.LeagueShape;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
+import otto.league.TeamDepth;
+import otto.lineup.PositionRanking;
 import otto.lineup.Slot;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
@@ -60,17 +63,17 @@ public class TradeEvaluator {
     private final PlayerLookup lookup;
     private final RestOfSeasonProjections restOfSeason;
     private final RosterFit rosterFit;
-    private final LeagueAnalysis league;
+    private final LeagueShapes shapes;
     private final TradeMarket market;
     private final InjuredPlayers injuredPlayers;
 
     public TradeEvaluator(PlayerLookup lookup, RestOfSeasonProjections restOfSeason,
-            RosterFit rosterFit, LeagueAnalysis league, TradeMarket market,
+            RosterFit rosterFit, LeagueShapes shapes, TradeMarket market,
             InjuredPlayers injuredPlayers) {
         this.lookup = lookup;
         this.restOfSeason = restOfSeason;
         this.rosterFit = rosterFit;
-        this.league = league;
+        this.shapes = shapes;
         this.market = market;
         this.injuredPlayers = injuredPlayers;
     }
@@ -347,7 +350,7 @@ public class TradeEvaluator {
             case SourceResult.Unavailable<RestOfSeason> unavailable ->
                 new SourceResult.Unavailable<>(unavailable.source(), unavailable.reason());
             case SourceResult.Ok<RestOfSeason> ok -> {
-                LeagueShape shape = league.shape(leagueWeek);
+                LeagueShape shape = shapes.shape(leagueWeek);
                 Map<String, InjuredPlayer> injured = injuredPlayers.read(leagueWeek, ok.value());
                 yield new SourceResult.Ok<>(new Basis(InjuredPlayers.priced(ok.value(), injured),
                         shape, replacementOverTheWeeksLeft(leagueWeek, shape, positions,
@@ -544,7 +547,7 @@ public class TradeEvaluator {
                 partnerOutcome(partner, theirNet),
                 deadline.filter(TradeDeadline::passed).isPresent()
                         ? List.of()
-                        : leverage(leagueWeek, mine, partner),
+                        : leverage(leagueWeek, shape, mine, partner),
                 postTradeRoster(mine, myAfter, outgoing, incoming, slots),
                 postTradeRoster(partner, theirAfter, incoming, outgoing, slots),
                 notes);
@@ -627,10 +630,10 @@ public class TradeEvaluator {
     private Map<String, Double> replacementOverTheWeeksLeft(LeagueWeek leagueWeek,
             LeagueShape shape, Map<String, String> positions, int weeks) {
         Map<String, Double> replacement = new LinkedHashMap<>();
-        positions.values().stream().filter(Objects::nonNull).distinct().sorted()
-                .forEach(position -> league.replacementLevel(leagueWeek, position,
-                                shape.replacementRank(position))
-                        .ifPresent(weekly -> replacement.put(position, weekly * weeks)));
+        shapes.ranking(leagueWeek).ifPresent(ranking -> positions.values().stream()
+                .filter(Objects::nonNull).distinct().sorted()
+                .forEach(position -> shape.replacementLevel(ranking, position)
+                        .ifPresent(weekly -> replacement.put(position, weekly * weeks))));
         return replacement;
     }
 
@@ -860,17 +863,18 @@ public class TradeEvaluator {
      * says which of the user's spare parts the partner has a reason to
      * pay for.
      */
-    private List<String> leverage(LeagueWeek leagueWeek, RosterSnapshot mine,
-            RosterSnapshot partner) {
-        LeagueAnalysis.Depth theirs = league.depthOf(leagueWeek, partner);
-        LeagueAnalysis.Depth ours = league.depthOf(leagueWeek, mine);
+    private List<String> leverage(LeagueWeek leagueWeek, LeagueShape shape,
+            RosterSnapshot mine, RosterSnapshot partner) {
+        Optional<PositionRanking> ranking = shapes.ranking(leagueWeek);
+        TeamDepth theirs = TeamDepth.of(leagueWeek, shape, ranking, partner);
+        TeamDepth ours = TeamDepth.of(leagueWeek, shape, ranking, mine);
         if (theirs.positions().isEmpty() || ours.positions().isEmpty()) {
             return List.of("I have no weekly projection table yet, so I cannot say what "
                     + "either team is short of");
         }
 
         List<String> leverage = new ArrayList<>();
-        for (LeagueAnalysis.PositionDepth depth : theirs.positions()) {
+        for (TeamDepth.PositionDepth depth : theirs.positions()) {
             String position = depth.position();
             if (!theirs.shortAt(position)) {
                 continue;
@@ -884,7 +888,7 @@ public class TradeEvaluator {
             leverage.add(ours.deepAt(position)
                     ? "%s, and you hold %d above replacement there. That is what he has a "
                             .formatted(need, ours.at(position)
-                                    .map(LeagueAnalysis.PositionDepth::aboveReplacement)
+                                    .map(TeamDepth.PositionDepth::aboveReplacement)
                                     .orElse(0))
                             + "reason to pay for"
                     : "%s, but you are no deeper there than he is".formatted(need));

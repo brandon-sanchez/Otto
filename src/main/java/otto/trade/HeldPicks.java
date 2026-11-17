@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 import otto.advice.Ordinal;
-import otto.ask.LeagueAnalysis;
+import otto.league.Seeding;
 import otto.market.DraftPick;
 import otto.sleeper.SleeperAdapter;
 import otto.snapshot.RosterSnapshot;
@@ -39,7 +39,7 @@ record HeldPicks(List<SleeperAdapter.TradedPick> traded, List<RosterSnapshot> se
     static HeldPicks of(List<SleeperAdapter.TradedPick> traded, List<RosterSnapshot> rosters,
             OptionalInt nextDraft) {
         return new HeldPicks(traded,
-                rosters.stream().sorted(LeagueAnalysis.BY_SEED).toList(), nextDraft);
+                rosters.stream().sorted(Seeding.BY_SEED).toList(), nextDraft);
     }
 
     /**

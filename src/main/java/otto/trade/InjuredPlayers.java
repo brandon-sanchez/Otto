@@ -14,11 +14,11 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
+import otto.league.LeagueWeek;
 import otto.research.PlayerResearch;
 import otto.research.ResearchCache;
 import otto.research.ReturnTimeline;

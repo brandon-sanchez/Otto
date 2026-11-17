@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.ToolAnswer;
+import otto.advice.ToolAnswer;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 

@@ -16,10 +16,10 @@ import otto.alerts.AlertPhraser;
 import otto.alerts.Confidence;
 import otto.alerts.MuteStore;
 import otto.alerts.Recommendation;
-import otto.ask.LeagueWeek;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
 import otto.events.Event;
+import otto.league.LeagueWeek;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
 import otto.sleeper.SourceResult;
@@ -111,7 +111,6 @@ public class WaiverAlertService {
         return delivery.deliverPhrased(round, phraser.basis(facts, recommendation),
                 () -> phraser.phrase(facts, recommendation), facts);
     }
-
 
     /** One target, as the outbound message would say it. */
     private static String headline(WaiverCandidate candidate) {

@@ -20,14 +20,15 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.ask.LeagueAnalysis;
-import otto.ask.LeagueWeek;
 import otto.check.WeekFacts;
 import otto.directory.DirectoryPlayer;
 import otto.directory.NameMatch;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
+import otto.league.LeagueShape;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
@@ -93,16 +94,16 @@ public class WaiverScorer {
     private final NflverseStore nflverse;
     private final SleeperAdapter sleeper;
     private final SleeperAdapter withinCadence;
-    private final LeagueAnalysis leagueAnalysis;
+    private final LeagueShapes shapes;
 
     public WaiverScorer(PlayerDirectoryStore directoryStore, NflverseStore nflverse,
-            SleeperAdapter sleeper, LeagueAnalysis leagueAnalysis, OttoProperties properties) {
+            SleeperAdapter sleeper, LeagueShapes shapes, OttoProperties properties) {
         this.directoryStore = directoryStore;
         this.nflverse = nflverse;
         this.sleeper = sleeper;
         // Trending is a poll like any other; only news is always live.
         this.withinCadence = sleeper.cachedWithin(properties.sleeperCadence());
-        this.leagueAnalysis = leagueAnalysis;
+        this.shapes = shapes;
     }
 
     public SourceResult<WaiverBoard> rank(LeagueWeek league, Instant now, WaiverQuery query) {
@@ -341,9 +342,10 @@ public class WaiverScorer {
             // Every position feeds the scale and the roster-need read,
             // whatever the question narrowed to: a player's score must
             // not move because the user asked about his position alone.
+            LeagueShape shape = shapes.shape(league);
             WaiverQuery.ALL_POSITIONS.forEach(position ->
                     replacements.put(position, replacementFor(position,
-                            leagueAnalysis.replacementRank(league, position))));
+                            shape.replacementRank(position))));
             this.scale = scale();
             this.needPositions = needPositions();
             this.positionsThatFixASlot = positionsThatFixASlot();

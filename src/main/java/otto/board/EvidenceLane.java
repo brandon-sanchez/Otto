@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import otto.advice.EvidenceItem;
-import otto.ask.LeagueWeek;
 import otto.directory.DirectoryPlayer;
+import otto.league.LeagueWeek;
 import otto.snapshot.RosterSnapshot;
 
 /**

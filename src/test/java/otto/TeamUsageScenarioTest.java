@@ -6,8 +6,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import otto.advice.ToolAnswer;
 import otto.ask.TeamUsage;
-import otto.ask.ToolAnswer;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;

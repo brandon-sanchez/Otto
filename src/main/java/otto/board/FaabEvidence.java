@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
 import otto.advice.EvidenceItem;
-import otto.ask.LeagueWeek;
 import otto.directory.DirectoryPlayer;
+import otto.league.LeagueWeek;
 import otto.research.ResearchCache;
 import otto.settings.SettingsStore;
 import otto.sleeper.SleeperAdapter;

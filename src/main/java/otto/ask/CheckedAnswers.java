@@ -8,6 +8,11 @@ import java.util.function.Function;
 
 import org.springframework.ai.chat.model.ToolContext;
 
+import otto.advice.AnswerDelivery;
+import otto.advice.ToolAnswer;
+
+import otto.advice.ToolAnswer;
+
 /**
  * The checked answers the chat tools of one round of tool calls hand
  * back, and whether such an answer goes to the user unchanged.
@@ -29,23 +34,16 @@ public final class CheckedAnswers {
 
     private static final String KEY = CheckedAnswers.class.getName();
 
-    /** How a checked answer from this round reaches the user. */
-    public enum Delivery {
-        /** Word for word, with no model reply written around it. */
-        UNCHANGED,
-        /** As a tool result the chat model explains in its own reply. */
-        THROUGH_CHAT_MODEL
-    }
-
-    private final Delivery delivery;
+    private final AnswerDelivery delivery;
     private final List<String> offered = new ArrayList<>();
 
-    private CheckedAnswers(Delivery delivery) {
+    private CheckedAnswers(AnswerDelivery delivery) {
         this.delivery = delivery;
     }
 
     static CheckedAnswers forRound(boolean onlyToolCall) {
-        return new CheckedAnswers(onlyToolCall ? Delivery.UNCHANGED : Delivery.THROUGH_CHAT_MODEL);
+        return new CheckedAnswers(onlyToolCall ? AnswerDelivery.UNCHANGED
+                : AnswerDelivery.THROUGH_CHAT_MODEL);
     }
 
     /** Returns the round's answers from the context a tool was called with. */
@@ -57,7 +55,7 @@ public final class CheckedAnswers {
     }
 
     /** Returns how a checked answer from this round reaches the user. */
-    public Delivery delivery() {
+    public AnswerDelivery delivery() {
         return delivery;
     }
 
@@ -80,7 +78,7 @@ public final class CheckedAnswers {
     }
 
     Optional<String> answerToSendAsIs() {
-        return delivery == Delivery.UNCHANGED && offered.size() == 1
+        return delivery == AnswerDelivery.UNCHANGED && offered.size() == 1
                 ? Optional.of(offered.getFirst())
                 : Optional.empty();
     }

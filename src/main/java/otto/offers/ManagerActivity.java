@@ -7,8 +7,8 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.ask.LeagueWeek;
 import otto.check.SeasonWeek;
+import otto.league.LeagueWeek;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 

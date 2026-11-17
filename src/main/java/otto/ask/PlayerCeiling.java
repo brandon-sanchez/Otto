@@ -9,16 +9,17 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
-import otto.advice.AdviceResult;
-import otto.advice.AdviceWriter;
+import otto.advice.AdvicePrompt;
+import otto.advice.AnswerDelivery;
 import otto.advice.BundlePlayer;
+import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.FriendVoice;
+import otto.advice.ToolAnswer;
 import otto.ceiling.BoomLine;
 import otto.ceiling.Ceiling;
 import otto.check.WeekFacts;
@@ -28,14 +29,9 @@ import otto.lineup.LeagueScoring;
 import otto.nflverse.NflverseStore;
 import otto.nflverse.WeeklyStats;
 import otto.records.Candidate;
-import otto.records.DecisionRecord;
-import otto.records.Outcome;
-import otto.records.RunIds;
 import otto.records.RunKind;
-import otto.records.RunOutcomes;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
-import otto.storage.OttoJson;
 
 /**
  * The deterministic core behind the ceiling question: how often one
@@ -51,14 +47,8 @@ public class PlayerCeiling {
 
     private static final String RUN_ID_PREFIX = "ceiling-";
 
-    private static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user about a
-            player, the way a knowledgeable friend would.
-
-            The user message is an evidence bundle as JSON. State facts only from the
-            evidence bundle: never from memory, never invented. Every number you write
-            must appear in the evidence, written as the evidence writes it. Name only
-            players listed in "players".
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble("about a player",
+            AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
             Explain the player's ceiling and floor in two to four natural sentences of
             plain text: the range most of his weeks land in, how low a bad week goes,
@@ -67,49 +57,24 @@ public class PlayerCeiling {
             words, such as a steady receiver, but never with a number the evidence
             lacks. Past boom weeks are history: mention them only after the estimate,
             say they are history, and never give them as a reason the chance is higher
-            or lower. Introduce the player by full name before using his surname alone.
-            Never write a confidence label such as High or Medium. Stay under
+            or lower. Never write a confidence label such as High or Medium. Stay under
             "maxLength" characters.
-            """ + FriendVoice.RULE + """
-
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": null,
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}]
-            }
-            """;
+            """ + FriendVoice.RULE
+            + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
     private final UserWeekLoader loader;
     private final PlayerLookup lookup;
     private final NflverseStore nflverse;
-    private final AdviceWriter writer;
-    private final RunOutcomes runs;
+    private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
-    private final String userId;
 
     public PlayerCeiling(UserWeekLoader loader, PlayerLookup lookup, NflverseStore nflverse,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            OttoProperties properties) {
+            CheckedAdvice advice, AdviceCheck check) {
         this.loader = loader;
         this.lookup = lookup;
         this.nflverse = nflverse;
-        this.writer = writer;
-        this.runs = runs;
-        this.userId = properties.userId();
-        this.form = new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return INSTRUCTIONS;
-            }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
-                    String reply) {
-                return check.check(bundle, reply);
-            }
-        };
+        this.advice = advice;
+        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
     }
 
     /**
@@ -136,7 +101,7 @@ public class PlayerCeiling {
      *         without a boom line, or the explanation failed its checks
      */
     public ToolAnswer<Answer> explain(String reference, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> switch (loader.league()) {
@@ -153,7 +118,7 @@ public class PlayerCeiling {
     }
 
     private ToolAnswer<Answer> explain(DirectoryPlayer player, SleeperAdapter.League league,
-            WeekFacts week, Instant now, CheckedAnswers.Delivery delivery) {
+            WeekFacts week, Instant now, AnswerDelivery delivery) {
         Optional<Double> projection = week.projections()
                 .flatMap(table -> table.points(player.playerId(), player.position()));
         if (projection.isEmpty()) {
@@ -167,14 +132,12 @@ public class PlayerCeiling {
                     + "have no ceiling for %s").formatted(player.fullName()));
         }
         EvidenceBundle bundle = bundle(player, ceiling.get(), week.scoring(), now);
-        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(player, league, bundle, result, now, delivery));
-        return switch (outcome) {
-            case Outcome.Sent sent -> ToolAnswer.of(new Answer(player.fullName(), sent.message()));
-            case Outcome.HandedToChat handed ->
-                ToolAnswer.of(new Answer(player.fullName(), handed.message()));
-            default -> ToolAnswer.unavailable(withheld(player, result));
-        };
+        return advice.write(bundle, form, new CheckedAdvice.Run(RUN_ID_PREFIX,
+                        List.of(player.playerId()), RunKind.PLAYER_CEILING, league,
+                        List.of(new Candidate(player.playerId(), player.fullName(), true,
+                                "the player the user asked about")), "explanation"), now,
+                        delivery)
+                .answer(message -> new Answer(player.fullName(), message), fallbacks(player));
     }
 
     private static <T> ToolAnswer<Answer> unavailable(SourceResult.Unavailable<T> unavailable) {
@@ -193,15 +156,13 @@ public class PlayerCeiling {
                         .formatted(player.fullName());
     }
 
-    private static String withheld(DirectoryPlayer player, AdviceResult<AdviceAnswer> result) {
-        return switch (result) {
-            case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                ("I cannot reach my language model to explain %s's ceiling right now")
-                        .formatted(player.fullName());
-            default -> ("I worked out %s's ceiling, but I could not check my explanation "
-                    + "of it against the numbers, so I am holding it back rather than risk a "
-                    + "wrong figure").formatted(player.fullName());
-        };
+    private static CheckedAdvice.Fallbacks fallbacks(DirectoryPlayer player) {
+        return new CheckedAdvice.Fallbacks(
+                "I cannot reach my language model to explain %s's ceiling right now"
+                        .formatted(player.fullName()),
+                ("I worked out %s's ceiling, but I could not check my explanation of it "
+                        + "against the numbers, so I am holding it back rather than risk a "
+                        + "wrong figure").formatted(player.fullName()));
     }
 
     private EvidenceBundle bundle(DirectoryPlayer player, Ceiling ceiling, LeagueScoring scoring,
@@ -265,32 +226,6 @@ public class PlayerCeiling {
                         "season", season,
                         "games", Integer.toString(scores.size()),
                         "boomWeeks", Long.toString(booms))));
-    }
-
-    private DecisionRecord record(DirectoryPlayer player, SleeperAdapter.League league,
-            EvidenceBundle bundle, AdviceResult<AdviceAnswer> result, Instant now,
-            CheckedAnswers.Delivery delivery) {
-        String runId = RunIds.stable(RUN_ID_PREFIX, player.playerId(), bundle.identity(),
-                now.toString());
-        return DecisionRecord.forRun(runId, RunKind.PLAYER_CEILING, now, userId,
-                        league.leagueId(), OttoJson.MAPPER.valueToTree(league))
-                .candidates(List.of(new Candidate(player.playerId(), player.fullName(), true,
-                        "the player the user asked about")))
-                .evidence(bundle.recorded())
-                .versions(bundle.versions(form, result))
-                .exchanges(result.exchanges())
-                .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
-                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
-                        case THROUGH_CHAT_MODEL ->
-                            new Outcome.HandedToChat(approved.answer().message());
-                    };
-                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
-                            "The explanation failed its checks twice: "
-                                    + String.join(" ", rejected.failures()));
-                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                        new Outcome.Withheld(unavailable.reason());
-                });
     }
 
     private static String decimal(double value) {

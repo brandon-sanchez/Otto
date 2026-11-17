@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
 import otto.alerts.SelfReportService;
-import otto.ask.LeagueWeek;
+import otto.league.LeagueWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.LeagueScoring;
 import otto.lineup.ProjectionTable;

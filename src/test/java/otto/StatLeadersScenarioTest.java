@@ -3,9 +3,9 @@ package otto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import otto.advice.ToolAnswer;
 import otto.ask.LeagueRankLookup;
 import otto.ask.StatLeaders;
-import otto.ask.ToolAnswer;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;

@@ -14,13 +14,13 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import otto.ask.LeagueWeek;
 import otto.buysell.Assessment;
 import otto.buysell.BuySellReader;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.habits.HabitLean;
+import otto.league.LeagueWeek;
 import otto.market.MarketValuation;
 import otto.matchup.MatchupSourcesFactory;
 import otto.nflverse.NflverseStore;
@@ -171,7 +171,8 @@ public class TradeOffers {
 
     private Ideas search(LeagueWeek league, RosterSnapshot mine, TradeEvaluator.Basis basis,
             Request request, Instant now) {
-        LeagueProfile profile = profiler.profile(league, TeamProfiler.perGame(basis.season()));
+        LeagueProfile profile = profiler.profile(league, basis.shape(),
+                TeamProfiler.perGame(basis.season()));
         TeamProfile user = profile.user().orElseThrow();
         OfferSearch.League read = read(league, mine, user, basis, now);
         OfferSearch.Needs needs = OfferSearch.needs(user, profile.teams().size(),

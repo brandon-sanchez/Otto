@@ -13,11 +13,13 @@ import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
+import otto.advice.AdvicePrompt;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
 import otto.directory.PlayerLookup;
 import otto.market.DraftPick;
 import otto.market.KeeperCost;
@@ -45,18 +47,11 @@ import otto.storage.OttoJson;
 @Component
 public class MarketValueAnswers {
 
-    private static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user, the way a
-            knowledgeable friend would.
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble(
+            "about what one player or draft pick is worth on the trade market in his league",
+            AdvicePrompt.Naming.LISTED) + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
 
-            The user message is an evidence bundle as JSON about what one player or draft
-            pick is worth on the trade market in the user's league. State facts only from
-            the evidence: never from memory, never invented. Every number you write must
-            appear in the evidence, written the same way and with no thousands separators.
-            Name only players listed in "players".
-            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
-
-            Answer in two to four sentences: his value in the league's format and the
+            Write every number with no thousands separators. Answer in two to four sentences: his value in the league's format and the
             source it comes from, his rank and tier when the evidence has them, and how his
             value has moved. Write a rank on the list as "35th on the list" or "12th among
             WRs", never with the word "overall". When "staleness" is present, say how old
@@ -67,16 +62,7 @@ public class MarketValueAnswers {
             Mention his age, roster share or trade share only when they help explain the
             value. Never write a confidence label such as High or Medium. Stay under
             "maxLength" characters. There is no lineup move, so "move" is null.
-
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": null,
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": []
-            }
-            """;
+            """ + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED);
 
     private static final String WITHHELD = "I worked out that value, but my answer failed "
             + "its fact check twice, so I'm not sending numbers I can't stand behind. "
@@ -107,17 +93,7 @@ public class MarketValueAnswers {
         this.valuation = valuation;
         this.keeperCosts = keeperCosts;
         this.writer = writer;
-        this.form = new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return INSTRUCTIONS;
-            }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle, String reply) {
-                return check.check(bundle, reply);
-            }
-        };
+        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
         this.records = records;
         this.userId = properties.userId();
         this.clock = clock;

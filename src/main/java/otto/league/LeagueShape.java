@@ -1,12 +1,15 @@
-package otto.trade;
+package otto.league;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import otto.advice.Ordinal;
+import otto.lineup.PositionCutoffs;
+import otto.lineup.PositionRanking;
 import otto.sleeper.SleeperAdapter;
 
 /**
@@ -22,7 +25,13 @@ import otto.sleeper.SleeperAdapter;
  * the 24th. When no projections are read yet to fill those lineups, the
  * rank falls back to one player for every dedicated slot, with a
  * Superflex slot counted as a quarterback slot because managers fill it
- * with one whenever they can.
+ * with one whenever they can. A position neither gives a rank, such as a
+ * tight end in a league with no tight end slot, reads its rank from the
+ * configured {@code otto.replacement-cutoffs}.
+ *
+ * <p>The waiver board, a team's depth, a trade and a team profile all
+ * read their replacement rank here, so all of them agree on what a free
+ * agent is worth.
  *
  * @param teams how many teams the league holds
  * @param slots dedicated starting slots a team has at each position,
@@ -30,8 +39,11 @@ import otto.sleeper.SleeperAdapter;
  * @param starters how many players at each position start across the
  *        league in every team's best lineup; empty when no lineup could
  *        be filled
+ * @param fallback the rank for a position the slots and starters give
+ *        none; 0 for a position it doesn't name, such as a kicker
  */
-public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Integer> starters) {
+public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Integer> starters,
+        PositionCutoffs fallback) {
 
     private static final double NO_SCARCITY = 1.00;
 
@@ -65,8 +77,10 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      *
      * @param rosterCount how many teams the Snapshot holds, used when the
      *        league document doesn't say {@code num_teams}
+     * @param fallback the configured {@code otto.replacement-cutoffs}
      */
-    public static LeagueShape of(SleeperAdapter.League league, int rosterCount) {
+    public static LeagueShape of(SleeperAdapter.League league, int rosterCount,
+            PositionCutoffs fallback) {
         Map<String, Integer> slots = new LinkedHashMap<>();
         for (String slot : league.rosterPositions()) {
             String position = slot.toUpperCase(Locale.ROOT);
@@ -77,7 +91,8 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                 slots.merge(position, 1, Integer::sum);
             }
         }
-        return new LeagueShape(league.rules().teams().orElse(rosterCount), slots, Map.of());
+        return new LeagueShape(league.rules().teams().orElse(rosterCount), slots, Map.of(),
+                fallback);
     }
 
     /**
@@ -94,13 +109,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                 kept.put(position, count);
             }
         });
-        return new LeagueShape(teams, slots, kept);
-    }
-
-    /** True when the shape gives the position a replacement rank of its own. */
-    public boolean ranks(String position) {
-        return position != null
-                && (starters.containsKey(position) || slots.containsKey(position));
+        return new LeagueShape(teams, slots, kept, fallback);
     }
 
     /** True when a team can start two quarterbacks, through Superflex or two QB slots. */
@@ -112,11 +121,31 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      * Returns the rank Replacement Level is read at: the players at the
      * position who start in the league's best lineups, or one for every
      * dedicated slot when no lineup was filled, and at least the first one.
+     * A position the league's lineup gives no rank reads the fallback
+     * cutoff, which is 0, no rank at all, for a position it doesn't name.
      */
     public int replacementRank(String position) {
+        if (!ranks(position)) {
+            return fallback.forPosition(position);
+        }
         return Math.max(1, starters.isEmpty()
                 ? teams * slots.getOrDefault(position, 0)
                 : starters.getOrDefault(position, 0));
+    }
+
+    /** True when the position has a replacement rank at all. */
+    public boolean hasReplacementLevel(String position) {
+        return replacementRank(position) > 0;
+    }
+
+    /**
+     * Returns what a week of Replacement Level is worth at the position:
+     * the projection of the player at its replacement rank. Empty when the
+     * table does not reach that far down, which is a shallow table rather
+     * than a replacement level of zero, or when the position has no rank.
+     */
+    public Optional<Double> replacementLevel(PositionRanking ranking, String position) {
+        return ranking.pointsAtRank(position, replacementRank(position));
     }
 
     /** Returns the position's scarcity multiplier in this league. */
@@ -148,6 +177,12 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                         .formatted(teams) + "spots included";
         return ("A player is worth his rest-of-season points above the free agent who ranks %s "
                 + "this week, %s. %s").formatted(lines, basis, quarterbacks);
+    }
+
+    /** True when the league's lineup gives the position a replacement rank of its own. */
+    private boolean ranks(String position) {
+        return position != null
+                && (starters.containsKey(position) || slots.containsKey(position));
     }
 
     private static String listed(List<String> items) {

@@ -14,16 +14,17 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
-import otto.OttoProperties;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
-import otto.advice.AdviceResult;
-import otto.advice.AdviceWriter;
+import otto.advice.AdvicePrompt;
+import otto.advice.AnswerDelivery;
 import otto.advice.BundlePlayer;
+import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
+import otto.advice.ToolAnswer;
 import otto.ceiling.Ceiling;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
@@ -31,19 +32,16 @@ import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketValues;
 import otto.offers.Offer;
 import otto.offers.TradeOffers;
-import otto.records.DecisionRecord;
-import otto.records.Outcome;
-import otto.records.RunIds;
 import otto.records.RunKind;
-import otto.records.RunOutcomes;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
-import otto.storage.OttoJson;
 import otto.team.LeagueDirections;
 import otto.team.LeagueProfile;
 import otto.team.PositionProfile;
@@ -76,16 +74,8 @@ public class TeamWeaknesses {
     private static final Pattern EVERY_LEAGUE =
             Pattern.compile("(?i)\\b(?:all|every|each|both)\\b");
 
-    private static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user about his
-            team, the way a knowledgeable friend would.
-
-            The user message is an evidence bundle as JSON. State facts only from the
-            evidence bundle: never from memory, never invented. Every number you write
-            must appear in the evidence, written as the evidence writes it. Name only
-            players listed in "players", and introduce each by full name before using his
-            surname alone.
-            """ + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble("about his team",
+            AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             Write plain text in four parts, with a blank line between parts:
             1. Two or three sentences that sum up the team: where it is strong and where it
@@ -106,16 +96,13 @@ public class TeamWeaknesses {
             When "limits" is present, say each limit plainly in one sentence where it
             matters. Never write a confidence label such as High or Medium. Stay under
             "maxLength" characters.
+            """ + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
-            Answer with only this JSON object:
-            {
-              "message": "the text the user receives",
-              "move": null,
-              "players": ["<playerId of every player the message names>"],
-              "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}],
-              "comparisons": []
-            }
-            """;
+    private static final CheckedAdvice.Fallbacks FALLBACKS = new CheckedAdvice.Fallbacks(
+            "I cannot reach my language model to explain your team right now",
+            "I worked out your team's strengths and weaknesses, but I could not check my "
+                    + "explanation against the numbers, so I am holding it back rather than "
+                    + "risk a wrong figure");
 
     private static final Set<PlayerHealth> INJURED = Set.of(PlayerHealth.QUESTIONABLE,
             PlayerHealth.DOUBTFUL, PlayerHealth.OUT, PlayerHealth.PUP, PlayerHealth.IR);
@@ -130,44 +117,31 @@ public class TeamWeaknesses {
     private final UserWeekLoader loader;
     private final RestOfSeasonProjections restOfSeason;
     private final TeamProfiler profiler;
+    private final LeagueShapes shapes;
     private final PlayerDirectoryStore directory;
     private final MarketValues market;
     private final TeamDirections directions;
     private final TradeOffers offers;
     private final HabitService habits;
-    private final AdviceWriter writer;
-    private final RunOutcomes runs;
+    private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
-    private final String userId;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
-            TeamProfiler profiler, PlayerDirectoryStore directory, MarketValues market,
-            TeamDirections directions, TradeOffers offers, HabitService habits,
-            AdviceWriter writer, AdviceCheck check, RunOutcomes runs,
-            OttoProperties properties) {
+            TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
+            MarketValues market, TeamDirections directions, TradeOffers offers,
+            HabitService habits, CheckedAdvice advice, AdviceCheck check) {
         this.loader = loader;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
+        this.shapes = shapes;
         this.directory = directory;
         this.market = market;
         this.directions = directions;
         this.offers = offers;
         this.habits = habits;
-        this.writer = writer;
-        this.runs = runs;
-        this.userId = properties.userId();
-        this.form = new AdviceForm<>() {
-            @Override
-            public String instructions() {
-                return INSTRUCTIONS;
-            }
-
-            @Override
-            public AdviceCheck.Verdict<AdviceAnswer> check(EvidenceBundle bundle,
-                    String reply) {
-                return QuietHabits.failHabitMentions(check.check(bundle, reply));
-            }
-        };
+        this.advice = advice;
+        this.form = AdviceForm.of(INSTRUCTIONS, (bundle, reply) ->
+                QuietHabits.failHabitMentions(check.check(bundle, reply)));
     }
 
     /**
@@ -199,7 +173,7 @@ public class TeamWeaknesses {
      * @return the checked message, or why there is none in plain words
      */
     public ToolAnswer<Answer> answer(String leagueReference, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         return switch (loader.leagueWeek()) {
             case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
                     "%s: %s".formatted(unavailable.source(), unavailable.reason()));
@@ -209,7 +183,7 @@ public class TeamWeaknesses {
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
-            CheckedAnswers.Delivery delivery) {
+            AnswerDelivery delivery) {
         String name = league.league().name();
         boolean everyLeague = reference != null && EVERY_LEAGUE.matcher(reference).find();
         if (!everyLeague && !names(reference, name)) {
@@ -235,10 +209,10 @@ public class TeamWeaknesses {
 
     private ToolAnswer<Answer> explain(LeagueWeek league, RosterSnapshot mine,
             Map<String, DirectoryPlayer> freeAgents, RestOfSeason season, boolean everyLeague,
-            Instant now, CheckedAnswers.Delivery delivery) {
+            Instant now, AnswerDelivery delivery) {
         String name = league.league().name();
         Map<String, Double> perGame = TeamProfiler.perGame(season);
-        LeagueProfile profile = profiler.profile(league, perGame);
+        LeagueProfile profile = profiler.profile(league, shapes.shape(league), perGame);
         TeamProfile user = profile.user().orElseThrow();
         Optional<Integer> deadline = passedDeadline(league);
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
@@ -251,16 +225,14 @@ public class TeamWeaknesses {
                 deadline, limits(mine, user), everyLeague, direction(league, now));
         EvidenceBundle bundle = QuietHabits.add(TeamWeaknessEvidence.bundle(facts, MAX_LENGTH,
                 now), lean, now);
-        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(league, bundle, result, now, delivery));
-        if (outcome instanceof Outcome.Sent || outcome instanceof Outcome.HandedToChat) {
+        CheckedAdvice.Checked checked = advice.write(bundle, form,
+                new CheckedAdvice.Run(RUN_ID_PREFIX, List.of(league.league().leagueId()),
+                        RunKind.TEAM_WEAKNESSES, league.league(), List.of(), "explanation"),
+                now, delivery);
+        if (checked.reachesUser()) {
             facts.direction().ifPresent(direction -> directions.asked(league, direction.user()));
         }
-        return switch (outcome) {
-            case Outcome.Sent sent -> ToolAnswer.of(new Answer(name, sent.message()));
-            case Outcome.HandedToChat handed -> ToolAnswer.of(new Answer(name, handed.message()));
-            default -> ToolAnswer.unavailable(withheld(result));
-        };
+        return checked.answer(message -> new Answer(name, message), FALLBACKS);
     }
 
     /**
@@ -397,38 +369,5 @@ public class TeamWeaknesses {
             limits.add(ROUTES_LIMIT);
         }
         return limits;
-    }
-
-    private static String withheld(AdviceResult<AdviceAnswer> result) {
-        return switch (result) {
-            case AdviceResult.Unavailable<AdviceAnswer> _ ->
-                "I cannot reach my language model to explain your team right now";
-            default -> "I worked out your team's strengths and weaknesses, but I could not "
-                    + "check my explanation against the numbers, so I am holding it back "
-                    + "rather than risk a wrong figure";
-        };
-    }
-
-    private DecisionRecord record(LeagueWeek league, EvidenceBundle bundle,
-            AdviceResult<AdviceAnswer> result, Instant now, CheckedAnswers.Delivery delivery) {
-        String leagueId = league.league().leagueId();
-        String runId = RunIds.stable(RUN_ID_PREFIX, leagueId, bundle.identity(), now.toString());
-        return DecisionRecord.forRun(runId, RunKind.TEAM_WEAKNESSES, now, userId, leagueId,
-                        OttoJson.MAPPER.valueToTree(league.league()))
-                .evidence(bundle.recorded())
-                .versions(bundle.versions(form, result))
-                .exchanges(result.exchanges())
-                .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
-                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
-                        case THROUGH_CHAT_MODEL ->
-                            new Outcome.HandedToChat(approved.answer().message());
-                    };
-                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
-                            "The explanation failed its checks twice: "
-                                    + String.join(" ", rejected.failures()));
-                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                        new Outcome.Withheld(unavailable.reason());
-                });
     }
 }

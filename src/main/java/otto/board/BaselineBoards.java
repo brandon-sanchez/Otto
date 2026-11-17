@@ -14,9 +14,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.ask.LeagueWeek;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
+import otto.league.LeagueWeek;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.needs.RosterNeeds;

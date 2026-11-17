@@ -6,14 +6,15 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import otto.ask.LeagueAnalysis;
-import otto.ask.LeagueWeek;
 import otto.ask.UserWeekLoader;
 import otto.check.CheckRunner;
 import otto.harness.KickerAndDefenseLeague;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
+import otto.league.LeagueShapes;
+import otto.league.LeagueWeek;
+import otto.league.TeamDepth;
 import otto.needs.RosterNeeds;
 import otto.needs.RosterNeeds.SidelineReason;
 import otto.needs.RosterNeeds.SlotStanding;
@@ -66,7 +67,7 @@ class RosterNeedsScenarioTest extends WireSeamTest {
     private RosterNeedsService needs;
 
     @Autowired
-    private LeagueAnalysis analysis;
+    private LeagueShapes shapes;
 
     private void aWeekThreeLeague(String rostersFixture) {
         stubWeekThreeLeague(rostersFixture);
@@ -100,12 +101,12 @@ class RosterNeedsScenarioTest extends WireSeamTest {
 
     private RosterNeeds assess() {
         return switch (loader.leagueWeek()) {
-            case SourceResult.Ok<otto.ask.LeagueWeek> ok -> switch (needs.assess(ok.value())) {
+            case SourceResult.Ok<otto.league.LeagueWeek> ok -> switch (needs.assess(ok.value())) {
                 case SourceResult.Ok<RosterNeeds> assessed -> assessed.value();
                 case SourceResult.Unavailable<RosterNeeds> unavailable ->
                     throw new AssertionError("needs unavailable: " + unavailable.reason());
             };
-            case SourceResult.Unavailable<otto.ask.LeagueWeek> unavailable ->
+            case SourceResult.Unavailable<otto.league.LeagueWeek> unavailable ->
                 throw new AssertionError("league unavailable: " + unavailable.reason());
         };
     }
@@ -276,9 +277,10 @@ class RosterNeedsScenarioTest extends WireSeamTest {
         RosterSnapshot user = league.rosters().stream()
                 .filter(RosterSnapshot::userRoster).findFirst().orElseThrow();
 
-        LeagueAnalysis.Depth depth = analysis.depthOf(league, user);
+        TeamDepth depth = TeamDepth.of(league, shapes.shape(league), shapes.ranking(league),
+                user);
 
-        assertThat(depth.positions()).extracting(LeagueAnalysis.PositionDepth::position)
+        assertThat(depth.positions()).extracting(TeamDepth.PositionDepth::position)
                 .containsExactly("QB", "RB", "TE", "WR");
     }
 }
