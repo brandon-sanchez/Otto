@@ -28,7 +28,6 @@ import otto.nflverse.Schedule;
 import otto.records.Candidate;
 import otto.records.RunKind;
 import otto.sleeper.SleeperAdapter;
-import otto.sleeper.SourceResult;
 
 /**
  * Answers "what was his snap share last week?" and "what advanced stats
@@ -113,13 +112,8 @@ public class PlayerStatsAnswers {
             AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
-            case PlayerLookup.Match.Found found -> switch (loader.league()) {
-                case SourceResult.Unavailable<SleeperAdapter.League> unavailable ->
-                    ToolAnswer.unavailable("%s: %s".formatted(unavailable.source(),
-                            unavailable.reason()));
-                case SourceResult.Ok<SleeperAdapter.League> league ->
-                    read(found.player(), league.value(), span, asked, now, delivery);
-            };
+            case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
+                    league -> read(found.player(), league, span, asked, now, delivery));
         };
     }
 

@@ -163,9 +163,7 @@ public class BoardComparison {
     private void recordBaselines(LeagueWeek league, ClaimRound round, ScoredBoard scored) {
         Optional<SeasonWeek> week = league.week().seasonWeek();
         Optional<PlayerDirectory> players = directory.read();
-        Optional<RosterSnapshot> user = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> user = league.userRoster();
         if (week.isEmpty() || players.isEmpty() || user.isEmpty()) {
             log.info("The waiver baselines wait: no week, player directory or user roster");
             return;

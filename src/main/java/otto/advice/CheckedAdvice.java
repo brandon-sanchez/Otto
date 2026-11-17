@@ -20,9 +20,7 @@ import otto.storage.OttoJson;
 /**
  * Writes one checked chat answer: the model writes it under a form,
  * {@link AdviceWriter} checks it, and the run is kept as a Decision
- * Record whatever the outcome. Every chat tool that has the model
- * explain computed facts runs through here, so all of them record a
- * run and fall back the same way.
+ * Record whatever the outcome.
  */
 @Component
 public class CheckedAdvice {

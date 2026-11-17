@@ -142,9 +142,7 @@ public class WaiverEvidence {
             return new SourceResult.Unavailable<>("waivers",
                     "there is no player directory yet, so no free agent is known");
         }
-        Optional<RosterSnapshot> user = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> user = league.userRoster();
         if (user.isEmpty()) {
             return new SourceResult.Unavailable<>("waivers",
                     "the Snapshot holds no roster for the user");
@@ -375,7 +373,7 @@ public class WaiverEvidence {
                 .map(standing -> "%s: %s, %s, league median %s".formatted(standing.slot(),
                         standing.points().map(points -> Facts.points(points) + " points "
                                 + basis).orElse("points unknown"),
-                        standing.rank().map(rank -> "%s of %d".formatted(Ordinal.of(rank),
+                        standing.rank().map(rank -> Ordinal.standing(rank,
                                 standing.rankedTeams())).orElse("unranked"),
                         standing.leagueMedian().map(Facts::points).orElse(Facts.UNKNOWN)))
                 .collect(Collectors.joining("; "));

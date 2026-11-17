@@ -15,10 +15,8 @@ import otto.snapshot.RosterSnapshot;
 
 /**
  * What replacement level says about one team, read position by position.
- * {@code get_team_roster} shows it, and a trade reads it for both sides
- * of a deal: ADR-0004 fixed that a team is judged the same way whichever
- * team it is, and a second yardstick for a trade partner would break
- * that.
+ * Every team, the user's or a trade partner's, is read through this one
+ * record, as ADR-0004 requires.
  *
  * @param positions each position the league's slots can start, with
  *        what this team holds above replacement there

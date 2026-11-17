@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
+import otto.advice.Ordinal;
 import otto.check.WeekFacts;
 import otto.league.LeagueWeek;
 import otto.lineup.LineupOptimizer;
@@ -61,9 +62,7 @@ public class RosterNeedsService {
      * @return unavailable when the Snapshot holds no roster for the user
      */
     public SourceResult<RosterNeeds> assess(LeagueWeek league) {
-        Optional<RosterSnapshot> user = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> user = league.userRoster();
         if (user.isEmpty()) {
             return new SourceResult.Unavailable<>("snapshot",
                     "the Snapshot holds no roster for you, so I cannot see what it needs");
@@ -210,8 +209,7 @@ public class RosterNeedsService {
                     .toList();
             Optional<Double> mine = Optional.ofNullable(
                     byRoster.getOrDefault(userRosterId, Map.of()).get(slot));
-            Optional<Integer> rank = mine.map(points ->
-                    1 + (int) league.stream().filter(other -> other > points).count());
+            Optional<Integer> rank = mine.map(points -> Ordinal.rankAmong(points, league));
             standings.add(new SlotStanding(index, slots.get(index).name(), mine, rank,
                     league.size(), median(league)));
         }

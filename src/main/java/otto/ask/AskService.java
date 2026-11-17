@@ -150,10 +150,12 @@ public class AskService {
     private final ConversationStore conversation;
     private final Clock clock;
 
-    public AskService(ModelChain chain, AskTools tools, ToolCallingManager toolCalling,
-            ConversationStore conversation, Clock clock) {
+    public AskService(ModelChain chain, LineupTools lineupTools, PlayerTools playerTools,
+            TradeTools tradeTools, TeamTools teamTools, SettingsTools settingsTools,
+            ToolCallingManager toolCalling, ConversationStore conversation, Clock clock) {
         this.chain = chain;
-        this.toolCallbacks = List.of(ToolCallbacks.from(tools));
+        this.toolCallbacks = List.of(ToolCallbacks.from(lineupTools, playerTools, tradeTools,
+                teamTools, settingsTools));
         this.toolCalling = toolCalling;
         this.conversation = conversation;
         this.clock = clock;

@@ -172,10 +172,10 @@ final class TeamWeaknessEvidence {
         facts.put("strength", words(profile.strength()));
         facts.put("starters", "%s points a game from your top %d %s".formatted(
                 decimal(profile.starterAverage()), width, plural(position, width)));
-        facts.put("starterRank", standing(profile.starterRank(), profile.teams()));
+        facts.put("starterRank", Ordinal.standing(profile.starterRank(), profile.teams()));
         facts.put("depth", "%s points a game from your next %d %s".formatted(
                 decimal(profile.depthAverage()), width, plural(position, width)));
-        facts.put("depthRank", standing(profile.depthRank(), profile.teams()));
+        facts.put("depthRank", Ordinal.standing(profile.depthRank(), profile.teams()));
         facts.put("players", "%d %s you can use".formatted(profile.players().size(),
                 plural(position, profile.players().size())));
         if (Double.isFinite(profile.startableLine())) {
@@ -225,7 +225,8 @@ final class TeamWeaknessEvidence {
         ceiling.put("boomStarters", ("%s of your %d starters reach a boom week in an average "
                 + "week").formatted(decimal(facts.user().boomStarters()),
                         facts.user().lineup().size()));
-        ceiling.put("boomRank", standing(facts.user().boomRank(), facts.league().teams().size()));
+        ceiling.put("boomRank", Ordinal.standing(facts.user().boomRank(),
+                facts.league().teams().size()));
         facts.user().lineup().stream()
                 .filter(player -> player.boomChance().isPresent())
                 .max((a, b) -> Double.compare(a.boomChance().get(), b.boomChance().get()))
@@ -309,10 +310,6 @@ final class TeamWeaknessEvidence {
             case STRONG -> "strong";
             case MIDDLE -> "in the middle";
         };
-    }
-
-    private static String standing(int rank, int teams) {
-        return "%s of %d".formatted(Ordinal.of(rank), teams);
     }
 
     private static String plural(String position, int count) {

@@ -31,7 +31,6 @@ import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunIds;
 import otto.records.RunKind;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
@@ -205,8 +204,7 @@ public class MarketValueAnswers {
 
     private SourceResult<LeagueAndRosters> leagueAndRosters() {
         return loader.league().flatMap(league -> {
-            if (league.rules().format().filter(LeagueRules.LeagueFormat.KEEPER::equals)
-                    .isEmpty()) {
+            if (!league.rules().keeper()) {
                 return new SourceResult.Ok<>(new LeagueAndRosters(league, List.of()));
             }
             return loader.leagueWeek().flatMap(week -> new SourceResult.Ok<>(

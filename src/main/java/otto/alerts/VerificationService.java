@@ -67,9 +67,7 @@ public class VerificationService {
      * @return the verification and note events recorded
      */
     public List<Event> verify(Snapshot snapshot, WeekFacts week, Instant now) {
-        Optional<RosterSnapshot> userRoster = snapshot.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> userRoster = snapshot.userRoster();
         if (userRoster.isEmpty()) {
             return List.of();
         }

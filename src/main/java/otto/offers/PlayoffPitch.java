@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import otto.advice.Ordinal;
+import otto.advice.Prose;
 import otto.matchup.Position;
 import otto.nflverse.DefenseVersusPosition;
 import otto.nflverse.Schedule;
@@ -90,7 +91,7 @@ record PlayoffPitch(int firstWeek, int lastWeek, Schedule schedule,
                 .flatMap(player -> byeWeek(player).map(week -> ("%s, whom he would give up, "
                         + "has his bye in week %d, a playoff week, while %s %s every playoff "
                         + "week from %d to %d").formatted(player.name(), week,
-                        names(receives.stream().map(Player::name).toList()),
+                        Prose.listed(receives.stream().map(Player::name).toList()),
                         receives.size() == 1 ? "plays" : "play", firstWeek, lastWeek))
                         .stream())
                 .findFirst();
@@ -112,9 +113,9 @@ record PlayoffPitch(int firstWeek, int lastWeek, Schedule schedule,
                 .max(Comparator.comparingDouble(Run::averageRank))
                 .map(run -> ("%s gets a soft playoff run, facing %s in weeks %d to %d, "
                         + "defenses that rank %s against %s").formatted(run.player().name(),
-                        names(run.opponents()), firstWeek, lastWeek,
-                        names(run.ranks().stream().map(rank -> "%s of %d".formatted(
-                                Ordinal.of(rank), defenses.teams())).toList()),
+                        Prose.listed(run.opponents()), firstWeek, lastWeek,
+                        Prose.listed(run.ranks().stream().map(rank -> Ordinal.standing(rank,
+                                defenses.teams())).toList()),
                         run.position().plural()));
     }
 
@@ -151,14 +152,6 @@ record PlayoffPitch(int firstWeek, int lastWeek, Schedule schedule,
                 .filter(game -> team.equals(game.home()) || team.equals(game.away()))
                 .findFirst()
                 .map(game -> team.equals(game.home()) ? game.away() : game.home());
-    }
-
-    private static String names(List<String> names) {
-        if (names.size() <= 1) {
-            return String.join("", names);
-        }
-        return String.join(", ", names.subList(0, names.size() - 1)) + " and "
-                + names.getLast();
     }
 
     private record Run(Player player, Position position, List<String> opponents,

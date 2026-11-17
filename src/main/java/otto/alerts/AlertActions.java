@@ -138,10 +138,7 @@ public class AlertActions {
 
     private Optional<RosterSnapshot> rosterAtTap() {
         return snapshotStore.current()
-                .map(Snapshot::rosters)
-                .flatMap(rosters -> rosters.stream()
-                        .filter(RosterSnapshot::userRoster)
-                        .findFirst());
+                .flatMap(Snapshot::userRoster);
     }
 
     private String ackText(String action) {

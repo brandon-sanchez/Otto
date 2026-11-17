@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import otto.advice.Ordinal;
 import otto.team.PositionProfile.Strength;
 
 /**
@@ -67,7 +68,8 @@ public final class WeaknessSuggestions {
                 .filter(player -> player.position().equals(need.position()))
                 .max(Comparator.comparingDouble(RatedPlayer::perGame))
                 .filter(player -> player.perGame() > toBeat)
-                .map(player -> new WaiverSuggestion(need, player, 1 + (int) need.players()
-                        .stream().filter(mine -> mine.perGame() > player.perGame()).count()));
+                .map(player -> new WaiverSuggestion(need, player, Ordinal.rankAmong(
+                        player.perGame(),
+                        need.players().stream().map(RatedPlayer::perGame).toList())));
     }
 }

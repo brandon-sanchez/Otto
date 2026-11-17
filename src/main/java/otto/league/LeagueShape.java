@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import otto.advice.Ordinal;
+import otto.advice.Prose;
 import otto.lineup.PositionCutoffs;
 import otto.lineup.PositionRanking;
 import otto.sleeper.SleeperAdapter;
@@ -28,10 +29,6 @@ import otto.sleeper.SleeperAdapter;
  * with one whenever they can. A position neither gives a rank, such as a
  * tight end in a league with no tight end slot, reads its rank from the
  * configured {@code otto.replacement-cutoffs}.
- *
- * <p>The waiver board, a team's depth, a trade and a team profile all
- * read their replacement rank here, so all of them agree on what a free
- * agent is worth.
  *
  * @param teams how many teams the league holds
  * @param slots dedicated starting slots a team has at each position,
@@ -165,7 +162,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                 .filter(this::ranks)
                 .map(position -> "%s among %ss".formatted(Ordinal.of(replacementRank(position)),
                         position))
-                .collect(Collectors.collectingAndThen(Collectors.toList(), LeagueShape::listed));
+                .collect(Collectors.collectingAndThen(Collectors.toList(), Prose::listed));
         String quarterbacks = twoQuarterbacks()
                 ? "Your league can start two quarterbacks, so a quarterback is the hardest "
                         + "player to replace and carries the biggest premium."
@@ -183,12 +180,5 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
     private boolean ranks(String position) {
         return position != null
                 && (starters.containsKey(position) || slots.containsKey(position));
-    }
-
-    private static String listed(List<String> items) {
-        if (items.size() <= 1) {
-            return String.join("", items);
-        }
-        return String.join(", ", items.subList(0, items.size() - 1)) + " and " + items.getLast();
     }
 }

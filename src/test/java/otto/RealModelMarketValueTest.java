@@ -4,7 +4,7 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import otto.ask.AskTools;
+import otto.ask.SettingsTools;
 import otto.harness.Fixtures;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
@@ -45,7 +45,7 @@ class RealModelMarketValueTest extends RealModelScenario {
                     + "month, so this is a cheap time to ask about him.", NACUA));
 
     @Autowired
-    private AskTools tools;
+    private SettingsTools tools;
 
     @Autowired
     private NflverseFeedService feeds;

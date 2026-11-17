@@ -53,6 +53,7 @@ import otto.team.WaiverSuggestion;
 import otto.team.WeaknessSuggestions;
 import otto.trade.RestOfSeason;
 import otto.trade.RestOfSeasonProjections;
+import otto.trade.TradeDeadline;
 
 /**
  * Answers "what are my team's weaknesses?" in chat, only when the user
@@ -174,12 +175,8 @@ public class TeamWeaknesses {
      */
     public ToolAnswer<Answer> answer(String leagueReference, Instant now,
             AnswerDelivery delivery) {
-        return switch (loader.leagueWeek()) {
-            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
-            case SourceResult.Ok<LeagueWeek> ok -> answer(ok.value(), leagueReference, now,
-                    delivery);
-        };
+        return ToolAnswer.from(loader.leagueWeek(),
+                league -> answer(league, leagueReference, now, delivery));
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
@@ -190,10 +187,8 @@ public class TeamWeaknesses {
             return ToolAnswer.unavailable(("I follow one league, %s, and no other, so I "
                     + "cannot read \"%s\"").formatted(name, reference));
         }
-        Optional<RosterSnapshot> mine = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .filter(roster -> !roster.players().isEmpty())
-                .findFirst();
+        Optional<RosterSnapshot> mine = league.userRoster()
+                .filter(roster -> !roster.players().isEmpty());
         if (mine.isEmpty()) {
             return ToolAnswer.unavailable("the Snapshot holds no players on a roster of yours, "
                     + "so I have no team to read");
@@ -214,7 +209,8 @@ public class TeamWeaknesses {
         Map<String, Double> perGame = TeamProfiler.perGame(season);
         LeagueProfile profile = profiler.profile(league, shapes.shape(league), perGame);
         TeamProfile user = profile.user().orElseThrow();
-        Optional<Integer> deadline = passedDeadline(league);
+        Optional<Integer> deadline = TradeDeadline.passedWeek(
+                league.league().tradeDeadline(), league.week().weekNumber());
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
         List<WaiverSuggestion> waivers = WeaknessSuggestions.of(profile,
                 rated(freeAgents, perGame, league), lean.depthAt());
@@ -316,16 +312,6 @@ public class TeamWeaknesses {
                     .map(user -> new TeamWeaknessEvidence.Direction(user, read.value().market()));
             case SourceResult.Unavailable<LeagueDirections> _ -> Optional.empty();
         };
-    }
-
-    /**
-     * The trade deadline week once it has passed: trades close after the
-     * deadline week, so its own week is still open.
-     */
-    private static Optional<Integer> passedDeadline(LeagueWeek league) {
-        return league.league().tradeDeadline()
-                .filter(deadline -> league.week().weekNumber().isPresent()
-                        && league.week().weekNumber().getAsInt() > deadline);
     }
 
     private static List<BundlePlayer> sidelined(RosterSnapshot roster, TeamProfile user) {

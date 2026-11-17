@@ -175,7 +175,7 @@ public final class RosterPlans {
         Optional<String> replacement = subject.replacement();
         LeagueRules rules = league.rules();
         if (rules.taxi().slots().isEmpty()
-                && rules.format().equals(Optional.of(LeagueRules.LeagueFormat.DYNASTY))) {
+                && rules.dynasty()) {
             ruledOut.put(TAXI, "Sleeper did not say how many taxi slots the league has");
             return;
         }

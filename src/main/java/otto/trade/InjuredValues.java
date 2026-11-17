@@ -41,8 +41,7 @@ public class InjuredValues {
         if (format.isEmpty()) {
             return Optional.empty();
         }
-        Optional<RosterSnapshot> user = league.rosters().stream()
-                .filter(RosterSnapshot::userRoster).findFirst();
+        Optional<RosterSnapshot> user = league.userRoster();
         Optional<RosterSnapshot> other = holder.filter(team -> !team.userRoster());
         Optional<String> timing = format.get() == LeagueRules.LeagueFormat.DYNASTY
                 || player.seasonOver() ? Optional.empty()

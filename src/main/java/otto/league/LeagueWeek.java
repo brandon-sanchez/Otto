@@ -27,6 +27,11 @@ public record LeagueWeek(
         return snapshot.rosters();
     }
 
+    /** Returns the user's own roster, or empty when no team in the league is his. */
+    public Optional<RosterSnapshot> userRoster() {
+        return snapshot.userRoster();
+    }
+
     /**
      * The last week of the regular season, which is the week before the
      * playoffs start. Empty when the league document does not say.

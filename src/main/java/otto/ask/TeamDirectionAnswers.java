@@ -102,17 +102,14 @@ public class TeamDirectionAnswers {
      * @return the checked message, or why there is none in plain words
      */
     public ToolAnswer<Answer> answer(Instant now, AnswerDelivery delivery) {
-        return switch (loader.leagueWeek()) {
-            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
-            case SourceResult.Ok<LeagueWeek> ok -> switch (directions.read(ok.value(), now)) {
-                case SourceResult.Unavailable<LeagueDirections> none -> ToolAnswer.unavailable(
-                        "no game has been played yet and I couldn't read market values, so "
-                                + "I have nothing to judge the teams by: " + none.reason());
-                case SourceResult.Ok<LeagueDirections> read ->
-                    explain(ok.value(), read.value(), now, delivery);
-            };
-        };
+        return ToolAnswer.from(loader.leagueWeek(), league -> switch (directions.read(league,
+                now)) {
+            case SourceResult.Unavailable<LeagueDirections> none -> ToolAnswer.unavailable(
+                    "no game has been played yet and I couldn't read market values, so I have "
+                            + "nothing to judge the teams by: " + none.reason());
+            case SourceResult.Ok<LeagueDirections> read ->
+                explain(league, read.value(), now, delivery);
+        });
     }
 
     /**

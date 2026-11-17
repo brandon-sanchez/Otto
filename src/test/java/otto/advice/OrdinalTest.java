@@ -1,5 +1,7 @@
 package otto.advice;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -15,6 +17,17 @@ class OrdinalTest {
             "21, 21st", "22, 22nd", "23, 23rd", "101, 101st", "111, 111th", "113, 113th"})
     void writesTheSuffixEnglishUses(int rank, String written) {
         assertThat(Ordinal.of(rank)).isEqualTo(written);
+    }
+
+    @Test
+    void writesAStandingOutOfAField() {
+        assertThat(Ordinal.standing(3, 12)).isEqualTo("3rd of 12");
+    }
+
+    @Test
+    void ranksTiedValuesTogetherAndSkipsPastThem() {
+        assertThat(Ordinal.rankAmong(9.0, List.of(10.0, 9.0, 9.0, 8.0))).isEqualTo(2);
+        assertThat(Ordinal.rankAmong(8.0, List.of(10.0, 9.0, 9.0, 8.0))).isEqualTo(4);
     }
 
     @Test

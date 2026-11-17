@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import otto.advice.ToolAnswer;
-import otto.ask.AskTools;
 import otto.ask.MarketValueAnswers;
+import otto.ask.SettingsTools;
 import otto.check.CheckRunner;
 import otto.harness.Fixtures;
 import otto.harness.NflverseStubs;
@@ -89,7 +89,7 @@ class KeeperCostScenarioTest extends WireSeamTest {
     private MarketValueAnswers marketValues;
 
     @Autowired
-    private AskTools tools;
+    private SettingsTools tools;
 
     @Autowired
     private DecisionRecords records;

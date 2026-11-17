@@ -6,7 +6,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import otto.advice.ToolAnswer;
-import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 
 /**
@@ -63,7 +62,7 @@ public class KeeperRuleChat {
      *         rounds, and for a confirm with no rule read off the drafts
      */
     public ToolAnswer<View> apply(SleeperAdapter.League league, String action, Stated stated) {
-        if (league.rules().format().filter(LeagueRules.LeagueFormat.KEEPER::equals).isEmpty()) {
+        if (!league.rules().keeper()) {
             return ToolAnswer.unavailable("this isn't a keeper league, so it has no keeper rule");
         }
         String leagueId = league.leagueId();

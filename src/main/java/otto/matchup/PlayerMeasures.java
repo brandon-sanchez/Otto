@@ -11,6 +11,7 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,6 +24,7 @@ import otto.nflverse.PfrPassing;
 import otto.nflverse.PlayerUsage;
 import otto.nflverse.Players;
 import otto.nflverse.RushingAdvancedStats;
+import otto.nflverse.UsageTotals;
 import otto.nflverse.WeeklyStats;
 
 /**
@@ -79,8 +81,13 @@ final class PlayerMeasures {
      */
     private sealed interface Recipe {
 
+        /**
+         * @param holds whether a game counts toward the stat
+         * @param figure the stat from the usage summed over the games
+         *        that count
+         */
         record FromGames(Predicate<PlayerUsage.Game> holds,
-                Function<List<PlayerUsage.Game>, Figure> figure) implements Recipe {
+                Function<UsageTotals, Figure> figure) implements Recipe {
         }
 
         record FromBoxScores(Function<List<WeeklyStats.StatLine>, Figure> figure)
@@ -115,27 +122,31 @@ final class PlayerMeasures {
     private static Recipe recipe(PlayerStat stat) {
         return switch (stat) {
             case SNAP_SHARE -> new Recipe.FromGames(game -> game.snaps() != null,
-                    held -> new Figure(held.stream()
-                            .mapToDouble(game -> game.snaps().share()).average(), held.size()));
-            case TARGETS_PER_GAME -> perGame(PlayerUsage.Volume::targets);
-            case CARRIES_PER_GAME -> perGame(PlayerUsage.Volume::carries);
-            case TARGET_SHARE -> shareOfTeam(PlayerUsage.Volume::targets,
-                    PlayerUsage.Volume::teamTargets);
-            case CARRY_SHARE -> shareOfTeam(PlayerUsage.Volume::carries,
-                    PlayerUsage.Volume::teamCarries);
-            case AIR_YARDS -> opportunities(PlayerUsage.Opportunities::airYards);
-            case RED_ZONE_TARGETS -> opportunities(PlayerUsage.Opportunities::redZoneTargets);
-            case RED_ZONE_CARRIES -> opportunities(PlayerUsage.Opportunities::redZoneCarries);
-            case END_ZONE_TARGETS -> opportunities(PlayerUsage.Opportunities::endZoneTargets);
+                    totals -> total(totals.snaps(), UsageTotals.Snaps::meanShare));
+            case TARGETS_PER_GAME -> perGame(UsageTotals.Volume::targets);
+            case CARRIES_PER_GAME -> perGame(UsageTotals.Volume::carries);
+            case TARGET_SHARE -> shareOfTeam(UsageTotals.Volume::targets,
+                    UsageTotals.Volume::teamTargets);
+            case CARRY_SHARE -> shareOfTeam(UsageTotals.Volume::carries,
+                    UsageTotals.Volume::teamCarries);
+            case AIR_YARDS -> looks(UsageTotals.Looks::airYards);
+            case RED_ZONE_TARGETS -> looks(UsageTotals.Looks::redZoneTargets);
+            case RED_ZONE_CARRIES -> looks(UsageTotals.Looks::redZoneCarries);
+            case END_ZONE_TARGETS -> looks(UsageTotals.Looks::endZoneTargets);
             case FIRST_READ_TARGETS -> new Recipe.FromGames(
                     game -> game.opportunities() != null
                             && game.opportunities().firstReadTargets() != null,
-                    held -> total(held, game -> game.opportunities().firstReadTargets()));
-            case AIR_YARDS_SHARE -> mean(game -> game.receiving() == null ? null
-                    : game.receiving().airYardsShare());
-            case WOPR -> mean(game -> game.receiving() == null ? null : game.receiving().wopr());
-            case EXPECTED_POINTS_PER_GAME -> mean(game -> game.expected() == null ? null
-                    : game.expected().expectedFantasyPoints());
+                    totals -> total(totals.firstReads(), Integer::doubleValue));
+            case AIR_YARDS_SHARE -> new Recipe.FromGames(
+                    game -> game.receiving() != null && game.receiving().airYardsShare() != null,
+                    totals -> mean(totals.airYardsShare()));
+            case WOPR -> new Recipe.FromGames(
+                    game -> game.receiving() != null && game.receiving().wopr() != null,
+                    totals -> mean(totals.wopr()));
+            case EXPECTED_POINTS_PER_GAME -> new Recipe.FromGames(
+                    game -> game.expected() != null
+                            && game.expected().expectedFantasyPoints() != null,
+                    totals -> mean(totals.expectedPerGame()));
             case TARGETS -> boxTotal("rec_tgt");
             case CARRIES -> boxTotal("rush_att");
             case RECEPTIONS -> boxTotal("rec");
@@ -158,37 +169,37 @@ final class PlayerMeasures {
         };
     }
 
-    private static Recipe perGame(ToIntFunction<PlayerUsage.Volume> own) {
-        return new Recipe.FromGames(game -> game.volume() != null, held -> {
-            int count = held.stream().mapToInt(game -> own.applyAsInt(game.volume())).sum();
-            return new Figure(Ratio.of(count, held.size()), count);
+    private static Recipe perGame(ToIntFunction<UsageTotals.Volume> own) {
+        return new Recipe.FromGames(game -> game.volume() != null, totals -> {
+            UsageTotals.Part<UsageTotals.Volume> volume = totals.volume();
+            int count = volume.value() == null ? 0 : own.applyAsInt(volume.value());
+            return new Figure(Ratio.of(count, volume.counted().size()), count);
         });
     }
 
-    private static Recipe shareOfTeam(ToIntFunction<PlayerUsage.Volume> own,
-            ToIntFunction<PlayerUsage.Volume> team) {
-        return new Recipe.FromGames(game -> game.volume() != null, held -> {
-            int count = held.stream().mapToInt(game -> own.applyAsInt(game.volume())).sum();
-            int teams = held.stream().mapToInt(game -> team.applyAsInt(game.volume())).sum();
+    private static Recipe shareOfTeam(ToIntFunction<UsageTotals.Volume> own,
+            ToIntFunction<UsageTotals.Volume> team) {
+        return new Recipe.FromGames(game -> game.volume() != null, totals -> {
+            UsageTotals.Volume volume = totals.volume().value();
+            int count = volume == null ? 0 : own.applyAsInt(volume);
+            int teams = volume == null ? 0 : team.applyAsInt(volume);
             return new Figure(Ratio.of(count, teams), count);
         });
     }
 
-    private static Recipe opportunities(ToIntFunction<PlayerUsage.Opportunities> count) {
+    private static Recipe looks(ToIntFunction<UsageTotals.Looks> count) {
         return new Recipe.FromGames(game -> game.opportunities() != null,
-                held -> total(held, game -> count.applyAsInt(game.opportunities())));
+                totals -> total(totals.looks(), looks -> count.applyAsInt(looks)));
     }
 
-    private static Figure total(List<PlayerUsage.Game> held,
-            ToIntFunction<PlayerUsage.Game> count) {
-        return new Figure(held.isEmpty() ? OptionalDouble.empty()
-                : OptionalDouble.of(held.stream().mapToInt(count).sum()), held.size());
+    /** A summed part as a figure over the games it counts; empty when no game holds it. */
+    private static <T> Figure total(UsageTotals.Part<T> part, ToDoubleFunction<T> value) {
+        return new Figure(part.value() == null ? OptionalDouble.empty()
+                : OptionalDouble.of(value.applyAsDouble(part.value())), part.counted().size());
     }
 
-    private static Recipe mean(Function<PlayerUsage.Game, Double> figure) {
-        return new Recipe.FromGames(game -> figure.apply(game) != null,
-                held -> new Figure(held.stream().map(figure).mapToDouble(Double::doubleValue)
-                        .average(), held.size()));
+    private static Figure mean(UsageTotals.Mean mean) {
+        return new Figure(mean.value(), mean.games());
     }
 
     private static Recipe boxTotal(String key) {
@@ -254,7 +265,7 @@ final class PlayerMeasures {
                         .or(() -> usage.profile(gsisId).map(Players.Player::name))
                         .orElse(null);
                 players.add(new Placed(position.get(), measurement(gsisId, name,
-                        recipe.figure().apply(held))));
+                        recipe.figure().apply(UsageTotals.of(held)))));
             }
             return weeks(weeks, usage.season(), usage.priorSeasonFinal())
                     .map(covered -> new Measured(covered, players, List.of()));

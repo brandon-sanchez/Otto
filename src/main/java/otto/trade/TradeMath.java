@@ -121,10 +121,7 @@ final class TradeMath {
     }
 
     static String points(double value) {
-        // A rounded zero must never print as "-0.0", which reads as a
-        // loss of nothing rather than as nothing at all.
-        double rounded = round(value);
-        return String.format(Locale.ROOT, "%.1f", rounded == 0 ? 0.0 : rounded);
+        return String.format(Locale.ROOT, "%.1f", round(value));
     }
 
     private static String factor(double value) {
@@ -268,9 +265,6 @@ final class TradeMath {
                 if (piece.asset() instanceof TradeAsset.Faab) {
                     continue;
                 }
-                // Every player on this side is priced as the one player
-                // moving. Two backs sent together must not each be called
-                // buried behind the other: they both leave.
                 Valued valued = value(piece, reading.alongside(assets, piece));
                 values.add(valued.asset());
                 total += valued.value();

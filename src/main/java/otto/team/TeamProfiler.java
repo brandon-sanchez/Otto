@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import otto.advice.Ordinal;
 import otto.ceiling.Ceiling;
 import otto.directory.PlayerHealth;
 import otto.league.LeagueShape;
@@ -69,7 +70,8 @@ public class TeamProfiler {
         return new LeagueProfile(teams.stream()
                 .map(team -> new TeamProfile(team.roster().rosterId(), team.roster().manager(),
                         team.roster().userRoster(), positions.get(team.roster().rosterId()),
-                        team.lineup(), team.boomStarters(), rank(team.boomStarters(), booms)))
+                        team.lineup(), team.boomStarters(),
+                        Ordinal.rankAmong(team.boomStarters(), booms)))
                 .toList());
     }
 
@@ -178,8 +180,8 @@ public class TeamProfiler {
                 List<RatedPlayer> players = team.at(position);
                 int startable = (int) players.stream()
                         .filter(player -> player.perGame() >= line).count();
-                int starterRank = rank(starterAverages.get(index), starterAverages);
-                int depthRank = rank(depthAverages.get(index), depthAverages);
+                int starterRank = Ordinal.rankAmong(starterAverages.get(index), starterAverages);
+                int depthRank = Ordinal.rankAmong(depthAverages.get(index), depthAverages);
                 byTeam.get(team.roster().rosterId()).put(position, new PositionProfile(position,
                         dedicated, spots, players, starterAverages.get(index), starterRank,
                         depthAverages.get(index), depthRank, startable, line, teams.size(),
@@ -231,7 +233,4 @@ public class TeamProfiler {
         return total / count;
     }
 
-    private static int rank(double value, List<Double> values) {
-        return 1 + (int) values.stream().filter(other -> other > value).count();
-    }
 }

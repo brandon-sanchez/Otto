@@ -161,9 +161,7 @@ public class TradeEvaluator {
      */
     public ToolAnswer<TradeEvaluation> evaluate(LeagueWeek leagueWeek, RosterSnapshot partner,
             String gets, String gives) {
-        Optional<RosterSnapshot> mine = leagueWeek.rosters().stream()
-                .filter(RosterSnapshot::userRoster)
-                .findFirst();
+        Optional<RosterSnapshot> mine = leagueWeek.userRoster();
         if (mine.isEmpty()) {
             return ToolAnswer.unavailable(
                     "no team in this league is yours, so I have no side of a trade to judge");
@@ -205,8 +203,8 @@ public class TradeEvaluator {
         addTraded(positions, teams, resolvedIn);
         addTraded(positions, teams, resolvedOut);
         return switch (basis(leagueWeek, positions, teams)) {
-            case SourceResult.Unavailable<Basis> unavailable -> ToolAnswer.unavailable(
-                    "%s: %s".formatted(unavailable.source(), unavailable.reason()));
+            case SourceResult.Unavailable<Basis> unavailable ->
+                ToolAnswer.unavailable(unavailable);
             case SourceResult.Ok<Basis> ok -> ToolAnswer.of(narration.evaluation(leagueWeek,
                     ok.value(), mine.get(), partner, resolvedIn.pieces(), resolvedOut.pieces(),
                     price(leagueWeek, ok.value(), mine.get(), partner, resolvedIn.pieces(),
