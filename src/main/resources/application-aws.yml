@@ -5,6 +5,7 @@ otto:
     bucket: "${OTTO_BUCKET}"
     table: "${OTTO_TABLE}"
     records-bucket: "${OTTO_RECORDS_BUCKET}"
+    account-deletion-function: "${OTTO_ACCOUNT_DELETION_FUNCTION:}"
 
 logging:
   pattern:
