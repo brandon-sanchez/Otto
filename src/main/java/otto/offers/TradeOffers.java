@@ -20,6 +20,7 @@ import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.habits.HabitLean;
 import otto.league.LeagueWeek;
+import otto.matchup.Position;
 import otto.market.MarketValuation;
 import otto.matchup.MatchupSourcesFactory;
 import otto.nflverse.NflverseStore;
@@ -117,8 +118,10 @@ public class TradeOffers {
      *        a 2-for-1 for an upgrade and a 1-for-2 for depth
      * @param lean how his costly habits tilt the search: depth at the
      *        positions it names is sought as a need
+     * @param target the starting position to upgrade, when the user names one
      */
-    public record Request(int count, int skip, Optional<TradeShape> shape, HabitLean lean) {
+    public record Request(int count, int skip, Optional<TradeShape> shape, HabitLean lean,
+            Optional<Position> target) {
 
         public Request {
             if (count < 1 || skip < 0) {
@@ -129,6 +132,10 @@ public class TradeOffers {
         /** A request with no tilt from his habits. */
         public Request(int count, int skip, Optional<TradeShape> shape) {
             this(count, skip, shape, HabitLean.NONE);
+        }
+
+        public Request(int count, int skip, Optional<TradeShape> shape, HabitLean lean) {
+            this(count, skip, shape, lean, Optional.empty());
         }
     }
 
@@ -176,8 +183,11 @@ public class TradeOffers {
         LeagueProfile profile = profiler.profile(league, basis.shape(), perGame);
         TeamProfile user = profile.user().orElseThrow();
         OfferSearch.League read = read(league, mine, user, basis, perGame, now);
-        OfferSearch.Needs needs = OfferSearch.needs(user, profile.teams().size(),
-                request.lean().depthAt());
+        Optional<String> target = request.target().map(Position::name);
+        OfferSearch.Needs needs = target.map(position ->
+                        new OfferSearch.Needs(List.of(position), List.of()))
+                .orElseGet(() -> OfferSearch.needs(user, profile.teams().size(),
+                        request.lean().depthAt()));
         List<OfferSearch.Asset> spare = OfferSearch.assets(read, mine);
         List<OfferSearch.Candidate> candidates = new ArrayList<>();
         for (RosterSnapshot partner : league.rosters()) {
@@ -186,8 +196,11 @@ public class TradeOffers {
             }
             List<OfferSearch.Asset> theirs = OfferSearch.assets(read, partner);
             candidates.addAll(request.shape()
-                    .map(shape -> OfferSearch.asked(read, needs, shape, partner, spare, theirs))
-                    .orElseGet(() -> OfferSearch.defaults(read, needs, partner, spare, theirs)));
+                    .map(shape -> OfferSearch.asked(read, needs, shape, partner, spare, theirs,
+                            target))
+                    .orElseGet(() -> OfferSearch.defaults(read, needs, partner, spare,
+                            theirs.stream().filter(asset -> target.isEmpty()
+                                    || asset.position().equals(target)).toList())));
         }
         candidates.sort(Comparator.comparing((OfferSearch.Candidate candidate) ->
                         !candidate.marketFair())
