@@ -228,30 +228,25 @@ final class DecisionEvidence {
                         replacement.map(DirectoryPlayer::playerId),
                         listed.flatMap(DirectoryPlayer::yearsInLeague)),
                 id -> names.getOrDefault(id, id));
-        return new Planned(droppingOnlyTheLeastValuable(plans, playerId,
-                drops.droppableFor(roster.playerPositions().getOrDefault(playerId, "")), names),
+        return new Planned(droppingOnlyTheLeastValuable(plans, playerId, roster, drops, names),
                 replacement, listed);
     }
 
     /**
      * Returns the plans without those that drop a player other than the
-     * subject who is not among {@code droppable}, each ruled out with
-     * the reason. An empty {@code droppable} means the roster could not
-     * be ranked, and rules nothing out.
+     * subject whom {@code drops} does not let a claim at the subject's
+     * position replace, each ruled out with the reason.
      */
     private static RosterPlans.Plans droppingOnlyTheLeastValuable(RosterPlans.Plans plans,
-            String playerId, List<DropRanking.Ranked> droppable, Map<String, String> names) {
-        if (droppable.isEmpty()) {
-            return plans;
-        }
-        Set<String> allowed = droppable.stream()
-                .map(DropRanking.Ranked::playerId)
-                .collect(Collectors.toSet());
+            String playerId, RosterSnapshot roster, DropRanking drops,
+            Map<String, String> names) {
+        Map<String, String> positions = roster.playerPositions();
         Map<String, String> ruledOut = new LinkedHashMap<>(plans.ruledOut());
         List<RosterPlan> legal = new ArrayList<>();
         for (RosterPlan plan : plans.legal()) {
             Optional<String> other = plan.drop().filter(drop -> !drop.equals(playerId));
-            if (other.isPresent() && !allowed.contains(other.get())) {
+            if (other.isPresent() && !drops.allowsDrop(other.get(), positions.get(other.get()),
+                    positions.getOrDefault(playerId, ""))) {
                 ruledOut.put(plan.id(), "%s is worth more than the least valuable players on "
                         .formatted(names.getOrDefault(other.get(), other.get()))
                         + "the roster, so he is not the one to drop");

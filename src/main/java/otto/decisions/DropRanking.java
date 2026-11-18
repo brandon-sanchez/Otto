@@ -14,14 +14,21 @@ import java.util.Set;
  *
  * @param basis what the values are, in plain words, such as
  *        "FantasyCalc dynasty market value"
- * @param lowestFirst every droppable player, least valuable first;
- *        empty when the roster could not be ranked, which is unknown and
- *        never a ranking of equals
+ * @param lowestFirst every droppable player at a position the market
+ *        prices, least valuable first; empty when the roster could not
+ *        be ranked, which is unknown and never a ranking of equals
  */
 public record DropRanking(String basis, List<Ranked> lowestFirst) {
 
     /** How many of the least valuable players count as the likeliest drops. */
     public static final int LIKELIEST = 3;
+
+    /**
+     * The positions the market lists price. A kicker or a team defense
+     * has no market value by design, so the ranking leaves him out and
+     * has no say in whether he is dropped.
+     */
+    public static final Set<String> PRICED_POSITIONS = Set.of("QB", "RB", "WR", "TE");
 
     /** The ranking of a roster that could not be ranked: it allows and forbids no drop. */
     public static final DropRanking UNKNOWN = new DropRanking("", List.of());
@@ -65,10 +72,26 @@ public record DropRanking(String basis, List<Ranked> lowestFirst) {
     }
 
     /**
-     * Returns the players a claim for a pickup at {@code position} may
-     * drop, least valuable first: the {@link #likeliest} drops and the
-     * least valuable droppable player at that position. Empty when the
-     * roster could not be ranked.
+     * Returns whether a claim may drop a rostered player: always when
+     * the roster could not be ranked or he plays a position the market
+     * does not price, and otherwise only when he is among {@link
+     * #droppableFor}.
+     *
+     * @param position the position of the player to drop; null or
+     *        unknown counts as unpriced
+     * @param pickupPosition the position of the player the claim adds
+     */
+    public boolean allowsDrop(String playerId, String position, String pickupPosition) {
+        return !known() || position == null || !PRICED_POSITIONS.contains(position)
+                || droppableFor(pickupPosition).stream()
+                        .anyMatch(player -> player.playerId().equals(playerId));
+    }
+
+    /**
+     * Returns the ranked players a claim for a pickup at {@code
+     * position} may drop, least valuable first: the {@link #likeliest}
+     * drops and the least valuable droppable player at that position.
+     * Empty when the roster could not be ranked.
      */
     public List<Ranked> droppableFor(String position) {
         Set<Ranked> allowed = new LinkedHashSet<>(likeliest());

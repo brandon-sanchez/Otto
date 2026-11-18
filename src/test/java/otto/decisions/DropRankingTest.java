@@ -30,6 +30,18 @@ class DropRankingTest {
     }
 
     @Test
+    void aDropIsAllowedOnlyFromTheBottomUnlessTheMarketDoesNotPriceHisPosition() {
+        assertThat(RANKING.allowsDrop("Tutu Atwell", "WR", "RB")).isTrue();
+        assertThat(RANKING.allowsDrop("Travis Etienne Jr.", "RB", "RB")).isTrue();
+        assertThat(RANKING.allowsDrop("Travis Etienne Jr.", "RB", "WR")).isFalse();
+        assertThat(RANKING.allowsDrop("Parker Washington", "WR", "WR")).isFalse();
+        assertThat(RANKING.allowsDrop("a kicker", "K", "WR")).isTrue();
+        assertThat(RANKING.allowsDrop("a starter whose game kicked off", "RB", "RB"))
+                .isFalse();
+        assertThat(DropRanking.UNKNOWN.allowsDrop("Parker Washington", "WR", "WR")).isTrue();
+    }
+
+    @Test
     void aRosterThatCouldNotBeRankedAllowsAndForbidsNoDrop() {
         assertThat(DropRanking.UNKNOWN.known()).isFalse();
         assertThat(DropRanking.UNKNOWN.droppableFor("RB")).isEmpty();

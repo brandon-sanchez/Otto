@@ -33,10 +33,17 @@ import otto.trade.RestOfSeasonProjections;
  *
  * <p>A player on IR or the taxi squad is not ranked, and neither is a
  * starter whose game has kicked off, because Sleeper does not let him be
- * dropped this week.
+ * dropped this week. A kicker or a team defense is not ranked either:
+ * the market prices only {@link DropRanking#PRICED_POSITIONS}, and
+ * ranking him as worthless would make him every board's first drop.
+ *
+ * <p>A market list older than {@link #MAX_LIST_AGE_DAYS} ranks nothing.
  */
 @Component
 public class DropRankings {
+
+    /** The oldest market list worth rejecting a drop over, in days. */
+    static final int MAX_LIST_AGE_DAYS = 7;
 
     private static final Logger log = LoggerFactory.getLogger(DropRankings.class);
 
@@ -59,8 +66,19 @@ public class DropRankings {
      *
      * @return {@link DropRanking#UNKNOWN} when the league does not say
      *         its format or team count, or the market list cannot be read
+     *         or is too old; never throws, so advice that only wants the
+     *         ranking as context is not lost with it
      */
     public DropRanking rank(LeagueWeek league, RosterSnapshot roster, Instant now) {
+        try {
+            return ranked(league, roster, now);
+        } catch (RuntimeException e) {
+            log.warn("No drop ranking: reading the values failed", e);
+            return DropRanking.UNKNOWN;
+        }
+    }
+
+    private DropRanking ranked(LeagueWeek league, RosterSnapshot roster, Instant now) {
         Optional<LeagueRules.LeagueFormat> format = league.league().rules().format();
         boolean dynasty = format.filter(LeagueRules.LeagueFormat.REDRAFT::equals).isEmpty();
         Optional<MarketFormat> list = MarketFormat.neededBy(league.league()).stream()
@@ -70,6 +88,12 @@ public class DropRankings {
             return DropRanking.UNKNOWN;
         }
         return switch (market.fantasyCalc(list.get(), now)) {
+            case SourceResult.Ok<MarketValues.Listing<MarketDay>> ok
+                    when ok.value().ageDays() > MAX_LIST_AGE_DAYS -> {
+                log.info("No drop ranking: the market list is {} days old",
+                        ok.value().ageDays());
+                yield DropRanking.UNKNOWN;
+            }
             case SourceResult.Ok<MarketValues.Listing<MarketDay>> ok -> ranking(
                     "FantasyCalc %s market value".formatted(dynasty ? "dynasty" : "redraft"),
                     league, roster, ok.value().values(), now);
@@ -124,6 +148,8 @@ public class DropRankings {
         return roster.players().stream()
                 .filter(playerId -> !roster.reserve().contains(playerId)
                         && !roster.taxi().contains(playerId))
+                .filter(playerId -> DropRanking.PRICED_POSITIONS.contains(
+                        roster.playerPositions().getOrDefault(playerId, "")))
                 .filter(playerId -> !roster.starters().contains(playerId)
                         || !kickedOff(league, roster.playerTeams().get(playerId), now))
                 .toList();

@@ -148,14 +148,12 @@ final class BidCheck {
             return;
         }
         DirectoryPlayer pickup = candidates.get(entry.playerId());
-        List<DropRanking.Ranked> allowed = drops.droppableFor(
-                pickup == null ? "" : pickup.position());
-        if (!allowed.isEmpty()
-                && allowed.stream().noneMatch(player -> player.playerId().equals(drop))) {
+        String pickupPosition = pickup == null ? "" : pickup.position();
+        if (!drops.allowsDrop(drop, user.playerPositions().get(drop), pickupPosition)) {
             failures.add(("%s is not among the roster's least valuable players, so he is not "
                     + "the one to drop for %s. Drop one of these, by id: %s.").formatted(
                             user.playerNames().getOrDefault(drop, drop), name(entry.playerId()),
-                            allowed.stream()
+                            drops.droppableFor(pickupPosition).stream()
                                     .map(player -> "%s (%s)".formatted(player.fullName(),
                                             player.playerId()))
                                     .collect(Collectors.joining(", "))));
