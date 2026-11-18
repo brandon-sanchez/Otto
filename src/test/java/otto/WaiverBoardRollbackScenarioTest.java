@@ -88,7 +88,7 @@ class WaiverBoardRollbackScenarioTest extends WireSeamTest {
         DecisionRecord record = boards.getFirst();
         assertThat(record.outcome()).isInstanceOf(Outcome.DryRun.class);
         assertThat(((Outcome.DryRun) record.outcome()).messages()).singleElement()
-                .satisfies(message -> assertThat(message).startsWith("Your waiver options"));
+                .satisfies(message -> assertThat(message).startsWith("<b>Your waiver options</b>"));
     }
 
     @Test

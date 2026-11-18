@@ -65,9 +65,11 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             to hold and save FAAB, and list any reasonable speculative moves under
             "optional". Otherwise "optional" is empty.
 
-            Write the opening and each reasoning in two to four sentences of plain
-            text, at most 700 characters each, that tell the user why the player is
-            worth a claim through his recent usage, role, news and roster fit.
+            Write the opening in one or two short sentences, and each reasoning in two
+            or three short sentences, at most 700 characters each, that tell the user
+            why the player is worth a claim through his recent usage, role, news and
+            roster fit. The bid, range and drop are shown on their own lines above the
+            reasoning, so the reasoning need not repeat them.
             Introduce every player by full name before using a surname alone. Never
             write a score, a confidence label such as High or Medium, or a "Cons:"
             list; when something is uncertain, say exactly what is uncertain. Never say

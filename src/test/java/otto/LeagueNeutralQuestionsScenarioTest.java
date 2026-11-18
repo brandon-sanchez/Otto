@@ -146,7 +146,7 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
 
         llm.resetScenarios();
         say("the dynasty one");
-        assertThat(sent()).last().isEqualTo("League: Dynasty Bros\n\n" + POINTS);
+        assertThat(sent()).last().isEqualTo("🏈 <b>Dynasty Bros</b>\n\n" + POINTS);
     }
 
     @Test
@@ -163,7 +163,7 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
     void aNeutralAnswerCarriesNoLeagueHeadingWhileTheChatIsAboutALeague() {
         OutboundStubs.llmPhrases(llm, "Start your best lineup.");
         say("who should I start in Dynasty Bros?");
-        assertThat(sent()).containsExactly("League: Dynasty Bros\n\nStart your best lineup.");
+        assertThat(sent()).containsExactly("🏈 <b>Dynasty Bros</b>\n\nStart your best lineup.");
 
         freshModelAndChat();
         modelCalls("get_player_stats", SNAP_CALL);
@@ -188,7 +188,7 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
         OutboundStubs.llmPhrases(llm, "Start your best lineup.");
         say("the dynasty one");
 
-        assertThat(sent()).containsExactly("League: Dynasty Bros\n\nStart your best lineup.");
+        assertThat(sent()).containsExactly("🏈 <b>Dynasty Bros</b>\n\nStart your best lineup.");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("who should I start?")));
     }
