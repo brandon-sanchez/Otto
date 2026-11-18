@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
+import otto.format.TelegramHtml;
 import otto.storage.OttoJson;
 
 /**
@@ -33,7 +34,10 @@ import otto.storage.OttoJson;
  * players it moves, that the advice is conditional on every unknown,
  * that every claim cites evidence that supports it, and the message's
  * voice: no "lock", no confidence labels, no evidence id written out,
- * the kickoff phrase when one is required, and the length limit.
+ * the kickoff phrase when one is required, and the length limit. It
+ * reads the words the user sees: the message with its formatting tags
+ * and emoji removed, so bold or a coloured dot never fails a check and
+ * never counts toward the length.
  *
  * <p>Three things a model writes are read for what they mean instead
  * of failed. A player written by exact full name where an id belongs is
@@ -175,8 +179,9 @@ public class AdviceCheck {
      *        may be named in the message
      * @return as {@link #checkAnswer(EvidenceBundle, AdviceAnswer)}
      */
-    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer answer,
+    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer written,
             Set<String> citedInText) {
+        AdviceAnswer answer = written.withMessage(TelegramHtml.words(written.message()));
         List<String> failures = new ArrayList<>();
         List<BundlePlayer> outsiders = citedOutsiders(bundle, answer, citedInText);
         checkPlayers(bundle, answer, outsiders, failures);
