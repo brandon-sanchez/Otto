@@ -23,28 +23,27 @@ class LeagueChoiceTest {
 
     private static Choice choose(String message, List<FollowedLeague> followed,
             String waiting, String chatLeague) {
-        return LeagueChoice.of(message, followed, Optional.ofNullable(waiting),
-                Optional.ofNullable(chatLeague));
+        return LeagueChoice.of(message, followed, () -> Optional.ofNullable(waiting),
+                () -> Optional.ofNullable(chatLeague));
     }
 
     @Test
     void withOneLeagueEveryMessageIsAboutIt() {
         assertThat(choose(LINEUP, List.of(CANES), null, null))
-                .isEqualTo(new Choice.InOne(CANES, LINEUP, false, LeaguePick.ONLY_LEAGUE));
+                .isEqualTo(new Choice.OnlyLeague(CANES, LINEUP));
     }
 
     @Test
-    void withOneLeagueAskingAboutEveryLeagueIsAnsweredThereAndSaysSo() {
-        String message = "what are the weaknesses on all my teams?";
+    void withOneLeagueTheChatsMemoryIsNeverAskedFor() {
+        Choice choice = LeagueChoice.of("the dynasty one", List.of(CANES),
+                () -> {
+                    throw new AssertionError("read the waiting question");
+                },
+                () -> {
+                    throw new AssertionError("read the chat's league");
+                });
 
-        assertThat(choose(message, List.of(CANES), null, null)).isEqualTo(
-                new Choice.InOne(CANES, message, false, LeaguePick.EVERY_LEAGUE_ASKED));
-    }
-
-    @Test
-    void withOneLeagueTheChatsMemoryHasNoSay() {
-        assertThat(choose("the dynasty one", List.of(CANES), LINEUP, "200")).isEqualTo(
-                new Choice.InOne(CANES, "the dynasty one", false, LeaguePick.ONLY_LEAGUE));
+        assertThat(choice).isEqualTo(new Choice.OnlyLeague(CANES, "the dynasty one"));
     }
 
     @Test
@@ -52,7 +51,7 @@ class LeagueChoiceTest {
         String message = "who should I start in Dynasty Bros?";
 
         assertThat(choose(message, BOTH, null, "100"))
-                .isEqualTo(new Choice.InOne(BROS, message, true, LeaguePick.CHOSEN));
+                .isEqualTo(new Choice.InOne(BROS, message, true));
     }
 
     @Test
@@ -66,7 +65,7 @@ class LeagueChoiceTest {
     @Test
     void aMessageThatNamesNoLeagueIsAboutTheChatsLeague() {
         assertThat(choose(LINEUP, BOTH, null, "200"))
-                .isEqualTo(new Choice.InOne(BROS, LINEUP, false, LeaguePick.CHOSEN));
+                .isEqualTo(new Choice.InOne(BROS, LINEUP, false));
     }
 
     @Test
@@ -83,7 +82,7 @@ class LeagueChoiceTest {
     @Test
     void aShortReplyThatPicksALeagueAnswersTheQuestionThatWaited() {
         assertThat(choose("the dynasty one", BOTH, LINEUP, null))
-                .isEqualTo(new Choice.InOne(BROS, LINEUP, true, LeaguePick.CHOSEN));
+                .isEqualTo(new Choice.InOne(BROS, LINEUP, true));
     }
 
     @Test

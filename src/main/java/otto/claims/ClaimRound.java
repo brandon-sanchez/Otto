@@ -19,7 +19,7 @@ import otto.sleeper.SleeperAdapter;
  * out, the key its Alert is sent under, and the run ids its board and
  * baselines are recorded under. A board that fails its checks is tried
  * again, up to {@link #BOARD_TRIES} times in all, and each try has its
- * own run id and Alert key. Both waiver boards, the baselines and
+ * own run id. Both waiver boards, the baselines and
  * the role-slip advice held for a board read the round here, so none of
  * them depends on another.
  *
@@ -112,23 +112,6 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
      */
     public String alertKey() {
         return "alert:waiver:" + due().toLocalDate();
-    }
-
-    /**
-     * Returns the Alert key the board of one try is sent under: {@link
-     * #alertKey} for the first, and a key of its own for each later
-     * try, so a board that passes on a later try still goes out when a
-     * notice was already sent under the round's key.
-     *
-     * @param boardTry which try, from 1 to {@link #BOARD_TRIES}
-     */
-    public String alertKey(int boardTry) {
-        return boardTry == 1 ? alertKey() : alertKey() + ":try-" + boardTry;
-    }
-
-    /** Returns every Alert key a board of this round can be sent under, first try first. */
-    public List<String> alertKeys() {
-        return IntStream.rangeClosed(1, BOARD_TRIES).mapToObj(this::alertKey).toList();
     }
 
     /**

@@ -137,9 +137,9 @@ public final class StatLeaders {
         boolean everyPosition = ranking.position() == null;
         String lines = IntStream.range(0, listed.size())
                 .mapToObj(index -> line(listed.get(index).rank(), leaders.get(index), stat,
-                        everyPosition))
+                        everyPosition, ranking.dot(listed.get(index)).emoji()))
                 .collect(Collectors.joining("\n"));
-        return new Answer(stat.label(), group, weeks, leaders, opening + "\n" + lines);
+        return new Answer(stat.label(), group, weeks, leaders, opening + "\n\n" + lines);
     }
 
     /**
@@ -158,10 +158,11 @@ public final class StatLeaders {
 
     /**
      * Writes one leader with the stat in bold, as
-     * "3. Chase Brown (RB) · <b>412</b> air yards in 4 games". Leaders
-     * get no coloured dot: every one of them would be green.
+     * "🟢 3. Chase Brown (RB) · <b>412</b> air yards in 4 games".
+     * The caller chooses the dot from the full ranking population.
      */
-    private static String line(int rank, Entry entry, PlayerStat stat, boolean everyPosition) {
+    private static String line(int rank, Entry entry, PlayerStat stat, boolean everyPosition,
+            String dot) {
         String who = everyPosition && entry.position() != null
                 ? "%s (%s)".formatted(TelegramHtml.escape(entry.name()), entry.position())
                 : TelegramHtml.escape(entry.name());
@@ -172,7 +173,7 @@ public final class StatLeaders {
                 && entry.value().equals("1") && stat.label().endsWith("s")
                 ? stat.label().substring(0, stat.label().length() - 1)
                 : stat.label();
-        return "%d. %s · <b>%s</b> %s %s".formatted(rank, who, entry.value(), label, sample);
+        return "%s %d. %s · <b>%s</b> %s %s".formatted(dot, rank, who, entry.value(), label, sample);
     }
 
     private static Optional<PlayerStat> parse(String stat) {

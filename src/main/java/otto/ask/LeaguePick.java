@@ -5,23 +5,26 @@ import java.util.Map;
 import org.springframework.ai.chat.model.ToolContext;
 
 /**
- * How the chat's front door picked the league in scope for one Ask. A
- * chat tool reads it from its {@link ToolContext} instead of working
- * out from its own arguments whether the owner meant every league.
+ * How the chat's front door settled the league in scope for one Ask.
+ * A chat tool that takes the owner's words for a league reads it from
+ * its {@link ToolContext}, so it never counts the followed leagues
+ * itself to know whether those words still matter.
  */
 public enum LeaguePick {
 
-    /** Otto follows several leagues, and the message or the conversation chose this one. */
+    /**
+     * Code settled the league from the message, the conversation or the
+     * owner's reply to "which league?", so a tool does not read the
+     * owner's words for a league.
+     */
     CHOSEN,
 
-    /** Otto follows only this league, and the message did not ask about every league. */
-    ONLY_LEAGUE,
-
     /**
-     * Otto follows only this league, and the message asked about every
-     * league, so the answer covers this one and should say so.
+     * Otto follows only this league, so a tool reads the owner's words
+     * for a league against it: to say so when he asked about every
+     * league, and to name back a league Otto does not follow.
      */
-    EVERY_LEAGUE_ASKED;
+    ONLY_LEAGUE;
 
     private static final String KEY = LeaguePick.class.getName();
 

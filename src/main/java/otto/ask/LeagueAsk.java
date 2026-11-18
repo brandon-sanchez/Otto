@@ -80,8 +80,10 @@ public class LeagueAsk {
         List<FollowedLeague> followed = leagues.followed();
         Instant now = clock.instant();
         LeagueChoice.Choice choice = LeagueChoice.of(message, followed,
-                chatLeague.waiting(now), chatLeague.current(now));
+                () -> chatLeague.waiting(now), () -> chatLeague.current(now));
         return switch (choice) {
+            case LeagueChoice.Choice.OnlyLeague only -> List.of(
+                    answerIn(only.league(), only.message(), false, LeaguePick.ONLY_LEAGUE));
             case LeagueChoice.Choice.InEach each ->
                     inSeveral(each.leagues(), each.question(), each.waited(), now);
             case LeagueChoice.Choice.NoneYet none ->
@@ -90,8 +92,9 @@ public class LeagueAsk {
                         return new Reply(Optional.empty(), whichLeague(followed));
                     }));
             case LeagueChoice.Choice.InOne one -> {
-                Reply reply = answerIn(one.league(), one.question(), one.named(), one.pick());
-                if (one.pick() == LeaguePick.CHOSEN && reply.leagueId().isPresent()) {
+                Reply reply = answerIn(one.league(), one.question(), one.named(),
+                        LeaguePick.CHOSEN);
+                if (reply.leagueId().isPresent()) {
                     chatLeague.answered(one.league().leagueId(), now);
                 }
                 yield List.of(reply);

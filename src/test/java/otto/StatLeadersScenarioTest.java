@@ -32,16 +32,17 @@ class StatLeadersScenarioTest extends WireSeamTest {
 
     private static final String TOP_TEN = """
             <b>Top 10 players in WOPR</b> (weeks 1 to 2 of 2026)
-            1. Leader TE 1 (TE) · <b>0.81</b> WOPR in 2 games
-            2. Leader WR 2 (WR) · <b>0.76</b> WOPR in 2 games
-            3. Leader WR 3 (WR) · <b>0.71</b> WOPR in 2 games
-            4. Leader TE 4 (TE) · <b>0.66</b> WOPR in 2 games
-            5. Leader WR 5 (WR) · <b>0.61</b> WOPR in 2 games
-            6. Leader WR 6 (WR) · <b>0.56</b> WOPR in 2 games
-            7. Leader TE 7 (TE) · <b>0.51</b> WOPR in 2 games
-            8. Leader WR 8 (WR) · <b>0.46</b> WOPR in 2 games
-            9. Leader WR 9 (WR) · <b>0.41</b> WOPR in 2 games
-            10. Leader TE 10 (TE) · <b>0.36</b> WOPR in 2 games""";
+
+            🟢 1. Leader TE 1 (TE) · <b>0.81</b> WOPR in 2 games
+            🟢 2. Leader WR 2 (WR) · <b>0.76</b> WOPR in 2 games
+            🟢 3. Leader WR 3 (WR) · <b>0.71</b> WOPR in 2 games
+            🟡 4. Leader TE 4 (TE) · <b>0.66</b> WOPR in 2 games
+            🟡 5. Leader WR 5 (WR) · <b>0.61</b> WOPR in 2 games
+            🟡 6. Leader WR 6 (WR) · <b>0.56</b> WOPR in 2 games
+            🟠 7. Leader TE 7 (TE) · <b>0.51</b> WOPR in 2 games
+            🟠 8. Leader WR 8 (WR) · <b>0.46</b> WOPR in 2 games
+            🟠 9. Leader WR 9 (WR) · <b>0.41</b> WOPR in 2 games
+            🔴 10. Leader TE 10 (TE) · <b>0.36</b> WOPR in 2 games""";
 
     private static final String TOOL_RESULT = "\"role\":\"tool\"";
 
@@ -84,10 +85,11 @@ class StatLeadersScenarioTest extends WireSeamTest {
 
         assertThat(tightEnds.message()).isEqualTo("""
                 <b>All 4 tight ends with WOPR</b> (week 2 of 2026)
-                1. Leader TE 1 · <b>0.82</b> WOPR in 1 game
-                2. Leader TE 4 · <b>0.67</b> WOPR in 1 game
-                3. Leader TE 7 · <b>0.52</b> WOPR in 1 game
-                4. Leader TE 10 · <b>0.37</b> WOPR in 1 game""");
+
+                🟢 1. Leader TE 1 · <b>0.82</b> WOPR in 1 game
+                🟡 2. Leader TE 4 · <b>0.67</b> WOPR in 1 game
+                🟠 3. Leader TE 7 · <b>0.52</b> WOPR in 1 game
+                🔴 4. Leader TE 10 · <b>0.37</b> WOPR in 1 game""");
     }
 
     @Test

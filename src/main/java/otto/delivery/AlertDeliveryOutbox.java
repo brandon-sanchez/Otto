@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,7 +155,16 @@ public class AlertDeliveryOutbox {
      */
     public List<Event> deliver(DeliveryBasis basis, Supplier<String> compose,
             List<Event> templates) {
-        String text = pendingText(templates.stream().map(Event::key).toList(), basis)
+        return deliver(basis, compose, UnaryOperator.identity(), templates);
+    }
+
+    /** Refreshes time-sensitive text on a matching retry before any part has been sent. */
+    public List<Event> deliver(DeliveryBasis basis, Supplier<String> compose,
+            UnaryOperator<String> refreshPendingText, List<Event> templates) {
+        String text = matchingPending(templates.stream().map(Event::key).toList(), basis)
+                .map(delivery -> delivery.partsSent() == 0
+                        ? refreshPendingText.apply(delivery.text())
+                        : delivery.text())
                 .orElseGet(compose);
         return deliver(TelegramText.parts(text), false, basis, templates);
     }
@@ -261,10 +271,9 @@ public class AlertDeliveryOutbox {
         return store.lease(LEASE_PREFIX + encoded(key), new Lease(holder, now.plus(LEASE)), now);
     }
 
-    private synchronized Optional<String> pendingText(List<String> keys, DeliveryBasis basis) {
+    private synchronized Optional<Delivery> matchingPending(List<String> keys, DeliveryBasis basis) {
         return pending(keys).stream()
                 .filter(delivery -> basis.value().equals(delivery.basis()))
-                .map(Delivery::text)
                 .findFirst();
     }
 

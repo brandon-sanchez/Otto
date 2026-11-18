@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
 import otto.alerts.AlertService;
+import otto.alerts.RoleSlipAdvice;
 import otto.alerts.SelfReportService;
 import otto.alerts.VerificationService;
 import otto.board.BoardComparison;
@@ -72,6 +73,7 @@ public class CheckRunner {
     private final AlertService alertService;
     private final WaiverAlertService waiverAlertService;
     private final WaiverBoardService waiverBoard;
+    private final RoleSlipAdvice roleSlipAdvice;
     private final BoardComparison boardComparison;
     private final BoardRouting routing;
     private final VerificationService verificationService;
@@ -90,7 +92,7 @@ public class CheckRunner {
             LastCheckStore stateStore, EventLog eventLog,
             AlertService alertService, WaiverAlertService waiverAlertService,
             WaiverBoardService waiverBoard, BoardComparison boardComparison,
-            BoardRouting routing,
+            BoardRouting routing, RoleSlipAdvice roleSlipAdvice,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, HabitLedger habits, SelfReportService selfReport,
             ModelChain models, FollowedLeagues leagues, Clock clock,
@@ -107,6 +109,7 @@ public class CheckRunner {
         this.alertService = alertService;
         this.waiverAlertService = waiverAlertService;
         this.waiverBoard = waiverBoard;
+        this.roleSlipAdvice = roleSlipAdvice;
         this.boardComparison = boardComparison;
         this.routing = routing;
         this.verificationService = verificationService;
@@ -221,6 +224,9 @@ public class CheckRunner {
             try {
                 alerts.addAll(alertService.process(leagueWeek));
                 if (round.isPresent()) {
+                    if (round.get().open()) {
+                        roleSlipAdvice.reviewHeld(leagueWeek, now);
+                    }
                     if (routing.sent() == SentWaiverBoard.SCORED) {
                         waiverAlertService.considerWaiverAlert(round.get(), scored)
                                 .ifPresent(alerts::add);

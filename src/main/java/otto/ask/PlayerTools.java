@@ -1,6 +1,7 @@
 package otto.ask;
 
 import java.time.Clock;
+import java.util.List;
 
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -36,6 +37,7 @@ public class PlayerTools {
         this.clock = clock;
     }
 
+    @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "get_player_news", description = """
             The latest news on one player, newest first, with the
             headline, the report and the analysis behind it. This one
@@ -47,6 +49,7 @@ public class PlayerTools {
         return players.news(player, clock.instant());
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_player_ceiling", description = """
             How high one player can score in a big week and how low a bad
             week usually goes: his chance of a boom week, the range most
@@ -62,20 +65,25 @@ public class PlayerTools {
                 PlayerCeiling.Answer::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.FANTASY_POINTS_ASKED)
     @Tool(name = "get_player_stats", description = """
             One player's usage and advanced stats for one week, his team's
             last few games or the season so far: snaps and snap share,
             targets and target share, carries and carry share, air yards,
             air-yards share and WOPR, red-zone, end-zone and first-read
             targets, expected fantasy points against actual, his Next Gen
-            Stats and, for a running back, PFR's contact figures, each with
+            Stats and, for a running back, PFR's contact figures, his
+            fantasy points in his league's own scoring with his rank at
+            his position when fantasyPoints is set, each with
             its sample and his season rank at his position, already written
             and fact-checked. Send its message word for word. Otto stores
             all of these, so call this before ever saying a stat is out of
             reach. Give at most one of week, weeksAgo and lastGames, and
             none for the season so far. Call it for "what was his snap %
-            last week", "how many targets did he get", "what about the
-            week before" and "what advanced stats can you see".""")
+            last week", "how many targets did he get", "how many points
+            did he score last week", "what about the week before" and
+            "what advanced stats can you see". Use it for player stats
+            among one position, multiple positions or all skill players.""")
     public ToolAnswer<PlayerStatsAnswers.Answer> getPlayerStats(
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player,
@@ -95,24 +103,38 @@ public class PlayerTools {
             @ToolParam(required = false, description = """
                     What he asked about, in his words, such as "snap
                     percentage" or "advanced stats".""")
-            String asked, ToolContext context) {
+            String asked,
+            @ToolParam(required = false, description = """
+                    true when he asks about fantasy points: what the
+                    player scored, his points per game or where he ranks
+                    in points. They come in his league's own scoring.
+                    Leave it out for usage and advanced stats.""")
+            Boolean fantasyPoints,
+            @ToolParam(required = false, description = """
+                    Usage rank comparison group explicitly requested by the user.
+                    Use an array of QB, RB, WR and/or TE. For all skill positions
+                    give all four. Omit when no group is named.""")
+            List<String> rankPositions, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return switch (StatsSpan.parse(week, weeksAgo, lastGames)) {
             case StatsSpan.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
             case StatsSpan.Parsed.Ok parsed -> checked.offer(playerStats.answer(player,
-                    parsed.span(), asked, clock.instant(), checked.delivery()),
-                    PlayerStatsAnswers.Answer::message);
+                    parsed.span(), asked, Boolean.TRUE.equals(fantasyPoints), rankPositions,
+                    clock.instant(), checked.delivery()), PlayerStatsAnswers.Answer::message);
         };
     }
 
+    @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "get_team_usage", description = """
-            One NFL team's usage by position group over its last four
-            finished games, week by week, from nflverse: each player's
+            One NFL team's usage by position group from nflverse, for a
+            specific NFL week when requested or the last four finished games: each player's
             snaps and snap share, targets and target share, carries and
             carry share, and the group's share of the team's targets and
             carries. Its table is written to fit one message; show it as
             it is. Call this for "Chargers RB usage", "Lions targets by
-            position", backfield splits and target shares.""")
+            position", backfield splits and target shares. For "that week",
+            use the exact NFL week established in the conversation. For a snap
+            share comparison, request snapShareOnly.""")
     public ToolAnswer<TeamUsage.Report> getTeamUsage(
             @ToolParam(description = """
                     The NFL team as the user wrote it: a nickname, a city
@@ -121,11 +143,25 @@ public class PlayerTools {
             @ToolParam(required = false, description = """
                     QB, RB, WR or TE. Leave it out to compare every
                     group's share of the team's targets and carries.""")
-            String position, ToolContext context) {
-        return CheckedAnswers.of(context).offer(teamUsage.forTeam(team, position),
-                TeamUsage.Report::table);
+            String position,
+            @ToolParam(required = false, description = """
+                    Exact NFL week. For "that week" or "the same week",
+                    reuse the week number in the previous answer. Leave
+                    it out only when no single week is intended.""")
+            Integer week,
+            @ToolParam(required = false, description = """
+                    Weeks back from the last finished NFL week: 1 for
+                    last week, 2 for the week before last. Omit when
+                    week is known or when no single week is intended.""")
+            Integer weeksAgo,
+            @ToolParam(required = false, description = """
+                    True for a snap share comparison. Omit targets and carries.""")
+            Boolean snapShareOnly, ToolContext context) {
+        return CheckedAnswers.of(context).offer(teamUsage.forTeam(team, position, week, weeksAgo,
+                Boolean.TRUE.equals(snapShareOnly)), TeamUsage.Report::table);
     }
 
+    @LeagueNeed(LeagueNeed.When.RANKED_IN_FANTASY_POINTS)
     @Tool(name = "get_league_rank", description = """
             Where one player ranks among his position, one defense
             against a position, or one team's remaining schedule for a
@@ -134,7 +170,10 @@ public class PlayerTools {
             + RankConvention.TONE + """
              Quote ranks as written, such as 3rd or 5th from the bottom.
             For a player, quote his rank as "quoted" writes it, sample
-            included, and add "askedOverall" when it is there. Call this
+            included, and name which position he ranks among. Keep a separate
+            "askedOverall" comparison explicitly labeled as across skill positions.
+            Use get_player_stats for one player's stats across an explicitly named
+            group of multiple positions. Call this
             for "where does he
             rank in target share", "best pass rush in the league",
             "toughest run defense" or "easiest schedule the rest of the
@@ -160,6 +199,7 @@ public class PlayerTools {
         return leagueRanks.lookup(stat, position, who);
     }
 
+    @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "get_stat_leaders", description = """
             The league leaders in one player stat, top 10 unless he names
             a number, at one position or across every position, over the

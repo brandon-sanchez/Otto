@@ -118,6 +118,19 @@ public final class SleeperStubs {
                         .withBody("[]")));
     }
 
+    /**
+     * Sleeper's played stat lines for weeks 1 to 5 of 2026: Isaiah Likely
+     * and Mark Andrews of the Ravens, who are on bye in week 3, beside
+     * Travis Kelce and Dallas Goedert, who play every week. Each line
+     * carries a decoy {@code pts_ppr} of 99.9 that no scoring may read.
+     */
+    public static void likelysPlayedWeeks(WireMockServer sleeper) {
+        for (int week = 1; week <= 5; week++) {
+            stubJson(sleeper, "/v1/stats/nfl/regular/2026/" + week,
+                    "sleeper/stats-2026-%d-likely.json".formatted(week), "stats-likely-" + week);
+        }
+    }
+
     public static void stubJson(WireMockServer server, String path, String fixture, String etag) {
         server.stubFor(get(urlEqualTo(path)).willReturn(aResponse()
                 .withStatus(200)

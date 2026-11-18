@@ -2,6 +2,7 @@ package otto.ask;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import otto.followed.FollowedLeague;
 import otto.followed.LeagueMentions;
@@ -21,7 +22,8 @@ import otto.followed.LeagueMentions;
  *   <li>otherwise no league is chosen yet.</li>
  * </ol>
  *
- * <p>It reads and writes nothing, so the rules are tested on their own.
+ * <p>It reads nothing but what it is handed and writes nothing, so the
+ * rules are tested on their own.
  */
 final class LeagueChoice {
 
@@ -31,13 +33,17 @@ final class LeagueChoice {
     /** What to answer, and in which league or leagues. */
     sealed interface Choice {
 
+        /** Otto follows one league: answer the message there. */
+        record OnlyLeague(FollowedLeague league, String message) implements Choice {
+        }
+
         /**
-         * Answer {@code question} in one league.
+         * Answer {@code question} in one of several followed leagues.
          *
          * @param named true when the message named the league, so the
          *        reply names it whatever it turns out to depend on
          */
-        record InOne(FollowedLeague league, String question, boolean named, LeaguePick pick)
+        record InOne(FollowedLeague league, String question, boolean named)
                 implements Choice {
         }
 
@@ -60,7 +66,9 @@ final class LeagueChoice {
     }
 
     /**
-     * Chooses the league or leagues a message is about.
+     * Chooses the league or leagues a message is about. The chat's
+     * memory is asked for only when several leagues are followed and the
+     * message leaves the choice open.
      *
      * @param followed the followed leagues, never empty
      * @param waiting the question that waits on the owner's choice of
@@ -68,15 +76,13 @@ final class LeagueChoice {
      * @param chatLeagueId the league the chat was last about, if it is
      *        still about one
      */
-    static Choice of(String message, List<FollowedLeague> followed, Optional<String> waiting,
-            Optional<String> chatLeagueId) {
+    static Choice of(String message, List<FollowedLeague> followed,
+            Supplier<Optional<String>> waiting, Supplier<Optional<String>> chatLeagueId) {
         if (followed.size() == 1) {
-            return new Choice.InOne(followed.getFirst(), message, false,
-                    LeagueMentions.everyLeague(message) ? LeaguePick.EVERY_LEAGUE_ASKED
-                            : LeaguePick.ONLY_LEAGUE);
+            return new Choice.OnlyLeague(followed.getFirst(), message);
         }
-        Optional<String> waited = waiting
-                .filter(question -> LeagueMentions.onlyAChoice(message, followed));
+        Optional<String> waited = LeagueMentions.onlyAChoice(message, followed)
+                ? waiting.get() : Optional.empty();
         String question = waited.orElse(message);
         List<FollowedLeague> mentioned = LeagueMentions.named(message, followed);
         List<FollowedLeague> named = mentioned.isEmpty() && LeagueMentions.everyLeague(message)
@@ -84,12 +90,14 @@ final class LeagueChoice {
         if (named.size() > 1) {
             return new Choice.InEach(named, question, waited.isPresent());
         }
-        Optional<FollowedLeague> league = named.stream().findFirst()
-                .or(() -> chatLeagueId.flatMap(id -> followed.stream()
-                        .filter(candidate -> candidate.leagueId().equals(id))
-                        .findFirst()));
-        return league.<Choice>map(chosen -> new Choice.InOne(chosen, question,
-                        !named.isEmpty(), LeaguePick.CHOSEN))
+        if (!named.isEmpty()) {
+            return new Choice.InOne(named.getFirst(), question, true);
+        }
+        return chatLeagueId.get()
+                .flatMap(id -> followed.stream()
+                        .filter(league -> league.leagueId().equals(id))
+                        .findFirst())
+                .<Choice>map(league -> new Choice.InOne(league, question, false))
                 .orElseGet(() -> new Choice.NoneYet(question));
     }
 }

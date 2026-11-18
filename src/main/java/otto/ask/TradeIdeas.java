@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
@@ -24,6 +25,7 @@ import otto.format.TelegramHtml;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
 import otto.league.LeagueWeek;
+import otto.matchup.Position;
 import otto.offers.Offer;
 import otto.offers.TradeOffers;
 import otto.offers.TradeShape;
@@ -140,8 +142,8 @@ public class TradeIdeas {
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
      */
-    public ToolAnswer<Answer> answer(Integer count, Integer shown, String shape, Instant now,
-            AnswerDelivery delivery) {
+    public ToolAnswer<Answer> answer(Integer count, Integer shown, String shape,
+            String position, Instant now, AnswerDelivery delivery) {
         if (shown != null && count == null) {
             return ToolAnswer.unavailable(("he has seen %d trade ideas and asked for more "
                     + "without saying how many: ask him how many more he wants, then call "
@@ -149,6 +151,15 @@ public class TradeIdeas {
         }
         if (count != null && count < 1) {
             return ToolAnswer.unavailable("ask for at least one trade idea");
+        }
+        Optional<Position> target = Position.parse(position);
+        if (position != null && !position.isBlank() && target.isEmpty()) {
+            return ToolAnswer.of(new Answer("I can look for upgrades at QB, RB, WR or TE."));
+        }
+        Optional<Position> positionInShape = Position.parse(shape);
+        if (positionInShape.isPresent() && (target.isEmpty() || target.equals(positionInShape))) {
+            target = positionInShape;
+            shape = null;
         }
         if (TradeShape.tooLarge(shape)) {
             return ToolAnswer.unavailable(("he asked for a %s trade, and I build trades of up "
@@ -165,30 +176,41 @@ public class TradeIdeas {
         }
         TradeOffers.Request request = new TradeOffers.Request(
                 count == null ? TradeOffers.DEFAULT_COUNT : count,
-                shown == null ? 0 : Math.max(0, shown), asked);
-        return ToolAnswer.from(loader.leagueWeek(),
-                league -> answer(league, request, now, delivery));
+                shown == null ? 0 : Math.max(0, shown), asked, HabitLean.NONE, target);
+        return switch (loader.leagueWeek()) {
+            case SourceResult.Ok<LeagueWeek> ok -> answer(ok.value(), request, now, delivery);
+            case SourceResult.Unavailable<LeagueWeek> unavailable -> ToolAnswer.of(new Answer(
+                    "snapshot".equals(unavailable.source())
+                            ? "I don’t have a roster snapshot for this league yet."
+                            : "I couldn’t load your league from Sleeper to build trade offers."));
+        };
     }
 
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,
             Instant now, AnswerDelivery delivery) {
         Optional<TradeDeadline> deadline = deadlines.assess(league);
-        if (deadline.filter(TradeDeadline::closed).isPresent()) {
-            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(now, delivery);
-            return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
-                    : ToolAnswer.of(new Answer(read.facts().message()));
+        Optional<String> closed = deadline.flatMap(TradeDeadline::closedBecause);
+        if (closed.isPresent()) {
+            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null,
+                    LeaguePick.CHOSEN, now, delivery);
+            String message = read.facts() == null
+                    ? StringUtils.capitalize(closed.get()) + "."
+                    : read.facts().message();
+            return ToolAnswer.of(new Answer(message));
         }
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
         return switch (offers.find(league, new TradeOffers.Request(request.count(),
-                request.skip(), request.shape(), lean), now)) {
+                request.skip(), request.shape(), lean, request.target()), now)) {
             case SourceResult.Unavailable<TradeOffers.Ideas> unavailable ->
-                ToolAnswer.unavailable(unavailable.reason());
+                ToolAnswer.of(new Answer(StringUtils.capitalize(unavailable.reason()) + "."));
             case SourceResult.Ok<TradeOffers.Ideas> ideas when ideas.value().offers().isEmpty() ->
-                ToolAnswer.unavailable(request.skip() > 0
-                        ? "there are no more trades that are a win for him and that the other "
-                                + "manager would plausibly accept"
-                        : "no trade I could build is a win for him that the other manager "
-                                + "would plausibly accept right now");
+                ToolAnswer.of(new Answer(request.skip() > 0
+                        ? "I couldn't find any more deals that help your team and give the "
+                                + "other manager a reason to say yes."
+                        : request.target().map(position -> "I couldn't find a deal to upgrade your "
+                                + position.plural() + " that the other manager might accept.")
+                                .orElse("I couldn't find a deal that helps your team and gives the "
+                                        + "other manager a reason to say yes right now.")));
             case SourceResult.Ok<TradeOffers.Ideas> ideas -> explain(league, request,
                     ideas.value().offers(), deadline, lean, now, delivery);
         };
@@ -198,13 +220,15 @@ public class TradeIdeas {
             List<Offer> found, Optional<TradeDeadline> deadline, HabitLean lean, Instant now,
             AnswerDelivery delivery) {
         int maxLength = Math.min(LONGEST, INTRO_LENGTH + LENGTH_PER_OFFER * found.size());
-        EvidenceBundle bundle = QuietHabits.add(TradeIdeaEvidence.bundle(
-                new TradeIdeaEvidence.Facts(league.league().name(), found, request.count(),
-                        request.skip(), request.shape().map(TradeShape::words),
-                        deadline.map(TradeDeadline::message)), maxLength, now), lean, now);
+        TradeIdeaEvidence.Facts facts = new TradeIdeaEvidence.Facts(league.league().name(),
+                found, request.count(), request.skip(), request.shape().map(TradeShape::words),
+                deadline.map(TradeDeadline::message));
+        EvidenceBundle bundle = QuietHabits.add(
+                TradeIdeaEvidence.bundle(facts, maxLength, now), lean, now);
         return advice.write(bundle, form(found), new CheckedAdvice.Run(RUN_ID_PREFIX,
                         List.of(league.league().leagueId()), RunKind.TRADE_IDEAS,
-                        league.league(), candidates(found), "explanation"), now, delivery)
+                        league.league(), candidates(found), "explanation"), now, delivery,
+                        () -> TradeIdeaEvidence.verifiedMessage(facts))
                 .answer(Answer::new, FALLBACKS);
     }
 

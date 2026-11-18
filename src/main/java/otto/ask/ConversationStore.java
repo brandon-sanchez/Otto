@@ -78,12 +78,12 @@ public class ConversationStore {
     }
 
     /**
-     * A turn as the conversation document stores it. The shape is the
-     * one older code reads, so a rollback reads new turns too.
+     * A turn as the conversation document stores it. The league stays a
+     * plain string field, so every deployed version reads the document.
      *
      * @param leagueId the league's id, or {@link #EVERY_LEAGUE}; null in
-     *        a turn stored before turns named their league, which was
-     *        about the config league
+     *        a turn written without a league, which reads as the config
+     *        league
      */
     private record StoredTurn(Turn.Role role, String text, Instant at, String leagueId) {
     }

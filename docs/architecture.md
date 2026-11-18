@@ -143,6 +143,8 @@ Answers are short and scannable: what you asked comes first, one fact to a line,
 | 🟠 | 9-16 | 2N+1 to 3N | third quarter | Doubtful |
 | 🔴 | 1-8, tough | below 3N | bottom quarter | Out, IR, PUP, NFI, Suspended, COV, DNR |
 
+A usage rank within one position uses 12-team fantasy tiers, capped by the player's quarter in the actual stat pool. For example, 16th of 156 RBs is yellow even though it's in the top quarter. When a rank combines positions, its dot uses the stat pool's quarters. Fantasy-point ranks still use the size of the user's league.
+
 The Advice Check reads the visible words only, with tags and emoji removed, so formatting never fails a check or counts toward a length limit.
 
 The tools fall into two kinds:
