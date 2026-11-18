@@ -368,6 +368,14 @@ public final class RosterPlans {
         legal.add(plan);
     }
 
+    /**
+     * Returns a designation as it reads after "is" or "was": "on IR" for
+     * IR, otherwise {@link #designation}.
+     */
+    public static String listedAs(PlayerHealth health) {
+        return health == PlayerHealth.IR ? "on IR" : designation(health);
+    }
+
     /** A designation as the user reads it, such as "Out" or "IR". */
     public static String designation(PlayerHealth health) {
         if (health == PlayerHealth.IR || health == PlayerHealth.PUP) {

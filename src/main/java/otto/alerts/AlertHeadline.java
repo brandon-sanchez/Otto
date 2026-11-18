@@ -9,6 +9,7 @@ import otto.decisions.RosterPlans;
 import otto.directory.PlayerHealth;
 import otto.format.Dot;
 import otto.format.TelegramHtml;
+import otto.research.OfficialUpdate;
 
 /**
  * The first line of every Alert: one icon that says what kind of news it
@@ -67,11 +68,12 @@ final class AlertHeadline {
     }
 
     private static String status(String player, AlertCandidate candidate) {
-        String teamSaysPlays = candidate.facts().get(OfficialUpdateDetector.TEAM_SAYS_PLAYS);
-        if (teamSaysPlays != null) {
-            return Boolean.parseBoolean(teamSaysPlays)
-                    ? "✅ %s will play, his team says".formatted(player)
-                    : "🔴 %s won't play, his team says".formatted(player);
+        if (candidate.facts().containsKey(OfficialUpdateDetector.ANNOUNCEMENT)) {
+            return switch (OfficialUpdate.Availability.valueOf(
+                    candidate.facts().get(OfficialUpdateDetector.TEAM_SAYS))) {
+                case WILL_PLAY -> "✅ %s will play, his team says".formatted(player);
+                case WILL_NOT_PLAY -> "🔴 %s won't play, his team says".formatted(player);
+            };
         }
         String to = candidate.facts().get("to");
         Optional<PlayerHealth> known = Arrays.stream(PlayerHealth.values())
@@ -81,9 +83,7 @@ final class AlertHeadline {
             return "🔔 %s has news".formatted(player);
         }
         PlayerHealth health = known.get();
-        String designation = health == PlayerHealth.IR
-                ? "on IR"
-                : RosterPlans.designation(health);
+        String designation = RosterPlans.listedAs(health);
         String icon = Dot.injury(health).map(Dot::emoji)
                 .orElse(health == PlayerHealth.ACTIVE || health == PlayerHealth.PROBABLE
                         ? "✅"

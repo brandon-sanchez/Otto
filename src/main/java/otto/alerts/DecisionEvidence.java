@@ -106,8 +106,8 @@ final class DecisionEvidence {
      *
      * @param urgent the fallback text for a change with no slot to fix,
      *        under a headline that already names the player and his status
-     * @param caveat the fallback's lines on a team update Sleeper's later
-     *        designation contradicts, empty when the sources agree
+     * @param caveat the fallback's line on what his team said, when it
+     *        disagrees with Sleeper; empty when the sources agree
      */
     private record StatusChange(LineupEvidence builder, PlayerHealth to, boolean announced,
             String task, RosterPlans.Plans plans, List<String> unknowns, String urgent,
@@ -152,10 +152,14 @@ final class DecisionEvidence {
         unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
                 leagueWeek.snapshot().at(), now));
 
-        List<String> caveat = AvailabilityEvidence.disagreement(availability).stream().toList();
+        // An announcement is newer than Sleeper's designation, so what the
+        // team said is the news itself, never an earlier word.
+        List<String> caveat = announced
+                ? List.of(capitalized(AvailabilityEvidence.announced(availability)) + ".")
+                : AvailabilityEvidence.disagreement(availability).stream().toList();
         String urgent = announced
-                ? capitalized(AvailabilityEvidence.announced(availability)) + "."
-                : lines("He was %s before.".formatted(wasPhrase(from)), caveat);
+                ? caveat.getFirst()
+                : lines("He was %s before.".formatted(RosterPlans.listedAs(from)), caveat);
         String task = "Advise what to do with %s after %s: choose one of rosterPlans."
                 .formatted(name, announced ? "his team's announcement" : "his status change");
         return new StatusChange(builder, to, announced, task, plans, unknowns, urgent, caveat);
@@ -399,10 +403,6 @@ final class DecisionEvidence {
                 true, plans.legal(), unknowns,
                 Optional.of(TelegramHtml.bold("Replace him in your %s slot".formatted(slot.name()))
                         + ": " + announcement + ".\n" + builder.bestOption(moves)), false);
-    }
-
-    private static String wasPhrase(PlayerHealth health) {
-        return health == PlayerHealth.IR ? "on IR" : RosterPlans.designation(health);
     }
 
     private static String lines(String text, List<String> more) {

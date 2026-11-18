@@ -35,12 +35,13 @@ class AlertHeadlineTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "false|🔴 <b>Bucky Irving</b> won't play, his team says",
-            "true|✅ <b>Bucky Irving</b> will play, his team says"})
-    void aTeamAnnouncementSaysWhatTheTeamSaidNotSleepersDesignation(String plays,
+            "WILL_NOT_PLAY|🔴 <b>Bucky Irving</b> won't play, his team says",
+            "WILL_PLAY|✅ <b>Bucky Irving</b> will play, his team says"})
+    void aTeamAnnouncementSaysWhatTheTeamSaidNotSleepersDesignation(String teamSays,
             String headline) {
         assertThat(AlertHeadline.of(candidate(AlertCandidate.Source.TRANSITION, "Bucky Irving",
-                Map.of("to", "ACTIVE", OfficialUpdateDetector.TEAM_SAYS_PLAYS, plays))))
+                Map.of("to", "ACTIVE", OfficialUpdateDetector.ANNOUNCEMENT, "story",
+                        OfficialUpdateDetector.TEAM_SAYS, teamSays))))
                 .isEqualTo(headline);
     }
 
