@@ -3,6 +3,7 @@ package otto.trade;
 import java.util.Locale;
 import java.util.Optional;
 
+import otto.format.TelegramHtml;
 import otto.sleeper.LeagueRules;
 
 /**
@@ -59,6 +60,21 @@ record TradeCall(VerdictBand band, String favours, boolean marketDecides, String
                         + "accept").formatted(partner),
                 "On market value alone this is %s".formatted(
                         described(marketBand, read.favours())));
+    }
+
+    /**
+     * Returns the verdict as the line a trade answer opens with: "⚖️
+     * <b>About even</b>", "⚖️ <b>Slight edge for you</b>" or for the
+     * partner by name, "✅ <b>Clear win</b>" or "❌ <b>Clear loss</b>".
+     */
+    String headline() {
+        boolean yours = TradeMath.YOU.equals(favours);
+        return switch (band.verdict()) {
+            case VerdictBand.EVEN -> "⚖️ <b>About even</b>";
+            case VerdictBand.SLIGHT_EDGE -> "⚖️ <b>Slight edge for %s</b>".formatted(
+                    yours ? TradeMath.YOU : TelegramHtml.escape(favours));
+            default -> yours ? "✅ <b>Clear win</b>" : "❌ <b>Clear loss</b>";
+        };
     }
 
     private static String described(VerdictBand band, String favours) {

@@ -7,10 +7,14 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +24,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+
+import otto.format.TelegramHtml;
+import otto.storage.OttoJson;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The one seam all tests use: boot the real Spring context, invoke entry
@@ -46,6 +55,17 @@ public abstract class WireSeamTest {
     protected static final WireMockServer teamSites = newServer();
     protected static final WireMockServer fantasyCalc = newServer();
     private static final Path storageDir = newStorageDir();
+
+    /** Every message body sent to Telegram during one test, before any reset. */
+    private static final List<String> sentBodies = new CopyOnWriteArrayList<>();
+
+    static {
+        telegram.addMockServiceRequestListener((request, response) -> {
+            if (request.getUrl().endsWith("/sendMessage")) {
+                sentBodies.add(request.getBodyAsString());
+            }
+        });
+    }
 
     private static WireMockServer newServer() {
         WireMockServer server = new WireMockServer(
@@ -92,8 +112,35 @@ public abstract class WireSeamTest {
     @Autowired
     private otto.model.ProviderBreakers breakers;
 
+    /**
+     * Holds every scenario to what the user sees in Telegram: no literal
+     * Markdown marks, no formatting tag shown as text, and HTML that Telegram parses,
+     * with only supported tags, each closed inside its own message.
+     */
+    @AfterEach
+    void everySentMessageIsCleanTelegramHtml() throws IOException {
+        try {
+            for (String body : sentBodies) {
+                JsonNode message = OttoJson.MAPPER.readTree(body);
+                String text = message.path("text").asText();
+                assertThat(text).as("a sent message")
+                        .doesNotContain("**");
+                if (message.path("parse_mode").asText().equals("HTML")) {
+                    assertThat(TelegramHtml.normalize(text))
+                            .as("a sent message as Telegram HTML").isEqualTo(text);
+                    assertThat(TelegramHtml.visible(text)).as("a sent message as the user sees it")
+                            .doesNotContainPattern(
+                                    "</?(b|i|u|s|code|pre|a|blockquote|strong|em)\\b[^<>]*>");
+                }
+            }
+        } finally {
+            sentBodies.clear();
+        }
+    }
+
     @BeforeEach
     void resetSeam() throws IOException {
+        sentBodies.clear();
         sleeper.resetAll();
         telegram.resetAll();
         llm.resetAll();

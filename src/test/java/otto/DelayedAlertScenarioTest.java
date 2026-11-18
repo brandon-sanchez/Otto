@@ -78,7 +78,7 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(FIRST_PHRASE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(FIRST_PHRASE))));
         telegram.resetAll();
         OutboundStubs.telegramOk(telegram);
         clock.advance(Duration.ofSeconds(61));
@@ -116,7 +116,7 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(FIRST_PHRASE)))
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(FIRST_PHRASE)))
                 .withRequestBody(matchingJsonPath(
                         "$.reply_markup.inline_keyboard[0][0].callback_data",
                         equalTo("done:1"))));
@@ -147,7 +147,7 @@ class DelayedAlertScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Placed on injured reserve")));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(UPDATED_PHRASE)))
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(UPDATED_PHRASE)))
                 .withRequestBody(matchingJsonPath(
                         "$.reply_markup.inline_keyboard[0][0].callback_data",
                         equalTo("done:1"))));
@@ -193,10 +193,10 @@ class DelayedAlertScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(FIRST_PHRASE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(FIRST_PHRASE))));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(RECOVERY_PHRASE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(RECOVERY_PHRASE))));
         assertThat(firstDeliveryStatus()).isEqualTo("CANCELLED");
     }
 

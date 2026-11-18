@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import otto.format.TelegramHtml;
 import otto.sleeper.LeagueScope;
 import otto.telegram.MessageHeading;
 
@@ -12,7 +13,7 @@ import otto.telegram.MessageHeading;
  * follows more than one league. Alerts, waiver boards, follow-ups and
  * outage reports all go out through the Telegram client, so each names
  * its league without having to remember to. With one league followed
- * nothing is added.
+ * nothing is added. The heading reads "🏈 <b>Torta Lovers</b>".
  */
 @Component
 public class LeagueHeading implements MessageHeading {
@@ -29,10 +30,10 @@ public class LeagueHeading implements MessageHeading {
         if (bound.isEmpty() || !leagues.several()) {
             return Optional.empty();
         }
-        return Optional.of("League: " + leagues.known().stream()
+        return Optional.of("🏈 " + TelegramHtml.bold(leagues.known().stream()
                 .filter(league -> league.leagueId().equals(bound.get()))
                 .findFirst()
                 .map(FollowedLeague::label)
-                .orElse("league " + bound.get()));
+                .orElse("league " + bound.get())));
     }
 }

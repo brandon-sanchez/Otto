@@ -205,7 +205,7 @@ class ModelFallbackScenarioTest extends WireSeamTest {
 
     private void edgeMessageWasSent() {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(EDGE_MESSAGE))));
     }
 
     @Test

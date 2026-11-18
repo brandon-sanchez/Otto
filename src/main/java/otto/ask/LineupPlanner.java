@@ -40,6 +40,15 @@ public class LineupPlanner {
     private static final String NO_WEEK_MATH =
             "I have no projections or starting slots for this week yet";
 
+    /** The note on a player whose health rules him out, followed by that health. */
+    static final String CANNOT_PLAY = "cannot play: ";
+
+    /** The note on a player whose team has no game this week. */
+    static final String ON_BYE = "on bye";
+
+    /** The note on a player whose game has started. */
+    static final String LOCKED = "locked";
+
     private final LineupOptimizer optimizer;
 
     public LineupPlanner(LineupOptimizer optimizer) {
@@ -442,13 +451,13 @@ public class LineupPlanner {
     private String note(UserWeek team, Instant now, String playerId) {
         PlayerHealth health = team.health(playerId);
         if (health.rulesOutPlaying()) {
-            return "cannot play: " + health;
+            return CANNOT_PLAY + health;
         }
         if (team.onBye(playerId)) {
-            return "on bye";
+            return ON_BYE;
         }
         if (team.locked(playerId, now)) {
-            return "locked";
+            return LOCKED;
         }
         if (health.isWorseThan(PlayerHealth.ACTIVE)) {
             return health.name().toLowerCase(Locale.ROOT);

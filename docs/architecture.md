@@ -130,6 +130,21 @@ sequenceDiagram
     TG->>You: The answer
 ```
 
+### How messages look
+
+Every message goes out in Telegram's HTML mode, so bold is real bold. One send step, `TelegramHtml.normalize` in `format`, cleans every message: Markdown the model writes (`**x**`) becomes bold, other Markdown is removed, names are escaped, and only the tags Telegram supports survive, each one closed. A long message splits at Telegram's 4,096-character limit without cutting a tag, and a tag left open at the end of one part is reopened in the next. If Telegram still refuses the formatting, the same words go again as plain text.
+
+Answers are short and scannable: what you asked comes first, one fact to a line, with at most a short line of reason. Code writes every line that carries a number, such as a rank line (`🟢 Carries per game: 4th of 79 (18.6)`), an Alert's headline (`🔴 Bucky Irving is now Out`), a trade verdict (`⚖️ Slight edge for you`) or a waiver bid (`💰 Bid $9 (range $7–12)`). The model copies those lines and adds the reason. One class, `Dot` in `format`, picks every colored dot, so a color means the same thing everywhere:
+
+| Dot | Matchup (defense rank vs position) | League tier (N teams) | Stat rank among M | Injury |
+|---|---|---|---|---|
+| 🟢 | 25-32, easy | 1 to N | top quarter | never |
+| 🟡 | 17-24 | N+1 to 2N | second quarter | Questionable |
+| 🟠 | 9-16 | 2N+1 to 3N | third quarter | Doubtful |
+| 🔴 | 1-8, tough | below 3N | bottom quarter | Out, IR, PUP, NFI, Suspended, COV, DNR |
+
+The Advice Check reads the visible words only, with tags and emoji removed, so formatting never fails a check or counts toward a length limit.
+
 The tools fall into two kinds:
 
 - **Fact tools** return computed data, such as the roster, the standings, a player's news or a league's scoring settings. The chat model reads the data and writes a short reply, which doesn't go through the Advice Check.
@@ -241,3 +256,4 @@ Packages under `src/main/java/otto` are grouped by feature.
 | `followed`, `league` | Multiple leagues and each league's rules |
 | `model` | `ModelChain`, the provider fallback |
 | `telegram`, `aws`, `storage`, `account` | Telegram, the Lambda handlers, storage backends and account deletion |
+| `format` | Telegram HTML escaping and cleanup, and the colored dots |

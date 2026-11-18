@@ -85,7 +85,7 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
     private static JsonNode alertIn(String leagueName) {
         return alertsSent().stream()
-                .filter(body -> body.path("text").asText().startsWith("League: " + leagueName))
+                .filter(body -> body.path("text").asText().startsWith("🏈 <b>" + leagueName + "</b>"))
                 .findFirst()
                 .orElseThrow();
     }
@@ -133,7 +133,8 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
         mccaffreyTurnsOut();
 
         assertThat(alertsSent()).singleElement().satisfies(alert ->
-                assertThat(alert.path("text").asText()).startsWith(NEWS));
+                assertThat(alert.path("text").asText())
+                        .startsWith("🔴 <b>Christian McCaffrey</b> is now Out\n" + NEWS));
     }
 
     @Test

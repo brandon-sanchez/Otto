@@ -113,7 +113,7 @@ class TaxiSquadDecisionScenarioTest extends WireSeamTest {
                 answer(TAXI_ROOKIE, "taxi", "\"" + ROOKIE + "\""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(TAXI_ROOKIE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(TAXI_ROOKIE))));
         DecisionRecord record = onlyRecord();
         assertThat(record.outcome()).isEqualTo(new Outcome.Sent(TAXI_ROOKIE));
         assertThat(planIds(record)).contains("taxi", "taxi-add", "hold");

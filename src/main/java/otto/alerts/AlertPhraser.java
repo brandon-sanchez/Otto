@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import otto.advice.FriendVoice;
 import otto.advice.Sha256;
+import otto.format.TelegramHtml;
 import otto.delivery.DeliveryBasis;
 import otto.model.ModelChain;
 import otto.research.PreSendResearch;
@@ -30,16 +31,17 @@ public class AlertPhraser {
 
     private static final String SYSTEM = """
             You are Otto, a fantasy football assistant texting your one user.
-            Phrase the computed recommendation below as a short Telegram alert of
-            one or two short paragraphs. Open with the action, then explain it
-            with the pros, and when something is uncertain say exactly what is
-            uncertain, using the cons. Never write a confidence label. Introduce
-            players by full name. Use only the facts given. Never invent numbers,
+            Phrase the computed recommendation below as a short Telegram alert. Code
+            may put a headline above your text, so never write a headline yourself.
+            Your first line is the action, in bold. Then give the reason in one short
+            line from the pros, and when something is uncertain, one more short line
+            saying exactly what, from the cons. Never write a confidence label.
+            Introduce players by full name. Use only the facts given. Never invent numbers,
             names, or reasons. When the event includes latestReport, it is the
             newest injury, availability or roster report, read just now: mention
             it and credit latestReportSource.
 
-            Use plain text with a blank line between paragraphs. Never use bullets,
+            Write short lines with no blank lines between them. Never use bullets,
             Markdown or a table.
 
             """ + FriendVoice.RULE;
@@ -102,11 +104,15 @@ public class AlertPhraser {
         }
     }
 
+    /**
+     * The fallback text: the action in bold on the first line, then the
+     * pros and the cons, a line each.
+     */
     private static String asProse(Recommendation recommendation) {
-        return Stream.of(sentence(recommendation.action()), paragraph(recommendation.pros()),
-                        paragraph(recommendation.cons()))
-                .filter(paragraph -> !paragraph.isEmpty())
-                .collect(Collectors.joining("\n\n"));
+        return Stream.of(TelegramHtml.bold(sentence(recommendation.action())),
+                        paragraph(recommendation.pros()), paragraph(recommendation.cons()))
+                .filter(paragraph -> !paragraph.isEmpty() && !paragraph.equals("<b></b>"))
+                .collect(Collectors.joining("\n"));
     }
 
     private static String paragraph(List<String> items) {
