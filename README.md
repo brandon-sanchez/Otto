@@ -8,25 +8,25 @@ Sleeper tells you a starter is out when you remember to open the app. Otto tells
 
 ## What it does
 
-- **Texts you first.** A starter ruled out, a defense or a starter on bye, an empty slot before lock, a bench player projecting better than the one you started.
-- **Plans your waivers.** The evening before your league's claims are due, a board of the five best free agents, each with the evidence behind it, who to drop and what to bid out of the FAAB you have left.
-- **Helps with player decisions.** When a player's status changes, Otto says whether to hold him, move him to IR or taxi, or drop him, and only offers moves Sleeper would allow.
-- **Watches the league.** Trades, notable drops, and the moment another manager claims a player off your watchlist.
-- **Answers questions.** Start or sit, where your team is thin, whether a trade is fair, who to buy low, what a player's ceiling is, and more. See [Ask it anything](#ask-it-anything).
+- **Texts you first.** A starter ruled out, a starter or defense on bye, an empty slot before lock, or a bench player projecting better than the one you started.
+- **Helps with player decisions.** When any player on your roster changes status, Otto picks one move from the ones Sleeper allows in your league: keep him, move him to IR or the taxi squad, drop him, or drop someone else to add a free agent.
+- **Plans your waivers.** The evening before claims are due, a board of up to five free agents worth a claim, with the evidence behind each one, what to bid out of the FAAB you have left, and who to drop when your roster is full. When no pickup would help, it tells you to hold and save your budget.
+- **Watches the league.** Trades, notable drops, and changes to players on your watchlist: claimed, dropped, trending or projected differently.
+- **Answers questions.** Your lineup, where your team is thin, whether a trade is fair, who to buy low, a player's ceiling and stats, and more. See [Ask it anything](#ask-it-anything).
 
 ## Code computes the numbers, the model explains them
 
-Java computes every number Otto sends: projections, ranks, trade values, FAAB bids and the list of legal lineup moves. The model only reads those facts and writes the message.
+Java computes the numbers Otto works from: projections, ranks, trade values, FAAB bids and the list of legal lineup moves. The model reads those facts and writes the words.
 
-For advice, the facts go to the model as an evidence bundle. Before anything reaches you, a step called the Advice Check holds the reply against that bundle. It checks every player name, number, rank, dollar amount and recommended move. A reply that fails gets one correction attempt. If that fails too, Otto doesn't send it.
+Advice gets one more step. For alerts, the waiver board, player decisions, and the lineup, team, trade-idea, buy-low, ceiling and stat answers, the facts go to the model as an evidence bundle. A step called the Advice Check then holds the reply against that bundle: every player name, number, rank, dollar amount and recommended move. A reply that fails gets one correction attempt. If that fails too, Otto doesn't send it. Other chat replies, such as comparing two players or pricing a trade, are written from the same computed facts without that check.
 
-When OpenAI is down, Otto asks Anthropic Claude, then Google Gemini. When all three fail, it sends a short message that code writes, never a guess.
+When OpenAI is down, Otto asks Anthropic Claude, then Google Gemini. When all three fail, urgent alerts go out as plain facts that code writes, and advice that can't be checked is held back. A bench swap isn't sent, and the waiver board is replaced by a short note saying why.
 
 ## What it won't do
 
 - **Change your lineup.** Sleeper's API is read-only, so Otto tells you and you tap. It checks a later snapshot to confirm the problem is gone.
 - **Guess.** If a source is down it says so, rather than filling the gap with a zero. If no source gives an injury timeline, Otto says it doesn't know.
-- **Nag.** One alert per problem, one repeat 30 minutes before that player's game locks, nothing after. Mute anything you would rather not hear.
+- **Nag.** One alert per problem, one last warning 30 minutes before that player's game locks, nothing after. Mute anything you would rather not hear.
 - **Talk during your draft.** Roster alerts stay off until the league is in season.
 - **Send or accept a trade.** It suggests offers. You send them.
 
@@ -34,46 +34,119 @@ When OpenAI is down, Otto asks Anthropic Claude, then Google Gemini. When all th
 
 | Something happens | Otto texts |
 | --- | --- |
-| Your starter is ruled out | Yes, with what to do about him and the best legal replacement |
-| A starting slot is empty, or its player or defense is on bye | Yes, before that slot locks |
-| A bench player projects a point or more better | Yes |
+| A player on your roster changes status | Yes, with the one move it recommends |
+| A starting slot is empty, its player is ruled out, or its player or defense is on bye | Yes, before that slot locks |
+| A bench player projects at least 1 point more than a starter (you can change the margin) | Yes, when the swap holds up |
 | A team's own injury report says something Sleeper doesn't show yet | Yes |
 | A healthy player's role shrinks, in the news or in his snaps | Yes |
 | It is the evening before waiver claims are due | Yes, the waiver board |
-| Another manager claims a player you are watching | Yes, always |
-| Anyone in the league trades | Yes |
-| A top-24 running back or receiver, or a top-12 quarterback or tight end, is dropped (cutoffs you can change) | Yes |
-| The same problem, an hour later | No, once on detect and once before lock |
-| You already tapped Done | No |
+| Another manager claims, or drops, a player on your watchlist | Yes |
+| Anyone in the league trades, including commissioner edits | Yes |
+| Another manager drops a top-24 running back or receiver, or a top-12 quarterback or tight end, in this week's projections (cutoffs you can change) | Yes |
+| The same problem, an hour later | No, once when found and once before lock |
+| You tapped **Done** | Otto checks the fix shows up in Sleeper, and still warns you before lock if it doesn't |
+| You tapped **Ignore** | No more about it, unless your lineup is still illegal before lock |
 | Anything you muted | No |
 
-Every alert has **Done**, **Ignore** and **Mute** buttons.
+Every alert has **Done**, **Ignore** and **Mute** buttons. The waiver board adds **View all options**.
+
+## What it looks like
+
+These are real message formats. Code writes the fixed parts, such as the lineup, the bid line and the roster, and the model writes the sentences around them.
+
+A player decision when a starter gets hurt:
+
+```text
+Move Christian McCaffrey to IR and start Josh Jacobs at RB. Christian
+McCaffrey is expected to miss about four weeks with a hamstring strain,
+which still leaves him time to help before the playoffs, and IR keeps him
+without using a roster spot.
+
+[Done] [Ignore] [Mute]
+```
+
+One entry on the waiver board:
+
+```text
+Your waiver options
+
+A pickup stands out this week, and a receiver is worth a claim behind him.
+
+1. Bucky Irving · RB, TB
+I'd bid $9. Anything from $7 to $12 makes sense.
+Bucky Irving played 71% of offensive snaps in his latest game, and his
+coach named him the starter. He projects 19.0 points this week.
+Past that you pay for more than a lead role.
+
+[Done] [Ignore] [Mute]
+[View all options]
+```
 
 ## Ask it anything
 
-> **you:** who do I start at flex
->
-> **otto:** Start Kamara over Pollard. Kamara projects 14.2 to Pollard's 11.8, and Pollard faces the 3rd-toughest run defense this week.
+The chat model picks from 28 tools, each one a piece of Java that computes the answer.
 
-> **you:** best wide receivers on waivers
->
-> **otto:** Nacua is the one to chase. Kupp is on IR and Nacua saw 15 targets last week. I'd bid $40-60 of the $112 you have left.
+```text
+you:  who should I start this week
 
-The chat model picks from 28 tools, each one a piece of Java that computes the answer. You can ask about:
+otto: Here's your week 2 lineup.
 
-- **Your lineup.** Start or sit, the best lineup for this week or a later one, and what a change would do to your projected total.
+      I'd start Josh Jacobs over James Cook, a gain of 3.5 points.
+      Your lineup as set projects 145.0 points, and this one projects 148.5.
+
+      ----- STARTERS -----
+      QB: Josh Allen 24.1
+      RB: Josh Jacobs 16.5
+      ↳ Move to starter
+      ...
+      ----- BENCH -----
+      RB: James Cook 13.0
+      ↳ Move to bench
+      ...
+```
+
+```text
+you:  what are my team's weaknesses
+
+otto: Your team is strong at QB and TE, but running back is thin and you
+      have more receivers than you can start.
+
+      At RB your starters rank 4th of 4 and your depth ranks 4th of 4.
+      At WR you have 6 startable WRs for 4 spots.
+
+      Your lineup's big weeks rank 1st of 4, and Justin Jefferson has the
+      best chance of a boom week among your starters at 41%.
+
+      Claim a running back off waivers. The best one averages 13.0 points
+      a game and would be 2nd among your RBs.
+```
+
+```text
+you:  who should I buy low
+
+otto: George Pickens is a buy-low. His expected points from his targets
+      are down just 3% from last season, but he's scoring 4.6 points a
+      game below what that usage is worth, and his value is down 18% this
+      month while his targets held. On your team, Jaxon Smith-Njigba is a
+      sell-high: he's 12.5 points a game above his usage, so expect about
+      22.2 a game from here.
+```
+
+You can ask about:
+
+- **Your lineup.** The best lineup for this week or a later one, one player or another at flex, and what a change would do to your projected total.
 - **Waivers.** The best free agents at a position, who to drop for one, and what to bid. "Focus on TE this week" steers the next waiver board.
 - **Your team.** Where it is strong or thin against every team in the league, with numbers, and up to three moves to fix it. Whether you are contending or rebuilding, and every other team's direction.
-- **Trades.** Whether a trade is fair, priced two ways: what it does for each roster this season, and what both sides are worth on the trade market. Named offers to send to named managers. In the deadline week and after it, answers say whether trading is still open.
+- **Trades.** Whether a trade is fair, priced two ways: what it does for each roster this season, and what both sides are worth on the trade market. Named offers to send to named managers, with why each one would say yes. Near and after the deadline, answers say whether trading is still open.
 - **Buy low, sell high.** Players whose usage held while their points slumped, players scoring above what their usage is worth, and whether to trade for an injured player.
-- **Players and stats.** News, ceiling and floor, snap share, target share, air yards, Next Gen Stats, where a player ranks, the top 10 at any stat, and a team's usage by position.
+- **Players and stats.** News, ceiling and floor, snap share, target share, air yards, Next Gen Stats, where a player ranks, the top 10 (or up to 50) at any stat, and a team's usage by position.
 - **Matchups.** How a defense ranks against a position, which of its starters are out, and how hard a team's remaining schedule is.
 - **The league.** Standings, the playoff race, and another manager's roster.
 - **Your habits.** Points you left on your bench, and how following or overriding Otto's advice turned out. Otto only brings this up when you ask.
 - **Keeper costs.** What keeping a player costs next season, using the keeper rule you tell it.
-- **Settings.** Your watchlist, mutes, alert switches and your largest waiver bid.
+- **Settings.** Your watchlist, mutes, alert switches, the bench-swap margin and your largest waiver bid.
 
-Replies run a couple of lines. Reply "why" or "more" for the reasoning behind one.
+Simple questions get a few sentences, and answers like a lineup or a team breakdown take the space they need. Reply "why" or "more" for the full reasoning behind one.
 
 ## Every league you play in
 
