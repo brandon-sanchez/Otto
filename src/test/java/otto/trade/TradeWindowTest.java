@@ -14,7 +14,7 @@ import otto.sleeper.SleeperAdapter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class TradeDeadlineTest {
+class TradeWindowTest {
 
     private static final Instant THURSDAY_KICKOFF = Instant.parse("2026-12-04T01:15:00Z");
     private static final Instant MONDAY_KICKOFF = Instant.parse("2026-12-08T01:15:00Z");
@@ -51,69 +51,69 @@ class TradeDeadlineTest {
                 null, null);
     }
 
-    private static Optional<TradeDeadline> assess(SleeperAdapter.League league,
+    private static TradeWindow assess(SleeperAdapter.League league,
             Optional<SeasonWeek> week, Optional<Schedule> schedule, String now) {
-        return TradeDeadline.assess(league, week, () -> schedule, Instant.parse(now));
+        return TradeWindow.assess(league, week, () -> schedule, Instant.parse(now));
     }
 
     @Test
     void nothingLimitsTradingBeforeTheDeadlineWeek() {
         assertThat(assess(deadlineInWeek13(), week(12), week13Schedule(false),
-                "2026-12-01T12:00:00Z")).isEmpty();
+                "2026-12-01T12:00:00Z")).isEqualTo(new TradeWindow.Open());
     }
 
     @Test
     void tradesAreOpenOnMondayBeforeTheLastGameOfTheDeadlineWeek() {
-        Optional<TradeDeadline> deadline = TradeDeadline.assess(deadlineInWeek13(), week(13),
+        TradeWindow deadline = TradeWindow.assess(deadlineInWeek13(), week(13),
                 () -> week13Schedule(false), MONDAY_AFTERNOON);
 
-        assertThat(deadline).contains(new TradeDeadline.FinalWeek(13));
-        assertThat(deadline.get().closed()).isFalse();
+        assertThat(deadline).isEqualTo(new TradeWindow.FinalWeek(13));
+        assertThat(deadline.closed()).isFalse();
     }
 
     @Test
     void tradesAreOpenWhileTheLastGameIsBeingPlayed() {
         assertThat(assess(deadlineInWeek13(), week(13), week13Schedule(false),
-                "2026-12-08T04:44:00Z")).contains(new TradeDeadline.FinalWeek(13));
+                "2026-12-08T04:44:00Z")).isEqualTo(new TradeWindow.FinalWeek(13));
     }
 
     @Test
     void tradesCloseAGamesLengthAfterTheLastKickoffOfTheDeadlineWeek() {
-        Optional<TradeDeadline> deadline = assess(deadlineInWeek13(), week(13),
+        TradeWindow deadline = assess(deadlineInWeek13(), week(13),
                 week13Schedule(false), "2026-12-08T04:45:00Z");
 
-        assertThat(deadline).contains(new TradeDeadline.Passed(13));
-        assertThat(deadline.get().closed()).isTrue();
+        assertThat(deadline).isEqualTo(new TradeWindow.Passed(13));
+        assertThat(deadline.closed()).isTrue();
     }
 
     @Test
     void tradesCloseOnceEveryGameOfTheDeadlineWeekHasAResult() {
         assertThat(assess(deadlineInWeek13(), week(13), week13Schedule(true),
-                "2026-12-08T04:00:00Z")).contains(new TradeDeadline.Passed(13));
+                "2026-12-08T04:00:00Z")).isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
     void tradesStayClosedOnTuesdayMorningWhileSleeperStillSaysTheDeadlineWeek() {
         assertThat(assess(deadlineInWeek13(), week(13), week13Schedule(false),
-                "2026-12-08T14:00:00Z")).contains(new TradeDeadline.Passed(13));
+                "2026-12-08T14:00:00Z")).isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
     void tradesAreClosedInEveryWeekAfterTheDeadlineWeek() {
         assertThat(assess(deadlineInWeek13(), week(14), Optional.empty(),
-                "2026-12-10T12:00:00Z")).contains(new TradeDeadline.Passed(13));
+                "2026-12-10T12:00:00Z")).isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
     void withoutAScheduleTradesAreOpenUntilEightUtcOnTuesday() {
         assertThat(assess(deadlineInWeek13(), week(13), Optional.empty(),
-                "2026-12-08T07:59:59Z")).contains(new TradeDeadline.FinalWeek(13));
+                "2026-12-08T07:59:59Z")).isEqualTo(new TradeWindow.FinalWeek(13));
     }
 
     @Test
     void withoutAScheduleTradesCloseAtEightUtcOnTuesday() {
         assertThat(assess(deadlineInWeek13(), week(13), Optional.empty(),
-                "2026-12-08T08:00:00Z")).contains(new TradeDeadline.Passed(13));
+                "2026-12-08T08:00:00Z")).isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
@@ -122,9 +122,9 @@ class TradeDeadlineTest {
                 game("2026_12_NYG_WAS", 12, Instant.parse("2026-11-29T18:00:00Z"), true));
 
         assertThat(assess(deadlineInWeek13(), week(13), otherWeeks, "2026-12-08T07:59:59Z"))
-                .contains(new TradeDeadline.FinalWeek(13));
+                .isEqualTo(new TradeWindow.FinalWeek(13));
         assertThat(assess(deadlineInWeek13(), week(13), otherWeeks, "2026-12-08T08:00:00Z"))
-                .contains(new TradeDeadline.Passed(13));
+                .isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
@@ -133,7 +133,7 @@ class TradeDeadlineTest {
                 new SeasonWeek("2026", 13, "regular", Optional.empty()));
 
         assertThat(assess(deadlineInWeek13(), undated, Optional.empty(),
-                "2026-12-08T14:00:00Z")).contains(new TradeDeadline.FinalWeek(13));
+                "2026-12-08T14:00:00Z")).isEqualTo(new TradeWindow.FinalWeek(13));
     }
 
     @Test
@@ -143,21 +143,21 @@ class TradeDeadlineTest {
                 game("2026_13_NYG_WAS", 13, Instant.parse("2026-12-07T05:00:00Z"), false));
 
         assertThat(assess(deadlineInWeek13(), week(13), untimed, "2026-12-07T19:00:00Z"))
-                .contains(new TradeDeadline.FinalWeek(13));
+                .isEqualTo(new TradeWindow.FinalWeek(13));
         assertThat(assess(deadlineInWeek13(), week(13), untimed, "2026-12-08T08:00:00Z"))
-                .contains(new TradeDeadline.Passed(13));
+                .isEqualTo(new TradeWindow.Passed(13));
     }
 
     @Test
     void aLeagueWithNoDeadlineNeverCloses() {
         assertThat(assess(league(Optional.empty(), false), week(17), Optional.empty(),
-                "2027-01-05T12:00:00Z")).isEmpty();
+                "2027-01-05T12:00:00Z")).isEqualTo(new TradeWindow.Open());
     }
 
     @Test
     void anUnknownWeekSaysNothingAboutTheDeadline() {
         assertThat(assess(deadlineInWeek13(), Optional.empty(), Optional.empty(),
-                "2026-12-08T14:00:00Z")).isEmpty();
+                "2026-12-08T14:00:00Z")).isEqualTo(new TradeWindow.Open());
     }
 
     @Test
@@ -165,8 +165,30 @@ class TradeDeadlineTest {
         SleeperAdapter.League off = league(Optional.of(13), true);
 
         assertThat(assess(off, week(2), Optional.empty(), "2026-09-20T12:00:00Z"))
-                .contains(new TradeDeadline.TradesOff());
+                .isEqualTo(new TradeWindow.TradesOff());
         assertThat(assess(off, Optional.empty(), Optional.empty(), "2026-09-20T12:00:00Z"))
-                .contains(new TradeDeadline.TradesOff());
+                .isEqualTo(new TradeWindow.TradesOff());
+    }
+
+    @Test
+    void anOpenWindowHasNothingToSayAboutATrade() {
+        TradeWindow open = assess(deadlineInWeek13(), week(12), Optional.empty(),
+                "2026-12-01T12:00:00Z");
+
+        assertThat(open.closed()).isFalse();
+        assertThat(open.closedBecause()).isEmpty();
+        assertThat(open.note()).isEmpty();
+    }
+
+    @Test
+    void aClosedWindowSaysWhyAndWhatItMeansForATrade() {
+        TradeWindow passed = assess(deadlineInWeek13(), week(14), Optional.empty(),
+                "2026-12-10T12:00:00Z");
+
+        assertThat(passed.closed()).isTrue();
+        assertThat(passed.closedBecause()).hasValueSatisfying(reason ->
+                assertThat(reason).startsWith("the trade deadline passed after week 13"));
+        assertThat(passed.note()).hasValueSatisfying(note ->
+                assertThat(note).startsWith("The trade deadline passed after week 13."));
     }
 }

@@ -13,31 +13,29 @@ import otto.nflverse.Schedule;
 
 /** Reads where trading in a league stands right now, from the stored schedule and the clock. */
 @Component
-public class TradeDeadlines {
+public class TradeWindows {
 
-    private static final Logger log = LoggerFactory.getLogger(TradeDeadlines.class);
+    private static final Logger log = LoggerFactory.getLogger(TradeWindows.class);
 
     private final NflverseStore nflverse;
     private final Clock clock;
 
-    TradeDeadlines(NflverseStore nflverse, Clock clock) {
+    TradeWindows(NflverseStore nflverse, Clock clock) {
         this.nflverse = nflverse;
         this.clock = clock;
     }
 
     /**
      * Returns where trading stands for the league, as
-     * {@link TradeDeadline#assess} reads it. A stored schedule that cannot
+     * {@link TradeWindow#assess} reads it. A stored schedule that cannot
      * be read counts as no schedule, so the answer falls back to the
      * Tuesday rule instead of failing.
      *
      * <p>Side effects: reads the stored nflverse schedule, in the deadline
      * week only.
-     *
-     * @return empty when nothing limits trading this week
      */
-    public Optional<TradeDeadline> assess(LeagueWeek league) {
-        return TradeDeadline.assess(league.league(), league.week().seasonWeek(),
+    public TradeWindow read(LeagueWeek league) {
+        return TradeWindow.assess(league.league(), league.week().seasonWeek(),
                 this::schedule, clock.instant());
     }
 

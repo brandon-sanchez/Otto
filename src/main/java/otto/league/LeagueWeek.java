@@ -6,6 +6,7 @@ import java.util.OptionalInt;
 
 import otto.check.WeekFacts;
 import otto.directory.NameMatch;
+import otto.lineup.GameWeek;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.snapshot.RosterSnapshot;
@@ -20,8 +21,6 @@ public record LeagueWeek(
         SleeperAdapter.League league,
         Snapshot snapshot,
         WeekFacts week) {
-
-    private static final int LAST_NFL_WEEK = 18;
 
     public List<RosterSnapshot> rosters() {
         return snapshot.rosters();
@@ -61,7 +60,8 @@ public record LeagueWeek(
             case TWO_WEEK_FINAL -> rounds + 1;
             case TWO_WEEKS -> 2 * rounds;
         };
-        return OptionalInt.of(Math.min(LAST_NFL_WEEK, league.playoffWeekStart() + weeks - 1));
+        return OptionalInt.of(Math.min(GameWeek.LAST_NFL_WEEK,
+                league.playoffWeekStart() + weeks - 1));
     }
 
     /**

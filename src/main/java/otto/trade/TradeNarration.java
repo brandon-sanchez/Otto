@@ -37,12 +37,12 @@ class TradeNarration {
 
     private final RosterFit rosterFit;
     private final LeagueShapes shapes;
-    private final TradeDeadlines deadlines;
+    private final TradeWindows tradeWindows;
 
-    TradeNarration(RosterFit rosterFit, LeagueShapes shapes, TradeDeadlines deadlines) {
+    TradeNarration(RosterFit rosterFit, LeagueShapes shapes, TradeWindows tradeWindows) {
         this.rosterFit = rosterFit;
         this.shapes = shapes;
-        this.deadlines = deadlines;
+        this.tradeWindows = tradeWindows;
     }
 
     /**
@@ -57,13 +57,13 @@ class TradeNarration {
     TradeEvaluator.TradeEvaluation evaluation(LeagueWeek leagueWeek, TradeEvaluator.Basis basis,
             RosterSnapshot mine, RosterSnapshot partner, List<TradePiece> gets,
             List<TradePiece> gives, PricedTrade priced) {
-        Optional<TradeDeadline> deadline = deadlines.assess(leagueWeek);
+        TradeWindow window = tradeWindows.read(leagueWeek);
         List<Slot> slots = leagueWeek.week().startingSlots();
         TradeMath.Pricing pricing = priced.pricing();
         TradeCall call = priced.call();
         return new TradeEvaluator.TradeEvaluation(
                 unpriced(priced) ? null : call.headline(),
-                deadline.map(TradeDeadline::message).orElse(null),
+                window.note().orElse(null),
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
                 pricing.weeks(),
@@ -77,7 +77,7 @@ class TradeNarration {
                 call.otherMeasure(),
                 priced.market().orElse(null),
                 partnerOutcome(partner, pricing.theirNet()),
-                deadline.filter(TradeDeadline::closed).isPresent()
+                window.closed()
                         ? List.of()
                         : leverage(leagueWeek, basis.shape(), mine, partner),
                 postTradeRoster(mine, pricing.myAfter(), gives, gets, slots),

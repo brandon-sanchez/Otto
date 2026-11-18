@@ -35,9 +35,6 @@ import otto.sleeper.SourceResult;
 @Component
 public class RestOfSeasonProjections {
 
-    /** The last week an NFL regular season can reach. */
-    private static final int LAST_POSSIBLE_WEEK = 18;
-
     private final SleeperAdapter sleeper;
     private final SelfReportService selfReport;
 
@@ -77,7 +74,7 @@ public class RestOfSeasonProjections {
         int firstWeek = stateOk.value().week();
         // A drifted playoff_week_start must not turn one question into
         // hundreds of requests. No NFL regular season runs past week 18.
-        int lastWeek = Math.min(league.lastRegularWeek().getAsInt(), LAST_POSSIBLE_WEEK);
+        int lastWeek = Math.min(league.lastRegularWeek().getAsInt(), GameWeek.LAST_NFL_WEEK);
         if (firstWeek > lastWeek) {
             return new SourceResult.Unavailable<>("sleeper:state",
                     "the regular season ended in week %d, so there is no season left to price"

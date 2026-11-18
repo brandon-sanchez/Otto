@@ -38,10 +38,9 @@ import otto.trade.InjuredValue;
 import otto.trade.InjuredValues;
 import otto.trade.LeaguePicks;
 import otto.trade.PricedTrade;
-import otto.trade.TradeDeadline;
-import otto.trade.TradeDeadlines;
 import otto.trade.TradeEvaluator;
 import otto.trade.TradePiece;
+import otto.trade.TradeWindows;
 
 /**
  * Finds named trade offers for the user: who to target, what to give,
@@ -88,13 +87,13 @@ public class TradeOffers {
     private final PlayerDirectoryStore directory;
     private final InjuredValues injuredValues;
     private final MatchupSourcesFactory sources;
-    private final TradeDeadlines deadlines;
+    private final TradeWindows tradeWindows;
 
     public TradeOffers(TradeEvaluator evaluator, TeamProfiler profiler,
             TeamDirections directions, ManagerActivity activity, LeaguePicks picks,
             MarketValuation valuation, BuySellReader buySell, PlayerDirectoryStore directory,
             InjuredValues injuredValues, MatchupSourcesFactory sources,
-            TradeDeadlines deadlines) {
+            TradeWindows tradeWindows) {
         this.evaluator = evaluator;
         this.profiler = profiler;
         this.directions = directions;
@@ -105,7 +104,7 @@ public class TradeOffers {
         this.directory = directory;
         this.injuredValues = injuredValues;
         this.sources = sources;
-        this.deadlines = deadlines;
+        this.tradeWindows = tradeWindows;
     }
 
     /**
@@ -223,8 +222,7 @@ public class TradeOffers {
 
     private Optional<PlayoffPitch> playoffPitch(LeagueWeek league) {
         OptionalInt lastWeek = league.lastPlayoffWeek();
-        boolean closed = deadlines.assess(league).filter(TradeDeadline::closed).isPresent();
-        if (lastWeek.isEmpty() || closed) {
+        if (lastWeek.isEmpty() || tradeWindows.read(league).closed()) {
             return Optional.empty();
         }
         NflverseStore store = sources.open().store();

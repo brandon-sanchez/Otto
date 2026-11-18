@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import otto.lineup.GameWeek;
+
 import static otto.nflverse.FeedRows.KEPT_POSITIONS;
 import static otto.nflverse.FeedRows.blankOrNa;
 import static otto.nflverse.FeedRows.optionalNumber;
@@ -18,12 +20,6 @@ import static otto.nflverse.FeedRows.requireColumns;
  * file, which the buy-low and sell-high reads compare a player with.
  */
 final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, ExpectedPoints> {
-
-    /**
-     * The last regular-season week. The file has no season-type column
-     * and carries the playoffs as weeks 19 onwards.
-     */
-    private static final int LAST_REGULAR_WEEK = 18;
 
     private static final Set<String> COLUMNS = Set.of(
             "player_id", "position", "posteam", "week", "game_id", "total_touchdown",
@@ -82,8 +78,9 @@ final class ExpectedPointsFeed implements FeedSpec<ExpectedPoints.Line, Expected
             requireColumns(row, COLUMNS);
             String gsisId = row.text("player_id");
             int week = row.integer("week");
+            // The file carries the NFL playoffs too, with no season-type column.
             if (blankOrNa(gsisId) || !KEPT_POSITIONS.contains(row.text("position"))
-                    || week < 1 || week > LAST_REGULAR_WEEK) {
+                    || week < 1 || week > GameWeek.LAST_NFL_WEEK) {
                 return;
             }
             lines.add(new ExpectedPoints.Line(gsisId, row.text("position"),

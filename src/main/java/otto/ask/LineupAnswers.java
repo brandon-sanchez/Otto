@@ -22,9 +22,6 @@ import otto.sleeper.SourceResult;
 @Component
 public class LineupAnswers {
 
-    /** The last week of Sleeper's regular-season projections. */
-    private static final int LAST_PROJECTED_WEEK = 18;
-
     private static final String NEXT = "next";
     private static final List<String> THIS = List.of("", "this", "current");
 
@@ -125,10 +122,10 @@ public class LineupAnswers {
     }
 
     private Target load(int number, Integer finishedWeek) {
-        if (number > LAST_PROJECTED_WEEK) {
+        if (number > GameWeek.LAST_NFL_WEEK) {
             return new Target.Rejected(
                     "the regular season ends in week %d, and I only plan lineups up to then"
-                            .formatted(LAST_PROJECTED_WEEK));
+                            .formatted(GameWeek.LAST_NFL_WEEK));
         }
         return switch (loader.load(number)) {
             case SourceResult.Unavailable<UserWeek> unavailable -> unavailable(unavailable);

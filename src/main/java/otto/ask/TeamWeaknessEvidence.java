@@ -68,7 +68,7 @@ final class TeamWeaknessEvidence {
      *        profile because he cannot activate them now
      * @param weeks the remaining weeks the per-game averages cover
      * @param tradesClosed why no trade can be made, as
-     *        {@link otto.trade.TradeDeadline#closedBecause} words it;
+     *        {@link otto.trade.TradeWindow#closedBecause} words it;
      *        empty while trades are open
      * @param limits what free data cannot say that matters to this read
      * @param everyLeague true when the user asked about all his leagues

@@ -16,6 +16,8 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import otto.lineup.GameWeek;
+
 import static otto.nflverse.FeedRows.KEPT_POSITIONS;
 import static otto.nflverse.FeedRows.blankOrNa;
 import static otto.nflverse.FeedRows.requireColumns;
@@ -32,9 +34,6 @@ final class PbpParticipationFeed implements FeedSpec<PbpParticipation.TeamGame, 
     private static final Set<String> COLUMNS = Set.of(
             "nflverse_game_id", "possession_team", "offense_players", "offense_positions",
             "was_pressure", "defense_man_zone_type", "defense_coverage_type");
-
-    /** The file carries the playoffs too, with no season-type column; their weeks follow 18. */
-    private static final int LAST_REGULAR_SEASON_WEEK = 18;
 
     private static final Pattern GAME_ID = Pattern.compile("\\d{4}_(\\d{2})_([A-Z]+)_([A-Z]+)");
     private static final String MAN = "MAN_COVERAGE";
@@ -99,7 +98,8 @@ final class PbpParticipationFeed implements FeedSpec<PbpParticipation.TeamGame, 
                                 .formatted(gameId));
             }
             int week = Integer.parseInt(game.group(1));
-            if (week > LAST_REGULAR_SEASON_WEEK) {
+            // The file carries the NFL playoffs too, with no season-type column.
+            if (week > GameWeek.LAST_NFL_WEEK) {
                 return;
             }
             String offense = row.text("possession_team");
