@@ -309,7 +309,7 @@ public class BoardComparison {
      */
     private Optional<List<ComparisonRound.Pick>> newBoard(String leagueId,
             ComparisonRound round) {
-        Optional<DecisionRecord> board = records.read(userId, leagueId, round.boardRunId());
+        Optional<DecisionRecord> board = lastTry(leagueId, round.boardRunId());
         Optional<List<Outcome.BoardPick>> recorded = board.flatMap(BoardComparison::picks);
         if (recorded.isEmpty()) {
             return Optional.empty();
@@ -364,8 +364,19 @@ public class BoardComparison {
                         .toList());
     }
 
+    /**
+     * Returns the record of the last try the round's board made, which
+     * is the one that decided what the user got.
+     */
+    private Optional<DecisionRecord> lastTry(String leagueId, String firstTryRunId) {
+        return ClaimRound.boardRunIds(firstTryRunId).reversed().stream()
+                .map(runId -> records.read(userId, leagueId, runId))
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
     private String newBoardMissing(String leagueId, ComparisonRound round) {
-        return records.read(userId, leagueId, round.boardRunId())
+        return lastTry(leagueId, round.boardRunId())
                 .map(DecisionRecord::outcome)
                 .map(outcome -> switch (outcome) {
                     case Outcome.Withheld withheld ->
