@@ -2,14 +2,14 @@ package otto.harness;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import otto.OttoProperties;
 import otto.followed.LeagueDocumentNaming;
 import otto.format.TelegramHtml;
 import otto.storage.DocumentNaming;
@@ -59,6 +60,9 @@ public abstract class WireSeamTest {
     protected static final WireMockServer teamSites = newServer();
     protected static final WireMockServer fantasyCalc = newServer();
     private static final Path storageDir = newStorageDir();
+
+    /** Every document name the store was handed during one test. */
+    private static final Set<String> DOCUMENTS_TOUCHED = ConcurrentHashMap.newKeySet();
 
     /** Every message body sent to Telegram during one test, before any reset. */
     private static final List<String> sentBodies = new CopyOnWriteArrayList<>();
@@ -143,31 +147,25 @@ public abstract class WireSeamTest {
     }
 
     /**
-     * Holds every document a scenario stores to the rule that keeps the
+     * Holds every document a scenario touches to the rule that keeps the
      * leagues apart: each kind of document is listed as belonging to one
      * league or as shared by every league, so a new kind cannot quietly
      * be shared.
      */
     @AfterEach
-    void everyStoredDocumentIsMarkedPerLeagueOrShared() throws IOException {
-        try (Stream<Path> files = Files.list(storageDir)) {
-            List<String> unmarked = files
-                    .map(file -> file.getFileName().toString())
-                    .filter(file -> file.endsWith(".json"))
-                    .map(WireSeamTest::documentName)
-                    .map(DocumentNaming::withoutLeague)
-                    .filter(name -> !LeagueDocumentNaming.isMarked(name))
-                    .distinct()
-                    .toList();
-            assertThat(unmarked).as("documents LeagueDocumentNaming lists as neither "
-                    + "belonging to a league nor shared").isEmpty();
+    void everyDocumentTouchedIsListedPerLeagueOrShared() {
+        try {
+            assertThat(DOCUMENTS_TOUCHED.stream()
+                    .filter(name -> LeagueDocumentNaming.ownershipOf(name)
+                            == LeagueDocumentNaming.Ownership.UNLISTED)
+                    .sorted()
+                    .toList())
+                    .as("documents LeagueDocumentNaming lists as neither belonging to a "
+                            + "league nor shared")
+                    .isEmpty();
+        } finally {
+            DOCUMENTS_TOUCHED.clear();
         }
-    }
-
-    /** Reads a document's name back from its file, which FileDocumentBackend names in hex. */
-    private static String documentName(String file) {
-        String encoded = file.substring(0, file.length() - ".json".length());
-        return new String(HexFormat.of().parseHex(encoded), StandardCharsets.UTF_8);
     }
 
     @BeforeEach
@@ -204,6 +202,17 @@ public abstract class WireSeamTest {
 
     @TestConfiguration
     public static class HarnessConfig {
+
+        /** The app's league naming, noting each document name it is handed. */
+        @Bean
+        @Primary
+        DocumentNaming recordingNaming(OttoProperties properties) {
+            LeagueDocumentNaming naming = new LeagueDocumentNaming(properties);
+            return name -> {
+                DOCUMENTS_TOUCHED.add(name);
+                return naming.stored(name);
+            };
+        }
 
         @Bean
         @Primary

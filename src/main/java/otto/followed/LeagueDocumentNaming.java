@@ -20,8 +20,8 @@ import otto.storage.DocumentNaming;
  * or copy. ADR-0012 lists which documents belong to a league and why.
  *
  * <p>Every kind of document Otto stores is listed here as one or the
- * other, and the scenario tests fail on a document that is in neither
- * list. A document missing from both is stored as shared.
+ * other, and the scenario tests fail on any document they touch that is
+ * in neither list. A document missing from both is stored as shared.
  */
 @Component
 public class LeagueDocumentNaming implements DocumentNaming {
@@ -90,26 +90,37 @@ public class LeagueDocumentNaming implements DocumentNaming {
         this.configLeagueId = properties.leagueId();
     }
 
+    /** Whether a kind of document belongs to one league or is shared by every league. */
+    public enum Ownership {
+        /** Each league keeps its own copy. */
+        PER_LEAGUE,
+        /** One copy serves every league. */
+        SHARED,
+        /** Listed as neither, which is stored as shared and is a mistake to fix. */
+        UNLISTED
+    }
+
     @Override
     public String stored(String name) {
         String league = LeagueScope.bound().orElse(configLeagueId);
-        if (league.equals(configLeagueId) || !belongsToALeague(name)) {
+        if (league.equals(configLeagueId) || ownershipOf(name) != Ownership.PER_LEAGUE) {
             return name;
         }
         return name + LEAGUE_SUFFIX + league;
     }
 
-    /**
-     * True when the document called {@code name} is listed as belonging
-     * to a league or as shared by every league.
-     */
-    public static boolean isMarked(String name) {
-        return belongsToALeague(name) || SHARED.contains(name)
-                || SHARED_PREFIXES.stream().anyMatch(name::startsWith);
+    /** Returns whether the document called {@code name} belongs to one league or is shared. */
+    public static Ownership ownershipOf(String name) {
+        if (PER_LEAGUE.contains(name) || startsWithAny(name, PER_LEAGUE_PREFIXES)) {
+            return Ownership.PER_LEAGUE;
+        }
+        if (SHARED.contains(name) || startsWithAny(name, SHARED_PREFIXES)) {
+            return Ownership.SHARED;
+        }
+        return Ownership.UNLISTED;
     }
 
-    private static boolean belongsToALeague(String name) {
-        return PER_LEAGUE.contains(name)
-                || PER_LEAGUE_PREFIXES.stream().anyMatch(name::startsWith);
+    private static boolean startsWithAny(String name, Set<String> prefixes) {
+        return prefixes.stream().anyMatch(name::startsWith);
     }
 }

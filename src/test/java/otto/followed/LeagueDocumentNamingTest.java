@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import otto.OttoProperties;
+import otto.followed.LeagueDocumentNaming.Ownership;
 import otto.scope.LeagueScope;
 
 class LeagueDocumentNamingTest {
@@ -16,26 +17,30 @@ class LeagueDocumentNamingTest {
             CONFIG_LEAGUE, null, null, null, null, null, null, null, null, null, null, 0.0,
             null, null));
 
+    private String storedInOtherLeague(String name) {
+        return LeagueScope.call(OTHER_LEAGUE, () -> naming.stored(name));
+    }
+
     @Test
     void aLeaguesOwnDocumentIsStoredApartForEachLeagueButTheConfigLeague() {
         assertThat(naming.stored("settings")).isEqualTo("settings");
-        assertThat(LeagueScope.call(OTHER_LEAGUE, () -> naming.stored("settings")))
-                .isEqualTo("settings@league-" + OTHER_LEAGUE);
-        assertThat(LeagueDocumentNaming.isMarked("settings")).isTrue();
+        assertThat(storedInOtherLeague("settings")).isEqualTo("settings@league-" + OTHER_LEAGUE);
+        assertThat(storedInOtherLeague("alert-delivery-key:lineup"))
+                .isEqualTo("alert-delivery-key:lineup@league-" + OTHER_LEAGUE);
     }
 
     @Test
     void aSharedDocumentKeepsItsNameInEveryLeague() {
-        assertThat(LeagueScope.call(OTHER_LEAGUE, () -> naming.stored("conversation")))
-                .isEqualTo("conversation");
-        assertThat(LeagueDocumentNaming.isMarked("conversation")).isTrue();
-        assertThat(LeagueDocumentNaming.isMarked("nflverse-stats-player-2026")).isTrue();
+        assertThat(storedInOtherLeague("conversation")).isEqualTo("conversation");
+        assertThat(storedInOtherLeague("alert-delivery-id:42")).isEqualTo("alert-delivery-id:42");
+        assertThat(LeagueDocumentNaming.ownershipOf("nflverse-stats-player-2026"))
+                .isEqualTo(Ownership.SHARED);
     }
 
     @Test
-    void aDocumentInNeitherListIsNotMarkedAndIsStoredAsShared() {
-        assertThat(LeagueDocumentNaming.isMarked("brand-new-cache")).isFalse();
-        assertThat(LeagueScope.call(OTHER_LEAGUE, () -> naming.stored("brand-new-cache")))
-                .isEqualTo("brand-new-cache");
+    void aDocumentInNeitherListIsUnlistedAndStoredAsShared() {
+        assertThat(LeagueDocumentNaming.ownershipOf("brand-new-cache"))
+                .isEqualTo(Ownership.UNLISTED);
+        assertThat(storedInOtherLeague("brand-new-cache")).isEqualTo("brand-new-cache");
     }
 }
