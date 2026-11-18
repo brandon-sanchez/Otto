@@ -30,6 +30,11 @@ class JsonStoreSnapshotTest {
         }
 
         @Override
+        public void delete(String name) {
+            throw new AssertionError("a snapshot never deletes");
+        }
+
+        @Override
         public void flush() {
             throw new AssertionError("a snapshot never flushes the store it reads");
         }

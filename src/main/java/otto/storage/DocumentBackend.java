@@ -37,6 +37,14 @@ public interface DocumentBackend {
     void store(String name, byte[] json);
 
     /**
+     * Removes one document, so it loads as empty from then on. Removing
+     * a document that holds nothing does nothing. A backend that batches
+     * writes may leave the stored copy until {@link #flush}, but loads
+     * the document as empty at once.
+     */
+    void delete(String name);
+
+    /**
      * Stores the lease under its name unless another holder's lease on
      * it is still live at {@code now}. Taking a lease the holder already
      * has extends it. A backend that several processes share decides

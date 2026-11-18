@@ -29,6 +29,10 @@ class AdviceCheckSlipsTest {
         @Override
         public void store(String name, byte[] json) {
         }
+
+        @Override
+        public void delete(String name) {
+        }
     };
 
     private final AdviceCheck check = new AdviceCheck(

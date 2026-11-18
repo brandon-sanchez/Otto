@@ -30,6 +30,11 @@ class StoredWithoutDropbacksTest {
         public void store(String name, byte[] json) {
             documents.put(name, json);
         }
+
+        @Override
+        public void delete(String name) {
+            documents.remove(name);
+        }
     });
 
     /** Stores the value, then drops its dropbacks field, as a copy from before it held them. */

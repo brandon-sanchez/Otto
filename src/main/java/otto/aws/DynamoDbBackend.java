@@ -8,6 +8,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
@@ -117,4 +118,11 @@ public class DynamoDbBackend implements DocumentBackend {
                 .build());
     }
 
+    @Override
+    public void delete(String name) {
+        dynamo.deleteItem(DeleteItemRequest.builder()
+                .tableName(table)
+                .key(Map.of(NAME, AttributeValue.fromS(name)))
+                .build());
+    }
 }

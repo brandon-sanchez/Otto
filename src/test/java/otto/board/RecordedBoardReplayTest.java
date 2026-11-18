@@ -63,6 +63,10 @@ class RecordedBoardReplayTest {
             @Override
             public void store(String name, byte[] json) {
             }
+
+            @Override
+            public void delete(String name) {
+            }
         });
         PlayerDirectoryStore directory = new PlayerDirectoryStore(store) {
             @Override

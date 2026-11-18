@@ -34,6 +34,7 @@ import otto.records.EvidenceStatus;
 import otto.records.FileRecordObjects;
 import otto.records.ModelExchange;
 import otto.records.Outcome;
+import otto.records.RecordsPurge;
 import otto.records.RedactedCredentials;
 import otto.records.RosterContext;
 import otto.records.RunKind;
@@ -273,7 +274,7 @@ class DecisionRecordStorageScenarioTest {
                 Map.of("judged", true));
         s3.expire("article-text/user=owner/league=league-1/run=20261010T153000Z-3f9a1c2e.json");
 
-        records.deleteUser("owner");
+        new RecordsPurge(new S3RecordObjects(s3, BUCKET)).deleteUser("owner");
 
         assertThat(s3.versionsUnder("records/user=owner/"))
                 .as("no version is left to read back").isEmpty();
@@ -292,7 +293,8 @@ class DecisionRecordStorageScenarioTest {
         assertThatThrownBy(() -> records.saveFirst(record("owner/../x", "league-1",
                 "20261010T153000Z-3f9a1c2e")))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> records.deleteUser("owner/"))
+        assertThatThrownBy(() -> new RecordsPurge(new S3RecordObjects(s3, BUCKET))
+                .deleteUser("owner/"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(s3.keys()).isEmpty();
     }
@@ -312,7 +314,7 @@ class DecisionRecordStorageScenarioTest {
         assertThat(local.read("owner", "league-1", "20261010T153000Z-3f9a1c2e"))
                 .contains(saved);
 
-        local.deleteUser("owner");
+        new RecordsPurge(new FileRecordObjects(dir)).deleteUser("owner");
 
         assertThat(local.read("owner", "league-1", "20261010T153000Z-3f9a1c2e")).isEmpty();
     }

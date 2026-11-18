@@ -1,6 +1,5 @@
 package otto.aws;
 
-import java.util.List;
 import java.util.Map;
 
 import ch.qos.logback.classic.Level;
@@ -9,13 +8,12 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import otto.records.DecisionRecords;
-import otto.records.RedactedCredentials;
+import otto.records.RecordsPurge;
 
 /**
  * The one entry point that may delete a Decision Record. The webhook
  * invokes it once the user confirms, with {@code {"userId": "..."}}, and
- * it calls {@link DecisionRecords#deleteUser}. Its role is the only one
+ * it calls {@link RecordsPurge#deleteUser}. Its role is the only one
  * granted delete and governance-bypass rights on the records bucket, and
  * the bucket policy lets only it and the account root through, so the
  * functions that run every day cannot delete a record whatever goes
@@ -42,13 +40,11 @@ public class AccountDeletionHandler implements RequestHandler<Map<String, Object
 
     private static final Logger log = LoggerFactory.getLogger(AccountDeletionHandler.class);
 
-    private final DecisionRecords records;
+    private final RecordsPurge purge;
 
     /** Deletes from the bucket the stack names in {@code OTTO_RECORDS_BUCKET}. */
     public AccountDeletionHandler() {
-        this(new DecisionRecords(
-                new S3RecordObjects(AwsConfig.newS3Client(), recordsBucket()),
-                new RedactedCredentials(List.of())));
+        this(new RecordsPurge(new S3RecordObjects(AwsConfig.newS3Client(), recordsBucket())));
     }
 
     private static String recordsBucket() {
@@ -59,8 +55,8 @@ public class AccountDeletionHandler implements RequestHandler<Map<String, Object
         return bucket;
     }
 
-    AccountDeletionHandler(DecisionRecords records) {
-        this.records = records;
+    AccountDeletionHandler(RecordsPurge purge) {
+        this.purge = purge;
     }
 
     /**
@@ -79,7 +75,7 @@ public class AccountDeletionHandler implements RequestHandler<Map<String, Object
             throw new IllegalArgumentException("The request names no user whose records to delete");
         }
         try {
-            records.deleteUser(userId);
+            purge.deleteUser(userId);
         } catch (RuntimeException e) {
             log.error("Could not delete every Decision Record of one user", e);
             throw e;

@@ -64,6 +64,19 @@ public class FileDocumentBackend implements DocumentBackend {
         }
     }
 
+    @Override
+    public void delete(String name) {
+        try {
+            Files.deleteIfExists(fileFor(name));
+            Optional<Path> legacy = legacyFileFor(name);
+            if (legacy.isPresent()) {
+                Files.deleteIfExists(legacy.get());
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Cannot delete stored document " + name, e);
+        }
+    }
+
     private Path fileFor(String name) {
         return dir.resolve(encodedName(name) + ".json");
     }
