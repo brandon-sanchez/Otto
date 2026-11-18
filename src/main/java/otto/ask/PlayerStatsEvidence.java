@@ -123,7 +123,7 @@ final class PlayerStatsEvidence {
                 "notInFreeData", NOT_IN_FREE_DATA)));
         String asked = subject.asked() == null || subject.asked().isBlank() ? ""
                 : " He asked about: %s.".formatted(subject.asked().strip());
-        String what = leaguePoints.isPresent() ? "fantasy points in his league's scoring"
+        String what = leaguePoints.isPresent() ? "fantasy points in the user's league scoring"
                 : "stats";
         return new EvidenceBundle("Tell the user %s's %s for %s.%s".formatted(subject.name(),
                 what, subject.window().label(), asked), items,

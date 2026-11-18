@@ -39,10 +39,10 @@ public class TeamDirectionAnswers {
     private static final String RUN_ID_PREFIX = "team-directions-";
 
     private static final String INSTRUCTIONS = AdvicePrompt.preamble(
-            "about the teams in his league", AdvicePrompt.Naming.NO_PLAYER)
+            "about the teams in their league", AdvicePrompt.Naming.NO_PLAYER)
             + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
 
-            Write plain text. Say which teams are contending, which are in the middle and
+            Say which teams are contending, which are in the middle and
             which are rebuilding, using each "team-" item's "direction", and give each team
             its reason in a short clause drawn from its "reason". The item whose manager is
             "you" is the user's own team: call it "your team". When "basis" says market

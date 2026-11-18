@@ -133,11 +133,11 @@ public class LineupTools {
                     five.""")
             Integer count,
             @ToolParam(required = false, description = """
-                    The players on the user's own roster he would drop,
+                    The players on the user's own roster the user would drop,
                     by name or Sleeper player id. Every candidate then
-                    carries the projected points he gains over each of
+                    carries the projected points the user gains over each of
                     them. Use it for "who is better than X" and "who
-                    would I drop". Leave it out when he named nobody.""")
+                    would I drop". Leave it out when the user named nobody.""")
             List<String> replacing,
             @ToolParam(required = false, description = """
                     True to keep the board to the positions where the
@@ -155,17 +155,17 @@ public class LineupTools {
 
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_waiver_preferences", description = """
-            The user's preference for his next waiver board, the one Otto
+            The user's preference for their next waiver board, the one Otto
             builds before the league's next claim deadline. A preference
             covers that one claim round and ends when its claims close.
-            Call this to set one when he asks to steer the board or the
+            Call this to set one when the user asks to steer the board or the
             waiver round, such as "focus on TE this week" or "only TEs on
             my board", to show what is in force, or to clear it. A one-off
-            "only show me TEs" about the answer he is reading is not a
+            "only show me TEs" about the answer the user is reading is not a
             preference: answer it with rank_waiver_targets and its
             position. Only this tool knows what is in force: never treat a
             preference mentioned earlier in the conversation as active,
-            and never set one he did not ask for in his latest message.""")
+            and never set one the user did not ask for in their latest message.""")
     public ToolAnswer<WaiverPreferences.View> manageWaiverPreferences(
             @ToolParam(description = "set, show or clear")
             String action,
@@ -174,7 +174,7 @@ public class LineupTools {
                     to set; leave it out to show or clear.""")
             List<String> positions,
             @ToolParam(required = false, description = """
-                    True when he wants the board to show only those
+                    True when the user wants the board to show only those
                     positions. Leave it out for a focus, which ranks them
                     first and still shows a clearly better pickup
                     elsewhere.""")

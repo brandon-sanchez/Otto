@@ -88,7 +88,7 @@ record PlayoffPitch(int firstWeek, int lastWeek, Schedule schedule,
             return Optional.empty();
         }
         return gives.stream()
-                .flatMap(player -> byeWeek(player).map(week -> ("%s, whom he would give up, "
+                .flatMap(player -> byeWeek(player).map(week -> ("%s, whom they would give up, "
                         + "has his bye in week %d, a playoff week, while %s %s every playoff "
                         + "week from %d to %d").formatted(player.name(), week,
                         Prose.listed(receives.stream().map(Player::name).toList()),

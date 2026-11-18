@@ -35,7 +35,7 @@ final class TeamDirectionEvidence {
         league.teams().forEach(team -> evidence.add(item("team-" + team.rosterId(), now,
                 facts(team, league.market(), league.teams().size()))));
         return new EvidenceBundle(
-                "Tell the user which teams in his league are contending, in the middle or "
+                "Tell the user which teams in their league are contending, in the middle or "
                         + "rebuilding, and why.",
                 evidence, List.of(), List.of(), true, Optional.empty(), maxLength,
                 Optional.empty(), List.of(), List.of());

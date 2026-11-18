@@ -372,7 +372,7 @@ public class WaiverEvidence {
                         .collect(Collectors.joining(", ")));
         facts.put("weaknessThisWeek", standings(needs.weakness(), "projected"));
         facts.put("pastStarterScoring", needs.weeksScored() == 0 ? "no completed week yet"
-                : standings(needs.pastScoring(), "per week from his starters over "
+                : standings(needs.pastScoring(), "per week from the user's starters over "
                         + needs.weeksScored() + " completed weeks"));
         if (!needs.notes().isEmpty()) {
             facts.put("notes", String.join("; ", needs.notes()));

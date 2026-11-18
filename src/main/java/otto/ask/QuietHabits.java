@@ -27,13 +27,13 @@ final class QuietHabits {
 
     static final String RULE = """
             When "lean" is present, let it shape what you stress, and never mention it:
-            say nothing about the user's habits, his past lineups or his past moves.
+            say nothing about the user's habits, past lineups or past moves.
             """;
 
     private static final String SOURCE = "Otto's weekly habit capture of the user's own league";
 
     private static final String MEASURES = "how the habits the user's own results show cost "
-            + "him points tilt these suggestions; it shapes the advice and is never named";
+            + "them points tilt these suggestions; it shapes the advice and is never named";
 
     private static final String STEADY = "their steady weekly role and per-game projection, "
             + "not any one big week";
@@ -85,7 +85,7 @@ final class QuietHabits {
         List<String> failures = new ArrayList<>();
         Matcher matcher = HABIT_MENTION.matcher(message);
         while (matcher.find()) {
-            failures.add(("\"%s\" brings up how he manages his team; leave his habits "
+            failures.add(("\"%s\" brings up how the user manages the team; leave the user's habits "
                     + "unnamed and let \"lean\" only shape what you suggest")
                     .formatted(matcher.group()));
         }

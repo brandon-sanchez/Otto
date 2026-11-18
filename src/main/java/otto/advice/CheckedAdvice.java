@@ -9,6 +9,8 @@ import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.format.Spacing;
+import otto.format.TelegramHtml;
 import otto.records.Candidate;
 import otto.records.DecisionRecord;
 import otto.records.Outcome;
@@ -115,7 +117,7 @@ public class CheckedAdvice {
     /** Uses a verified, code-written answer when the model cannot explain the same facts. */
     public Checked write(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form, Run run,
             Instant now, AnswerDelivery delivery, Supplier<String> verifiedFallback) {
-        AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
+        AdviceResult<AdviceAnswer> result = laidOut(writer.write(bundle, form));
         Outcome outcome = switch (result) {
             case AdviceResult.Approved<AdviceAnswer> approved ->
                 delivered(approved.answer().message(), delivery);
@@ -142,6 +144,21 @@ public class CheckedAdvice {
                 .versions(bundle.versions(form, result))
                 .exchanges(result.exchanges())
                 .outcome(outcome);
+    }
+
+    /**
+     * Returns the result with an approved message as Telegram shows it:
+     * Markdown turned into the HTML it stands for by
+     * {@link TelegramHtml#normalize} and crammed lines given room by
+     * {@link Spacing#breathe}, so the Decision Record keeps the message
+     * as the user reads it.
+     */
+    private static AdviceResult<AdviceAnswer> laidOut(AdviceResult<AdviceAnswer> result) {
+        return result instanceof AdviceResult.Approved<AdviceAnswer> approved
+                ? new AdviceResult.Approved<>(approved.answer().withMessage(Spacing.breathe(
+                        TelegramHtml.normalize(approved.answer().message()))),
+                        approved.exchanges())
+                : result;
     }
 
     private static Outcome delivered(String message, AnswerDelivery delivery) {

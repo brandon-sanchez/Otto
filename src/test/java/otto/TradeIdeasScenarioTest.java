@@ -38,6 +38,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -74,9 +75,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     private static final String REAGOR = "6768";
 
     private static final String CHECKED = "Send GridironGoblin Dallas Goedert and Justin "
-            + "Jefferson for Saquon Barkley. It's a slight edge for you on rest-of-season fit, "
-            + "a gap of 8.2%, and on market value GridironGoblin gets 9500 for the 8200 he "
-            + "gives.";
+            + "Jefferson for Saquon Barkley.\n\nOn trade value GridironGoblin gets 9500 and "
+            + "gives 8200, so the trade looks fair to them.";
 
     private static final String WRONG_PARTNER = "Send GridironGoblin Dallas Goedert and Jalen "
             + "Reagor for Saquon Barkley.";
@@ -89,8 +89,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     private static final String WR_DEPTH_04 = "93004";
 
     private static final String TIGHT_END_OFFER = "Send WaiverWizard CeeDee Lamb for TE Depth "
-            + "03 and WR Depth 04. It's a slight edge for you on rest-of-season fit, a gap of "
-            + "9.4%.";
+            + "03 and WR Depth 04. It leans your way for your lineup the rest of this "
+            + "season.";
 
     private static final String TIGHT_END_DEPTH ="a 1-for-2: one of yours for two of his, "
             + "for depth at TE";
@@ -253,13 +253,13 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .containsEntry("youGive", "Dallas Goedert and Justin Jefferson")
                 .containsEntry("shape", "a 2-for-1: two of yours for one better player, to "
                         + "upgrade your RB starters")
-                .containsEntry("yourEdge", "a slight edge for you on rest-of-season fit, a "
-                        + "gap of 8.2%")
-                .containsEntry("why1", "On market value GridironGoblin gets 9500 for the 8200 "
-                        + "he gives")
+                .containsEntry("yourEdge", "a slight edge for you for your lineup the rest of "
+                        + "this season")
+                .containsEntry("why1", "On trade value GridironGoblin gets 9500 and gives "
+                        + "8200, so the trade looks fair to them")
                 .containsEntry("why4", "GridironGoblin is contending, 9-2, 4 games clear of "
                         + "the first team out of the 6 playoff spots, with the most points and "
-                        + "the 2nd-most valuable roster, so points now matter to him")
+                        + "the 2nd-most valuable roster, so points now matter to them")
                 .containsEntry("why5", "GridironGoblin has made 1 trade this season");
         assertThat(evidence).containsKeys("offer-2", "offer-3").doesNotContainKey("offer-4");
         assertThat(evidence.get("summary")).containsEntry("found", "3 offers");
@@ -340,7 +340,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         Map<String, Map<String, String>> evidence = askForTrades("{\"shape\":\"3-for-2\"}");
 
         assertThat(evidence.get("summary")).containsEntry("shape",
-                "each offer is a 3-for-2, as he asked");
+                "each offer is a 3-for-2, as the user asked");
         assertThat(evidence.get("offer-1"))
                 .containsEntry("shape", "a 3-for-2, the shape you asked for")
                 .hasEntrySatisfying("youGive", names -> assertThat(names.split(", | and "))
@@ -361,9 +361,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .containsEntry("sendTo", "GridironGoblin")
                 .containsEntry("youGet", "RB Depth 10")
                 .containsEntry("youGive", "Jalen Reagor and 2028 2nd-round pick")
-                .containsEntry("yourEdge", "about even on market value, leaning your way by "
-                        + "2.4%")
-                .containsEntry("market", "on market value you get 4200 and give 4100");
+                .containsEntry("yourEdge", "about even on trade value, leaning your way")
+                .containsEntry("market", "on trade value you get 4200 and give 4100");
         assertThat(evidence.get("offer-1-pick3"))
                 .containsEntry("pick", "2028 2nd-round pick")
                 .containsEntry("nflDraft", "2nd round");
@@ -390,14 +389,14 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         ask("show more");
 
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("ask him how many more he wants")));
+                .withRequestBody(containing("ask how many more they want")));
         assertThat(records(RunKind.TRADE_IDEAS)).hasSize(1);
 
         nextQuestion();
         Map<String, Map<String, String>> more = askForTrades("{\"count\":2,\"shown\":3}");
 
         assertThat(more.get("summary")).containsEntry("asked",
-                "2 more trade ideas after the 3 he has seen");
+                "2 more trade ideas after the 3 already shown");
         List<String> seen = List.of("offer-1", "offer-2", "offer-3").stream()
                 .map(id -> first.get(id).get("youGet") + " for " + first.get(id).get("youGive"))
                 .toList();
@@ -625,10 +624,16 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 You give: Dallas Goedert and Justin Jefferson
                 You get: Saquon Barkley
 
-                Your side: a slight edge for you on rest-of-season fit, a gap of 8.2%.
-                On market value GridironGoblin gets 9500 for the 8200 he gives.""";
+                Your RB starters rank 4th of 4 in the league, and this upgrades them. Your \
+                starting lineup gains 30.6 points over weeks 12 to 14.
+
+                GridironGoblin's starting lineup gains 2.4 points over weeks 12 to 14. \
+                GridironGoblin is short at TE, where their starters rank 1st of 4 and their \
+                depth ranks 4th of 4.""";
         telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing(firstOffer))));
+                .withRequestBody(matchingJsonPath("$.text", containing(firstOffer)))
+                .withRequestBody(matchingJsonPath("$.text",
+                        notMatching("(?is).*\\b(he|his|him|she|her)\\b.*"))));
         assertThat(records(RunKind.TRADE_IDEAS)).singleElement().satisfies(record -> {
             assertThat(record.exchanges().getLast().checkFailures()).isNotEmpty();
             assertThat(record.outcome()).isInstanceOfSatisfying(Outcome.Sent.class, sent ->
@@ -711,7 +716,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
         ask("what trades should I make and why?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("brings up how he manages his team")));
+                .withRequestBody(containing("brings up how the user manages the team")));
         theUserReads(TIGHT_END_OFFER);
     }
 

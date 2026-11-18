@@ -52,21 +52,27 @@ public class BuyLowSellHigh {
             "about buy-low and sell-high players", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + """
 
-            Give each player his own line that leads with his call: "📉 Buy low:
-            <b>Player Name</b>" for a buy-low, partial bounce-back or market buy-low, and
-            "📈 Sell high: <b>Player Name</b>" for a sell-high, followed on the same line
-            by the one number that makes the call, such as how many points a game he
-            scored below his usage.
-            Then one short line on why. A buy-low is a player whose usage held while
-            his points slumped; say how his usage held and how far below it he scored. For
-            a partial bounce-back, say his usage slipped too, so only part of his old level
-            should come back. A role decline is never a buy-low: say his role shrank. For a
-            sell-high, say how far above his usage he has scored and give "levelToExpect"
-            as the level to expect from here. When a market item is present, say it plainly,
-            for example "his value is down 18% this month while his targets held". Explain
-            xFP in plain words the first time you use it. When "rosteredBy" is present, say
-            whose team he is on. Never write a confidence label such as High or Medium. Stay
-            under "maxLength" characters. There is no lineup move, so "move" is null.
+            Give each player a header on one line that leads with the call. For a buy-low,
+            a partial bounce-back or a buy-low on price the header is
+            "📉 Buy low: <b>Player Name</b>"
+            and for a sell-high it is
+            "📈 Sell high: <b>Player Name</b>"
+            with the icon, the call and the name all on that one line. A player whose
+            "call" is neither gets no icon: open with his name in bold and say plainly
+            that he is not a buy-low, or that he is neither.
+            Under the header, explain the call in one or two short sentences in your own
+            words, from that player's "meaning" and numbers. Say only what matters for
+            him, and never write two players' explanations to the same pattern. A buy-low
+            is getting the same work and scoring less, so his points should come back. A
+            partial bounce-back has lost some work too, so only part should come back. A
+            player whose work shrank is not a buy-low. A sell-high is scoring more than
+            his work supports; give "levelToExpect" as what to expect from here. Mention
+            his trade value from a market item only when it has moved, and whose team he
+            is on from "rosteredBy" only when it helps the user act. Never call a player
+            a "market buy-low"; say he costs less than he should. Leave a blank line
+            between players.
+            Never write a confidence label such as High or Medium. Stay under "maxLength"
+            characters. There is no lineup move, so "move" is null.
             """ + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
@@ -199,7 +205,7 @@ public class BuyLowSellHigh {
             return ToolAnswer.unavailable(nobody(side));
         }
         return explain(week.league(), judged, "Tell the user which players are buy-lows on "
-                + "other teams and which of his own players are sell-highs, and why.", now,
+                + "other teams and which of the user's own players are sell-highs, and why.", now,
                 delivery);
     }
 

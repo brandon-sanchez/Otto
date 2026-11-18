@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
+import otto.advice.Ordinal;
 import otto.buysell.Assessment;
 import otto.buysell.BuySellReader;
 import otto.directory.DirectoryPlayer;
@@ -431,8 +432,39 @@ public class TradeOffers {
                     .map(acceptance -> new Judged(new Offer(partner.manager(),
                             partner.rosterId(), candidate.kind(), candidate.shape(),
                             candidate.need(), described(candidate.gets()),
-                            described(candidate.gives()), priced, acceptance.reasons(),
-                            direction, Optional.empty()), acceptance));
+                            described(candidate.gives()), priced, helpsYou(candidate, priced),
+                            acceptance.reasons(), direction, Optional.empty()), acceptance));
+        }
+
+        /**
+         * Says how the trade helps the user: where the position it
+         * targets ranks in the league today, and what it does to the
+         * starting lineup over the weeks left. Only an upgrade or depth
+         * offer names its position, because only those are built to
+         * fix one; a shape the user asked for may land anywhere.
+         */
+        private List<String> helpsYou(OfferSearch.Candidate candidate, PricedTrade priced) {
+            List<String> helps = new ArrayList<>();
+            candidate.need()
+                    .filter(position -> candidate.kind() != Offer.Kind.ASKED)
+                    .flatMap(position -> profile.teams().stream()
+                            .filter(team -> team.rosterId() == mine.rosterId())
+                            .findFirst()
+                            .flatMap(team -> team.at(position)))
+                    .map(need -> candidate.kind() == Offer.Kind.DEPTH
+                            ? "Your %s depth ranks %s in the league, and this adds to it"
+                                    .formatted(need.position(), Ordinal.standing(
+                                            need.depthRank(), need.teams()))
+                            : "Your %s starters rank %s in the league, and this upgrades them"
+                                    .formatted(need.position(), Ordinal.standing(
+                                            need.starterRank(), need.teams())))
+                    .ifPresent(helps::add);
+            double lineup = Double.parseDouble(priced.yours().startersDelta());
+            if (lineup > 0) {
+                helps.add("Your starting lineup gains %s points over %s".formatted(
+                        priced.yours().startersDelta(), priced.restOfSeasonWeeks()));
+            }
+            return helps;
         }
     }
 

@@ -100,7 +100,7 @@ class PlayoffPitchTest {
     @Test
     void aPlayerHeGivesUpWithAPlayoffByeIsTheLineWhenEverythingHeGetsPlays() {
         assertThat(pitch().line(CONTENDING, List.of(JEFFERSON), List.of(KELCE)))
-                .contains("GridironGoblin is contending, and Travis Kelce, whom he would "
+                .contains("GridironGoblin is contending, and Travis Kelce, whom they would "
                         + "give up, has his bye in week 16, a playoff week, while Justin "
                         + "Jefferson plays every playoff week from 15 to 17");
     }

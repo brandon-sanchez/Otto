@@ -245,9 +245,9 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
         assertThat(evidence.get("limits").get("limit2")).contains("route participation");
         assertThat(evidence.get("ceiling"))
                 .containsEntry("boomStarters",
-                        "2.1 of your 9 starters reach a boom week in an average week")
+                        "2.1 of your 9 starters have a huge week in an average week")
                 .containsEntry("boomRank", "1st of 4")
-                .containsEntry("bestBoom", "Justin Jefferson has the best chance of a boom "
+                .containsEntry("bestBoom", "Justin Jefferson has the best shot at a huge "
                         + "week among your starters, 41%");
     }
 
@@ -264,6 +264,29 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
 
         assertThat(evidence().get("suggestion-2")).containsEntry("sendTo", "GridironGoblin");
         theUserReads("Your running backs are thin.");
+    }
+
+    @Test
+    void sentenceLengthMovesTheModelCrammedTogetherReachTheUserWithBlankLinesBetween() {
+        redraftLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer("""
+                Your running backs are thin.
+                • Claim a running back off waivers, because your running backs are thin and \
+                you need a starter there.
+                • Then look for a trade, because you have more receivers than you can start \
+                every week."""));
+
+        ask("what are my team's weaknesses?");
+
+        theUserReads("""
+                Your running backs are thin.
+
+                • Claim a running back off waivers, because your running backs are thin and \
+                you need a starter there.
+
+                • Then look for a trade, because you have more receivers than you can start \
+                every week.""");
     }
 
     @Test
@@ -429,7 +452,7 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
         ask("what are my team's weaknesses?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("brings up how he manages his team")));
+                .withRequestBody(containing("brings up how the user manages the team")));
         theUserReads(CHECKED);
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("bench at tight end")));

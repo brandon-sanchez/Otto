@@ -97,6 +97,9 @@ public class AdviceCheck {
      */
     private static final Pattern OPENS_WITH_PRONOUN = Pattern.compile("^\\s*(?:He|His)\\b");
 
+    /** A pronoun that stands for a player the text named earlier. */
+    private static final Pattern PRONOUN = Pattern.compile("(?i)\\b(?:he|his|him)\\b");
+
     private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
 
     /**
@@ -316,8 +319,10 @@ public class AdviceCheck {
      * The evidence about a player is every item that names him or his
      * id, every item that names no player, his projection, and the items
      * cited by claims about him. A sentence that opens with "He" or "His"
-     * is also about whoever the text named last, and a person named from
-     * cited evidence is held to the items that name him.
+     * is also about whoever the text named last, and so are the words a
+     * sentence writes after "he", "his" or "him" and before its first
+     * name. A person named from cited evidence is held to the items that
+     * name him.
      */
     private void checkQuantities(EvidenceBundle bundle, AdviceAnswer answer,
             List<BundlePlayer> outsiders, List<String> failures) {
@@ -348,21 +353,39 @@ public class AdviceCheck {
             if (inSentence.isEmpty()) {
                 continue;
             }
-            List<BundlePlayer> named = OPENS_WITH_PRONOUN.matcher(sentence).find()
-                    ? Stream.concat(inSentence.stream(), namedLast.stream()).distinct().toList()
-                    : inSentence;
-            namedLast = named;
-            Set<Quantity> about = quantitiesAbout(bundle, answer, named);
-            Quantity.in(sentence).stream()
-                    .filter(stated -> known.contains(stated.quantity()))
-                    .filter(stated -> !about.contains(stated.quantity()))
-                    .map(Quantity.Stated::describe)
-                    .distinct()
-                    .forEach(stated -> failures.add(
-                            "The %s is not in the evidence about %s.".formatted(stated,
-                                    named.stream().map(BundlePlayer::fullName)
-                                            .collect(Collectors.joining(" or ")))));
+            List<BundlePlayer> withLast = Stream.concat(inSentence.stream(),
+                    namedLast.stream()).distinct().toList();
+            int firstName = firstNameAt(sentence, inSentence);
+            Matcher pronoun = PRONOUN.matcher(sentence);
+            if (OPENS_WITH_PRONOUN.matcher(sentence).find()) {
+                checkAbout(bundle, answer, sentence, withLast, known, failures);
+                namedLast = withLast;
+            } else if (pronoun.find() && pronoun.start() < firstName) {
+                checkAbout(bundle, answer, sentence.substring(0, firstName), withLast, known,
+                        failures);
+                checkAbout(bundle, answer, sentence.substring(firstName), inSentence, known,
+                        failures);
+                namedLast = withLast;
+            } else {
+                checkAbout(bundle, answer, sentence, inSentence, known, failures);
+                namedLast = inSentence;
+            }
         }
+    }
+
+    /** Holds the text's known numbers and ranks to the evidence about the players. */
+    private static void checkAbout(EvidenceBundle bundle, AdviceAnswer answer, String text,
+            List<BundlePlayer> named, Set<Quantity> known, List<String> failures) {
+        Set<Quantity> about = quantitiesAbout(bundle, answer, named);
+        Quantity.in(text).stream()
+                .filter(stated -> known.contains(stated.quantity()))
+                .filter(stated -> !about.contains(stated.quantity()))
+                .map(Quantity.Stated::describe)
+                .distinct()
+                .forEach(stated -> failures.add(
+                        "The %s is not in the evidence about %s.".formatted(stated,
+                                named.stream().map(BundlePlayer::fullName)
+                                        .collect(Collectors.joining(" or ")))));
     }
 
     private static Set<Quantity> quantitiesAbout(EvidenceBundle bundle, AdviceAnswer answer,
@@ -385,6 +408,23 @@ public class AdviceCheck {
         return Arrays.asList(item.id().split("-")).contains(player.playerId())
                 || item.facts().values().stream().anyMatch(value ->
                         value.equals(player.playerId()) || value.contains(player.fullName()));
+    }
+
+    /**
+     * Returns where the sentence first names one of the players, by full
+     * name or surname. The words before it can only be about a player
+     * named earlier, so "his 13 targets" there is that earlier player's.
+     */
+    private static int firstNameAt(String sentence, List<BundlePlayer> named) {
+        return named.stream()
+                .mapToInt(player -> {
+                    int fullName = sentence.indexOf(player.fullName());
+                    Matcher surname = surname(lastName(player.fullName())).matcher(sentence);
+                    return fullName >= 0 ? fullName
+                            : surname.find() ? surname.start() : sentence.length();
+                })
+                .min()
+                .orElse(sentence.length());
     }
 
     /**

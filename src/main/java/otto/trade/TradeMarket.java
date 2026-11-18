@@ -117,11 +117,11 @@ public class TradeMarket {
 
     private static String partnerView(RosterSnapshot partner, VerdictBand band, int net) {
         if (net <= 0 || band.verdict().equals(VerdictBand.EVEN)) {
-            return ("On market value %s gets at least about what he gives, so he'd likely "
-                    + "accept").formatted(partner.manager());
+            return ("On market value %s gets at least about what they give, so they'd "
+                    + "likely accept").formatted(partner.manager());
         }
-        return ("On market value %s gives up %.1f%% more than he gets, so expect him to push "
-                + "back or ask for more").formatted(partner.manager(), band.gap());
+        return ("On market value %s gives up %.1f%% more than they get, so expect them to "
+                + "push back or ask for more").formatted(partner.manager(), band.gap());
     }
 
     private record Side(MarketSide side, boolean priced, Optional<String> firstGap,

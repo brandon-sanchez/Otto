@@ -260,7 +260,9 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
                         🔴 <b>Christian McCaffrey</b> is now Out
 
                         <b>Fill your RB slot</b>: it scores zero with him in it.
+
                         Best bench option: Josh Jacobs, projected 12.5.
+
                         The 49ers said earlier that he will play."""))));
     }
 

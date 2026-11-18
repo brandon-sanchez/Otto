@@ -217,9 +217,10 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         assertThat(evidence.get("buysell-" + PICKENS))
                 .containsEntry("call", "buy-low")
                 .containsEntry("lastSeasonFinish", "WR5")
-                .containsEntry("expectedPointsChange", "his xFP a game is down 3% from last season")
+                .containsEntry("expectedPointsChange", "what his targets and carries are worth a game is down 3% "
+                                + "from last season")
                 .containsEntry("pointsVersusUsage",
-                        "4.6 points a game below what his usage is worth")
+                        "4.6 points a game below what his targets and carries are worth")
                 .containsEntry("usageHeld", "yes")
                 .containsEntry("rosteredBy", "GridironGoblin");
         assertThat(evidence.get("buysell-market-" + PICKENS))
@@ -229,9 +230,9 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         assertThat(evidence.get("buysell-" + MCBRIDE)).containsEntry("call", "buy-low on price");
         assertThat(evidence.get("buysell-" + SMITH_NJIGBA))
                 .containsEntry("call", "sell-high")
-                .containsEntry("levelToExpect", "22.2 points a game, his xFP this season")
+                .containsEntry("levelToExpect", "22.2 points a game, what his work this season is worth")
                 .containsEntry("pointsVersusUsage",
-                        "12.5 points a game above what his usage is worth");
+                        "12.5 points a game above what his targets and carries are worth");
     }
 
     @Test
@@ -252,14 +253,15 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
                 .containsExactly("ROLE_DECLINE");
         Map<String, Map<String, String>> evidence = evidence();
         assertThat(evidence.get("buysell-" + BARKLEY))
-                .containsEntry("call", "role decline")
+                .containsEntry("call", "not a buy-low, his work shrank")
                 .containsEntry("expectedPointsChange",
-                        "his xFP a game is down 34% from last season");
+                        "what his targets and carries are worth a game is down 34% "
+                                + "from last season");
         assertThat(evidence.get("buysell-market-" + BARKLEY))
                 .containsEntry("direction", "down")
                 .containsEntry("change", "25%")
-                .containsEntry("meaning", "his value fell and so did his usage, so the lower "
-                        + "price is fair and makes him no bargain");
+                .containsEntry("meaning", "his trade value fell and so did his work, so the "
+                        + "lower price is fair and makes him no bargain");
     }
 
     @Test
@@ -277,7 +279,8 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         assertThat(evidence().get("buysell-" + SUTTON))
                 .containsEntry("call", "partial bounce-back")
                 .containsEntry("expectedPointsChange",
-                        "his xFP a game is down 22% from last season");
+                        "what his targets and carries are worth a game is down 22% "
+                                + "from last season");
     }
 
     @Test
@@ -328,7 +331,7 @@ class BuyLowSellHighScenarioTest extends WireSeamTest {
         ask("is Colston Loveland a buy-low?");
 
         assertThat(evidence().get("buysell-" + LOVELAND))
-                .containsEntry("call", "role decline")
+                .containsEntry("call", "not a buy-low, his work shrank")
                 .doesNotContainKey("ruledOutAsBuyLow");
     }
 

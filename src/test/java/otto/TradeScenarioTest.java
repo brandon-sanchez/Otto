@@ -350,7 +350,7 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(field("net", "2.5")))
                 .withRequestBody(containing(field("net", "0.3")))
                 .withRequestBody(containing(
-                        "GridironGoblin gains from this too, which is why he would agree"))
+                        "GridironGoblin gains from this too, which is why they would agree"))
                 .withRequestBody(containing("is the first RB off that bench")));
     }
 
@@ -380,7 +380,7 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(field("net", "3.5")))
                 .withRequestBody(containing(field("net", "-3.5")))
                 .withRequestBody(containing(
-                        "GridironGoblin loses on this, so he has a reason to say no"))
+                        "GridironGoblin loses on this, so they have a reason to say no"))
                 .withRequestBody(containing("The verdict is yours alone")));
     }
 
@@ -563,7 +563,7 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(
                         "GridironGoblin is short at RB: 1 startable for 2 starting slots"))
                 .withRequestBody(containing("you hold 4 above replacement there"))
-                .withRequestBody(containing("That is what he has a reason to pay for"))
+                .withRequestBody(containing("That is what they have a reason to pay for"))
                 .withRequestBody(containing("Yours to spend")));
     }
 
@@ -813,11 +813,12 @@ class TradeScenarioTest extends WireSeamTest {
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing(field("verdict", "clear edge")))
                 .withRequestBody(containing(field("favours", "you")))
-                .withRequestBody(containing("Your rest-of-season fit decides this call"))
+                .withRequestBody(containing("What the trade does for your lineup the rest of this "
+                        + "season decides this call"))
                 .withRequestBody(containing(
                         "On market value alone this is a clear edge for GridironGoblin"))
                 .withRequestBody(containing(number("net", "-1192")))
-                .withRequestBody(containing("GridironGoblin gets at least about what he gives"))
+                .withRequestBody(containing("GridironGoblin gets at least about what they give"))
                 .withRequestBody(containing("12-team Superflex PPR redraft")));
     }
 
@@ -901,8 +902,8 @@ class TradeScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(number("total", "13197")))
                 .withRequestBody(containing(number("total", "14900")))
                 .withRequestBody(containing("market value GridironGoblin gives up 11.4% more "
-                        + "than he gets"))
-                .withRequestBody(containing("On rest-of-season fit alone this is")));
+                        + "than they get"))
+                .withRequestBody(containing("For your lineup this season alone this is")));
     }
 
     /**

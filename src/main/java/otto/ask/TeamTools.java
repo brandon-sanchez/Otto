@@ -48,7 +48,7 @@ public class TeamTools {
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "analyze_playoff_race", description = """
             What each team still needs: who has clinched a playoff place,
-            who is out, and how many of his remaining games the user must
+            who is out, and how many of their remaining games the user must
             win to be certain of a seed. Call this for playoff, clinch,
             elimination and "what do I need" questions.""")
     public ToolAnswer<LeagueAnalysis.PlayoffRace> analyzePlayoffRace() {
@@ -70,13 +70,13 @@ public class TeamTools {
 
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "review_habits", description = """
-            How the user manages his team, measured from his own results
-            this season: points left on his bench, how following or
+            How the user manages their team, measured from their own results
+            this season: points left on the bench, how following or
             overriding Otto's start/sit and waiver calls turned out,
             chasing last week's big game, starting Questionable players,
-            favouring one NFL team, and his waiver, FAAB and trade
-            activity. It reports only the habits that cost him points.
-            Call this only when he asks about himself as a manager, for
+            favouring one NFL team, and their waiver, FAAB and trade
+            activity. It reports only the habits that cost the user points.
+            Call this only when the user asks about themselves as a manager, for
             "what are my habits", "what mistakes am I making", "how can
             I improve?" and "how do I get better at this", and never
             bring habits up otherwise. Its message is already written and
@@ -89,20 +89,20 @@ public class TeamTools {
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_team_weaknesses", description = """
             Where the user's team is strong, thin or in surplus, position
-            by position against every team in his league, bench and depth
-            included, with his team's direction, how high its big weeks
+            by position against every team in the user's league, bench and depth
+            included, with the team's direction, how high its big weeks
             reach and up to three waiver or trade moves, already written
             and fact-checked. Send
-            its message word for word. Call this only when he asks about
-            his team or roster, for "what are my team's weaknesses", "how
+            its message word for word. Call this only when the user asks about
+            their team or roster, for "what are my team's weaknesses", "how
             can I improve my team" and "where is my roster thin". "How
-            can I improve?" with no team or roster named asks about him
+            can I improve?" with no team or roster named asks about the user
             as a manager: call review_habits for it instead.""")
     public ToolAnswer<TeamWeaknesses.Answer> getTeamWeaknesses(
             @ToolParam(required = false, description = """
-                    The league he named, or his words such as "all of
-                    them" when he asks about every league. Leave it out
-                    when he named none.""")
+                    The league the user named, or the user's words such as "all of
+                    them" when the user asks about every league. Leave it out
+                    when the user named none.""")
             String league, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return checked.offer(weaknesses.answer(league, clock.instant(), checked.delivery()),
@@ -112,7 +112,7 @@ public class TeamTools {
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_team_directions", description = """
             Every team in the user's league labelled contending, in the
-            middle or rebuilding, his own included, each with a one-line
+            middle or rebuilding, the user's own included, each with a one-line
             reason from its market value, record and points, already
             written and fact-checked. Send its message word for word.
             Call this for "who's contending in my league?", "who is
@@ -125,13 +125,13 @@ public class TeamTools {
 
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_team_direction", description = """
-            The direction the user gives his own team: contending, middle
-            or rebuilding. Otto uses his choice in place of the label it
-            measures until he changes or clears it. In a dynasty league
-            Otto never treats him as rebuilding until he says so. Call
-            this with set when he says which way his team is headed,
+            The direction the user gives their own team: contending, middle
+            or rebuilding. Otto uses the user's choice in place of the label it
+            measures until the user changes or clears it. In a dynasty league
+            Otto never treats the user as rebuilding until the user says so. Call
+            this with set when the user says which way their team is headed,
             such as "we're rebuilding" or "yes, I'm rebuilding", and
-            with clear when he asks Otto to judge it again itself.""")
+            with clear when the user asks Otto to judge it again itself.""")
     public ToolAnswer<TeamDirectionAnswers.Changed> manageTeamDirection(
             @ToolParam(description = "set or clear")
             String action,

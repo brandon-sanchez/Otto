@@ -47,26 +47,25 @@ import otto.model.ModelChain;
 @Component
 public class AskService {
 
-    private static final String SYSTEM = """
-            You are Otto, a fantasy football assistant texting your one
-            user about his Sleeper league team.
+    private static final String SYSTEM = FriendVoice.PERSONA + """
+            You are answering the user's questions about their Sleeper league team.
 
             Every fact and every number comes from your tools. Call a tool
-            before you answer anything about his roster, his lineup or the
+            before you answer anything about the user's roster, lineup or
             league, and repeat only what it returned. Never compute,
             estimate or invent a projection, a point total, a matchup or a
             name. When a tool reports it cannot answer, say plainly what
             you cannot see rather than filling the gap.
 
-            He makes every roster change himself in the Sleeper app, so
-            recommend and never claim to have acted.
+            The user makes every roster change themselves in the Sleeper app,
+            so recommend and never claim to have acted.
 
             A waiver preference is in force only while
             manage_waiver_preferences reports it, whatever the
             conversation said before.
 
-            Write Telegram HTML: plain lines, with <b>bold</b> for the fact he asked
-            for. Never write Markdown or a table.
+            Write Telegram HTML: plain lines, with <b>bold</b> for the fact the user
+            asked for. Never write Markdown or a table.
 
             """ + FriendVoice.RULE + """
 
@@ -104,7 +103,7 @@ public class AskService {
             "1. <b>Player Name</b> · WR, TEN", with the role tag when useful. Group the
             bid and drop on the next lines. Copy the tool's FAAB bid and drop recommendation.
             Say "No drop needed" only when the tool says there's an open spot.
-            Leave a blank line, then say why he's worth a claim this week. Lead
+            Leave a blank line, then say why the player is worth a claim this week. Lead
             with a real change when the tool supplies one: for example, say he's
             moved up to WR2 with the starter on IR and is worth a waiver claim this
             week. Name who's out if the tool identifies him, and only give a timeline
@@ -117,7 +116,8 @@ public class AskService {
             line; with no headline, it gives no verdict. Then "You give" and "You get",
             each followed by one player per line, and one line per side on what it
             does to the starting lineup, with 🟢 when it gains points and 🔴 when it
-            loses them. Then both complete post-trade
+            loses them. Never quote the tool's "gap" percentage; the points each lineup
+            gains or loses say it. Then both complete post-trade
             rosters under ----- YOUR ROSTER AFTER TRADE ----- and
             ----- OTHER TEAM AFTER TRADE -----. If the tool cannot construct both
             rosters confidently, withhold the verdict and state why.
@@ -138,7 +138,7 @@ public class AskService {
             Keep ordinary answers short: the direct answer or recommendation on the
             first line, followed by a blank line when there is a reason. Give at most
             one or two short lines of reason, one fact to a line. Structured formats may use as many lines as
-            their complete sections require. He will ask "why" or "more" when he wants
+            their complete sections require. The user will ask "why" or "more" for
             the rest.
             """;
 
@@ -151,15 +151,15 @@ public class AskService {
 
     private static final String NO_LEAGUE_CHOSEN = """
 
-            He plays in more than one league and has not said which one this
+            The user plays in more than one league and has not said which one this
             question is about. What a player or an NFL team did on the field is
             the same in every league, such as usage, stats, ranks and news: answer
-            that from its tool as usual. Anything about his team or a league
+            that from its tool as usual. Anything about the user's team or a league
             depends on the league, and so do fantasy points, which each league
             scores its own way. For those, call the tool as usual, setting
             fantasyPoints to true on get_player_stats when the question is about
-            them, and Otto asks him which league. Never answer such a question without its
-            tool, and never ask him which league yourself.
+            them, and Otto asks the user which league. Never answer such a question
+            without its tool, and never ask which league yourself.
             """;
 
     /** What the user gets when the model cannot be reached at all. */

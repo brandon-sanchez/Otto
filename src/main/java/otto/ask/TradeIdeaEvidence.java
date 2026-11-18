@@ -2,10 +2,13 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import otto.advice.BundlePlayer;
@@ -28,6 +31,9 @@ final class TradeIdeaEvidence {
 
     private TradeIdeaEvidence() {
     }
+
+    /** How many of the partner's reasons the code-written fallback gives for an offer. */
+    private static final int REASONS_IN_THE_FALLBACK = 2;
 
     /**
      * Everything the trade ideas bundle is written from.
@@ -55,12 +61,16 @@ final class TradeIdeaEvidence {
                     .forEach(evidence::add);
         }
         return new EvidenceBundle("Suggest these trade offers to the user, each with who to "
-                + "send it to, what he gives, what he gets and why the other manager would "
-                + "say yes.", evidence, players(facts.offers()), List.of(), true,
+                + "send it to, what the user gives and gets, how it helps the user and why "
+                + "the other manager would say yes.", evidence, players(facts.offers()), List.of(), true,
                 Optional.empty(), maxLength, Optional.empty(), List.of(), List.of());
     }
 
-    /** Renders the computed offers when the model can't supply a checked explanation. */
+    /**
+     * Renders the computed offers when the model can't supply a checked
+     * explanation: each offer, then how it helps the user and the leading
+     * reasons the other manager would say yes.
+     */
     static String verifiedMessage(Facts facts) {
         List<String> sections = new ArrayList<>();
         facts.deadline().map(TelegramHtml::escape).ifPresent(sections::add);
@@ -74,18 +84,34 @@ final class TradeIdeaEvidence {
             String message = """
                     %d. Send to %s
                     You give: %s
-                    You get: %s
-
-                    Your side: %s.""".formatted(index + 1, TelegramHtml.bold(offer.partner()),
+                    You get: %s""".formatted(index + 1, TelegramHtml.bold(offer.partner()),
                     TelegramHtml.escape(names(offer.gives())),
-                    TelegramHtml.escape(names(offer.gets())),
-                    TelegramHtml.escape(edge(offer.priced())));
-            if (!offer.reasons().isEmpty()) {
-                message += "\n" + TelegramHtml.escape(offer.reasons().getFirst()) + ".";
-            }
-            sections.add(message);
+                    TelegramHtml.escape(names(offer.gets())));
+            List<String> yours = offer.helpsYou().isEmpty()
+                    ? List.of("This is " + edge(offer.priced()))
+                    : offer.helpsYou();
+            List<String> paragraphs = Stream.of(yours, partnersReasons(offer))
+                    .filter(sentences -> !sentences.isEmpty())
+                    .map(sentences -> sentences.stream()
+                            .map(sentence -> TelegramHtml.escape(sentence) + ".")
+                            .collect(Collectors.joining(" ")))
+                    .toList();
+            sections.add(Stream.concat(Stream.of(message), paragraphs.stream())
+                    .collect(Collectors.joining("\n\n")));
         }
         return String.join("\n\n", sections);
+    }
+
+    /**
+     * Returns the reasons the fallback gives for the partner saying yes:
+     * what the trade does for the partner's roster first, and the trade
+     * values only when nothing else fills the space.
+     */
+    private static List<String> partnersReasons(Offer offer) {
+        return offer.reasons().stream()
+                .sorted(Comparator.comparing(reason -> reason.startsWith(Offer.TRADE_VALUE)))
+                .limit(REASONS_IN_THE_FALLBACK)
+                .toList();
     }
 
     /**
@@ -136,18 +162,18 @@ final class TradeIdeaEvidence {
         Map<String, String> summary = new LinkedHashMap<>();
         summary.put("league", facts.leagueName());
         summary.put("asked", facts.shown() > 0
-                ? "%d more trade ideas after the %d he has seen".formatted(facts.asked(),
+                ? "%d more trade ideas after the %d already shown".formatted(facts.asked(),
                         facts.shown())
                 : "%d trade ideas".formatted(facts.asked()));
         summary.put("found", facts.offers().size() < facts.asked()
-                ? "only %s a win for him that the other manager would plausibly accept"
+                ? "only %s a win for the user that the other manager would plausibly accept"
                         .formatted(facts.offers().size() == 1 ? "1 offer is"
                                 : facts.offers().size() + " offers are")
                 : "%d offers".formatted(facts.offers().size()));
-        facts.shape().ifPresent(shape -> summary.put("shape", "each offer is a %s, as he "
-                .formatted(shape) + "asked"));
+        facts.shape().ifPresent(shape -> summary.put("shape", "each offer is a %s, as the "
+                .formatted(shape) + "user asked"));
         summary.put("sending", "Otto never sends or accepts a trade; the user sends any offer "
-                + "himself in the Sleeper app");
+                + "in the Sleeper app");
         return summary;
     }
 
@@ -159,11 +185,13 @@ final class TradeIdeaEvidence {
         facts.put("youGet", names(offer.gets()));
         facts.put("shape", shape(offer));
         facts.put("yourEdge", edge(priced));
-        facts.put("yourLineup", "your starting lineup changes by %s points over %s".formatted(
-                priced.yours().startersDelta(), priced.restOfSeasonWeeks()));
+        facts.put("yourLineup", lineupChange(priced));
+        for (int index = 0; index < offer.helpsYou().size(); index++) {
+            facts.put("helpsYou" + (index + 1), offer.helpsYou().get(index));
+        }
         priced.market().ifPresent(market -> facts.put("market",
-                "on market value you get %d and give %d".formatted(market.youGet().total(),
-                        market.youGive().total())));
+                "on trade value you get %d and give %d".formatted(
+                        market.youGet().total(), market.youGive().total())));
         if (priced.otherMeasure() != null) {
             facts.put("otherMeasure", priced.otherMeasure());
         }
@@ -177,13 +205,29 @@ final class TradeIdeaEvidence {
         return facts;
     }
 
-    /** Says how far the deciding measure leans the user's way, as evaluate_trade does. */
+    /**
+     * Says in plain words how far the trade leans the user's way. The
+     * share behind the verdict stays out: it is a share of the larger
+     * side, so it reads 100% whenever the players leaving were not in the
+     * user's lineup, which says nothing a reader can use.
+     */
     private static String edge(PricedTrade priced) {
-        String measure = priced.marketDecides() ? "market value" : "rest-of-season fit";
-        String gap = priced.gapText();
+        String on = priced.marketDecides() ? "on trade value"
+                : "for your lineup the rest of this season";
         return "even".equals(priced.verdict())
-                ? "about even on %s, leaning your way by %s".formatted(measure, gap)
-                : "a %s for you on %s, a gap of %s".formatted(priced.verdict(), measure, gap);
+                ? "about even %s, leaning your way".formatted(on)
+                : "a %s for you %s".formatted(priced.verdict(), on);
+    }
+
+    private static String lineupChange(PricedTrade priced) {
+        double change = Double.parseDouble(priced.yours().startersDelta());
+        String weeks = priced.restOfSeasonWeeks();
+        if (change == 0) {
+            return "your starting lineup scores the same over %s".formatted(weeks);
+        }
+        return "your starting lineup %s %s points over %s".formatted(
+                change > 0 ? "gains" : "gives up",
+                String.format(Locale.ROOT, "%.1f", Math.abs(change)), weeks);
     }
 
     private static String shape(Offer offer) {

@@ -38,8 +38,9 @@ record TradeCall(VerdictBand band, String favours, boolean marketDecides, String
                             + "rest-of-season numbers alone. In a %s league those only see "
                             + "this season, so weigh what the players are worth after it "
                             + "yourself").formatted(formatName)
-                    : ("Your rest-of-season fit decides this call. I couldn't price the trade "
-                            + "at market value, so I can't say whether %s would accept")
+                    : ("What the trade does for your lineup the rest of this season decides "
+                            + "this call. I couldn't price the trade at market value, so I "
+                            + "can't say whether %s would accept")
                             .formatted(partner);
             return new TradeCall(fit, fitFavours, false, drivenBy, null);
         }
@@ -51,13 +52,13 @@ record TradeCall(VerdictBand band, String favours, boolean marketDecides, String
                             + "past this season, and the rest-of-season numbers only see the "
                             + "weeks left, so they show what the trade does for your lineup "
                             + "this year").formatted(formatName),
-                    "On rest-of-season fit alone this is %s".formatted(
+                    "For your lineup this season alone this is %s".formatted(
                             described(fit, fitFavours)));
         }
         return new TradeCall(fit, fitFavours, false,
-                ("Your rest-of-season fit decides this call, because a redraft league plays "
-                        + "for this season alone. The market value shows whether %s would "
-                        + "accept").formatted(partner),
+                ("What the trade does for your lineup the rest of this season decides this "
+                        + "call, because a redraft league plays for this season alone. The "
+                        + "market value shows whether %s would accept").formatted(partner),
                 "On market value alone this is %s".formatted(
                         described(marketBand, read.favours())));
     }

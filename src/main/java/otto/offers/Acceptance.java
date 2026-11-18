@@ -50,8 +50,8 @@ record Acceptance(int points, List<String> reasons) {
     /**
      * The signals, read from the trade priced in full.
      *
-     * @param receives the partner's positions among the players he gets
-     * @param spends the partner's positions among the players he gives
+     * @param receives the positions of the players the partner gets
+     * @param spends the positions of the players the partner gives
      * @param picksIn true when the partner receives a draft pick
      */
     record Signals(PricedTrade priced, String partner,
@@ -77,11 +77,11 @@ record Acceptance(int points, List<String> reasons) {
             int gives = market.youGet().total();
             if (!userAhead || gap < EVEN_GAP) {
                 points += 2;
-                reasons.add("On market value %s gets %d for the %d he gives".formatted(partner,
-                        gets, gives));
+                reasons.add((Offer.TRADE_VALUE + " %s gets %d and gives %d, so the trade "
+                        + "looks fair to them").formatted(partner, gets, gives));
             } else {
-                reasons.add("On market value %s gives %d for %d, so expect him to ask for a "
-                        .formatted(partner, gives, gets) + "little more");
+                reasons.add((Offer.TRADE_VALUE + " %s gives %d and gets %d, so expect them "
+                        + "to ask for a little more").formatted(partner, gives, gets));
             }
         } else {
             points += 1;
@@ -109,13 +109,13 @@ record Acceptance(int points, List<String> reasons) {
                     signals.trades() == 1 ? "trade" : "trades"));
         } else if (signals.activityComplete() && signals.moves() == 0) {
             points -= 1;
-            reasons.add("%s hasn't made a move all season, so he may not answer"
+            reasons.add("%s hasn't made a move all season, so they may not answer"
                     .formatted(partner));
         }
         return Optional.of(new Acceptance(points, reasons));
     }
 
-    /** A hole the trade fills for him, or a surplus of his it spends. */
+    /** A hole the trade fills for the partner, or a surplus of theirs it spends. */
     private static Optional<String> need(Signals signals) {
         if (signals.profile().isEmpty()) {
             return Optional.empty();
@@ -125,8 +125,8 @@ record Acceptance(int points, List<String> reasons) {
                 .flatMap(position -> team.at(position).stream())
                 .filter(profile -> profile.strength() == PositionProfile.Strength.THIN)
                 .findFirst()
-                .map(profile -> ("%s is thin at %s, where his starters rank %s and his depth "
-                        + "ranks %s").formatted(signals.partner(), profile.position(),
+                .map(profile -> ("%s is short at %s, where their starters rank %s and their "
+                        + "depth ranks %s").formatted(signals.partner(), profile.position(),
                         Ordinal.standing(profile.starterRank(), profile.teams()),
                         Ordinal.standing(profile.depthRank(), profile.teams())));
         if (hole.isPresent()) {
@@ -136,24 +136,24 @@ record Acceptance(int points, List<String> reasons) {
                 .flatMap(position -> team.at(position).stream())
                 .filter(profile -> profile.strength() == PositionProfile.Strength.SURPLUS)
                 .findFirst()
-                .map(profile -> "%s has %d startable %ss for %d %s, so he can spare one"
+                .map(profile -> "%s has %d startable %ss for %d %s, so they can spare one"
                         .formatted(signals.partner(), profile.startable(), profile.position(),
                                 profile.spots(), profile.spots() == 1 ? "spot" : "spots"));
     }
 
     /**
-     * Why his direction suits the trade: a contender wants points now, and
+     * Why the partner's direction suits the trade: a contender wants points now, and
      * a rebuilding team wants picks.
      */
     private static Optional<String> direction(Signals signals) {
         return signals.direction().flatMap(team -> {
             if (team.direction() == Direction.CONTENDING
                     && signals.priced().theirStartersDelta() > NO_CHANGE) {
-                return Optional.of(("%s is contending, %s, so points now matter to him")
+                return Optional.of(("%s is contending, %s, so points now matter to them")
                         .formatted(signals.partner(), team.reason()));
             }
             if (team.direction() == Direction.REBUILDING && signals.picksIn()) {
-                return Optional.of(("%s is rebuilding, %s, so a draft pick suits him")
+                return Optional.of(("%s is rebuilding, %s, so a draft pick suits them")
                         .formatted(signals.partner(), team.reason()));
             }
             return Optional.empty();
