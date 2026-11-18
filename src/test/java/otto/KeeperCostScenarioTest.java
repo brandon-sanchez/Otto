@@ -293,7 +293,7 @@ class KeeperCostScenarioTest extends WireSeamTest {
                 .containsEntry("keeperCost", "2321")
                 .containsEntry("keeperBonus", "4825")
                 .containsEntry("whatKeepingHimCosts", "Keeping him costs no draft pick, but he "
-                        + "uses a keeper spot his team would otherwise give to Saquon Barkley, "
+                        + "uses a keeper spot their team would otherwise give to Saquon Barkley, "
                         + "worth 2321.");
     }
 
@@ -410,7 +410,7 @@ class KeeperCostScenarioTest extends WireSeamTest {
         assertThat(keeperEvidenceFor("Saquon Barkley", "4866"))
                 .containsEntry("keeperCost", "0")
                 .containsEntry("whatKeepingHimCosts", "Keeping him costs no draft pick, and "
-                        + "his team has no other player worth a keeper spot, so the spot costs "
+                        + "their team has no other player worth a keeper spot, so the spot costs "
                         + "nothing.");
     }
 

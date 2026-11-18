@@ -64,10 +64,10 @@ public class DraftKeeperCosts implements KeeperCosts {
         return spot.instead()
                 .map(instead -> "Keeping him costs no draft pick, but he uses a keeper spot "
                         + "%s otherwise give to %s, worth %d.".formatted(
-                                spot.usersTeam() ? "you'd" : "his team would", instead,
+                                spot.usersTeam() ? "you'd" : "their team would", instead,
                                 spot.value()))
                 .orElseGet(() -> "Keeping him costs no draft pick, and %s no other player "
-                        .formatted(spot.usersTeam() ? "you have" : "his team has")
+                        .formatted(spot.usersTeam() ? "you have" : "their team has")
                         + "worth a keeper spot, so the spot costs nothing.");
     }
 

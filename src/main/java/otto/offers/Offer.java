@@ -10,16 +10,19 @@ import otto.trade.InjuredValue;
 import otto.trade.PricedTrade;
 
 /**
- * One named trade idea: what the user gets, what he gives, which
- * manager to send it to, and why that manager would plausibly say yes.
+ * One named trade idea: what the user gets, what the user gives, which
+ * manager to send it to, how it helps the user, and why that manager
+ * would plausibly say yes.
  *
- * @param partner the manager to send it to, as the league names him
- * @param partnerRosterId his roster id
+ * @param partner the manager to send it to, as the league names them
+ * @param partnerRosterId the partner's roster id
  * @param kind why the trade is shaped the way it is
  * @param need the user's position the trade helps; empty for a shape
  *        the user asked for that targets no one position
  * @param priced the trade priced exactly as {@code evaluate_trade}
  *        prices it
+ * @param helpsYou how the trade helps the user, one sentence each, every
+ *        number computed; empty when nothing measured says it does
  * @param reasons why the partner would plausibly accept, one sentence
  *        each, every number computed
  * @param partnerDirection his team's direction; empty when there was
@@ -38,6 +41,7 @@ public record Offer(
         List<Piece> gets,
         List<Piece> gives,
         PricedTrade priced,
+        List<String> helpsYou,
         List<String> reasons,
         Optional<TeamDirection> partnerDirection,
         Optional<String> playoffWeeks) {
@@ -45,13 +49,14 @@ public record Offer(
     public Offer {
         gets = List.copyOf(gets);
         gives = List.copyOf(gives);
+        helpsYou = List.copyOf(helpsYou);
         reasons = List.copyOf(reasons);
     }
 
     /** Returns this offer carrying the playoff-weeks line. */
     Offer withPlayoffWeeks(String line) {
         return new Offer(partner, partnerRosterId, kind, shape, need, gets, gives, priced,
-                reasons, partnerDirection, Optional.of(line));
+                helpsYou, reasons, partnerDirection, Optional.of(line));
     }
 
     /** Why a trade is shaped the way it is. */

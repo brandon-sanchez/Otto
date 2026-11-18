@@ -33,9 +33,9 @@ class RealModelTradeIdeasTest extends RealModelScenario {
 
     private static final Rehearsal TRADES = new Rehearsal("suggest_trades", "{}",
             checkedAnswer("Send GridironGoblin Dallas Goedert and Justin Jefferson for "
-                    + "Saquon Barkley. It's a slight edge for you on rest-of-season fit, a gap "
-                    + "of 8.9%, and on market value GridironGoblin gets 9500 for the 8200 he "
-                    + "gives.", "6813", "6794", "4866"));
+                    + "Saquon Barkley. FantasyCalc values what GridironGoblin gets at 9500 "
+                    + "and what they give at 8200, so the trade looks fair to them.", "6813",
+                    "6794", "4866"));
 
     @Autowired
     private ResearchCache research;
@@ -80,7 +80,8 @@ class RealModelTradeIdeasTest extends RealModelScenario {
 
         ask("what trades should I make and why?", new Rehearsal("suggest_trades", "{}",
                 checkedAnswer("Send GridironGoblin Jalen Reagor and your 2028 2nd-round pick "
-                        + "for RB Depth 10. On market value you get 4200 and give 4100.",
+                        + "for RB Depth 10. FantasyCalc values what you get at 4200 and "
+                        + "what you give at 4100.",
                         "6768", "92010")));
 
         DecisionRecord answer = sentAfterPassingItsCheck(RunKind.TRADE_IDEAS);

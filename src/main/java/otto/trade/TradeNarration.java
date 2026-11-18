@@ -208,13 +208,13 @@ class TradeNarration {
      */
     private static String partnerOutcome(RosterSnapshot partner, double theirNet) {
         if (Math.abs(TradeMath.round(theirNet)) < 0.05) {
-            return "%s comes out level, so he has no reason either way".formatted(
+            return "%s comes out level, so they have no reason either way".formatted(
                     partner.manager());
         }
         return theirNet > 0
-                ? "%s gains from this too, which is why he would agree to it".formatted(
+                ? "%s gains from this too, which is why they would agree to it".formatted(
                         partner.manager())
-                : "%s loses on this, so he has a reason to say no".formatted(partner.manager());
+                : "%s loses on this, so they have a reason to say no".formatted(partner.manager());
     }
 
     private static List<String> injuryNotes(TradeEvaluator.Basis basis, List<TradePiece> gets,
@@ -266,19 +266,19 @@ class TradeNarration {
                     : "%s has no %s cover on the bench above replacement".formatted(
                             partner.manager(), position);
             leverage.add(ours.deepAt(position)
-                    ? "%s, and you hold %d above replacement there. That is what he has a "
+                    ? "%s, and you hold %d above replacement there. That is what they have a "
                             .formatted(need, ours.at(position)
                                     .map(TeamDepth.PositionDepth::aboveReplacement)
                                     .orElse(0))
                             + "reason to pay for"
-                    : "%s, but you are no deeper there than he is".formatted(need));
+                    : "%s, but you are no deeper there than they are".formatted(need));
         }
         for (String strength : ours.strengths()) {
             leverage.add("Yours to spend: %s".formatted(strength));
         }
         if (leverage.isEmpty()) {
-            leverage.add(("%s is short at no position I can price, so he has no need to trade "
-                    + "into and you hold no leverage over him").formatted(partner.manager()));
+            leverage.add(("%s is short at no position I can price, so they have no need to trade "
+                    + "into and you hold no leverage over them").formatted(partner.manager()));
         }
         return leverage;
     }

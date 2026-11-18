@@ -84,8 +84,8 @@ public class InjuredValues {
             return "you're %s and need points now too, so waiting for him costs you games you "
                     .formatted(yours) + "can't spare";
         }
-        return "%s is %s and contending, so he has less reason to sell a player who could help "
-                .formatted(holder.manager(), theirs) + "him in the playoffs";
+        return "%s is %s and contending, so they have less reason to sell a player who could "
+                .formatted(holder.manager(), theirs) + "help them in the playoffs";
     }
 
     private static boolean winning(SleeperAdapter.TeamRecord record) {
