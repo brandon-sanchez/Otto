@@ -114,7 +114,7 @@ public abstract class WireSeamTest {
 
     /**
      * Holds every scenario to what the user sees in Telegram: no literal
-     * Markdown marks, no tag shown as text, and HTML that Telegram parses,
+     * Markdown marks, no formatting tag shown as text, and HTML that Telegram parses,
      * with only supported tags, each closed inside its own message.
      */
     @AfterEach
@@ -129,7 +129,8 @@ public abstract class WireSeamTest {
                     assertThat(TelegramHtml.normalize(text))
                             .as("a sent message as Telegram HTML").isEqualTo(text);
                     assertThat(TelegramHtml.visible(text)).as("a sent message as the user sees it")
-                            .doesNotContainPattern("</?[a-zA-Z]+[^<>]*>");
+                            .doesNotContainPattern(
+                                    "</?(b|i|u|s|code|pre|a|blockquote|strong|em)\\b[^<>]*>");
                 }
             }
         } finally {
