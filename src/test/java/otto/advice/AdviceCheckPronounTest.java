@@ -50,6 +50,13 @@ class AdviceCheckPronounTest {
     }
 
     @Test
+    void aNumberAfterTheLaterNameIsNotBackedByThePlayerNamedBefore() {
+        assertThat(failures("Claim Wandale Robinson first. I like him more than Puka Nacua, "
+                + "who drew 13 targets.")).containsExactly(
+                        "The number 13 is not in the evidence about Puka Nacua.");
+    }
+
+    @Test
     void aNumberAfterTheNameStillBelongsToThePlayerTheSentenceNames() {
         assertThat(failures("Claim Wandale Robinson first. Puka Nacua drew 13 targets and "
                 + "his role is safe.")).containsExactly(

@@ -87,7 +87,10 @@ final class TradeIdeaEvidence {
                     You get: %s""".formatted(index + 1, TelegramHtml.bold(offer.partner()),
                     TelegramHtml.escape(names(offer.gives())),
                     TelegramHtml.escape(names(offer.gets())));
-            List<String> paragraphs = Stream.of(offer.helpsYou(), partnersReasons(offer))
+            List<String> yours = offer.helpsYou().isEmpty()
+                    ? List.of("This is " + edge(offer.priced()))
+                    : offer.helpsYou();
+            List<String> paragraphs = Stream.of(yours, partnersReasons(offer))
                     .filter(sentences -> !sentences.isEmpty())
                     .map(sentences -> sentences.stream()
                             .map(sentence -> TelegramHtml.escape(sentence) + ".")
@@ -106,7 +109,7 @@ final class TradeIdeaEvidence {
      */
     private static List<String> partnersReasons(Offer offer) {
         return offer.reasons().stream()
-                .sorted(Comparator.comparing(reason -> reason.startsWith("FantasyCalc")))
+                .sorted(Comparator.comparing(reason -> reason.startsWith(Offer.TRADE_VALUE)))
                 .limit(REASONS_IN_THE_FALLBACK)
                 .toList();
     }
@@ -187,7 +190,7 @@ final class TradeIdeaEvidence {
             facts.put("helpsYou" + (index + 1), offer.helpsYou().get(index));
         }
         priced.market().ifPresent(market -> facts.put("market",
-                "FantasyCalc values what you get at %d and what you give at %d".formatted(
+                "on trade value you get %d and give %d".formatted(
                         market.youGet().total(), market.youGive().total())));
         if (priced.otherMeasure() != null) {
             facts.put("otherMeasure", priced.otherMeasure());

@@ -439,11 +439,14 @@ public class TradeOffers {
         /**
          * Says how the trade helps the user: where the position it
          * targets ranks in the league today, and what it does to the
-         * starting lineup over the weeks left.
+         * starting lineup over the weeks left. Only an upgrade or depth
+         * offer names its position, because only those are built to
+         * fix one; a shape the user asked for may land anywhere.
          */
         private List<String> helpsYou(OfferSearch.Candidate candidate, PricedTrade priced) {
             List<String> helps = new ArrayList<>();
             candidate.need()
+                    .filter(position -> candidate.kind() != Offer.Kind.ASKED)
                     .flatMap(position -> profile.teams().stream()
                             .filter(team -> team.rosterId() == mine.rosterId())
                             .findFirst()

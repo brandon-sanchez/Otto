@@ -274,8 +274,8 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
                 .filter(player -> !seen.contains(player.playerId()))
                 .filter(player -> answer.opening().contains(player.fullName()))
                 .forEach(player -> failures.add(("The opening names %s, a free agent the "
-                        + "board never lists: give him an entry or leave him out of the "
-                        + "opening.").formatted(player.fullName())));
+                        + "board never lists: list him under \"picks\" or leave him out of "
+                        + "the opening.").formatted(player.fullName())));
         return failures;
     }
 

@@ -42,6 +42,42 @@ class SpacingTest {
     }
 
     @Test
+    void aTableOfLongRowsThatAreNotSentencesStaysTight() {
+        String usage = """
+                Week 5: RB
+                - Derrick Henry: 44 snaps (63%), 2 targets (6%), 21 carries (66%)
+                - Keaton Mitchell: 26 snaps (37%), 6 targets (19%), 10 carries (31%)""";
+
+        assertThat(Spacing.breathe(usage)).isEqualTo(usage);
+    }
+
+    @Test
+    void sentencesAboveAWrappingListGetRoomInOnePass() {
+        String crammed = """
+                Your running backs are thin.
+                Your receivers are deep.
+                Your tight ends are fine.
+                • Claim a running back off waivers, because your running backs are thin and \
+                you need a starter there.
+                • Then look for a trade, because you have more receivers than you can start.""";
+
+        String once = Spacing.breathe(crammed);
+
+        assertThat(once).isEqualTo("""
+                Your running backs are thin.
+
+                Your receivers are deep.
+
+                Your tight ends are fine.
+
+                • Claim a running back off waivers, because your running backs are thin and \
+                you need a starter there.
+
+                • Then look for a trade, because you have more receivers than you can start.""");
+        assertThat(Spacing.breathe(once)).isEqualTo(once);
+    }
+
+    @Test
     void threeSentencesStackedOnConsecutiveLinesGetRoom() {
         String ceiling = """
                 Bucky Irving can reach 28 points or more in a big week.

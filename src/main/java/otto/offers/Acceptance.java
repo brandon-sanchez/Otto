@@ -77,13 +77,11 @@ record Acceptance(int points, List<String> reasons) {
             int gives = market.youGet().total();
             if (!userAhead || gap < EVEN_GAP) {
                 points += 2;
-                reasons.add(("FantasyCalc values what %s gets at %d and what they give at "
-                        + "%d, so the trade looks fair to them").formatted(partner, gets,
-                                gives));
+                reasons.add((Offer.TRADE_VALUE + " %s gets %d and gives %d, so the trade "
+                        + "looks fair to them").formatted(partner, gets, gives));
             } else {
-                reasons.add(("FantasyCalc values what %s gives at %d and what they get at "
-                        + "%d, so expect them to ask for a little more").formatted(partner,
-                                gives, gets));
+                reasons.add((Offer.TRADE_VALUE + " %s gives %d and gets %d, so expect them "
+                        + "to ask for a little more").formatted(partner, gives, gets));
             }
         } else {
             points += 1;

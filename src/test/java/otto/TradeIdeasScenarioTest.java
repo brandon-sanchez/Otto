@@ -75,8 +75,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     private static final String REAGOR = "6768";
 
     private static final String CHECKED = "Send GridironGoblin Dallas Goedert and Justin "
-            + "Jefferson for Saquon Barkley.\n\nFantasyCalc values what GridironGoblin gets at "
-            + "9500 and what they give at 8200, so the trade looks fair to them.";
+            + "Jefferson for Saquon Barkley.\n\nOn trade value GridironGoblin gets 9500 and "
+            + "gives 8200, so the trade looks fair to them.";
 
     private static final String WRONG_PARTNER = "Send GridironGoblin Dallas Goedert and Jalen "
             + "Reagor for Saquon Barkley.";
@@ -255,8 +255,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                         + "upgrade your RB starters")
                 .containsEntry("yourEdge", "a slight edge for you for your lineup the rest of "
                         + "this season")
-                .containsEntry("why1", "FantasyCalc values what GridironGoblin gets at 9500 "
-                        + "and what they give at 8200, so the trade looks fair to them")
+                .containsEntry("why1", "On trade value GridironGoblin gets 9500 and gives "
+                        + "8200, so the trade looks fair to them")
                 .containsEntry("why4", "GridironGoblin is contending, 9-2, 4 games clear of "
                         + "the first team out of the 6 playoff spots, with the most points and "
                         + "the 2nd-most valuable roster, so points now matter to them")
@@ -362,8 +362,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 .containsEntry("youGet", "RB Depth 10")
                 .containsEntry("youGive", "Jalen Reagor and 2028 2nd-round pick")
                 .containsEntry("yourEdge", "about even on trade value, leaning your way")
-                .containsEntry("market",
-                        "FantasyCalc values what you get at 4200 and what you give at 4100");
+                .containsEntry("market", "on trade value you get 4200 and give 4100");
         assertThat(evidence.get("offer-1-pick3"))
                 .containsEntry("pick", "2028 2nd-round pick")
                 .containsEntry("nflDraft", "2nd round");

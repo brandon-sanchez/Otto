@@ -6,9 +6,10 @@ import java.util.regex.Pattern;
 
 /**
  * Gives a message room to read on a phone, whoever wrote it: list items
- * that are sentences get a blank line between them, and so do three or
- * more sentences stacked on consecutive lines. Short rows, such as a
- * lineup or a block of ranks, stay tight.
+ * that are sentences long enough to wrap get a blank line between them,
+ * and so do three or more sentences stacked on consecutive lines. Rows
+ * that are not sentences, such as a lineup, a block of ranks or a usage
+ * table, stay tight however long they are.
  */
 public final class Spacing {
 
@@ -45,42 +46,42 @@ public final class Spacing {
         return String.join(PARAGRAPH, blocks);
     }
 
+    /**
+     * Lays out one block. Its lines fall into runs of list items and runs
+     * of other lines; a run that needs room is set off from its
+     * neighbours and its own lines are separated.
+     */
     private static String spaced(List<String> lines) {
-        if (lines.isEmpty()) {
-            return "";
-        }
-        if (lines.size() >= STACKED_SENTENCES && lines.stream().allMatch(Spacing::isSentence)) {
-            return String.join(PARAGRAPH, lines);
-        }
-        boolean[] wraps = wrappingItems(lines);
-        StringBuilder spaced = new StringBuilder(lines.getFirst());
-        for (int index = 1; index < lines.size(); index++) {
-            spaced.append(wraps[index - 1] || wraps[index] ? PARAGRAPH : "\n")
-                    .append(lines.get(index));
+        StringBuilder spaced = new StringBuilder();
+        boolean roomAfter = false;
+        int index = 0;
+        while (index < lines.size()) {
+            boolean items = isItem(lines.get(index));
+            int end = index;
+            while (end < lines.size() && isItem(lines.get(end)) == items) {
+                end++;
+            }
+            List<String> run = lines.subList(index, end);
+            boolean room = items ? wraps(run) : stacked(run);
+            if (!spaced.isEmpty()) {
+                spaced.append(room || roomAfter ? PARAGRAPH : "\n");
+            }
+            spaced.append(String.join(room ? PARAGRAPH : "\n", run));
+            roomAfter = room;
+            index = end;
         }
         return spaced.toString();
     }
 
-    /**
-     * Marks the lines that belong to a run of two or more list items in
-     * which at least one item wraps.
-     */
-    private static boolean[] wrappingItems(List<String> lines) {
-        boolean[] wraps = new boolean[lines.size()];
-        int index = 0;
-        while (index < lines.size()) {
-            int end = index;
-            while (end < lines.size() && isItem(lines.get(end))) {
-                end++;
-            }
-            boolean run = end - index > 1 && lines.subList(index, end).stream()
-                    .anyMatch(line -> seen(line).length() > LONGEST_TIGHT_ITEM);
-            for (int item = index; item < end; item++) {
-                wraps[item] = run;
-            }
-            index = Math.max(end, index + 1);
-        }
-        return wraps;
+    /** Returns whether a run of list items holds a sentence long enough to wrap. */
+    private static boolean wraps(List<String> items) {
+        return items.size() > 1 && items.stream().anyMatch(item ->
+                seen(item).length() > LONGEST_TIGHT_ITEM
+                        && ENDS_A_SENTENCE.matcher(seen(item)).matches());
+    }
+
+    private static boolean stacked(List<String> lines) {
+        return lines.size() >= STACKED_SENTENCES && lines.stream().allMatch(Spacing::isSentence);
     }
 
     private static boolean isItem(String line) {

@@ -46,6 +46,13 @@ public record Offer(
         Optional<TeamDirection> partnerDirection,
         Optional<String> playoffWeeks) {
 
+    /**
+     * How every reason that compares the two sides' trade values opens,
+     * so a reader of {@link #reasons} can tell those from the reasons
+     * about the partner's roster.
+     */
+    public static final String TRADE_VALUE = "On trade value";
+
     public Offer {
         gets = List.copyOf(gets);
         gives = List.copyOf(gives);

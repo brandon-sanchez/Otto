@@ -95,6 +95,9 @@ public class AdviceCheck {
      * A sentence whose subject is "He" or "His": it is about the player
      * the text named last, whoever else it goes on to name.
      */
+    private static final Pattern OPENS_WITH_PRONOUN = Pattern.compile("^\\s*(?:He|His)\\b");
+
+    /** A pronoun that stands for a player the text named earlier. */
     private static final Pattern PRONOUN = Pattern.compile("(?i)\\b(?:he|his|him)\\b");
 
     private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
@@ -315,9 +318,10 @@ public class AdviceCheck {
      * them, so a real stat or rank cannot be pinned on the wrong player.
      * The evidence about a player is every item that names him or his
      * id, every item that names no player, his projection, and the items
-     * cited by claims about him. A sentence that says "he", "his" or
-     * "him" before any name is also about whoever the text named last,
-     * and a person named from cited evidence is held to the items that
+     * cited by claims about him. A sentence that opens with "He" or "His"
+     * is also about whoever the text named last, and so are the words a
+     * sentence writes after "he", "his" or "him" and before its first
+     * name. A person named from cited evidence is held to the items that
      * name him.
      */
     private void checkQuantities(EvidenceBundle bundle, AdviceAnswer answer,
@@ -349,21 +353,39 @@ public class AdviceCheck {
             if (inSentence.isEmpty()) {
                 continue;
             }
-            List<BundlePlayer> named = pronounBeforeAnyName(sentence, inSentence)
-                    ? Stream.concat(inSentence.stream(), namedLast.stream()).distinct().toList()
-                    : inSentence;
-            namedLast = named;
-            Set<Quantity> about = quantitiesAbout(bundle, answer, named);
-            Quantity.in(sentence).stream()
-                    .filter(stated -> known.contains(stated.quantity()))
-                    .filter(stated -> !about.contains(stated.quantity()))
-                    .map(Quantity.Stated::describe)
-                    .distinct()
-                    .forEach(stated -> failures.add(
-                            "The %s is not in the evidence about %s.".formatted(stated,
-                                    named.stream().map(BundlePlayer::fullName)
-                                            .collect(Collectors.joining(" or ")))));
+            List<BundlePlayer> withLast = Stream.concat(inSentence.stream(),
+                    namedLast.stream()).distinct().toList();
+            int firstName = firstNameAt(sentence, inSentence);
+            Matcher pronoun = PRONOUN.matcher(sentence);
+            if (OPENS_WITH_PRONOUN.matcher(sentence).find()) {
+                checkAbout(bundle, answer, sentence, withLast, known, failures);
+                namedLast = withLast;
+            } else if (pronoun.find() && pronoun.start() < firstName) {
+                checkAbout(bundle, answer, sentence.substring(0, firstName), withLast, known,
+                        failures);
+                checkAbout(bundle, answer, sentence.substring(firstName), inSentence, known,
+                        failures);
+                namedLast = withLast;
+            } else {
+                checkAbout(bundle, answer, sentence, inSentence, known, failures);
+                namedLast = inSentence;
+            }
         }
+    }
+
+    /** Holds the text's known numbers and ranks to the evidence about the players. */
+    private static void checkAbout(EvidenceBundle bundle, AdviceAnswer answer, String text,
+            List<BundlePlayer> named, Set<Quantity> known, List<String> failures) {
+        Set<Quantity> about = quantitiesAbout(bundle, answer, named);
+        Quantity.in(text).stream()
+                .filter(stated -> known.contains(stated.quantity()))
+                .filter(stated -> !about.contains(stated.quantity()))
+                .map(Quantity.Stated::describe)
+                .distinct()
+                .forEach(stated -> failures.add(
+                        "The %s is not in the evidence about %s.".formatted(stated,
+                                named.stream().map(BundlePlayer::fullName)
+                                        .collect(Collectors.joining(" or ")))));
     }
 
     private static Set<Quantity> quantitiesAbout(EvidenceBundle bundle, AdviceAnswer answer,
@@ -389,22 +411,20 @@ public class AdviceCheck {
     }
 
     /**
-     * Returns whether the sentence says "he", "his" or "him" before it
-     * names any of its players, so the pronoun is whoever the text named
-     * last: "His 13 targets beat what Puka Nacua offers" is about that
-     * earlier player as well as Puka Nacua.
+     * Returns where the sentence first names one of the players, by full
+     * name or surname. The words before it can only be about a player
+     * named earlier, so "his 13 targets" there is that earlier player's.
      */
-    private static boolean pronounBeforeAnyName(String sentence, List<BundlePlayer> named) {
-        Matcher pronoun = PRONOUN.matcher(sentence);
-        if (!pronoun.find()) {
-            return false;
-        }
-        return named.stream().allMatch(player -> {
-            int fullName = sentence.indexOf(player.fullName());
-            Matcher surname = surname(lastName(player.fullName())).matcher(sentence);
-            int first = fullName >= 0 ? fullName : surname.find() ? surname.start() : -1;
-            return first < 0 || pronoun.start() < first;
-        });
+    private static int firstNameAt(String sentence, List<BundlePlayer> named) {
+        return named.stream()
+                .mapToInt(player -> {
+                    int fullName = sentence.indexOf(player.fullName());
+                    Matcher surname = surname(lastName(player.fullName())).matcher(sentence);
+                    return fullName >= 0 ? fullName
+                            : surname.find() ? surname.start() : sentence.length();
+                })
+                .min()
+                .orElse(sentence.length());
     }
 
     /**
