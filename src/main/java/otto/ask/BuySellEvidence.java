@@ -73,10 +73,10 @@ final class BuySellEvidence {
     private static EvidenceItem terms(Instant now) {
         return new EvidenceItem("buysell-terms", SOURCE, Optional.empty(), now, "definitions",
                 Map.of(
-                        "expectedPoints", "xFP: what an average player would score with the "
+                        "expectedPoints", "what an average player would score with the "
                                 + "same targets, carries and field position",
-                        "pointsOverExpected", "points a game above or below what his usage "
-                                + "is worth; inside a season this is mostly luck",
+                        "pointsOverExpected", "points a game above or below what his targets "
+                                + "and carries are worth; inside a season this is mostly luck",
                         "scoring", "ffopportunity's full-PPR scoring, which compares players "
                                 + "with each other but is not this league's scoring"));
     }
@@ -101,7 +101,7 @@ final class BuySellEvidence {
                         recent.gamesPlayed()));
         if (assessment.call() == Assessment.Call.SELL_HIGH) {
             PlayerSeason window = assessment.touchdownWindow();
-            facts.put("levelToExpect", "%s points a game, his xFP this season"
+            facts.put("levelToExpect", "%s points a game, what his work this season is worth"
                     .formatted(decimal(season.expectedPerGame())));
             facts.put("recentTouchdowns", "%s touchdowns on %s expected over his last %d games"
                     .formatted(whole(window.touchdowns()), decimal(window.expectedTouchdowns()),
@@ -129,8 +129,9 @@ final class BuySellEvidence {
     private static void usage(Usage usage, Map<String, String> facts) {
         long change = Math.round(100 * (usage.expectedRatio() - 1));
         facts.put("expectedPointsChange", change == 0
-                ? "his xFP a game is the same as last season"
-                : "his xFP a game is %s %d%% from last season".formatted(
+                ? "what his targets and carries are worth a game is the same as last season"
+                : "what his targets and carries are worth a game is %s %d%% from last season"
+                        .formatted(
                         change < 0 ? "down" : "up", Math.abs(change)));
         usage.shareNow().ifPresent(now -> usage.shareBefore().ifPresent(before -> facts.put(
                 "share", "his %s is %s this season against %s last season, %s".formatted(
@@ -148,15 +149,15 @@ final class BuySellEvidence {
         facts.put("window", "the last %d days".formatted(move.days()));
         facts.put("measuredBy", move.source());
         facts.put("meaning", switch (judged.assessment().marketRead()) {
-            case CHEAPER -> "his value fell while his usage held, so he costs less than his "
-                    + "role is worth";
-            case FELL_WITH_USAGE -> "his value fell and so did his usage, so the lower price "
-                    + "is fair and makes him no bargain";
-            case PAYING_FOR_STREAK -> "his value rose while his usage did not, so the market "
-                    + "is paying for a hot streak";
+            case CHEAPER -> "his trade value fell while he kept getting the same work, so "
+                    + "he costs less than he should";
+            case FELL_WITH_USAGE -> "his trade value fell and so did his work, so the lower "
+                    + "price is fair and makes him no bargain";
+            case PAYING_FOR_STREAK -> "his trade value rose while his work did not, so "
+                    + "managers are paying for a hot streak";
             case NONE -> move.fell() || move.rose()
-                    ? "his value moved with his usage, so the market is pricing his role"
-                    : "his value has barely moved";
+                    ? "his trade value moved with his work, so his price is fair"
+                    : "his trade value has barely moved";
         });
         return new EvidenceItem("buysell-market-" + judged.playerId(), "FantasyCalc",
                 Optional.empty(), now, "market value trend", facts);
@@ -167,7 +168,7 @@ final class BuySellEvidence {
             case BUY_LOW -> "buy-low";
             case MARKET_BUY_LOW -> "buy-low on price";
             case PARTIAL_BOUNCE_BACK -> "partial bounce-back";
-            case ROLE_DECLINE -> "role decline";
+            case ROLE_DECLINE -> "not a buy-low, his work shrank";
             case SELL_HIGH -> "sell-high";
             case NO_CALL -> "neither a buy-low nor a sell-high";
         };
@@ -175,19 +176,19 @@ final class BuySellEvidence {
 
     private static String meaning(Assessment assessment) {
         return switch (assessment.call()) {
-            case BUY_LOW -> "his usage held but his points slumped, so the gap is luck and "
-                    + "his points should come back toward his baseline";
-            case MARKET_BUY_LOW -> "his usage held while his market value fell, so he costs "
-                    + "less now than his role is worth";
-            case PARTIAL_BOUNCE_BACK -> "his points slumped partly from luck, but his usage "
-                    + "also slipped, so expect only part of his old level back";
-            case ROLE_DECLINE -> "his usage fell by more than a quarter, so his slump is a "
-                    + "smaller role rather than bad luck, and he is not a buy-low";
-            case SELL_HIGH -> "he is scoring well above what his usage is worth, which does "
-                    + "not usually last, so his xFP is the level to expect";
+            case BUY_LOW -> "he is getting the same targets and carries but scoring less, "
+                    + "so the dip is luck and his points should come back";
+            case MARKET_BUY_LOW -> "he is getting the same targets and carries while his "
+                    + "trade value fell, so he costs less than he should";
+            case PARTIAL_BOUNCE_BACK -> "some of his slump is luck, but he is also getting "
+                    + "less work, so expect only part of his old scoring back";
+            case ROLE_DECLINE -> "his targets and carries fell by more than a quarter, so he "
+                    + "is scoring less because he is used less, and he is not a buy-low";
+            case SELL_HIGH -> "he is scoring well above what his targets and carries are "
+                    + "worth, which does not usually last";
             case NO_CALL -> assessment.thisSeason().gamesPlayed() < 3
                     ? "he has played fewer than 3 games, too few to judge"
-                    : "his points are in line with his usage and his normal level";
+                    : "his points match the work he is getting and his normal level";
         };
     }
 
@@ -208,9 +209,10 @@ final class BuySellEvidence {
 
     private static String versus(double perGame) {
         if (Math.abs(perGame) < 0.05) {
-            return "right in line with what his usage is worth";
+            return "right in line with what his targets and carries are worth";
         }
-        return "%s points a game %s what his usage is worth".formatted(decimal(Math.abs(perGame)),
+        return "%s points a game %s what his targets and carries are worth".formatted(
+                decimal(Math.abs(perGame)),
                 perGame > 0 ? "above" : "below");
     }
 

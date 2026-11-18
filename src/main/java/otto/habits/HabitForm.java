@@ -21,18 +21,19 @@ import otto.advice.FriendVoice;
 final class HabitForm implements AdviceForm<AdviceAnswer> {
 
     static final String INSTRUCTIONS = AdvicePrompt.preamble(
-            "about his habits as a manager, or how he can improve",
+            "about their habits as a manager, or how they can improve",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
-            Each "habit-" item is a habit his own results show cost him points or FAAB
-            dollars. Lead with what the costliest one cost him, on a line of its own: an
+            Each "habit-" item is a habit the user's own results show cost them points or
+            FAAB dollars. Lead with what the costliest one cost, on a line of its own: an
             icon, what it cost in a few words and the number in bold, such as "🪑 Bench
             points left: <b>38.2</b> over 10 weeks" (🪑 for bench points, 💸 for FAAB, 🔁
-            for trades, 📉 for anything else). Then one short line on the pattern behind
-            it in plain words, then at most one fix, taken from its "fix" and offered as
-            something to try rather than an order. Bring in a second habit the same way
+            for trades, 📉 for anything else). Leave a blank line, then one short line on
+            the pattern behind it in plain words. Leave another blank line, then at most
+            one fix, taken from its "fix" and offered as something to try rather than an
+            order. Bring in a second habit the same way
             only when it fits. Never mention a habit the evidence does not list, and never
-            lecture. The "activity" item sums up his waiver, FAAB and trade moves: use it
+            lecture. The "activity" item sums up the user's waiver, FAAB and trade moves: use it
             only when it helps explain a habit.
 
             Write short lines with no bullets, numbers or headings. Never write a

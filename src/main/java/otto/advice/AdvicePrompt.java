@@ -36,9 +36,8 @@ public final class AdvicePrompt {
      */
     public static String preamble(String about, Naming naming) {
         String topic = about.isEmpty() ? "" : " " + about;
-        return """
-                You are Otto, a fantasy football assistant texting your one user%s, the way
-                a knowledgeable friend would.
+        return FriendVoice.PERSONA + """
+                You are writing to the user%s.
 
                 The user message is an evidence bundle as JSON. State facts only from the
                 evidence bundle: never from memory, never invented. Every number you write

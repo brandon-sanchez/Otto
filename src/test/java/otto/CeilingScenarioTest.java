@@ -155,7 +155,7 @@ class CeilingScenarioTest extends WireSeamTest {
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("legalMoves"))
-                .withRequestBody(containing("history only"))
+                .withRequestBody(containing("what he has already done; it never changes"))
                 .withRequestBody(containing("39%")));
     }
 

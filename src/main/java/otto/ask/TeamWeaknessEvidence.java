@@ -138,7 +138,7 @@ final class TeamWeaknessEvidence {
                 .distinct()
                 .toList();
         return new EvidenceBundle(
-                "Tell the user where his team is strong, thin or in surplus, position by "
+                "Tell the user where their team is strong, thin or in surplus, position by "
                         + "position, how high its big weeks reach, and what to do about it.",
                 evidence, players, List.of(), true, Optional.empty(), maxLength,
                 Optional.empty(), List.of(), List.of());
@@ -191,7 +191,10 @@ final class TeamWeaknessEvidence {
                     .formatted(decimal(profile.startableLine()), position));
         }
         facts.put("line", line(profile));
-        market.ifPresent(value -> facts.put("marketShape", marketShape(profile, value)));
+        market.ifPresent(value -> {
+            facts.put("marketShape", marketShape(profile, value));
+            noTopPlayer(profile, value).ifPresent(none -> facts.put("noTopPlayer", none));
+        });
         return facts;
     }
 
@@ -221,7 +224,7 @@ final class TeamWeaknessEvidence {
                 .formatted(decimal(player.perGame())));
         facts.put("role", player.starter() ? "in your best lineup" : "on your bench");
         player.boomChance().ifPresent(chance -> facts.put("boomChance",
-                "%s chance of a boom week".formatted(percent(chance))));
+                "%s chance of a huge week".formatted(percent(chance))));
         return facts;
     }
 
@@ -244,7 +247,9 @@ final class TeamWeaknessEvidence {
 
     private static Map<String, String> ceiling(Facts facts) {
         Map<String, String> ceiling = new LinkedHashMap<>();
-        ceiling.put("boomStarters", ("%s of your %d starters reach a boom week in an average "
+        ceiling.put("bigWeeksLine", "Your team's big weeks rank <b>%s</b> of %d in the league"
+                .formatted(Ordinal.of(facts.user().boomRank()), facts.league().teams().size()));
+        ceiling.put("boomStarters", ("%s of your %d starters have a huge week in an average "
                 + "week").formatted(decimal(facts.user().boomStarters()),
                         facts.user().lineup().size()));
         ceiling.put("boomRank", Ordinal.standing(facts.user().boomRank(),
@@ -252,10 +257,10 @@ final class TeamWeaknessEvidence {
         facts.user().lineup().stream()
                 .filter(player -> player.boomChance().isPresent())
                 .max((a, b) -> Double.compare(a.boomChance().get(), b.boomChance().get()))
-                .ifPresent(best -> ceiling.put("bestBoom", ("%s has the best chance of a boom "
+                .ifPresent(best -> ceiling.put("bestBoom", ("%s has the best shot at a huge "
                         + "week among your starters, %s").formatted(best.name(),
                                 percent(best.boomChance().get()))));
-        ceiling.put("boomWeek", "a boom week is a top weekly finish: QB6, RB12, WR12 or TE6");
+        ceiling.put("boomWeek", "a huge week is a top weekly finish: QB6, RB12, WR12 or TE6");
         return ceiling;
     }
 
@@ -303,6 +308,22 @@ final class TeamWeaknessEvidence {
         return "by FantasyCalc position rank: " + bands.entrySet().stream()
                 .map(entry -> entry.getValue() + " " + entry.getKey())
                 .collect(Collectors.joining(", "));
+    }
+
+    /**
+     * Says in plain words that the position has no top player by trade
+     * value, such as "you don't have a true WR1": nobody who ranks inside
+     * the top {@code teams} at the position on the list. Empty when it
+     * has one.
+     */
+    private static Optional<String> noTopPlayer(PositionProfile profile, Market market) {
+        int teams = market.format().teams();
+        boolean hasOne = profile.players().stream()
+                .flatMap(player -> market.day().entry(player.playerId())
+                        .flatMap(MarketPlayer::positionRank).stream())
+                .anyMatch(rank -> rank <= teams);
+        return hasOne ? Optional.empty()
+                : Optional.of("you don't have a true %s1".formatted(profile.position()));
     }
 
     private static String band(String position, int rank, int teams) {

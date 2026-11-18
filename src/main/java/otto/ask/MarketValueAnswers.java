@@ -47,7 +47,7 @@ import otto.storage.OttoJson;
 public class MarketValueAnswers {
 
     private static final String INSTRUCTIONS = AdvicePrompt.preamble(
-            "about what one player or draft pick is worth on the trade market in his league",
+            "about what one player or draft pick is worth on the trade market in their league",
             AdvicePrompt.Naming.LISTED) + RankConvention.ADVICE_RULES + FriendVoice.RULE + """
 
             Write every number with no thousands separators. Answer in two to four sentences: his value in the league's format and the

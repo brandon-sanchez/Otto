@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import otto.format.Spacing;
 import otto.format.TelegramHtml;
 
 /**
@@ -39,13 +40,16 @@ public final class TelegramText {
     private static String tidy(String text) {
         String tidied = TelegramHtml.normalize(text);
         tidied = TRAILING_SPACE.matcher(tidied).replaceAll("");
+        tidied = Spacing.breathe(tidied);
         tidied = EXTRA_BLANK_LINES.matcher(tidied).replaceAll(PARAGRAPH);
         return tidied.strip();
     }
 
     /**
      * Returns the text as the HTML messages it goes out as, in order:
-     * normalised, with spaces at line ends and extra blank lines removed.
+     * normalised, with spaces at line ends and extra blank lines removed
+     * and crammed lists and stacked sentences given room by
+     * {@link Spacing#breathe}.
      * Each message's visible text fits {@link #LIMIT}. Splits fall
      * between paragraphs, and never between the sections of one roster
      * or lineup list. A block too long for one message is split between

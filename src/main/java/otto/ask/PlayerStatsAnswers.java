@@ -50,36 +50,39 @@ public class PlayerStatsAnswers {
             "about one player's stats", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + RankConvention.ADVICE_RULES + """
 
-            Lead with exactly what he asked, in a layout he can scan, one fact to a line.
-            When he asks for a stat, the first line is one short sentence with that number
-            in bold and its sample, in the shape: He played <b>N%%</b> of snaps in week W
-            (S snaps). When adding season ranks for context, leave a blank line, show the
-            rank item's "header" fact to name the comparison group, then add at most two
-            "line" facts that describe that stat or his role. Copy those facts word for word.
-            When he asks for ranks, stats among a position group, or general season stats,
-            the first line is a rank item's "header" fact, word for word. Directly under
-            it, with no blank line, use the "line" fact of every rank he asked about, word
-            for word, the ones he named first. With no stat named, give the first four
-            rank items' lines. Do not repeat the same values in prose. A brief note
-            can explain what the usage means, such as whether he owns most of the backfield
-            work or gets involved as a receiver, when the evidence supports it.
+            Lead with exactly what the user asked, in a layout that scans, one fact to a
+            line. When the user asks for a stat, the first line is one short sentence with
+            that number in bold and its sample, in the shape: He played <b>N%%</b> of snaps
+            in week W (S snaps). When adding season ranks for context, leave a blank line,
+            show the rank item's "header" fact to name the comparison group, then add at
+            most two "line" facts that describe that stat or the player's role. Copy those
+            facts word for word.
+            When the user asks for ranks, stats among a position group, or general season
+            stats, the first line is a rank item's "header" fact, word for word. Directly
+            under it, with no blank line, use the "line" fact of every rank the user asked
+            about, word for word, the ones the user named first. With no stat named, give
+            the first four rank items' lines. Do not repeat the same values in prose. After
+            a blank line, a brief note can say what the numbers mean in plain words, such as
+            whether he gets most of his team's carries or catches a lot of passes, when the
+            evidence supports it.
             The header names exactly the group used for every rank line. Never relabel the
-            group or add another group unless he explicitly asks for it.
-            A rank is season to date: when the stats he asked about are for a single week
-            or a few weeks, the header or a short sentence says so.
-            When he asks what stats you can see, say what the evidence holds for this player
-            and what free data cannot tell you, from "statsOttoReads" and "notInFreeData",
-            in two or three short sentences. A stat whose value starts with "unknown" is not
-            zero: if he asked about it, say plainly that you don't have it and give the
-            reason the evidence states, and never say you cannot see a stat the evidence
-            holds. Add at most one short line of reason or context, never a paragraph.
-            When the evidence holds a league-points item and he asked for fantasy points,
-            the first line is its "%s" fact word for word, or its "%s" fact when he
-            asked for a per-game average; add its "%s" fact, word for word, when he
-            asks where he ranks in points. When he asked for his ranks instead, keep the
-            rank layout above, never lead with his points, and add the item's "%s" fact
-            as the last rank line. Those are his points in his league's scoring; never give
-            ffopportunity's full-PPR figures as his points.
+            group or add another group unless the user explicitly asks for it.
+            A rank is season to date: when the stats the user asked about are for a single
+            week or a few weeks, the header or a short sentence says so.
+            When the user asks what stats you can see, say what the evidence holds for this
+            player and what free data cannot tell you, from "statsOttoReads" and
+            "notInFreeData", in two or three short sentences. A stat whose value starts
+            with "unknown" is not zero: if the user asked about it, say plainly that you
+            don't have it and give the reason the evidence states, and never say you cannot
+            see a stat the evidence holds. Add at most one short line of reason or context,
+            never a paragraph.
+            When the evidence holds a league-points item and the user asked for fantasy
+            points, the first line is its "%s" fact word for word, or its "%s" fact for a
+            per-game average; add its "%s" fact, word for word, when the user asks where
+            the player ranks in points. When the user asked for the player's ranks instead,
+            keep the rank layout above, never lead with his points, and add the item's "%s"
+            fact as the last rank line. Those are the player's points in the user's league
+            scoring; never give ffopportunity's full-PPR figures as his points.
             Never write a confidence label such as High or Medium. Stay under "maxLength"
             characters.
             """.formatted(LeaguePointsEvidence.LINE_FACT, LeaguePointsEvidence.PER_GAME_LINE_FACT,

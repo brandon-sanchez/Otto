@@ -73,7 +73,7 @@ public class PlayerTools {
             air-yards share and WOPR, red-zone, end-zone and first-read
             targets, expected fantasy points against actual, his Next Gen
             Stats and, for a running back, PFR's contact figures, his
-            fantasy points in his league's own scoring with his rank at
+            fantasy points in the user's league scoring with his rank at
             his position when fantasyPoints is set, each with
             its sample and his season rank at his position, already written
             and fact-checked. Send its message word for word. Otto stores
@@ -88,7 +88,7 @@ public class PlayerTools {
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player,
             @ToolParam(required = false, description = """
-                    One NFL week by its number. Use it when he names a
+                    One NFL week by its number. Use it when the user names a
                     week, or for the week before or after one you already
                     answered about.""")
             Integer week,
@@ -101,13 +101,13 @@ public class PlayerTools {
                     last three weeks".""")
             Integer lastGames,
             @ToolParam(required = false, description = """
-                    What he asked about, in his words, such as "snap
+                    What the user asked about, in the user's words, such as "snap
                     percentage" or "advanced stats".""")
             String asked,
             @ToolParam(required = false, description = """
-                    true when he asks about fantasy points: what the
+                    true when the user asks about fantasy points: what the
                     player scored, his points per game or where he ranks
-                    in points. They come in his league's own scoring.
+                    in points. They come in the user's league scoring.
                     Leave it out for usage and advanced stats.""")
             Boolean fantasyPoints,
             @ToolParam(required = false, description = """
@@ -201,7 +201,7 @@ public class PlayerTools {
 
     @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "get_stat_leaders", description = """
-            The league leaders in one player stat, top 10 unless he names
+            The league leaders in one player stat, top 10 unless the user names
             a number, at one position or across every position, over the
             season or a span of weeks, each with its sample, already
             written. Send its message word for word. Call this for "top
@@ -218,10 +218,10 @@ public class PlayerTools {
                     QB, RB, WR or TE, or all for every position. Leave
                     it out for every position.""")
             String position,
-            @ToolParam(required = false, description = "How many to list, 10 when he names none")
+            @ToolParam(required = false, description = "How many to list, 10 when the user names none")
             Integer count,
             @ToolParam(required = false, description = """
-                    The first week counted, when he names a span such as
+                    The first week counted, when the user names a span such as
                     "weeks 3 to 6" or "since week 5".""")
             Integer fromWeek,
             @ToolParam(required = false, description = "The last week counted, for a span")

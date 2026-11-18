@@ -273,7 +273,7 @@ class PlayerStatsScenarioTest extends WireSeamTest {
         theEvidenceHolds(fact("header", "Isaiah Likely's season ranks among TEs (weeks 1–5)"),
                 "Snap share: <b>2nd</b> of 3 (66%)");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("When he asks for ranks, stats among a position group")));
+                .withRequestBody(containing("When the user asks for ranks, stats among a position group")));
         theUserReadsOnly(RANKS);
     }
 

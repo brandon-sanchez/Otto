@@ -63,11 +63,11 @@ public class SettingsTools {
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_keeper_rule", description = """
             How the user's keeper league prices keeping a player for next
-            season. Sleeper never records it, so until he says, Otto reads
+            season. Sleeper never records it, so until the user says, Otto reads
             it off the league's drafts or assumes the round a keeper was
             drafted in. Call this to show the rule in force, to set the
-            rule he states, to confirm the rule Otto read off his drafts
-            when he says yes to it, or to clear his rule.""")
+            rule the user states, to confirm the rule Otto read off the league's drafts
+            when the user says yes to it, or to clear the user's rule.""")
     public ToolAnswer<KeeperRuleChat.View> manageKeeperRule(
             @ToolParam(description = "show, set, confirm or clear")
             String action,
@@ -99,8 +99,8 @@ public class SettingsTools {
 
     @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "manage_watchlist", description = """
-            The user's watchlist: the players he wants watched wherever
-            they are, rostered or not. Watched players alert him when
+            The user's watchlist: the players the user wants watched wherever
+            they are, rostered or not. Watched players alert the user when
             somebody drops them, when another manager claims them, when
             Sleeper's add counts spike, and when their projection moves.
             Call this to add a player, to remove one, or to list what is

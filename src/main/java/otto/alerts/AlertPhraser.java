@@ -29,20 +29,21 @@ import otto.storage.OttoJson;
 @Component
 public class AlertPhraser {
 
-    private static final String SYSTEM = """
-            You are Otto, a fantasy football assistant texting your one user.
+    private static final String SYSTEM = FriendVoice.PERSONA + """
             Phrase the computed recommendation below as a short Telegram alert. Code
             may put a headline above your text, so never write a headline yourself.
             Your first line is the action, in bold. Leave a blank line before the reason.
             Give the reason in one short line from the pros, and when something is uncertain,
-            one more short line saying exactly what, from the cons. Never write a confidence label.
+            leave a blank line and add one more short line saying exactly what, from the
+            cons. Never write a confidence label.
             Introduce players by full name. Use only the facts given. Never invent numbers,
             names, or reasons. When the event includes latestReport, it is the
             newest injury, availability or roster report, read just now: mention
             it and credit latestReportSource.
 
-            Spend the explanation on what changed for his roster. Avoid repeating the
-            status if the reason is clear without it. Never use bullets, Markdown or a table.
+            Spend the explanation on what changed for the user's roster. Avoid repeating
+            the status if the reason is clear without it. Never use bullets, Markdown or a
+            table.
 
             """ + FriendVoice.RULE;
 

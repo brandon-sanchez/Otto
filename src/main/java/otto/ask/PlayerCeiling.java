@@ -49,15 +49,21 @@ public class PlayerCeiling {
     private static final String INSTRUCTIONS = AdvicePrompt.preamble("about a player",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
-            Give the player's ceiling and floor as short lines, one fact to a line: the
-            range most of his weeks land in, with the range in bold, how low a bad week
-            goes, how high a big week goes, and his chance of a boom week, which is the
-            finish the evidence names, with the chance in bold. You may compare him to a kind of player in
-            words, such as a steady receiver, but never with a number the evidence
-            lacks. Past boom weeks are history: mention them only after the estimate,
-            say they are history, and never give them as a reason the chance is higher
-            or lower. Never write a confidence label such as High or Medium. Stay under
-            "maxLength" characters.
+            Say how high the player can score and how low a bad week goes, in three
+            short parts with a blank line between them:
+            1. The range most of his weeks land in, from "typicalWeek", with the range in
+               bold.
+            2. How high a big week goes and how low a bad week goes, from "bigWeek" and
+               "badWeek", on one or two lines.
+            3. His chance of a huge week, from "hugeWeekChance" and "hugeWeek", with the
+               chance in bold, in one short sentence a friend would say, such as "He has
+               a <b>N%</b> shot at a top-12 RB week (P points or more)", using the chance,
+               the finish and the points as the evidence writes them.
+            You may compare him to a kind of player in words, such as a steady receiver,
+            but never with a number the evidence lacks. A "history-" item is what he has
+            already done: add it only as a last line after a blank line, as plain fact,
+            and never give it as a reason the chance is higher or lower. Never write a
+            confidence label such as High or Medium. Stay under "maxLength" characters.
             """ + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
@@ -161,11 +167,12 @@ public class PlayerCeiling {
                         "player", player.fullName(),
                         "projection", "%s points this week".formatted(
                                 decimal(ceiling.projection())),
-                        "boomWeek", "a finish of %s or better, which is %s points or more in "
+                        "hugeWeek", "a finish of %s or better, which is %s points or more in "
                                 .formatted(ceiling.boomLine().rank(),
                                         decimal(ceiling.boomLine().points()))
                                 + "this league's scoring",
-                        "boomChance", "%d%%".formatted(Math.round(100 * ceiling.boomChance())),
+                        "hugeWeekChance", "%d%%".formatted(
+                                Math.round(100 * ceiling.boomChance())),
                         "typicalWeek", "%d to %d points in the middle half of his weeks"
                                 .formatted(Math.round(ceiling.typicalLow()),
                                         Math.round(ceiling.typicalHigh())),
@@ -207,12 +214,12 @@ public class PlayerCeiling {
                 : "the %s season so far".formatted(stats.get().season());
         return Optional.of(new EvidenceItem("history-" + player.playerId(),
                 "nflverse:weekly-stats", Optional.empty(), stats.get().checkedAt(),
-                "history only: past boom weeks never change the estimate",
+                "what he has already done; it never changes the estimate",
                 Map.of(
                         "player", player.fullName(),
                         "season", season,
                         "games", Integer.toString(scores.size()),
-                        "boomWeeks", Long.toString(booms))));
+                        "hugeWeeks", Long.toString(booms))));
     }
 
     private static String decimal(double value) {

@@ -75,30 +75,30 @@ public class TradeTools {
     @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "suggest_trades", description = """
             Named trade offers for the user: for each, which manager to
-            send it to, what he gives, what he gets, and why the other
+            send it to, what the user gives, what the user gets, and why the other
             manager would plausibly say yes, each priced the way
             evaluate_trade prices it, already written and fact-checked.
-            Send its message word for word. Call this only when he asks,
+            Send its message word for word. Call this only when the user asks,
             for "what trades should I make", "show me 5 trades" or "find
             me a 3-for-2". A general request needs no trade shape. A request
-            to upgrade a position uses position, never shape. When he asks for
+            to upgrade a position uses position, never shape. When the user asks for
             more ideas, call it with shown
-            set to how many he has seen, and with count only when he said
-            how many; without a count it says to ask him how many more he
-            wants, so ask him that. Otto never sends or accepts a trade.""")
+            set to how many the user has seen, and with count only when the user said
+            how many; without a count it says to ask the user how many more they
+            want, so ask the user that. Otto never sends or accepts a trade.""")
     public ToolAnswer<TradeIdeas.Answer> suggestTrades(
             @ToolParam(required = false, description = """
-                    How many trade ideas he asked for. Leave it out for
-                    three, or when he asked for more without a number.""")
+                    How many trade ideas the user asked for. Leave it out for
+                    three, or when the user asked for more without a number.""")
             Integer count,
             @ToolParam(required = false, description = """
-                    How many trade ideas he has already seen in this
-                    conversation, when he asks for more. Leave it out
+                    How many trade ideas the user has already seen in this
+                    conversation, when the user asks for more. Leave it out
                     otherwise.""")
             Integer shown,
             @ToolParam(required = false, description = """
-                    The shape he asked for, as how many he gives for how
-                    many he gets, such as 3-for-2. Omit it unless the user
+                    The shape the user asked for, as how many the user gives for how
+                    many the user gets, such as 3-for-2. Omit it unless the user
                     specifies how many pieces each side sends.""")
             String shape,
             @ToolParam(required = false, description = """

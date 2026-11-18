@@ -77,23 +77,31 @@ public class TeamWeaknesses {
     private static final Pattern EVERY_LEAGUE =
             Pattern.compile("(?i)\\b(?:all|every|each|both)\\b");
 
-    private static final String INSTRUCTIONS = AdvicePrompt.preamble("about his team",
+    private static final String INSTRUCTIONS = AdvicePrompt.preamble("about their team",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             Write it in four short parts, with a blank line between parts:
-            1. One or two short sentences that sum up the team: where it is strong and
-               where it is thin, and its direction from "direction" with that item's
-               reason. When "leagues" is present, open by saying it.
+            1. One or two short sentences to the user about their team: "Your team is
+               strong at ... and thin at ...", then where it stands from "direction" with
+               that item's reason, as "You're contending", "You're in the middle" or
+               "You're rebuilding". The team is the user's: always "you" and "your team",
+               never "I" or "I'm", and never the league's name as the subject. When
+               "leagues" is present, open by saying it.
             2. One line for each position in "position-" items, in the order QB, RB, WR,
-               TE: its "line" fact word for word. Add a short clause after it only when
-               the market shape adds something, such as no WR1.
-            3. One short sentence on the lineup's ceiling from "ceiling".
-            4. Up to three moves from the "suggestion-" items, in order, each as a line
-               starting with "• " and its short reason. For a trade, say which manager to
-               send it to ("sendTo") in bold, what he gives and gets, and in one clause
-               why the other manager would say yes, from its "why" facts and its
-               "playoffWeeks" fact when it has one. Offer none that the evidence lacks.
-               When "trade-deadline" is present, say trades are closed and point to waivers.
+               TE: its "line" fact word for word and nothing else, with no blank line
+               between positions. Only when a position has a "noTopPlayer" fact, add it
+               after the line, as in ", and you don't have a true WR1".
+            3. The "ceiling" item's "bigWeeksLine" fact, word for word. You may add its
+               "bestBoom" fact as one short sentence. Add nothing else here, and never
+               list players' averages.
+            4. Up to three moves from the "suggestion-" items, in order, each starting
+               with "• ", with a blank line between moves. Give each its own reason in
+               plain words. For a trade, write "Send <b>manager</b> what you give for
+               what you get", then say how it helps the user from its "helpsYou" facts
+               and why that manager would say yes from its "why" facts and its
+               "playoffWeeks" fact when it has one, naming the manager. Offer none that
+               the evidence lacks. When "trade-deadline" is present, say trades are
+               closed and point to waivers.
             When "direction" has a "question", end the message by asking it.
             When "limits" is present, say each limit plainly in one sentence where it
             matters. Never write a confidence label such as High or Medium. Stay under

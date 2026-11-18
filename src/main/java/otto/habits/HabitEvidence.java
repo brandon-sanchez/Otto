@@ -29,42 +29,47 @@ final class HabitEvidence {
 
     private static final String SOURCE = "Otto's weekly habit capture of the user's own league";
 
-    private static final String TASK = "Tell the user which of his management habits cost him "
-            + "points this season, measured from his own results.";
+    private static final String TASK = "Tell the user which of their management habits cost them "
+            + "points this season, measured from their own results.";
 
     /** What each habit's numbers measure, for the model and the Decision Record. */
     private static final Map<String, String> MEASURES = Map.ofEntries(
-            Map.entry("bench", "points his benched players would have added in the best "
+            Map.entry("bench", "points the user's benched players would have added in the best "
                     + "lineup in hindsight"),
-            Map.entry("overrides", "start/sit calls from Otto he followed or overrode, and what "
-                    + "overriding cost against Otto's pick; waiver calls he claimed or passed "
+            Map.entry("overrides", "start/sit calls from Otto the user followed or overrode, "
+                    + "and what overriding cost against Otto's pick; waiver calls the user "
+                    + "claimed or passed "
                     + "on"),
             Map.entry("questionable", "starters listed Questionable at kickoff who sat out, "
                     + "known from their offensive snaps or news that they were inactive or "
                     + "ruled out rather than from scoring nothing, against the share of "
-                    + "Questionable players who play, and what his best benched option for "
+                    + "Questionable players who play, and what the user's best benched option for "
                     + "the slot scored"),
             Map.entry("chasing", "players started the week after a big game who then scored "
-                    + "less than his best benched option for the slot"),
-            Map.entry("team", "starts of one NFL team's players and what they lost to his best "
-                    + "benched option, beyond what his other starts lost"),
+                    + "less than the user's best benched option for the slot"),
+            Map.entry("team", "starts of one NFL team's players and what they lost to the "
+                    + "user's best "
+                    + "benched option, beyond what the user's other starts lost"),
             Map.entry("swaps", "starters who were ruled out before kickoff or on bye and scored "
-                    + "nothing, and what his best benched option for each slot scored"),
-            Map.entry("byes", "weeks when two or more of his core starters at one position, or "
-                    + "three or more overall, were on bye together, and how far his lineup "
+                    + "nothing, and what the user's best benched option for each slot scored"),
+            Map.entry("byes", "weeks when two or more of the user's core starters at one "
+                    + "position, or "
+                    + "three or more overall, were on bye together, and how far the user's lineup "
                     + "fell below its usual score those weeks"),
             Map.entry("clogging", "bench spots held by players eligible for an open IR slot or "
                     + "scoreless three weeks running, and what the starting slots that scored "
                     + "nothing for lack of a backup usually score"),
-            Map.entry("drops", "players he dropped right after a below-average game, and what "
-                    + "they scored over the next weeks next to the players he added for them"),
-            Map.entry("loyalty", "Otto's start/sit calls against one of his early draft picks or "
-                    + "a player drafted earlier, how often he kept that player, and what "
+            Map.entry("drops", "players the user dropped right after a below-average game, and "
+                    + "what they scored over the next weeks next to the players the user added "
+                    + "for them"),
+            Map.entry("loyalty", "Otto's start/sit calls against one of the user's early draft "
+                    + "picks or "
+                    + "a player drafted earlier, how often the user kept that player, and what "
                     + "keeping him cost against Otto's pick"),
-            Map.entry("streaming", "weeks he started the same kicker or defense, against the "
+            Map.entry("streaming", "weeks the user started the same kicker or defense, against the "
                     + "free agent projected highest at the position each of those weeks"),
-            Map.entry("faab", "his winning FAAB bids against the least that would have won, "
-                    + "and how his overpaying compares with the rest of his league"));
+            Map.entry("faab", "the user's winning FAAB bids against the least that would have won, "
+                    + "and how the user's overpaying compares with the rest of the user's league"));
 
     private HabitEvidence() {
     }

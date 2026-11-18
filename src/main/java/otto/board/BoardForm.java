@@ -48,9 +48,8 @@ import otto.storage.OttoJson;
  */
 final class BoardForm implements AdviceForm<BoardAnswer> {
 
-    static final String INSTRUCTIONS = """
-            You are Otto, a fantasy football assistant texting your one user about this
-            week's waiver claims, the way a knowledgeable friend would.
+    static final String INSTRUCTIONS = FriendVoice.PERSONA + """
+            You are writing to the user about this week's waiver claims.
 
             The user message is an evidence bundle as JSON. State facts only from the
             evidence bundle: never from memory, never invented. Every number you write
@@ -81,8 +80,9 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
 
             Write the opening in one or two short sentences, and each reasoning in two
             or three short sentences, at most 700 characters each, that tell the user
-            why the player is worth a claim through his recent usage, role, news and
-            roster fit. The bid, range and drop are shown on their own lines above the
+            why the player is worth a claim: what he has been doing lately, what changed
+            for him, and what he fixes on the user's roster. Give each player his own
+            reason; no two should follow the same sentence pattern. The bid, range and drop are shown on their own lines above the
             reasoning, so the reasoning need not repeat them.
             Introduce every player by full name before using a surname alone. Never
             write a score, a confidence label such as High or Medium, or a "Cons:"
@@ -101,7 +101,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             published consensus only as a cross-check behind it. In "limit", say in one
             sentence why the high is where the user should stop. You may go to most or
             all of the budget in an exceptional or late-season case; then say what it
-            costs him. When bids are withheld or the league claims by priority, leave
+            costs the user. When bids are withheld or the league claims by priority, leave
             out "bid", leave "limit" empty and state no dollar amount anywhere.
 
             When the user's roster has no open spot, put in "drop" the playerId, from
@@ -115,7 +115,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             roster spot.
 
             When the evidence has a "preference" item, the user asked for this claim
-            round's board in his own words, quoted there. For a focus, rank the best
+            round's board in their own words, quoted there. For a focus, rank the best
             players at the focused positions first, but still rank a player at another
             position when he is clearly the better pickup, and give each such player an
             "outsideFocus" of one or two sentences on why he beats the options at the
@@ -270,6 +270,12 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
                                 WaiverEvidence.PART_MAX_LENGTH));
             }
         }
+        candidates.values().stream()
+                .filter(player -> !seen.contains(player.playerId()))
+                .filter(player -> answer.opening().contains(player.fullName()))
+                .forEach(player -> failures.add(("The opening names %s, a free agent the "
+                        + "board never lists: give him an entry or leave him out of the "
+                        + "opening.").formatted(player.fullName())));
         return failures;
     }
 

@@ -61,7 +61,7 @@ public class TradeIdeas {
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
     private static final String INSTRUCTIONS = AdvicePrompt.preamble(
-            "about trades he could offer", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
+            "about trades they could offer", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
             When "trade-deadline" is present, open with it. Then give each "offer-" item
@@ -69,11 +69,12 @@ public class TradeIdeas {
             1. Send to <b>manager</b>
             You give: what "youGive" says, in those words
             You get: what "youGet" says, in those words
-            Then one short line on why it works for him ("yourEdge", and "yourLineup"
-            when it adds something), and one short line on why the other manager would
-            say yes, drawn from the "why" facts and "partnerDirection". When an offer
-            has "playoffWeeks", add it to that line with its weeks, opponents and ranks
-            exactly as written. When
+            Then leave a blank line and explain the deal in two or three short sentences
+            in your own words. Say how it helps the user, from the "helpsYou" facts and
+            "yourLineup". Then say why that manager would say yes, from the "why" facts
+            and "partnerDirection", naming the manager. When an offer has "playoffWeeks",
+            add it with its weeks, opponents and ranks exactly as written. Write each
+            offer's explanation fresh; no two should follow the same pattern. When
             a player in the offer has a buy-low or sell-high item, say so in a clause and
             why. When a player in the offer has an "injury-" item, say what he is worth
             while hurt from its "worth", give his timeline exactly as its "timeline" states
@@ -129,12 +130,12 @@ public class TradeIdeas {
      * outcome. Once trades are closed, the weaknesses answer's reads and
      * its Decision Record instead.
      *
-     * @param count how many offers he asked for; null for the default of
-     *        {@link TradeOffers#DEFAULT_COUNT}, or when he asked for more
+     * @param count how many offers the user asked for; null for the default of
+     *        {@link TradeOffers#DEFAULT_COUNT}, or when the user asked for more
      *        without a number
-     * @param shown how many offers he has already seen when he asks for
+     * @param shown how many offers the user has already seen when the user asks for
      *        more; null otherwise
-     * @param shape the shape he asked for, such as "3-for-2"; null for
+     * @param shape the shape the user asked for, such as "3-for-2"; null for
      *        the default shapes. A side of more than
      *        {@link TradeShape#MOST_PIECES} pieces is answered as
      *        unavailable
@@ -145,8 +146,8 @@ public class TradeIdeas {
     public ToolAnswer<Answer> answer(Integer count, Integer shown, String shape,
             String position, Instant now, AnswerDelivery delivery) {
         if (shown != null && count == null) {
-            return ToolAnswer.unavailable(("he has seen %d trade ideas and asked for more "
-                    + "without saying how many: ask him how many more he wants, then call "
+            return ToolAnswer.unavailable(("the user has seen %d trade ideas and asked for "
+                    + "more without saying how many: ask how many more they want, then call "
                     + "again with that count").formatted(shown));
         }
         if (count != null && count < 1) {
@@ -162,8 +163,8 @@ public class TradeIdeas {
             shape = null;
         }
         if (TradeShape.tooLarge(shape)) {
-            return ToolAnswer.unavailable(("he asked for a %s trade, and I build trades of up "
-                    + "to %d players a side: tell him that plainly, and offer to build one "
+            return ToolAnswer.unavailable(("the user asked for a %s trade, and I build trades "
+                    + "of up to %d players a side: say that plainly, and offer to build one "
                     + "that size or smaller").formatted(shape.strip(), TradeShape.MOST_PIECES));
         }
         Optional<TradeShape> asked = Optional.ofNullable(shape).filter(text -> !text.isBlank())
@@ -171,7 +172,7 @@ public class TradeIdeas {
                 .orElse(Optional.empty());
         if (shape != null && !shape.isBlank() && asked.isEmpty()) {
             return ToolAnswer.unavailable(("\"%s\" is not a trade shape I can read; write it "
-                    + "as how many he gives for how many he gets, such as 3-for-2")
+                    + "as how many you give for how many you get, such as 3-for-2")
                     .formatted(shape));
         }
         TradeOffers.Request request = new TradeOffers.Request(

@@ -37,9 +37,8 @@ import otto.storage.OttoJson;
 @Component
 public class AdviceWriter {
 
-    private static final String GROUNDING = """
-            You are Otto, a fantasy football assistant texting your one user about
-            their lineup and roster, the way a knowledgeable friend would.
+    private static final String GROUNDING = FriendVoice.PERSONA + """
+            You are writing to the user about their lineup and roster.
 
             The user message is an evidence bundle as JSON. State facts only from the
             evidence bundle: never from memory, never invented. Every number you write

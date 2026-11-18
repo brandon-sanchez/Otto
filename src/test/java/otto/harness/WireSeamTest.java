@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import otto.advice.FriendVoice;
 import otto.format.TelegramHtml;
 import otto.storage.OttoJson;
 
@@ -59,12 +60,17 @@ public abstract class WireSeamTest {
     /** Every message body sent to Telegram during one test, before any reset. */
     private static final List<String> sentBodies = new CopyOnWriteArrayList<>();
 
+    /** Every request body sent to the model during one test, before any reset. */
+    private static final List<String> modelRequests = new CopyOnWriteArrayList<>();
+
     static {
         telegram.addMockServiceRequestListener((request, response) -> {
             if (request.getUrl().endsWith("/sendMessage")) {
                 sentBodies.add(request.getBodyAsString());
             }
         });
+        llm.addMockServiceRequestListener((request, response) ->
+                modelRequests.add(request.getBodyAsString()));
     }
 
     private static WireMockServer newServer() {
@@ -138,9 +144,32 @@ public abstract class WireSeamTest {
         }
     }
 
+    /**
+     * Holds every scenario to one analyst: each system message Otto
+     * sends a model opens with the shared persona, word for word, so no
+     * prompt speaks as someone else and the opening stays cacheable.
+     */
+    @AfterEach
+    void everySystemMessageOpensWithTheSharedPersona() throws IOException {
+        try {
+            for (String body : modelRequests) {
+                for (JsonNode message : OttoJson.MAPPER.readTree(body).path("messages")) {
+                    if (message.path("role").asText().equals("system")) {
+                        assertThat(message.path("content").asText())
+                                .as("a system message sent to the model")
+                                .startsWith(FriendVoice.PERSONA);
+                    }
+                }
+            }
+        } finally {
+            modelRequests.clear();
+        }
+    }
+
     @BeforeEach
     void resetSeam() throws IOException {
         sentBodies.clear();
+        modelRequests.clear();
         sleeper.resetAll();
         telegram.resetAll();
         llm.resetAll();
