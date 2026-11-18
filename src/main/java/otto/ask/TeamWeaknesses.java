@@ -32,7 +32,6 @@ import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
-import otto.followed.FollowedLeagues;
 import otto.league.LeagueShapes;
 import otto.league.LeagueWeek;
 import otto.market.MarketDay;
@@ -74,6 +73,12 @@ public class TeamWeaknesses {
 
     private static final String RUN_ID_PREFIX = "team-weaknesses-";
 
+    /**
+     * The owner's words for every league, read in the one league Otto
+     * follows. The chat's front door reads "every league" from the
+     * message when several are followed; this reads the model's
+     * paraphrase, which is looser.
+     */
     private static final Pattern EVERY_LEAGUE =
             Pattern.compile("(?i)\\b(?:all|every|each|both)\\b");
 
@@ -128,15 +133,13 @@ public class TeamWeaknesses {
     private final TradeDeadlines deadlines;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
-    private final FollowedLeagues leagues;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
             MarketValues market, TeamDirections directions, TradeOffers offers,
             HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
-            AdviceCheck check, FollowedLeagues leagues) {
+            AdviceCheck check) {
         this.loader = loader;
-        this.leagues = leagues;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
         this.shapes = shapes;
@@ -174,25 +177,26 @@ public class TeamWeaknesses {
      * @param leagueReference the league the user named; null or blank for
      *        the league in the conversation, or words such as "all of
      *        them" for every league he has. With one league followed,
-     *        "all" answers that one and says so; with several, the chat
-     *        has already picked the league in scope, and this is not read.
+     *        "all" answers that one and says so, and a league Otto does
+     *        not follow is named back rather than guessed.
+     * @param pick how the chat settled the league in scope; the
+     *        reference is read only when it is {@link LeaguePick#ONLY_LEAGUE}
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
      */
-    public ToolAnswer<Answer> answer(String leagueReference, Instant now,
+    public ToolAnswer<Answer> answer(String leagueReference, LeaguePick pick, Instant now,
             AnswerDelivery delivery) {
         return ToolAnswer.from(loader.leagueWeek(),
-                league -> answer(league, leagueReference, now, delivery));
+                league -> answer(league, leagueReference, pick, now, delivery));
     }
 
-    private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
-            AnswerDelivery delivery) {
+    private ToolAnswer<Answer> answer(LeagueWeek league, String reference, LeaguePick pick,
+            Instant now, AnswerDelivery delivery) {
         String name = league.league().name();
-        boolean chatPickedLeague = leagues.several();
-        boolean everyLeague = !chatPickedLeague && reference != null
+        boolean everyLeague = pick == LeaguePick.ONLY_LEAGUE && reference != null
                 && EVERY_LEAGUE.matcher(reference).find();
-        if (!chatPickedLeague && !everyLeague && !names(reference, name)) {
+        if (pick == LeaguePick.ONLY_LEAGUE && !everyLeague && !names(reference, name)) {
             return ToolAnswer.unavailable(("I follow one league, %s, and no other, so I "
                     + "cannot read \"%s\"").formatted(name, reference));
         }

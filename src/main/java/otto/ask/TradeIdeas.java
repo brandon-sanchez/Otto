@@ -191,7 +191,8 @@ public class TradeIdeas {
         Optional<TradeDeadline> deadline = deadlines.assess(league);
         Optional<String> closed = deadline.flatMap(TradeDeadline::closedBecause);
         if (closed.isPresent()) {
-            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null, now, delivery);
+            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null,
+                    LeaguePick.CHOSEN, now, delivery);
             String message = read.facts() == null
                     ? StringUtils.capitalize(closed.get()) + "."
                     : read.facts().message();

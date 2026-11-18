@@ -3,8 +3,10 @@ package otto.ask;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -224,23 +226,38 @@ public class AskService {
         NOTHING
     }
 
-    /** Whether the league is settled before the loop runs. */
-    private enum Mode {
-        LEAGUE_IN_SCOPE(""), NO_LEAGUE(NO_LEAGUE_CHOSEN);
+    /** Whether the league is settled before the loop runs, and how. */
+    private sealed interface Mode {
 
-        private final String instructions;
-
-        Mode(String instructions) {
-            this.instructions = instructions;
+        /** A league is in scope, settled the way {@code pick} says. */
+        record LeagueInScope(LeaguePick pick) implements Mode {
         }
 
-        List<ConversationStore.Turn> window(ConversationStore conversation, Instant now) {
-            return this == LEAGUE_IN_SCOPE ? conversation.window(now)
-                    : conversation.windowForEveryLeague(now);
+        /** No league is chosen, so the loop stops at a tool that needs one. */
+        record NoLeague() implements Mode {
         }
 
-        boolean stopsAt(boolean needsLeague) {
-            return this == NO_LEAGUE && needsLeague;
+        default String instructions() {
+            return this instanceof NoLeague ? NO_LEAGUE_CHOSEN : "";
+        }
+
+        default List<ConversationStore.Turn> window(ConversationStore conversation,
+                Instant now) {
+            return this instanceof NoLeague ? conversation.windowForEveryLeague(now)
+                    : conversation.window(now);
+        }
+
+        default boolean stopsAt(boolean needsLeague) {
+            return this instanceof NoLeague && needsLeague;
+        }
+
+        /** The chat tools' context for one round of tool calls. */
+        default Map<String, Object> toolContext(CheckedAnswers round) {
+            Map<String, Object> context = new HashMap<>(round.toolContext());
+            if (this instanceof LeagueInScope(LeaguePick pick)) {
+                context.putAll(pick.toolContext());
+            }
+            return context;
         }
     }
 
@@ -273,10 +290,12 @@ public class AskService {
      * <p>Side effects: model calls, whatever the tools it calls do, and
      * one write of the conversation.
      *
+     * @param pick how the league in scope was picked, which the chat
+     *        tools read from their context
      * @return the reply to send back to the chat
      */
-    public Reply.Answered answer(String question) {
-        if (ask(question, Mode.LEAGUE_IN_SCOPE) instanceof Reply.Answered answered) {
+    public Reply.Answered answer(String question, LeaguePick pick) {
+        if (ask(question, new Mode.LeagueInScope(pick)) instanceof Reply.Answered answered) {
             return answered;
         }
         throw new IllegalStateException("The Ask loop asked for a league while one was in scope.");
@@ -294,7 +313,7 @@ public class AskService {
      * calls do, and one write of the conversation when it answers.
      */
     public Reply answerBeforeLeague(String question) {
-        return ask(question, Mode.NO_LEAGUE);
+        return ask(question, new Mode.NoLeague());
     }
 
     /**
@@ -315,7 +334,7 @@ public class AskService {
             case ModelChain.Result.Answered<Loop>(_, Loop.LeagueNeeded _, _) ->
                     new Reply.LeagueNeeded();
             case ModelChain.Result.Answered<Loop>(_, Loop.Said said, _) -> {
-                About about = mode == Mode.LEAGUE_IN_SCOPE ? about(said.tools(), window)
+                About about = mode instanceof Mode.LeagueInScope ? about(said.tools(), window)
                         : About.EVERY_LEAGUE;
                 if (about == About.LEAGUE) {
                     conversation.record(now, question, said.text());
@@ -384,7 +403,7 @@ public class AskService {
             ToolExecutionResult executed = toolCalling.executeToolCalls(
                     new Prompt(history, ToolCallingChatOptions.builder()
                             .toolCallbacks(toolCallbacks)
-                            .toolContext(round.toolContext())
+                            .toolContext(mode.toolContext(round))
                             .build()),
                     response);
             Optional<String> checked = round.answerToSendAsIs();
@@ -405,7 +424,7 @@ public class AskService {
             Mode mode) {
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage(SYSTEM + (wantsDepth(question) ? DEEP : BRIEF)
-                + mode.instructions));
+                + mode.instructions()));
         for (ConversationStore.Turn turn : window) {
             messages.add(switch (turn.role()) {
                 case USER -> new UserMessage(turn.text());

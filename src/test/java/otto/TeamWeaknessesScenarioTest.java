@@ -334,6 +334,21 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void theModelsWordsForEveryLeagueCountEvenWhenTheMessageWordsThemLoosely() {
+        redraftLeague();
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses",
+                "{\"league\":\"all my fantasy leagues\"}", NARRATION);
+        OutboundStubs.llmAdvises(llm, checkedAnswer());
+
+        ask("what are the weaknesses across all my fantasy leagues?");
+
+        assertThat(evidence().get("leagues")).containsEntry("leagues",
+                "I follow one league, Raising Canes Demon, so this answer covers that league "
+                        + "only");
+        theUserReads(CHECKED);
+    }
+
+    @Test
     void aLeagueOttoDoesNotFollowIsNamedBackRatherThanGuessed() {
         redraftLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses",

@@ -3,7 +3,9 @@ package otto;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
@@ -19,6 +21,7 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.TwoLeagues;
 import otto.harness.WireSeamTest;
+import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 import otto.webhook.TelegramWebhook;
 import otto.webhook.WebhookResult;
@@ -57,6 +60,9 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
 
     @Autowired
     private FollowedLeagues leagues;
+
+    @Autowired
+    private JsonStore store;
 
     /** Both leagues in week 12 with the team-analysis rosters, after one Check. */
     private void twoLeaguesInWeek12() {
@@ -251,5 +257,38 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         say("who should I start this week?");
 
         assertThat(sent()).last().isEqualTo("Start your best lineup.");
+    }
+
+    @Test
+    void storedTurnsKeepTheirLeagueWhateverFormTheyWereSavedIn() {
+        twoLeaguesInWeek12();
+        Instant earlier = WEEK_12.minusSeconds(3600);
+        store.write("conversation", List.of(
+                storedTurn("before turns named a league", earlier, null),
+                storedTurn("same in every league", earlier, "*"),
+                storedTurn("about the redraft league", earlier, TwoLeagues.CONFIG_LEAGUE),
+                storedTurn("about the dynasty league", earlier, TwoLeagues.DYNASTY_LEAGUE)));
+        OutboundStubs.llmPhrases(llm, "Start your best lineup.");
+
+        say("who should I start in Raising Canes Demon?");
+
+        LoggedRequest prompt = llm.findAll(
+                postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))).getFirst();
+        assertThat(prompt.getBodyAsString())
+                .contains("before turns named a league", "same in every league",
+                        "about the redraft league")
+                .doesNotContain("about the dynasty league");
+    }
+
+    /** One user turn as the conversation document stores it; a null league is left out. */
+    private static Map<String, Object> storedTurn(String text, Instant at, String leagueId) {
+        Map<String, Object> turn = new LinkedHashMap<>();
+        turn.put("role", "USER");
+        turn.put("text", text);
+        turn.put("at", at.toString());
+        if (leagueId != null) {
+            turn.put("leagueId", leagueId);
+        }
+        return turn;
     }
 }
