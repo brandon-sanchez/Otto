@@ -62,9 +62,9 @@ import otto.storage.OttoJson;
  * under its own run id. No new try starts inside the fallback buffer.
  * When the last try fails too, the user is told no board is coming
  * this round. Every failed try records that notice, since it cannot
- * know whether a later try passes; only the last one sends it. A board that passes on a later try goes out under that
- * try's own Alert key, so it still reaches a user who was already sent
- * the notice by a build that gave up after one try. When the
+ * know whether a later try passes; only the last one sends it. One
+ * Check makes at most one try, so a round whose first try came late
+ * never spends every try on the same evidence at once. When the
  * model cannot be reached, or no free agent can be screened because the
  * player directory or the user's roster is missing, each Check tries
  * again until the fallback buffer, and from then on the round is
@@ -112,13 +112,13 @@ public class WaiverBoardService {
     }
 
     /**
-     * Where a round stands after the tries made so far.
+     * The last try a round has recorded.
      *
-     * @param boardTry the last try recorded
-     * @param outcome what that try recorded
+     * @param boardTry which try it was, from 1
+     * @param outcome what it recorded
      * @param dryRun true when the round does not reach the user
      */
-    private record Standing(int boardTry, Outcome outcome, boolean dryRun) {
+    private record LastTry(int boardTry, Outcome outcome, boolean dryRun) {
 
         /** True while a later try may still replace a board that failed its checks. */
         boolean awaitsAnotherTry(ClaimRound round) {
@@ -185,40 +185,50 @@ public class WaiverBoardService {
         if (!round.open() || !settings.enabled(Trigger.WAIVER)) {
             return Optional.empty();
         }
-        return standing(league, round)
-                .filter(standing -> !standing.dryRun() && !standing.awaitsAnotherTry(round))
-                .flatMap(standing -> deliver(round, standing.boardTry(), standing.outcome()));
+        return lastTry(league, round)
+                .filter(last -> !last.dryRun() && !last.awaitsAnotherTry(round))
+                .flatMap(last -> deliver(round, last.boardTry(), last.outcome()));
     }
 
     /**
-     * Returns where the round stands, making the next try when it is
-     * due; empty while the first try waits. A round stays a dry run once
-     * one of its tries was recorded as one.
+     * Returns the round's last try, making the next one when it is due
+     * and this Check has made none; empty while the first try waits. A
+     * round stays a dry run once one of its tries was recorded as one.
      */
-    private Optional<Standing> standing(LeagueWeek league, ClaimRound round) {
+    private Optional<LastTry> lastTry(LeagueWeek league, ClaimRound round) {
         boolean dryRun = !routing.evidenceBoardReachesUser();
-        Optional<Standing> standing = Optional.empty();
-        for (int number = 1; number <= ClaimRound.BOARD_TRIES; number++) {
-            int boardTry = number;
-            boolean unsent = dryRun;
-            boolean due = boardTry == 1
-                    || round.boardTryDue(boardTry) && !round.inFallbackBuffer();
-            Optional<Outcome> outcome = runs.earlierOrMade(userId, round.leagueId(),
-                    round.boardRunId(boardTry), () -> due
-                            ? build(round, league, boardTry).map(record -> unsent
-                                    ? record.withOutcome(unsent(record.outcome())) : record)
-                            : Optional.empty());
+        Optional<LastTry> last = Optional.empty();
+        for (int boardTry = 1; boardTry <= ClaimRound.BOARD_TRIES; boardTry++) {
+            Optional<Outcome> earlier = runs.earlier(userId, round.leagueId(),
+                    round.boardRunId(boardTry));
+            Optional<Outcome> outcome = earlier.isPresent() ? earlier
+                    : made(round, league, boardTry, dryRun);
             if (outcome.isEmpty()) {
                 break;
             }
             dryRun = dryRun || outcome.get() instanceof Outcome.Withheld
                     || outcome.get() instanceof Outcome.DryRun;
-            standing = Optional.of(new Standing(boardTry, outcome.get(), dryRun));
-            if (!failedChecks(outcome.get())) {
+            last = Optional.of(new LastTry(boardTry, outcome.get(), dryRun));
+            if (earlier.isEmpty() || !failedChecks(outcome.get())) {
                 break;
             }
         }
-        return standing;
+        return last;
+    }
+
+    /**
+     * Makes and records one try when it is due, and returns its outcome.
+     * The first try is due as soon as the round is open; a later one
+     * only outside the fallback buffer.
+     */
+    private Optional<Outcome> made(ClaimRound round, LeagueWeek league, int boardTry,
+            boolean dryRun) {
+        if (boardTry > 1 && (!round.boardTryDue(boardTry) || round.inFallbackBuffer())) {
+            return Optional.empty();
+        }
+        return build(round, league, boardTry)
+                .map(record -> dryRun ? record.withOutcome(unsent(record.outcome())) : record)
+                .map(runs::record);
     }
 
     /** True for the outcome of a try whose board failed its checks. */
@@ -336,17 +346,14 @@ public class WaiverBoardService {
 
     /**
      * Sends a recorded try's board, or the notice that the round's
-     * board was withheld, unless Telegram has accepted it already. A
-     * board goes out under its own try's Alert key; a notice goes out
-     * under the round's, and never after anything else of the round.
+     * board was withheld, unless Telegram has accepted either already.
+     * A dry-run round, or a withheld round that recorded no notice,
+     * sends nothing.
      */
     private Optional<Event> deliver(ClaimRound round, int boardTry, Outcome outcome) {
-        boolean sent = outcome instanceof Outcome.SentBoard
-                ? delivery.alreadySent(round, boardTry) : delivery.alreadySent(round);
-        if (sent) {
+        if (delivery.alreadySent(round)) {
             return Optional.empty();
         }
-        int sentAs = outcome instanceof Outcome.SentBoard ? boardTry : 1;
         Optional<Sendable> board = switch (outcome) {
             case Outcome.SentBoard sentBoard -> Optional.of(new Sendable(
                     sentBoard.messages(), !sentBoard.allOptions().isEmpty()));
@@ -354,21 +361,17 @@ public class WaiverBoardService {
                     Optional.of(new Sendable(List.of(withheld.notice()), false));
             default -> Optional.empty();
         };
-        return board.flatMap(messages -> send(round, sentAs, boardTry, messages));
+        return board.flatMap(messages -> send(round, round.boardRunId(boardTry), messages));
     }
 
-    /**
-     * @param sentAs the try whose Alert key the messages go out under
-     * @param boardTry the try whose Decision Record the messages come from
-     */
-    private Optional<Event> send(ClaimRound round, int sentAs, int boardTry, Sendable board) {
-        String runId = round.boardRunId(boardTry);
+    /** @param runId the run id of the try whose Decision Record the messages come from */
+    private Optional<Event> send(ClaimRound round, String runId, Sendable board) {
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("trigger", TRIGGER);
         facts.put("runId", runId);
         facts.put("leagueId", round.leagueId());
         facts.put("claimDeadline", round.deadline().toString());
-        return delivery.deliver(round, sentAs, DeliveryBasis.of(runId),
+        return delivery.deliver(round, DeliveryBasis.of(runId),
                 held -> BoardMessage.withHeldAdvice(board.messages(), held),
                 board.viewAllOptions(), facts);
     }

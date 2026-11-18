@@ -33,16 +33,16 @@ public class AlertPhraser {
             You are Otto, a fantasy football assistant texting your one user.
             Phrase the computed recommendation below as a short Telegram alert. Code
             may put a headline above your text, so never write a headline yourself.
-            Your first line is the action, in bold. Then give the reason in one short
-            line from the pros, and when something is uncertain, one more short line
-            saying exactly what, from the cons. Never write a confidence label.
+            Your first line is the action, in bold. Leave a blank line before the reason.
+            Give the reason in one short line from the pros, and when something is uncertain,
+            one more short line saying exactly what, from the cons. Never write a confidence label.
             Introduce players by full name. Use only the facts given. Never invent numbers,
             names, or reasons. When the event includes latestReport, it is the
             newest injury, availability or roster report, read just now: mention
             it and credit latestReportSource.
 
-            Write short lines with no blank lines between them. Never use bullets,
-            Markdown or a table.
+            Spend the explanation on what changed for his roster. Avoid repeating the
+            status if the reason is clear without it. Never use bullets, Markdown or a table.
 
             """ + FriendVoice.RULE;
 
@@ -105,14 +105,16 @@ public class AlertPhraser {
     }
 
     /**
-     * The fallback text: the action in bold on the first line, then the
-     * pros and the cons, a line each.
+     * The fallback text: the action in bold, then the pros and cons.
      */
     private static String asProse(Recommendation recommendation) {
-        return Stream.of(TelegramHtml.bold(sentence(recommendation.action())),
-                        paragraph(recommendation.pros()), paragraph(recommendation.cons()))
-                .filter(paragraph -> !paragraph.isEmpty() && !paragraph.equals("<b></b>"))
+        String action = sentence(recommendation.action());
+        String reason = Stream.of(paragraph(recommendation.pros()), paragraph(recommendation.cons()))
+                .filter(line -> !line.isEmpty())
                 .collect(Collectors.joining("\n"));
+        return Stream.of(action.isEmpty() ? "" : TelegramHtml.bold(action), reason)
+                .filter(section -> !section.isEmpty())
+                .collect(Collectors.joining("\n\n"));
     }
 
     private static String paragraph(List<String> items) {

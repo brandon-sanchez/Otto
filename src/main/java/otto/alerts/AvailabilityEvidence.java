@@ -12,6 +12,7 @@ import otto.advice.RosterPlan;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.directory.PlayerHealth;
+import otto.format.TelegramHtml;
 import otto.research.OfficialUpdate;
 
 /**
@@ -64,27 +65,29 @@ final class AvailabilityEvidence {
     }
 
     /**
-     * The verified facts for a team announcement Sleeper has not caught
-     * up with, as code writes them when the advice cannot be had.
+     * Returns the verified facts for a team announcement Sleeper has not
+     * caught up with, as a lowercase clause for a message whose headline
+     * says what the team announced: "the 49ers announced it, but Sleeper
+     * still lists him as Active".
      */
-    static String announced(String name, PlayerAvailability availability) {
+    static String announced(PlayerAvailability availability) {
         OfficialUpdate update = availability.announcement().orElseThrow();
-        return "The %s announced that %s %s. Sleeper still lists him as %s, so Sleeper allows "
-                .formatted(update.teamName(), name, plays(update),
-                        RosterPlans.designation(availability.designation()))
-                + "only the moves that designation allows until it changes.";
+        return "the %s announced it, but Sleeper still lists him as %s".formatted(
+                TelegramHtml.escape(update.teamName()),
+                RosterPlans.designation(availability.designation()));
     }
 
     /**
-     * The disagreement as a sentence to follow a status change, or empty
-     * when the sources agree.
+     * Returns the disagreement as a line to follow a status change, or
+     * empty when the sources agree.
      */
-    static String disagreementSuffix(PlayerAvailability availability) {
+    static Optional<String> disagreement(PlayerAvailability availability) {
         if (!availability.sourcesDisagree()) {
-            return "";
+            return Optional.empty();
         }
         OfficialUpdate update = availability.announcement().orElseThrow();
-        return " The %s said earlier that he %s.".formatted(update.teamName(), plays(update));
+        return Optional.of("The %s said earlier that he %s.".formatted(
+                TelegramHtml.escape(update.teamName()), plays(update)));
     }
 
     private static EvidenceItem footballFact(String name, PlayerAvailability availability,

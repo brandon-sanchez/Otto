@@ -18,6 +18,8 @@ import otto.format.TelegramHtml;
  */
 final class AlertHeadline {
 
+    private static final String LOCK_PREFIX = "⏰ <b>Locks in ";
+
     private AlertHeadline() {
     }
 
@@ -28,16 +30,25 @@ final class AlertHeadline {
      */
     static String finalWarning(Instant kickoff, Instant now) {
         long minutes = Math.max(1, Duration.between(now, kickoff).toMinutes());
-        return "⏰ <b>Locks in %d min</b>".formatted(minutes);
+        return LOCK_PREFIX + minutes + " min</b>";
+    }
+
+    static String refreshFinalWarning(String text, Instant kickoff, Instant now) {
+        int bodyStart = text.indexOf('\n');
+        if (!text.startsWith(LOCK_PREFIX) || bodyStart < 0) {
+            return text;
+        }
+        return finalWarning(kickoff, now) + text.substring(bodyStart);
     }
 
     /**
      * Returns the headline for an Alert led by the candidate: for a
      * status change the injury dot of the new status, ✅ when he is
      * cleared, or 🔔 for a status with no dot such as not active, or one
-     * this code doesn't know; 📉 for a role slip or a notable drop; 🔁 for
-     * a trade in the league; 👀 for a Watchlist player; ⚠️ for a lineup
-     * that can't score; ⬆️ for a better lineup.
+     * this code doesn't know; 🔴 or ✅ for a team announcement, by
+     * whether the team says he plays; 📉 for a role slip or a notable
+     * drop; 🔁 for a trade in the league; 👀 for a Watchlist player; ⚠️
+     * for a lineup that can't score; ⬆️ for a better lineup.
      */
     static String of(AlertCandidate candidate) {
         String player = Optional.ofNullable(candidate.recommendation().player())
@@ -56,6 +67,12 @@ final class AlertHeadline {
     }
 
     private static String status(String player, AlertCandidate candidate) {
+        String teamSaysPlays = candidate.facts().get(OfficialUpdateDetector.TEAM_SAYS_PLAYS);
+        if (teamSaysPlays != null) {
+            return Boolean.parseBoolean(teamSaysPlays)
+                    ? "✅ %s will play, his team says".formatted(player)
+                    : "🔴 %s won't play, his team says".formatted(player);
+        }
         String to = candidate.facts().get("to");
         Optional<PlayerHealth> known = Arrays.stream(PlayerHealth.values())
                 .filter(each -> each.name().equals(to))

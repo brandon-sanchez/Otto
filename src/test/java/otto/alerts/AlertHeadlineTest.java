@@ -35,6 +35,17 @@ class AlertHeadlineTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
+            "false|🔴 <b>Bucky Irving</b> won't play, his team says",
+            "true|✅ <b>Bucky Irving</b> will play, his team says"})
+    void aTeamAnnouncementSaysWhatTheTeamSaidNotSleepersDesignation(String plays,
+            String headline) {
+        assertThat(AlertHeadline.of(candidate(AlertCandidate.Source.TRANSITION, "Bucky Irving",
+                Map.of("to", "ACTIVE", OfficialUpdateDetector.TEAM_SAYS_PLAYS, plays))))
+                .isEqualTo(headline);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
             "ROLE_SLIP|📉 <b>Bucky Irving</b>'s role is slipping",
             "DROP|📉 <b>Bucky Irving</b> was dropped in your league",
             "TRADE|🔁 <b>Trade in your league</b>",
@@ -62,5 +73,14 @@ class AlertHeadlineTest {
                 .isEqualTo("⏰ <b>Locks in 2 min</b>");
         assertThat(AlertHeadline.finalWarning(kickoff, kickoff))
                 .isEqualTo("⏰ <b>Locks in 1 min</b>");
+    }
+
+    @Test
+    void refreshingAPendingWarningChangesOnlyItsHeadline() {
+        Instant kickoff = Instant.parse("2026-09-13T17:00:00Z");
+        String stored = "⏰ <b>Locks in 25 min</b>\nStart <b>Josh Jacobs</b>.\nReason";
+
+        assertThat(AlertHeadline.refreshFinalWarning(stored, kickoff, kickoff.minusSeconds(900)))
+                .isEqualTo("⏰ <b>Locks in 15 min</b>\nStart <b>Josh Jacobs</b>.\nReason");
     }
 }

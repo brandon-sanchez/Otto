@@ -137,7 +137,12 @@ public record Ranking(RankedStat stat, Position position, Weeks weeks, Populatio
      * {@link #rank} ranks one position.
      */
     public static Ranking rankAll(PlayerStat stat, Weeks weeks, List<Measurement> measurements) {
-        return rank(stat, null, "players", weeks, measurements);
+        return rankGroup(stat, "players", weeks, measurements);
+    }
+
+    static Ranking rankGroup(PlayerStat stat, String group, Weeks weeks,
+            List<Measurement> measurements) {
+        return rank(stat, null, group, weeks, measurements);
     }
 
     private static Ranking rank(RankedStat stat, Position position, String group, Weeks weeks,
@@ -191,15 +196,20 @@ public record Ranking(RankedStat stat, Position position, Weeks weeks, Populatio
     /**
      * Returns the coloured dot a message shows beside the place: a
      * defense or remaining schedule by its {@link Dot#matchup} band, a
-     * player stat by the {@link Dot#quarter} it falls in, counted from
+     * player stat by {@link Dot#positionStat} within one position and by
+     * {@link Dot#quarter} across positions, counted from
      * the end that is good for his fantasy output.
      */
     public Dot dot(Placement placement) {
         return switch (stat) {
             case DefenseStat _, ScheduleStat _ -> Dot.matchup(placement.rank());
-            case PlayerStat player -> Dot.quarter(player.direction() == Direction.HIGHER_IS_BETTER
-                    ? placement.rank()
-                    : placement.rankFromBottom(), population.size());
+            case PlayerStat player -> {
+                int fantasyRank = player.direction() == Direction.HIGHER_IS_BETTER
+                        ? placement.rank()
+                        : placement.rankFromBottom();
+                yield position == null ? Dot.quarter(fantasyRank, population.size())
+                        : Dot.positionStat(fantasyRank, population.size());
+            }
         };
     }
 

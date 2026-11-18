@@ -351,7 +351,7 @@ class AskScenarioTest extends WireSeamTest {
         // Short by default; "why" and a short "more" open the answer up.
         // A long question that merely says "more" is a fresh question.
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("Never write a paragraph"))
+                .withRequestBody(containing("Keep ordinary answers short"))
                 .withRequestBody(notContaining("Give the full reasoning")));
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Give the full reasoning")));

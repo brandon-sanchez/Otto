@@ -45,10 +45,10 @@ public final class OutboundStubs {
 
     /**
      * Matches an Alert's text: one headline line, which code writes from
-     * the kind of news, then exactly the advice under it.
+     * the kind of news, then a blank line and exactly the advice under it.
      */
     public static StringValuePattern underHeadline(String advice) {
-        return matching("(?s)[^\\n]+\\n" + Pattern.quote(advice));
+        return matching("(?s)[^\\n]+\\n\\n" + Pattern.quote(advice));
     }
 
     /** Escapes a phrase into a valid JSON string literal. */

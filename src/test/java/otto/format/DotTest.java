@@ -58,6 +58,15 @@ class DotTest {
 
     @ParameterizedTest
     @CsvSource({
+            "4, 156, GREEN", "12, 156, GREEN", "13, 156, YELLOW",
+            "16, 156, YELLOW", "24, 156, YELLOW", "25, 156, ORANGE",
+            "36, 156, ORANGE", "37, 156, RED", "2, 3, YELLOW"})
+    void positionalUsageUsesFantasyTiersWithASmallPoolGuard(int rank, int size, Dot dot) {
+        assertThat(Dot.positionStat(rank, size)).isEqualTo(dot);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
             "Questionable, YELLOW", "Doubtful, ORANGE",
             "Out, RED", "IR, RED", "PUP, RED", "NFI, RED", "Sus, RED", "Suspended, RED",
             "COV, RED", "DNR, RED", "Injured Reserve, RED"})
@@ -75,6 +84,14 @@ class DotTest {
     @EnumSource(PlayerHealth.class)
     void healthIsNeverGreen(PlayerHealth health) {
         assertThat(Dot.injury(health)).isNotEqualTo(java.util.Optional.of(Dot.GREEN));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "QUESTIONABLE, 🟡 Questionable", "DOUBTFUL, 🟠 Doubtful", "OUT, 🔴 Out",
+            "IR, 🔴 IR", "SUSPENDED, 🔴 Suspended", "NOT_ACTIVE, Not active"})
+    void aHealthTagSpellsOutTheGameStatus(PlayerHealth health, String label) {
+        assertThat(Dot.healthTag(health)).isEqualTo(label);
     }
 
     @Test

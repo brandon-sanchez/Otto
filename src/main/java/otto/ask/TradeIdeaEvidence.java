@@ -13,6 +13,7 @@ import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
 import otto.advice.Prose;
+import otto.format.TelegramHtml;
 import otto.offers.Offer;
 import otto.trade.PricedTrade;
 
@@ -57,6 +58,34 @@ final class TradeIdeaEvidence {
                 + "send it to, what he gives, what he gets and why the other manager would "
                 + "say yes.", evidence, players(facts.offers()), List.of(), true,
                 Optional.empty(), maxLength, Optional.empty(), List.of(), List.of());
+    }
+
+    /** Renders the computed offers when the model can't supply a checked explanation. */
+    static String verifiedMessage(Facts facts) {
+        List<String> sections = new ArrayList<>();
+        facts.deadline().map(TelegramHtml::escape).ifPresent(sections::add);
+        if (facts.offers().size() < facts.asked()) {
+            int found = facts.offers().size();
+            sections.add(found == 1 ? "I found one trade worth offering."
+                    : "I found %d trades worth offering.".formatted(found));
+        }
+        for (int index = 0; index < facts.offers().size(); index++) {
+            Offer offer = facts.offers().get(index);
+            String message = """
+                    %d. Send to %s
+                    You give: %s
+                    You get: %s
+
+                    Your side: %s.""".formatted(index + 1, TelegramHtml.bold(offer.partner()),
+                    TelegramHtml.escape(names(offer.gives())),
+                    TelegramHtml.escape(names(offer.gets())),
+                    TelegramHtml.escape(edge(offer.priced())));
+            if (!offer.reasons().isEmpty()) {
+                message += "\n" + TelegramHtml.escape(offer.reasons().getFirst()) + ".";
+            }
+            sections.add(message);
+        }
+        return String.join("\n\n", sections);
     }
 
     /**
