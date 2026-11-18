@@ -17,6 +17,7 @@ import otto.advice.AdviceForm;
 import otto.advice.AdviceResult;
 import otto.advice.AdviceWriter;
 import otto.advice.EvidenceBundle;
+import otto.decisions.DropRankings;
 import otto.decisions.PlayerAvailability;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
@@ -68,12 +69,13 @@ public class LineupAdvice {
     private final MatchupFacts matchups;
     private final ResearchCache researchCache;
     private final PreSendResearch preSendResearch;
+    private final DropRankings dropRankings;
     private final String userId;
 
     public LineupAdvice(AdviceWriter writer, RunOutcomes runs, SettingsStore settings,
             PlayerDirectoryStore directory, NflverseStore nflverse, MatchupFacts matchups,
             ResearchCache researchCache, PreSendResearch preSendResearch,
-            OttoProperties properties) {
+            DropRankings dropRankings, OttoProperties properties) {
         this.writer = writer;
         this.runs = runs;
         this.settings = settings;
@@ -82,6 +84,7 @@ public class LineupAdvice {
         this.matchups = matchups;
         this.researchCache = researchCache;
         this.preSendResearch = preSendResearch;
+        this.dropRankings = dropRankings;
         this.userId = properties.userId();
     }
 
@@ -161,7 +164,9 @@ public class LineupAdvice {
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, research,
                 availability(transition, roster, now), leagueWeek, roster, directoryPlayers(),
-                this::profile, matchups(leagueWeek, now), now), research, leagueWeek, roster, now);
+                this::profile, matchups(leagueWeek, now),
+                dropRankings.rank(leagueWeek, roster, now), now), research, leagueWeek, roster,
+                now);
     }
 
     /**
@@ -180,8 +185,9 @@ public class LineupAdvice {
         }
         return decide(alertKey, transition, DecisionEvidence.draft(transition, legality,
                 research, availability(transition, roster, now), leagueWeek, roster,
-                directoryPlayers(), this::profile, matchups(leagueWeek, now), now), research,
-                leagueWeek, roster, now);
+                directoryPlayers(), this::profile, matchups(leagueWeek, now),
+                dropRankings.rank(leagueWeek, roster, now), now), research, leagueWeek, roster,
+                now);
     }
 
     private Optional<AlertText.Advised> decide(String alertKey, AlertCandidate transition,

@@ -273,7 +273,8 @@ public class WaiverBoardService {
             LatestWeekData.Report data) {
         BoardForm form = new BoardForm(check, screen.candidates(), preference.focus(),
                 new BidCheck(screen.bidding().policy(), screen.user(),
-                        league.league().activeRosterSpots(), screen.candidates()));
+                        league.league().activeRosterSpots(), screen.candidates(),
+                        screen.drops()));
         AdviceResult<BoardAnswer> result = writer.write(screen.bundle(), form);
         if (result instanceof AdviceResult.Unavailable<BoardAnswer> unavailable
                 && !round.inFallbackBuffer()) {

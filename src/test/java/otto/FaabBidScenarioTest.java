@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -16,10 +17,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.check.CheckRunner;
 import otto.harness.Fixtures;
+import otto.harness.MarketStubs;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
@@ -344,6 +348,40 @@ class FaabBidScenarioTest extends WireSeamTest {
         assertThat(onlyMessage(onlyBoardRecord()))
                 .contains(LIMIT + "\nDrop Josh Jacobs to make room.")
                 .contains("Drop Dallas Goedert to make room.");
+    }
+
+    @ParameterizedTest(name = "dynasty league: {0}")
+    @ValueSource(booleans = {false, true})
+    void aDropOutsideTheRostersLeastValuablePlayersIsCorrected(boolean dynasty) {
+        MarketStubs.fantasyCalcValues(fantasyCalc, dynasty, Map.ofEntries(
+                Map.entry("6813", 300), Map.entry("1466", 500), Map.entry("8112", 700),
+                Map.entry("8138", 4000), Map.entry("5850", 5000), Map.entry("9493", 6000),
+                Map.entry("6794", 7000), Map.entry("9509", 8000), Map.entry("4034", 8500),
+                Map.entry("4046", 9000), Map.entry("8135", 9500)));
+
+        tuesdayEvening(() -> leagueWith(league -> {
+                    ArrayNode slots = (ArrayNode) league.path("roster_positions");
+                    for (int bench = 0; bench < 5; bench++) {
+                        slots.remove(slots.size() - 1);
+                    }
+                    ((ObjectNode) league.path("settings")).put("type", dynasty ? 2 : 0);
+                }),
+                board(pick("10001", IRVING_REASONING, bid(7, 9, 12), "5850")),
+                board(pick("10001", IRVING_REASONING, bid(7, 9, 12), "6813")));
+
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.exchanges()).hasSize(2);
+        assertThat(record.exchanges().getFirst().checkFailures()).containsExactly(
+                "Josh Jacobs is not among the roster's least valuable players, so he is not "
+                        + "the one to drop for Bucky Irving. Drop one of these, by id: Dallas "
+                        + "Goedert (6813), Travis Kelce (1466), Garrett Wilson (8112), James "
+                        + "Cook (8138).");
+        assertThat(record.exchanges().getFirst().request().toString())
+                .contains("FantasyCalc %s market value".formatted(dynasty ? "dynasty" : "redraft"))
+                .contains("Dallas Goedert (TE, market value 300); Travis Kelce (TE, market "
+                        + "value 500); Garrett Wilson (WR, market value 700)");
+        assertThat(onlyMessage(record)).contains("Drop Dallas Goedert to make room.")
+                .doesNotContain("Josh Jacobs");
     }
 
     private void leagueWith(Consumer<JsonNode> change) {

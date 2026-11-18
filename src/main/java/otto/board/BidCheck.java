@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import otto.advice.NamedIds;
+import otto.decisions.DropRanking;
 import otto.directory.DirectoryPlayer;
 import otto.snapshot.RosterSnapshot;
 
@@ -15,7 +17,9 @@ import otto.snapshot.RosterSnapshot;
  * Holds the board's bids and drops to what code verified: every bid in
  * whole dollars between the league minimum and the most the user can
  * bid, {@code low <= target <= high}, no bid at all when bids are not
- * verified, a legal drop for every claim a full roster cannot take, and
+ * verified, a legal drop for every claim a full roster cannot take, a
+ * drop only from the roster's least valuable players when they could be
+ * ranked, and
  * claims placed together that stay affordable together at the top of
  * their ranges and drop different players.
  *
@@ -28,17 +32,22 @@ final class BidCheck {
     private final RosterSnapshot user;
     private final int openSpots;
     private final Map<String, DirectoryPlayer> candidates;
+    private final DropRanking drops;
 
     /**
      * @param activeRosterSpots how many players the league lets a team
      *        hold outside IR and the taxi squad
+     * @param drops the user's droppable players by value;
+     *        {@link DropRanking#UNKNOWN} when the roster could not be
+     *        ranked, in which case any legal drop passes
      */
     BidCheck(BidPolicy policy, RosterSnapshot user, int activeRosterSpots,
-            Map<String, DirectoryPlayer> candidates) {
+            Map<String, DirectoryPlayer> candidates, DropRanking drops) {
         this.policy = policy;
         this.user = user;
         this.openSpots = (int) Math.max(0, activeRosterSpots - user.activePlayerCount());
         this.candidates = Map.copyOf(candidates);
+        this.drops = drops;
     }
 
     /** Returns one failure per broken bid or drop rule; empty when the board passes. */
@@ -136,6 +145,20 @@ final class BidCheck {
                 || user.taxi().contains(drop)) {
             failures.add(("Player id %s is not on the user's active roster, so he cannot be "
                     + "dropped for %s.").formatted(drop, name(entry.playerId())));
+            return;
+        }
+        DirectoryPlayer pickup = candidates.get(entry.playerId());
+        List<DropRanking.Ranked> allowed = drops.droppableFor(
+                pickup == null ? "" : pickup.position());
+        if (!allowed.isEmpty()
+                && allowed.stream().noneMatch(player -> player.playerId().equals(drop))) {
+            failures.add(("%s is not among the roster's least valuable players, so he is not "
+                    + "the one to drop for %s. Drop one of these, by id: %s.").formatted(
+                            user.playerNames().getOrDefault(drop, drop), name(entry.playerId()),
+                            allowed.stream()
+                                    .map(player -> "%s (%s)".formatted(player.fullName(),
+                                            player.playerId()))
+                                    .collect(Collectors.joining(", "))));
         }
     }
 

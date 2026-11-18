@@ -102,7 +102,10 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
 
             When the user's roster has no open spot, put in "drop" the playerId, from
             "players", of the rostered player each claim replaces: his id, never his
-            name. List in "together" the picks meant to land together:
+            name. When the evidence has a "drops" item, drop only from the bottom of
+            it: one of its "leastValuable" players, or the least valuable rostered
+            player at the pickup's own position. List in "together" the picks meant to
+            land together:
             they must drop different players and stay affordable together at the top of
             their ranges. Every pick not in "together" is an alternative for the same
             roster spot.
