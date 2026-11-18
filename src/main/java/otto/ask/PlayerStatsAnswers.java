@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -33,9 +32,9 @@ import otto.sleeper.SleeperAdapter;
  * Answers "what was his snap share last week?" and "what advanced stats
  * can you see?" in chat. Code reads one player's stored usage, Next Gen
  * and PFR figures and his league ranks for a week, his team's last few
- * games or the season so far; the model writes them as a few natural
- * sentences under the {@link AdviceCheck}, so every number the user
- * reads is one code computed. An answer that fails the check twice is
+ * games or the season so far; the model lays them out as a short,
+ * scannable answer under the {@link AdviceCheck}, copying the rank lines
+ * code wrote, so every number the user reads is one code computed. An answer that fails the check twice is
  * withheld.
  */
 @Component
@@ -43,26 +42,29 @@ public class PlayerStatsAnswers {
 
     private static final String RUN_ID_PREFIX = "player-stats-";
 
-    private static final Pattern LIST_LINE = Pattern.compile("(?m)^\\s*(?:[-*•]|\\d+[.)])\\s");
-
-    private static final String NOT_A_LIST = "Write the answer as sentences in a paragraph or "
-            + "two, never as a list with one stat to a line.";
-
     private static final String INSTRUCTIONS = AdvicePrompt.preamble(
             "about one player's stats", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + RankConvention.ADVICE_RULES + """
 
-            Answer what he asked first, then add the two or three other stats that say the
-            most about the player's role, each with its sample when the evidence gives one.
+            Lead with exactly what he asked, in a layout he can scan, one fact to a line.
+            When he asks for a stat, the first line is one short sentence with that number
+            in bold and its sample, such as: Isaiah Likely played <b>88%</b> of snaps in
+            week 10 (57 snaps). Then add at most two of his season ranks that say the most
+            about that stat or his role, each as its rank item's "line" fact, word for word.
+            When he asks for ranks, the first line is a rank item's "header" fact, then the
+            "line" fact of every rank he asked about, word for word, the ones he named
+            first; with no stat named, give the lines that say the most about his role.
+            When a rank item has an "amongAllPlayers" fact, add it as one short sentence.
+            A rank is season to date: when the stats he asked about are for a single week
+            or a few weeks, the header or a short sentence says so.
             When he asks what stats you can see, say what the evidence holds for this player
-            and what free data cannot tell you, from "statsOttoReads" and "notInFreeData".
-            A rank is season to date: say so when the stats are for a single week or a few
-            weeks. Write a rank the way its "quoted" fact does, sample included, and add
-            its "amongAllPlayers" fact when the item has one. A stat whose value starts with "unknown" is not zero: if he asked about
-            it, say plainly that you don't have it and give the reason the evidence states,
-            and never say you cannot see a stat the evidence holds. Write two to five
-            sentences in one or two short paragraphs, never a list. Never write a confidence
-            label such as High or Medium. Stay under "maxLength" characters.
+            and what free data cannot tell you, from "statsOttoReads" and "notInFreeData",
+            in two or three short sentences. A stat whose value starts with "unknown" is not
+            zero: if he asked about it, say plainly that you don't have it and give the
+            reason the evidence states, and never say you cannot see a stat the evidence
+            holds. Add at most one short line of reason or context, never a paragraph.
+            Never write a confidence label such as High or Medium. Stay under "maxLength"
+            characters.
             """ + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
@@ -78,7 +80,7 @@ public class PlayerStatsAnswers {
         this.lookup = lookup;
         this.sources = sources;
         this.advice = advice;
-        this.form = AdviceForm.of(INSTRUCTIONS, (bundle, reply) -> sentencesOnly(check.check(bundle, reply)));
+        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
     }
 
     /**
@@ -207,19 +209,5 @@ public class PlayerStatsAnswers {
                 ("I read %s's stats, but my write-up failed its fact check twice, so I'm "
                         + "holding it back rather than risk a wrong number").formatted(
                                 player.fullName()));
-    }
-
-    private static AdviceCheck.Verdict<AdviceAnswer> sentencesOnly(
-            AdviceCheck.Verdict<AdviceAnswer> verdict) {
-        Optional<AdviceAnswer> answer = switch (verdict) {
-            case AdviceCheck.Verdict.Passed<AdviceAnswer> passed -> Optional.of(passed.answer());
-            case AdviceCheck.Verdict.Failed<AdviceAnswer> failed -> failed.answer();
-        };
-        if (answer.isEmpty() || !LIST_LINE.matcher(answer.get().message()).find()) {
-            return verdict;
-        }
-        List<String> failures = new ArrayList<>(verdict.failures());
-        failures.add(NOT_A_LIST);
-        return AdviceCheck.Verdict.checked(answer.get(), failures);
     }
 }

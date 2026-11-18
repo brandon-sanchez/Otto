@@ -38,7 +38,7 @@ import otto.nflverse.UsageTotals;
  */
 final class PlayerStatsEvidence {
 
-    static final int MAX_LENGTH = 900;
+    static final int MAX_LENGTH = 600;
 
     private static final String PREFIX = "stats-";
 
@@ -371,6 +371,9 @@ final class PlayerStatsEvidence {
                     ranking.stat().sampleUnit()));
             PlayerStat stat = (PlayerStat) ranking.stat();
             facts.put("quoted", RankWords.placed(stat, placement.get()));
+            facts.put("header", RankWords.header(subject.name(), subject.position(),
+                    ranking.weeks()));
+            facts.put("line", RankWords.line(ranking, placement.get()));
             sources.rankings().notableOverall(stat, subject.gsisId(), subject.position())
                     .ifPresent(overall -> facts.put("amongAllPlayers", overall));
         } else {
