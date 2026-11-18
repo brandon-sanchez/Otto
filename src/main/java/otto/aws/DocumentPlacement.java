@@ -26,9 +26,9 @@ import otto.storage.DocumentNaming;
  *
  * <p>Small means a record whose size is settled by its shape: the
  * user's Settings, Watchlist and Mutes, one conversation trimmed to
- * its newest turns, three markers, the list of followed leagues, each
- * Alert delivery record, where
- * each waiver board's full list resumes, and the research cache: one
+ * its newest turns, three markers, the list of followed leagues, the
+ * league the chat is about, each Alert delivery record, where each
+ * waiver board's full list resumes, and the research cache: one
  * player's stories, capped at a fixed count, and the index of when
  * each player was last read. The market values are small too: one day
  * of one format's list is a few hundred players, and the days are kept
@@ -61,7 +61,8 @@ public enum DocumentPlacement {
             "alert-id-sequence",
             "telegram-updates",
             "account-deletion-request",
-            "followed-leagues");
+            "followed-leagues",
+            "chat-league");
 
     private static final Set<String> SMALL_PREFIXES = Set.of(
             "alert-delivery-",

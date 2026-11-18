@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component;
 import otto.OttoProperties;
 import otto.account.AccountDeletion;
 import otto.alerts.AlertActions;
-import otto.ask.AskService;
+import otto.ask.LeagueAsk;
 import otto.board.WaiverBoardOptions;
+import otto.sleeper.LeagueScope;
 import otto.storage.OttoJson;
 
 /**
@@ -56,12 +57,12 @@ public class TelegramWebhook {
     private final String chatId;
     private final AlertActions alertActions;
     private final WaiverBoardOptions boardOptions;
-    private final AskService ask;
+    private final LeagueAsk ask;
     private final AccountDeletion accountDeletion;
     private final TelegramClient telegram;
 
     public TelegramWebhook(OttoProperties properties, AlertActions alertActions,
-            WaiverBoardOptions boardOptions, AskService ask, AccountDeletion accountDeletion,
+            WaiverBoardOptions boardOptions, LeagueAsk ask, AccountDeletion accountDeletion,
             TelegramClient telegram) {
         this.webhookSecret = properties.telegram().webhookSecret();
         this.chatId = properties.telegram().chatId();
@@ -159,7 +160,11 @@ public class TelegramWebhook {
             }
             return;
         }
-        telegram.sendMessage(ask.answer(text));
+        for (LeagueAsk.Reply reply : ask.answer(text)) {
+            reply.leagueId().ifPresentOrElse(
+                    league -> LeagueScope.run(league, () -> telegram.sendMessage(reply.text())),
+                    () -> telegram.sendMessage(reply.text()));
+        }
     }
 
     private void answerTap(JsonNode callback) {
@@ -176,10 +181,11 @@ public class TelegramWebhook {
             return;
         }
         long alertId = Long.parseLong(tap.group(2));
-        String ack = VIEW_ALL.equals(tap.group(1))
-                ? viewAllOptions(alertId)
-                : alertActions.apply(tap.group(1), alertId)
-                        .orElse("That alert is no longer on my log.");
+        String ack = LeagueScope.call(alertActions.leagueOf(alertId), () ->
+                VIEW_ALL.equals(tap.group(1))
+                        ? viewAllOptions(alertId)
+                        : alertActions.apply(tap.group(1), alertId)
+                                .orElse("That alert is no longer on my log."));
         acknowledge(callback, ack);
     }
 

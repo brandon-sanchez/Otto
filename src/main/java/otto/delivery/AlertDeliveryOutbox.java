@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.sleeper.LeagueScope;
 import otto.storage.JsonStore;
 import otto.storage.Lease;
 import otto.telegram.TelegramClient;
@@ -79,9 +80,13 @@ public class AlertDeliveryOutbox {
      *        retry never sends a part twice
      * @param viewAllOptions whether a View all options button joins the
      *        Done, Ignore and Mute buttons
+     * @param leagueId the league the Alert is about; null in a delivery
+     *        stored before Otto followed more than one league, which was
+     *        about the config league
      */
     private record Delivery(long alertId, Status status, String text, String basis,
-            List<Event> events, List<String> parts, int partsSent, boolean viewAllOptions) {
+            List<Event> events, List<String> parts, int partsSent, boolean viewAllOptions,
+            String leagueId) {
         private Delivery {
             events = List.copyOf(events);
             parts = parts == null ? List.of(text) : List.copyOf(parts);
@@ -93,12 +98,12 @@ public class AlertDeliveryOutbox {
 
         Delivery with(Status next) {
             return new Delivery(alertId, next, text, basis, events, parts, partsSent,
-                    viewAllOptions);
+                    viewAllOptions, leagueId);
         }
 
         Delivery sentThrough(int sent) {
             return new Delivery(alertId, status, text, basis, events, parts, sent,
-                    viewAllOptions);
+                    viewAllOptions, leagueId);
         }
     }
 
@@ -201,7 +206,7 @@ public class AlertDeliveryOutbox {
                 .toList();
         int partsSent = waiting.isEmpty() ? 0 : unchangedPartsSent(waiting.getFirst(), parts);
         Delivery delivery = new Delivery(alertId, Status.PENDING, text, basis, events, parts,
-                partsSent, viewAllOptions);
+                partsSent, viewAllOptions, LeagueScope.bound().orElse(null));
         if (!waiting.isEmpty()) {
             Delivery earlier = waiting.getFirst();
             log.info("Re-checked delayed Alert {}: {}", alertId,
@@ -239,6 +244,16 @@ public class AlertDeliveryOutbox {
                 .filter(delivery -> delivery.status() == Status.SENT)
                 .map(Delivery::events)
                 .orElseGet(List::of);
+    }
+
+    /**
+     * Returns the league the Alert with this id is about, so a tap on
+     * its buttons acts there. Empty when no delivery has this id, or
+     * when it was stored before deliveries named their league, which
+     * makes it the config league's.
+     */
+    public Optional<String> leagueOf(long alertId) {
+        return readById(alertId).map(Delivery::leagueId);
     }
 
     private boolean lease(String key) {

@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import otto.OttoProperties;
 import otto.delivery.AlertDeliveryOutbox;
 import otto.events.DiffKind;
 import otto.events.Event;
@@ -33,18 +34,32 @@ public class AlertActions {
     private final MuteStore muteStore;
     private final AlertDeliveryOutbox outbox;
     private final Clock clock;
+    private final String configLeagueId;
 
     public AlertActions(EventLog eventLog, SnapshotStore snapshotStore,
-            MuteStore muteStore, AlertDeliveryOutbox outbox, Clock clock) {
+            MuteStore muteStore, AlertDeliveryOutbox outbox, Clock clock,
+            OttoProperties properties) {
         this.eventLog = eventLog;
         this.snapshotStore = snapshotStore;
         this.muteStore = muteStore;
         this.outbox = outbox;
         this.clock = clock;
+        this.configLeagueId = properties.leagueId();
     }
 
     /**
-     * Applies one tap to the Alert it references.
+     * Returns the league the Alert with this id is about, which is where
+     * a tap on its buttons acts: the config league for an Alert sent
+     * before deliveries named their league.
+     */
+    public String leagueOf(long alertId) {
+        return outbox.leagueOf(alertId).orElse(configLeagueId);
+    }
+
+    /**
+     * Applies one tap to the Alert it references. Run it for the league
+     * {@link #leagueOf} names, because the Alert's events and Mutes are
+     * that league's.
      *
      * @return the ack text for the tap, or empty when no Alert with
      *         that id is on record

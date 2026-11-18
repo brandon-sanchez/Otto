@@ -13,7 +13,11 @@ import org.springframework.web.client.RestClient;
 import otto.OttoProperties;
 import otto.http.OutboundHttp;
 
-/** The outbound wire to the user's Telegram chat. */
+/**
+ * The outbound wire to the user's Telegram chat. Every message starts
+ * with the {@link MessageHeading} in force when it is sent, so a message
+ * about one of several leagues names its league.
+ */
 @Component
 public class TelegramClient {
 
@@ -24,14 +28,16 @@ public class TelegramClient {
     private final RestClient http;
     private final String botToken;
     private final String chatId;
+    private final MessageHeading heading;
 
-    public TelegramClient(OttoProperties properties) {
+    public TelegramClient(OttoProperties properties, MessageHeading heading) {
         this.http = RestClient.builder()
                 .baseUrl(properties.telegram().baseUrl())
                 .requestFactory(OutboundHttp.requestFactory(READ_TIMEOUT))
                 .build();
         this.botToken = properties.telegram().botToken();
         this.chatId = properties.telegram().chatId();
+        this.heading = heading;
     }
 
     /**
@@ -44,7 +50,7 @@ public class TelegramClient {
      * @return true when Telegram accepted every part
      */
     public boolean sendMessage(String text) {
-        for (String part : TelegramText.parts(text)) {
+        for (String part : TelegramText.parts(headed(text))) {
             if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
                 return false;
             }
@@ -95,7 +101,7 @@ public class TelegramClient {
     }
 
     private boolean sendWithKeyboard(String text, List<List<InlineButton>> rows) {
-        List<String> parts = TelegramText.parts(text);
+        List<String> parts = TelegramText.parts(headed(text));
         for (String part : parts.subList(0, parts.size() - 1)) {
             if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
                 return false;
@@ -121,6 +127,10 @@ public class TelegramClient {
         return post("answerCallbackQuery", Map.of(
                 "callback_query_id", callbackQueryId,
                 "text", text));
+    }
+
+    private String headed(String text) {
+        return heading.current().map(line -> line + "\n\n" + text).orElse(text);
     }
 
     private boolean post(String method, Map<String, Object> body) {

@@ -24,9 +24,12 @@ import otto.directory.PlayerDirectoryService;
 import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
 import otto.events.EventLog;
+import otto.followed.FollowedLeague;
+import otto.followed.FollowedLeagues;
 import otto.habits.HabitLedger;
 import otto.league.LeagueWeek;
 import otto.model.ModelChain;
+import otto.sleeper.LeagueScope;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.LeagueStatus;
@@ -46,6 +49,11 @@ import otto.watchlist.WatchlistWatcher;
  * {@link ModelChain#withinCheck}). Once it cannot fit another run, the
  * Alerts and the waiver board still waiting are left for the next
  * Check, and the steps that call no model still run.
+ *
+ * <p>One Check covers every followed league, one at a time, each bound
+ * in {@link LeagueScope} while it runs. The leagues share the model
+ * budget, and the league that goes first moves one place along the
+ * list each minute, so no league is always the one left short.
  */
 @Component
 public class CheckRunner {
@@ -71,6 +79,7 @@ public class CheckRunner {
     private final HabitLedger habits;
     private final SelfReportService selfReport;
     private final ModelChain models;
+    private final FollowedLeagues leagues;
     private final Clock clock;
     private final Duration preDraftCheckInterval;
 
@@ -84,7 +93,8 @@ public class CheckRunner {
             BoardRouting routing,
             VerificationService verificationService,
             WatchlistWatcher watchlistWatcher, HabitLedger habits, SelfReportService selfReport,
-            ModelChain models, Clock clock, OttoProperties properties) {
+            ModelChain models, FollowedLeagues leagues, Clock clock,
+            OttoProperties properties) {
         this.directoryService = directoryService;
         this.directoryStore = directoryStore;
         this.sleeper = sleeper;
@@ -104,6 +114,7 @@ public class CheckRunner {
         this.habits = habits;
         this.selfReport = selfReport;
         this.models = models;
+        this.leagues = leagues;
         this.clock = clock;
         this.preDraftCheckInterval = properties.preDraftCheckInterval();
     }
@@ -113,14 +124,78 @@ public class CheckRunner {
      *
      * <p>Side effects: Sleeper reads, model calls within the Check's
      * budget, Telegram messages, and the Snapshot, Event Log, Decision
-     * Record and last-check writes.
+     * Record and last-check writes, for each followed league; and when
+     * it is due, a read of the owner's league list.
+     *
+     * @throws RuntimeException the first league's failure, raised once
+     *         every other league has had its turn
      */
     public CheckResult runCheck() {
-        return models.withinCheck(this::check);
+        return models.withinCheck(this::checkEveryLeague);
     }
 
-    private CheckResult check() {
+    private CheckResult checkEveryLeague() {
         Instant now = clock.instant();
+        leagues.refreshIfDue();
+        Directory directory = new Directory();
+        List<CheckResult> results = new ArrayList<>();
+        RuntimeException failure = null;
+        for (FollowedLeague league : inTurn(leagues.followed(), now)) {
+            try {
+                results.add(LeagueScope.call(league.leagueId(), () -> check(now, directory)));
+            } catch (RuntimeException e) {
+                log.error("The Check of league {} failed; the other leagues still run",
+                        league.leagueId(), e);
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure;
+        }
+        if (results.stream().allMatch(CheckResult::skipped)) {
+            return CheckResult.skippedByCadence();
+        }
+        return new CheckResult(false, directory.update(),
+                results.stream().flatMap(result -> result.newEvents().stream()).toList(),
+                results.stream().flatMap(result -> result.alertsSent().stream()).toList());
+    }
+
+    private static List<FollowedLeague> inTurn(List<FollowedLeague> followed, Instant now) {
+        int first = (int) Math.floorMod(now.getEpochSecond() / 60, followed.size());
+        List<FollowedLeague> ordered = new ArrayList<>(followed.subList(first, followed.size()));
+        ordered.addAll(followed.subList(0, first));
+        return ordered;
+    }
+
+    /**
+     * The Player Directory is shared by every league, so one Check
+     * updates it once, for the first league that gets past the pre-draft
+     * cadence.
+     */
+    private final class Directory {
+
+        private PlayerDirectoryService.Update update;
+
+        PlayerDirectoryService.Update updateIfDue() {
+            if (update == null) {
+                update = directoryService.updateIfDue();
+                if (update instanceof PlayerDirectoryService.Update.Unavailable unavailable) {
+                    selfReport.report(unavailable.source(), unavailable.reason());
+                }
+            }
+            return update;
+        }
+
+        PlayerDirectoryService.Update update() {
+            return update == null ? new PlayerDirectoryService.Update.Skipped() : update;
+        }
+    }
+
+    private CheckResult check(Instant now, Directory directories) {
         Optional<LastCheck> state = stateStore.read();
         SourceResult<SleeperAdapter.League> league = sleeper.league();
         selfReport.reportIfUnavailable(league);
@@ -128,10 +203,7 @@ public class CheckRunner {
             return CheckResult.skippedByCadence();
         }
 
-        PlayerDirectoryService.Update directory = directoryService.updateIfDue();
-        if (directory instanceof PlayerDirectoryService.Update.Unavailable unavailable) {
-            selfReport.report(unavailable.source(), unavailable.reason());
-        }
+        PlayerDirectoryService.Update directory = directories.updateIfDue();
 
         SnapshotStage stage = snapshotStage(now, league);
         // Roster Alerts fire only in season: pre-draft and drafting stay

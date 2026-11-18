@@ -32,6 +32,7 @@ import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
+import otto.followed.FollowedLeagues;
 import otto.league.LeagueShapes;
 import otto.league.LeagueWeek;
 import otto.market.MarketDay;
@@ -128,13 +129,15 @@ public class TeamWeaknesses {
     private final TradeDeadlines deadlines;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
+    private final FollowedLeagues leagues;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
             MarketValues market, TeamDirections directions, TradeOffers offers,
             HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
-            AdviceCheck check) {
+            AdviceCheck check, FollowedLeagues leagues) {
         this.loader = loader;
+        this.leagues = leagues;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
         this.shapes = shapes;
@@ -171,8 +174,9 @@ public class TeamWeaknesses {
      *
      * @param leagueReference the league the user named; null or blank for
      *        the league in the conversation, or words such as "all of
-     *        them" for every league he has. Otto follows one league, so
-     *        "all" answers that one and says so.
+     *        them" for every league he has. With one league followed,
+     *        "all" answers that one and says so; with several, the chat
+     *        has already picked the league in scope, and this is not read.
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
@@ -186,8 +190,10 @@ public class TeamWeaknesses {
     private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
             AnswerDelivery delivery) {
         String name = league.league().name();
-        boolean everyLeague = reference != null && EVERY_LEAGUE.matcher(reference).find();
-        if (!everyLeague && !names(reference, name)) {
+        boolean chatPickedLeague = leagues.several();
+        boolean everyLeague = !chatPickedLeague && reference != null
+                && EVERY_LEAGUE.matcher(reference).find();
+        if (!chatPickedLeague && !everyLeague && !names(reference, name)) {
             return ToolAnswer.unavailable(("I follow one league, %s, and no other, so I "
                     + "cannot read \"%s\"").formatted(name, reference));
         }
