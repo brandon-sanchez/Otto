@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import otto.lineup.PlayerPositions;
 import otto.lineup.PositionRanking;
 import otto.lineup.Slot;
 import otto.snapshot.RosterSnapshot;
@@ -168,13 +169,16 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
         return gaps;
     }
 
-    /** The positions the league's starting slots can be filled with that have a replacement level. */
+    /**
+     * The positions the league's starting slots can be filled with that
+     * have a replacement level, in the order a lineup lists them.
+     */
     private static List<String> rankedPositions(LeagueShape shape, UserWeek team) {
         return team.slots().stream()
                 .flatMap(slot -> slot.eligible().stream())
                 .distinct()
                 .filter(shape::hasReplacementLevel)
-                .sorted()
+                .sorted(PlayerPositions.LINEUP_ORDER)
                 .toList();
     }
 

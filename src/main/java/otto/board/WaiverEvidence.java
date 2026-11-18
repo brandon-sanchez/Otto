@@ -31,6 +31,7 @@ import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.league.LeagueWeek;
+import otto.lineup.PlayerPositions;
 import otto.lineup.Slot;
 import otto.needs.RosterNeeds;
 import otto.needs.RosterNeedsService;
@@ -58,8 +59,6 @@ import otto.storage.OttoJson;
  */
 @Component
 public class WaiverEvidence {
-
-    private static final Set<String> POSITIONS = Set.of("QB", "RB", "WR", "TE");
 
     /** The longest opening or entry the model may write, in characters. */
     static final int PART_MAX_LENGTH = 700;
@@ -285,7 +284,7 @@ public class WaiverEvidence {
                 .flatMap(roster -> roster.players().stream())
                 .collect(Collectors.toSet());
         return players.players().values().stream()
-                .filter(player -> POSITIONS.contains(player.position()))
+                .filter(player -> PlayerPositions.SKILL.contains(player.position()))
                 .filter(player -> player.team() != null && !player.team().isBlank())
                 .filter(player -> !rostered.contains(player.playerId()))
                 .sorted(Comparator.comparing(DirectoryPlayer::playerId))

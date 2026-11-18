@@ -246,7 +246,7 @@ final class LineupEvidence {
 
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("fullName", name(playerId));
-        facts.put("position", roster.playerPositions().getOrDefault(playerId, "unknown"));
+        facts.put("position", week.positionOf(roster, playerId).orElse("unknown"));
         facts.put("nflTeam", roster.playerTeams().getOrDefault(playerId, "unknown"));
         facts.put("designation", designation(playerId));
         facts.put("lineupRole", lineupRole(playerId));
@@ -258,7 +258,7 @@ final class LineupEvidence {
         evidence.add(new EvidenceItem("projection-" + playerId, "sleeper:projections",
                 Optional.empty(), now, "projected points this week in league scoring",
                 Map.of("projectedPoints", projection.orElse("no projection available"))));
-        String position = roster.playerPositions().get(playerId);
+        String position = week.positionOf(roster, playerId).orElse(null);
         String team = roster.playerTeams().get(playerId);
         if (brief) {
             evidence.addAll(matchups.briefAbout(playerId, name(playerId), position, team));
@@ -305,7 +305,8 @@ final class LineupEvidence {
 
     private Optional<String> projection(String playerId) {
         return week.projections()
-                .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)))
+                .flatMap(table -> table.points(playerId,
+                        week.positionOf(roster, playerId).orElse(null)))
                 .map(points -> String.format(Locale.ROOT, "%.1f", points));
     }
 

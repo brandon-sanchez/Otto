@@ -40,9 +40,6 @@ import otto.snapshot.RosterSnapshot;
 @Component
 public class RosterNeedsService {
 
-    private static final List<String> POSITIONS = List.of("QB", "RB", "WR", "TE",
-            PlayerPositions.KICKER, PlayerPositions.DEFENSE);
-
     private static final String HYPOTHETICAL_PLAYER_ID_PREFIX = "hypothetical:";
 
     private final LineupOptimizer optimizer;
@@ -87,7 +84,7 @@ public class RosterNeedsService {
         }
         Set<String> positionsThatFill = new LinkedHashSet<>();
         if (!open.isEmpty()) {
-            for (String position : POSITIONS) {
+            for (String position : PlayerPositions.LINEUP) {
                 if (pool.match(slots, Map.of(HYPOTHETICAL_PLAYER_ID_PREFIX + position, position))
                         .holderBySlotIndex().size()
                         > matched.holderBySlotIndex().size()) {

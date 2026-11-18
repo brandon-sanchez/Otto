@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import otto.lineup.PlayerPositions;
 import otto.lineup.PositionCutoffs;
 
 /**
@@ -31,7 +32,7 @@ public record Settings(
         Integer maxBid) {
 
     /** The positions the Notable Player cutoffs cover, in reading order. */
-    public static final List<String> CUTOFF_POSITIONS = List.of("QB", "RB", "WR", "TE");
+    public static final List<String> CUTOFF_POSITIONS = PlayerPositions.SKILL;
 
     /** The spec's cutoffs: Superflex-aware, from the weekly projection table. */
     private static final PositionCutoffs DEFAULT_CUTOFFS = new PositionCutoffs(12, 24, 24, 12);

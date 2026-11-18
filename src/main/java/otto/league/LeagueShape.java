@@ -1,7 +1,6 @@
 package otto.league;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -67,12 +66,6 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      */
     private static final double TWO_QUARTERBACK_SCARCITY = 1.20;
 
-    /** Positions that share a flex or Superflex slot, so best lineups decide their rank. */
-    private static final List<String> SKILL_POSITIONS = List.of("QB", "RB", "WR", "TE");
-
-    private static final List<String> SLOT_ONLY = List.of(PlayerPositions.KICKER,
-            PlayerPositions.DEFENSE);
-
     public LeagueShape {
         slots = Map.copyOf(slots);
         starters = Map.copyOf(starters);
@@ -93,7 +86,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
             if (position.equals("SUPER_FLEX")) {
                 position = "QB";
             }
-            if (SKILL_POSITIONS.contains(position) || SLOT_ONLY.contains(position)) {
+            if (PlayerPositions.LINEUP.contains(position)) {
                 slots.merge(position, 1, Integer::sum);
             }
         }
@@ -111,7 +104,7 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
     public LeagueShape withStarters(Map<String, Integer> starters) {
         Map<String, Integer> kept = new LinkedHashMap<>();
         starters.forEach((position, count) -> {
-            if (SKILL_POSITIONS.contains(position)) {
+            if (PlayerPositions.SKILL.contains(position)) {
                 kept.put(position, count);
             }
         });
@@ -159,6 +152,40 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                 : Optional.empty();
     }
 
+    /**
+     * Where a position's Replacement Level sits in a week's table.
+     *
+     * @param rank the replacement rank, or how many players the table
+     *        prices when the league gives the position none
+     * @param ranked how many players the table prices at the position
+     * @param points what the player at the rank projects, or what the
+     *        lowest projected player does when the table is thinner
+     *        than the rank
+     */
+    public record ReplacementLine(int rank, int ranked, double points) {
+
+        /** True when the table prices fewer players than the rank, so its lowest sets the line. */
+        public boolean shallow() {
+            return ranked < rank;
+        }
+    }
+
+    /**
+     * Returns the position's Replacement Level for a reader that needs
+     * one even from a thin table, such as the waiver board: a table
+     * thinner than the rank, or a position with no rank, reads its lowest
+     * projected player. {@link #replacementLevel} reads the same rank and
+     * leaves a thin table unpriced instead.
+     *
+     * @return empty when the table prices nobody at the position
+     */
+    public Optional<ReplacementLine> replacementLine(PositionRanking ranking, String position) {
+        int ranked = ranking.ranked(position);
+        int rank = replacementRank(position).orElse(ranked);
+        return ranking.pointsAtRank(position, Math.min(rank, ranked))
+                .map(points -> new ReplacementLine(rank, ranked, points));
+    }
+
     /** Returns the position's scarcity multiplier in this league. */
     public double scarcity(String position) {
         if (position.equals("QB")) {
@@ -172,10 +199,10 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
      * sentence the user can read.
      */
     public String describe() {
-        String lines = SKILL_POSITIONS.stream()
+        String lines = PlayerPositions.LINEUP.stream()
                 .filter(this::ranks)
-                .map(position -> "%s among %ss".formatted(
-                        Ordinal.of(replacementRank(position).getAsInt()), position))
+                .map(position -> "%s among %s".formatted(
+                        Ordinal.of(replacementRank(position).getAsInt()), plural(position)))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), Prose::listed));
         String quarterbacks = twoQuarterbacks()
                 ? "Your league can start two quarterbacks, so a quarterback is the hardest "
@@ -188,6 +215,14 @@ public record LeagueShape(int teams, Map<String, Integer> slots, Map<String, Int
                         .formatted(teams) + "spots included";
         return ("A player is worth his rest-of-season points above the free agent who ranks %s "
                 + "this week, %s. %s").formatted(lines, basis, quarterbacks);
+    }
+
+    private static String plural(String position) {
+        return switch (position) {
+            case PlayerPositions.KICKER -> "kickers";
+            case PlayerPositions.DEFENSE -> "defenses";
+            default -> position + "s";
+        };
     }
 
     /** True when the league's lineup gives the position a replacement rank of its own. */

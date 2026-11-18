@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import otto.advice.ToolAnswer;
 import otto.claims.ClaimRound;
+import otto.lineup.PlayerPositions;
 import otto.sleeper.LeagueRules;
 import otto.sleeper.SleeperAdapter;
 import otto.storage.JsonStore;
@@ -28,8 +29,6 @@ import otto.storage.OttoJson;
 public class WaiverPreferences {
 
     private static final String DOCUMENT = "waiver-preferences";
-
-    private static final List<String> POSITIONS = List.of("QB", "RB", "WR", "TE");
 
     private static final DateTimeFormatter DEADLINE =
             DateTimeFormatter.ofPattern("EEEE, MMMM d 'at' h:mm a z", Locale.US);
@@ -108,7 +107,7 @@ public class WaiverPreferences {
             return ToolAnswer.unavailable("name at least one position: QB, RB, WR or TE");
         }
         Optional<String> unknown = named.stream()
-                .filter(position -> !POSITIONS.contains(position))
+                .filter(position -> !PlayerPositions.SKILL.contains(position))
                 .findFirst();
         if (unknown.isPresent()) {
             return ToolAnswer.unavailable("%s is not a position the waiver board ranks; "
@@ -121,7 +120,7 @@ public class WaiverPreferences {
         }
         WaiverPreference preference = new WaiverPreference(league.leagueId(),
                 round.get().deadline().toInstant(),
-                POSITIONS.stream().filter(named::contains).toList(),
+                PlayerPositions.SKILL.stream().filter(named::contains).toList(),
                 only ? WaiverPreference.Mode.ONLY : WaiverPreference.Mode.FOCUS, now);
         List<WaiverPreference> preferences = openForOtherLeagues(league.leagueId(), now);
         preferences.add(preference);

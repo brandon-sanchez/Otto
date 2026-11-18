@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import otto.lineup.PlayerPositions;
+
 /**
  * How the user's costly habits tilt team analysis and trade ideas. Those
  * answers let it shape what they suggest and stress, and never name it:
@@ -24,8 +26,6 @@ public record HabitLean(List<String> depthAt, boolean steadyUsage) {
 
     /** The tilt of a user whose habits cost him nothing. */
     public static final HabitLean NONE = new HabitLean(List.of(), false);
-
-    private static final Set<String> WEIGHED = Set.of("QB", "RB", "WR", "TE");
 
     private static final Set<String> NO_BACKUP_HABITS = Set.of("swaps", "byes");
 
@@ -49,7 +49,7 @@ public record HabitLean(List<String> depthAt, boolean steadyUsage) {
             } else if (NO_BACKUP_HABITS.contains(habit.id())) {
                 habit.players().stream()
                         .map(positions::get)
-                        .filter(WEIGHED::contains)
+                        .filter(PlayerPositions.SKILL::contains)
                         .forEach(depth::add);
             } else if ("chasing".equals(habit.id())) {
                 steady = true;
@@ -67,7 +67,7 @@ public record HabitLean(List<String> depthAt, boolean steadyUsage) {
         Map<String, Double> left = new HashMap<>();
         for (HabitWeek week : history.scoredWeeks()) {
             PlayedWeek played = week.played().orElseThrow();
-            for (String position : WEIGHED) {
+            for (String position : PlayerPositions.SKILL) {
                 double gap = total(played, played.optimal(), position)
                         - total(played, played.starters(), position);
                 if (gap > 0) {

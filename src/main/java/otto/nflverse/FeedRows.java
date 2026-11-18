@@ -3,10 +3,12 @@ package otto.nflverse;
 import java.util.List;
 import java.util.Set;
 
+import otto.lineup.PlayerPositions;
+
 /** What every nflverse reader agrees on about the rows it streams. */
 final class FeedRows {
 
-    static final Set<String> KEPT_POSITIONS = Set.of("QB", "RB", "WR", "TE");
+    static final Set<String> KEPT_POSITIONS = Set.copyOf(PlayerPositions.SKILL);
     static final String REGULAR_SEASON = "REG";
 
     private FeedRows() {

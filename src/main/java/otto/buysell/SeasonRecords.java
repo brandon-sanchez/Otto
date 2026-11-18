@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
+import otto.lineup.PlayerPositions;
 import otto.nflverse.ExpectedPoints;
 import otto.nflverse.NflverseStore;
 
@@ -20,7 +20,7 @@ import otto.nflverse.NflverseStore;
 public final class SeasonRecords {
 
     /** The positions the buy-low and sell-high rules cover. */
-    public static final Set<String> POSITIONS = Set.of("RB", "WR", "TE");
+    public static final List<String> POSITIONS = PlayerPositions.FLEX;
 
     /** A last season shorter than this says too little about a player's normal level. */
     static final int FULL_SEASON_GAMES = 8;

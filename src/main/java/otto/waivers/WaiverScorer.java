@@ -13,7 +13,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,6 +31,7 @@ import otto.league.LeagueShape;
 import otto.league.LeagueShapes;
 import otto.league.LeagueWeek;
 import otto.lineup.GameWeek;
+import otto.lineup.PositionRanking;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.needs.Cover;
@@ -343,9 +343,9 @@ public class WaiverScorer {
             // whatever the question narrowed to: a player's score must
             // not move because the user asked about his position alone.
             LeagueShape shape = shapes.shape(league);
+            PositionRanking ranking = PositionRanking.of(projections, directory);
             WaiverQuery.ALL_POSITIONS.forEach(position ->
-                    replacements.put(position, replacementFor(position,
-                            shape.replacementRank(position))));
+                    replacements.put(position, replacementFor(shape, ranking, position)));
             this.scale = scale();
             this.needPositions = needPositions();
             this.positionsThatFixASlot = positionsThatFixASlot();
@@ -1156,38 +1156,30 @@ public class WaiverScorer {
         // -- the user's own team --------------------------------------------
 
         /**
-         * Replacement level: the projection at the league's replacement
-         * rank across every player this system knows of, rostered or
-         * not. A table thinner than the cutoff has no player at that rank
-         * to read, so the lowest projected one sets the line and the
-         * basis says so - a replacement level of zero would price every
-         * scrub as a starter.
-         *
-         * @param rank the league's replacement rank; empty when it has
-         *        none, which the lowest projected player then sets
+         * Replacement level across every player this system knows of,
+         * rostered or not, as the league's shape reads it from a thin
+         * table too, with the basis in words. A replacement level of
+         * zero would price every scrub as a starter, so a thin table's
+         * lowest projected player sets it and the basis says so.
          */
-        private Replacement replacementFor(String position, OptionalInt rank) {
-            List<Double> ranked = directory.players().values().stream()
-                    .filter(player -> position.equals(player.position()))
-                    .map(player -> projections.points(player.playerId(), position))
-                    .flatMap(Optional::stream)
-                    .sorted(Comparator.reverseOrder())
-                    .toList();
-            int cutoff = rank.orElse(ranked.size());
-            if (ranked.isEmpty()) {
-                return new Replacement(position, 0.0,
-                        "no %s is projected this week, so I have no %s replacement level"
-                                .formatted(position, position));
+        private static Replacement replacementFor(LeagueShape shape, PositionRanking ranking,
+                String position) {
+            return shape.replacementLine(ranking, position)
+                    .map(line -> new Replacement(position, line.points(), basis(position, line)))
+                    .orElseGet(() -> new Replacement(position, 0.0,
+                            "no %s is projected this week, so I have no %s replacement level"
+                                    .formatted(position, position)));
+        }
+
+        private static String basis(String position, LeagueShape.ReplacementLine line) {
+            if (line.shallow()) {
+                return ("%s replacement level is %s points: only %d %ss are projected this week, "
+                        + "fewer than the %s%d cutoff, so the lowest sets it").formatted(position,
+                                points(line.points()), line.ranked(), position, position,
+                                line.rank());
             }
-            double level = ranked.get(Math.min(cutoff, ranked.size()) - 1);
-            String basis = ranked.size() >= cutoff
-                    ? "%s replacement level is %s points: the %s%d projection this week"
-                            .formatted(position, points(level), position, cutoff)
-                    : ("%s replacement level is %s points: only %d %ss are projected this week, "
-                            + "fewer than the %s%d cutoff, so the lowest sets it").formatted(
-                                    position, points(level), ranked.size(), position, position,
-                                    cutoff);
-            return new Replacement(position, level, basis);
+            return "%s replacement level is %s points: the %s%d projection this week"
+                    .formatted(position, points(line.points()), position, line.rank());
         }
 
         /**

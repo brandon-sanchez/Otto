@@ -252,7 +252,7 @@ public class TradeOffers {
                 .map(PlayerDirectory::players).orElse(Map.of());
         Map<String, Double> unfitted = new HashMap<>();
         league.rosters().forEach(roster -> roster.players().forEach(playerId ->
-                Optional.ofNullable(roster.playerPositions().get(playerId))
+                league.week().positionOf(roster, playerId)
                         .flatMap(position -> TradeEvaluator.unfitted(basis, playerId, position))
                         .ifPresent(value -> unfitted.put(playerId, value))));
         Map<String, Integer> market = switch (valuation.rostered(league.league(),
