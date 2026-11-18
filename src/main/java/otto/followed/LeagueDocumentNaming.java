@@ -12,12 +12,16 @@ import otto.storage.DocumentNaming;
  * Keeps each followed league's own documents apart. A document that
  * belongs to a league is stored under its plain name for the league
  * named in config, and under its name plus {@link #LEAGUE_SUFFIX} and
- * the league id for every other league. Every other document is shared
- * by all leagues and keeps its plain name.
+ * the league id for every other league. A shared document keeps its
+ * plain name for every league.
  *
  * <p>The config league's documents keep their plain names, so documents
  * stored under those names are its documents, with nothing to rename
  * or copy. ADR-0012 lists which documents belong to a league and why.
+ *
+ * <p>Every kind of document Otto stores is listed here as one or the
+ * other, and the scenario tests fail on a document that is in neither
+ * list. A document missing from both is stored as shared.
  */
 @Component
 public class LeagueDocumentNaming implements DocumentNaming {
@@ -44,6 +48,42 @@ public class LeagueDocumentNaming implements DocumentNaming {
             "alert-delivery-key:",
             "alert-delivery-lease:");
 
+    /**
+     * Documents about the owner or the NFL rather than one league, and
+     * documents whose entries carry their own league id.
+     */
+    private static final Set<String> SHARED = Set.of(
+            "conversation",
+            "chat-league",
+            "followed-leagues",
+            "watchlist",
+            "player-directory",
+            "defense-versus-position",
+            "team-reports",
+            "research-index",
+            "waiver-preferences",
+            "waiver-comparisons",
+            "team-directions",
+            "team-direction-questions",
+            "keeper-rules",
+            "alert-id-sequence",
+            "telegram-updates",
+            "account-deletion-request");
+
+    /**
+     * The nflverse feeds, ffopportunity's expected points among them, each
+     * player's research, the market values kept per format, the delivery
+     * records found by Alert id, and how far each waiver board's full
+     * list went out.
+     */
+    private static final Set<String> SHARED_PREFIXES = Set.of(
+            "nflverse-",
+            "ffopportunity-",
+            "research-player-",
+            "market-values-",
+            "alert-delivery-id:",
+            "board-options-sent-");
+
     private final String configLeagueId;
 
     public LeagueDocumentNaming(OttoProperties properties) {
@@ -57,6 +97,15 @@ public class LeagueDocumentNaming implements DocumentNaming {
             return name;
         }
         return name + LEAGUE_SUFFIX + league;
+    }
+
+    /**
+     * True when the document called {@code name} is listed as belonging
+     * to a league or as shared by every league.
+     */
+    public static boolean isMarked(String name) {
+        return belongsToALeague(name) || SHARED.contains(name)
+                || SHARED_PREFIXES.stream().anyMatch(name::startsWith);
     }
 
     private static boolean belongsToALeague(String name) {
