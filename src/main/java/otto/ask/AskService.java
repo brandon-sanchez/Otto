@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ClassUtils;
 
 import otto.advice.FriendVoice;
 import otto.model.ModelChain;
@@ -145,9 +147,9 @@ public class AskService {
             the same in every league, such as usage, stats, ranks and news: answer
             that from its tool as usual. Anything about his team or a league
             depends on the league, and so do fantasy points, which each league
-            scores its own way. For those, call the tool as usual, putting "fantasy
-            points" in what he asked about when the question is about them, and
-            Otto asks him which league. Never answer such a question without its
+            scores its own way. For those, call the tool as usual, setting
+            fantasyPoints to true on get_player_stats when the question is about
+            them, and Otto asks him which league. Never answer such a question without its
             tool, and never ask him which league yourself.
             """;
 
@@ -172,6 +174,7 @@ public class AskService {
 
     private final ModelChain chain;
     private final List<ToolCallback> toolCallbacks;
+    private final ToolLeagueNeed leagueNeed;
     private final ToolCallingManager toolCalling;
     private final ConversationStore conversation;
     private final Clock clock;
@@ -180,8 +183,11 @@ public class AskService {
             TradeTools tradeTools, TeamTools teamTools, SettingsTools settingsTools,
             ToolCallingManager toolCalling, ConversationStore conversation, Clock clock) {
         this.chain = chain;
-        this.toolCallbacks = List.of(ToolCallbacks.from(lineupTools, playerTools, tradeTools,
-                teamTools, settingsTools));
+        Object[] tools = {lineupTools, playerTools, tradeTools, teamTools, settingsTools};
+        this.toolCallbacks = List.of(ToolCallbacks.from(tools));
+        this.leagueNeed = ToolLeagueNeed.of(Stream.of(tools)
+                .map(ClassUtils::getUserClass)
+                .toArray(Class<?>[]::new));
         this.toolCalling = toolCalling;
         this.conversation = conversation;
         this.clock = clock;
@@ -359,7 +365,7 @@ public class AskService {
             }
             List<AssistantMessage.ToolCall> calls = toolCalls(response);
             boolean needsLeague = calls.stream()
-                    .anyMatch(call -> ToolLeagueNeed.of(call.name(), call.arguments()));
+                    .anyMatch(call -> leagueNeed.needsLeague(call.name(), call.arguments()));
             if (mode.stopsAt(needsLeague)) {
                 return new Loop.LeagueNeeded();
             }

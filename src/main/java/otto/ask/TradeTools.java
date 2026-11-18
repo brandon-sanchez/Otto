@@ -38,6 +38,7 @@ public class TradeTools {
         this.clock = clock;
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "evaluate_trade", description = """
             Prices a proposed trade with one league mate two ways: what
             the players do for each team's roster over the rest of the
@@ -67,6 +68,7 @@ public class TradeTools {
                 partner -> trades.evaluate(league, partner, gets, gives)));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "suggest_trades", description = """
             Named trade offers for the user: for each, which manager to
             send it to, what he gives, what he gets, and why the other
@@ -98,6 +100,7 @@ public class TradeTools {
                 checked.delivery()), TradeIdeas.Answer::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_market_value", description = """
             What one player or future draft pick is worth on the trade
             market in this league's format (redraft or dynasty, 1QB or
@@ -117,6 +120,7 @@ public class TradeTools {
                 MarketValueAnswers.Reply::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "find_buy_low_sell_high", description = """
             Buy-low and sell-high players, judged from usage: a buy-low
             is a proven player whose usage held while his points slumped
@@ -148,6 +152,7 @@ public class TradeTools {
                         "side must be buy, sell or both, not \"%s\"".formatted(side)));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "judge_injured_player", description = """
             Whether to trade for one injured player while he is hurt:
             his return timeline exactly as cited news gives it, the games

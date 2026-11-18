@@ -41,8 +41,8 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
     private static final String SNAPS = "Isaiah Likely played 52 snaps in week 5, 78% of "
             + "the Ravens' offensive snaps, and drew 7 of their 31 targets, a 23% share.";
 
-    private static final String POINTS = "This season Isaiah Likely has scored 46.9 PPR "
-            + "points against 37.8 expected.";
+    private static final String POINTS =
+            "Isaiah Likely has <b>46.0</b> points over 4 games (11.5 per game).";
 
     private static final String SNAP_QUESTION =
             "What was Isaiah Likely's snap percentage this last game?";
@@ -66,6 +66,7 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
         TwoLeagues.healthyInSeason(sleeper);
         SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
                 "sleeper/players-nfl-likely.json", "players-v1");
+        SleeperStubs.likelysPlayedWeeks(sleeper);
         NflverseStubs.isaiahLikelysSeason(nflverse);
         OutboundStubs.telegramOk(telegram);
         OutboundStubs.llmPhrases(llm, "An alert.");
@@ -138,7 +139,8 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
     @Test
     void fantasyPointsDependOnTheLeagueSoOttoAsksAndTheShortReplyAnswers() {
         modelCalls("get_player_stats",
-                "{\"player\":\"Isaiah Likely\",\"asked\":\"fantasy points\"}");
+                "{\"player\":\"Isaiah Likely\",\"asked\":\"fantasy points\","
+                        + "\"fantasyPoints\":true}");
         statsWriteUp(POINTS);
 
         say("How many fantasy points has Isaiah Likely scored this season?");
@@ -147,6 +149,10 @@ class LeagueNeutralQuestionsScenarioTest extends WireSeamTest {
         llm.resetScenarios();
         say("the dynasty one");
         assertThat(sent()).last().isEqualTo("🏈 <b>Dynasty Bros</b>\n\n" + POINTS);
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("legalMoves"))
+                .withRequestBody(containing("Dynasty Bros"))
+                .withRequestBody(containing("full PPR, tight ends +0.5 per catch")));
     }
 
     @Test
