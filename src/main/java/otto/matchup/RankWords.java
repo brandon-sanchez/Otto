@@ -153,8 +153,8 @@ public final class RankWords {
 
     /**
      * Returns the line above a player's {@link #line ranks}, naming who
-     * he is ranked among and over which weeks: "Bucky Irving's rankings
-     * among RBs this season (weeks 1–10)".
+     * he is ranked among and over which weeks: "Bucky Irving's season
+     * ranks among RBs (weeks 1–10)".
      */
     public static String header(String name, Position position, Ranking.Weeks weeks) {
         return header(name, group(Set.of(position)), weeks);
@@ -165,8 +165,8 @@ public final class RankWords {
         String span = weeks.firstWeek() == weeks.lastWeek()
                 ? "week %d".formatted(weeks.firstWeek())
                 : "weeks %d–%d".formatted(weeks.firstWeek(), weeks.lastWeek());
-        String season = weeks.priorSeasonFinal() ? "last season" : "this season";
-        return "%s's rankings among %s %s (%s)".formatted(name, group, season, span);
+        String season = weeks.priorSeasonFinal() ? "last-season" : "season";
+        return "%s's %s ranks among %s (%s)".formatted(name, season, group, span);
     }
 
     /** Names exactly the positions in a chat ranking. */

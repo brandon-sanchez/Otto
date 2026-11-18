@@ -3,6 +3,7 @@ package otto.ask;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -40,6 +41,12 @@ import otto.nflverse.UsageTotals;
 final class PlayerStatsEvidence {
 
     static final int MAX_LENGTH = 600;
+
+    /** The rank fact naming the comparison group and weeks above the rank rows. */
+    static final String RANK_HEADER_FACT = "header";
+
+    /** The rank fact holding one rank as the row the answer shows. */
+    static final String RANK_LINE_FACT = "line";
 
     private static final String PREFIX = "stats-";
 
@@ -356,13 +363,18 @@ final class PlayerStatsEvidence {
                 "what he makes before and after first contact, from PFR", facts);
     }
 
+    /**
+     * Returns his season ranks, the ones that say most about his fantasy
+     * role first: {@link RankRows} shows the leading rows when the model
+     * names none.
+     */
     private static List<EvidenceItem> ranks(Subject subject, MatchupSources sources,
             Instant now) {
-        List<PlayerStat> stats = new ArrayList<>(List.of(PlayerStat.SNAP_SHARE));
+        Set<PlayerStat> stats = new LinkedHashSet<>(subject.position() == Position.RB
+                ? List.of(PlayerStat.CARRIES_PER_GAME, PlayerStat.CARRY_SHARE,
+                        PlayerStat.SNAP_SHARE)
+                : List.of(PlayerStat.SNAP_SHARE));
         stats.addAll(subject.position().playerStats());
-        if (subject.position() == Position.RB) {
-            stats.add(PlayerStat.CARRIES_PER_GAME);
-        }
         return stats.stream()
                 .flatMap(stat -> sources.rankings().players(stat, subject.rankPositions())
                         .map(ranking -> rankItem(subject, ranking, now)).stream())
@@ -387,8 +399,8 @@ final class PlayerStatsEvidence {
                     ranking.stat().sampleUnit()));
             PlayerStat stat = (PlayerStat) ranking.stat();
             facts.put("quoted", RankWords.placed(stat, placement.get()));
-            facts.put("header", RankWords.header(subject.name(), group, ranking.weeks()));
-            facts.put("line", RankWords.line(ranking, placement.get()));
+            facts.put(RANK_HEADER_FACT, RankWords.header(subject.name(), group, ranking.weeks()));
+            facts.put(RANK_LINE_FACT, RankWords.line(ranking, placement.get()));
         } else {
             facts.put("noRank", ranking.unranked().stream()
                     .filter(entry -> entry.id().equals(subject.gsisId()))

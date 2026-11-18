@@ -6,8 +6,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -23,7 +21,6 @@ import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
-import otto.format.TelegramHtml;
 import otto.directory.PlayerLookup;
 import otto.lineup.LeagueScoring;
 import otto.matchup.MatchupSources;
@@ -60,10 +57,10 @@ public class PlayerStatsAnswers {
             rank item's "header" fact to name the comparison group, then add at most two
             "line" facts that describe that stat or his role. Copy those facts word for word.
             When he asks for ranks, stats among a position group, or general season stats,
-            the first line is a rank item's "header" fact, word for word. Leave a blank
-            line after it, then use the "line" fact of every rank he asked about, word for
-            word, the ones he named first. With no stat named, give up to four lines that
-            best show his fantasy role. Do not repeat the same values in prose. A brief note
+            the first line is a rank item's "header" fact, word for word. Directly under
+            it, with no blank line, use the "line" fact of every rank he asked about, word
+            for word, the ones he named first. With no stat named, give the first four
+            rank items' lines. Do not repeat the same values in prose. A brief note
             can explain what the usage means, such as whether he owns most of the backfield
             work or gets involved as a receiver, when the evidence supports it.
             The header names exactly the group used for every rank line. Never relabel the
@@ -76,15 +73,18 @@ public class PlayerStatsAnswers {
             zero: if he asked about it, say plainly that you don't have it and give the
             reason the evidence states, and never say you cannot see a stat the evidence
             holds. Add at most one short line of reason or context, never a paragraph.
-            When the evidence holds a league-points item, he asked for fantasy points: the
-            first line is its "%s" fact word for word, or its "%s" fact when he
+            When the evidence holds a league-points item and he asked for fantasy points,
+            the first line is its "%s" fact word for word, or its "%s" fact when he
             asked for a per-game average; add its "%s" fact, word for word, when he
-            asks where he ranks. Those are his points in his league's scoring; never give
+            asks where he ranks in points. When he asked for his ranks instead, keep the
+            rank layout above, never lead with his points, and add the item's "%s" fact
+            as the last rank line. Those are his points in his league's scoring; never give
             ffopportunity's full-PPR figures as his points.
             Never write a confidence label such as High or Medium. Stay under "maxLength"
             characters.
             """.formatted(LeaguePointsEvidence.LINE_FACT, LeaguePointsEvidence.PER_GAME_LINE_FACT,
-                    LeaguePointsEvidence.RANK_LINE_FACT) + FriendVoice.RULE
+                    LeaguePointsEvidence.RANK_LINE_FACT, LeaguePointsEvidence.RANK_ROW_FACT)
+            + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
     private final UserWeekLoader loader;
@@ -107,7 +107,7 @@ public class PlayerStatsAnswers {
             if (verdict instanceof AdviceCheck.Verdict.Passed<AdviceAnswer> passed) {
                 AdviceAnswer answer = passed.answer();
                 return new AdviceCheck.Verdict.Passed<>(
-                        answer.withMessage(restoreRankRows(bundle, answer.message())));
+                        answer.withMessage(RankRows.layout(bundle, answer.message())));
             }
             return verdict;
         });
@@ -266,25 +266,6 @@ public class PlayerStatsAnswers {
                         List.of(new Candidate(player.playerId(), player.fullName(), true,
                                 "the player the user asked about")), "write-up"), now, delivery)
                 .answer(message -> new Answer(subject.name(), message), fallbacks(player));
-    }
-
-    private static String restoreRankRows(EvidenceBundle bundle, String message) {
-        List<String> ranks = bundle.evidence().stream()
-                .filter(item -> item.facts().containsKey("header"))
-                .map(item -> item.facts().get("line"))
-                .filter(line -> line != null && line.contains(": <b>"))
-                .toList();
-        return message.lines().map(line -> {
-            String visible = TelegramHtml.words(line).strip();
-            return ranks.stream().filter(rank -> {
-                String row = TelegramHtml.visible(rank);
-                String label = row.substring(row.indexOf(' ') + 1, row.indexOf(':') + 1);
-                String ordinal = rank.substring(rank.indexOf("<b>") + 3, rank.indexOf("</b>"));
-                return visible.regionMatches(true, 0, label, 0, label.length())
-                        && visible.substring(label.length()).stripLeading()
-                                .matches(Pattern.quote(ordinal) + "\\b.*");
-            }).findFirst().orElse(line);
-        }).collect(Collectors.joining("\n"));
     }
 
     private static String nothingPlayed(PlayerStatsEvidence.Subject subject) {

@@ -150,7 +150,7 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
             Slot slot = team.slots().get(index);
             String playerId = team.starterAt(index);
             if (playerId == null) {
-                gaps.add("The %s slot is empty".formatted(slot.name()));
+                gaps.add("The %s slot is empty".formatted(slot.label()));
                 continue;
             }
             Optional<String> position = team.position(playerId);
@@ -162,7 +162,7 @@ public record TeamDepth(List<PositionDepth> positions, List<String> strengths,
                 continue;
             }
             gaps.add("%s: %s projects %s, below the %s replacement level of %s".formatted(
-                    slot.name(), team.name(playerId), points(projected.orElseThrow()),
+                    slot.label(), team.name(playerId), points(projected.orElseThrow()),
                     position.orElseThrow(), points(replacement.orElseThrow())));
         }
         return gaps;
