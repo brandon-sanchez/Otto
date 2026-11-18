@@ -112,7 +112,8 @@ public class TeamProfiler {
         Map<String, String> positions = roster.playerPositions();
         Map<String, Double> points = new LinkedHashMap<>();
         usable(roster, league, perGame).stream()
-                .filter(playerId -> LeagueProfile.POSITIONS.contains(positions.get(playerId)))
+                .filter(playerId -> positions.get(playerId) != null
+                        && LeagueProfile.POSITIONS.contains(positions.get(playerId)))
                 .filter(perGame::containsKey)
                 .forEach(playerId -> points.put(playerId, perGame.get(playerId)));
         Set<String> starters = Set.copyOf(

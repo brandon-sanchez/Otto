@@ -252,6 +252,21 @@ class TeamWeaknessesScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aRosteredPlayerTheDirectoryDoesNotKnowIsLeftOutOfTheTeamRead() {
+        leagueInWeek("sleeper/league-in-season.json",
+                "sleeper/rosters-offers-unknown-player.json", "sleeper/projections-trade.json",
+                "sleeper/state-nfl-week12.json", 12);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_weaknesses", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer("Your running backs are thin."));
+
+        ask("how can I improve my team?");
+
+        assertThat(evidence().get("suggestion-2")).containsEntry("sendTo", "GridironGoblin");
+        theUserReads("Your running backs are thin.");
+    }
+
+    @Test
     void tradeSuggestionsAreNamedOffersBesideTheWaiverMove() {
         leagueInWeek("sleeper/league-in-season.json", "sleeper/rosters-offers.json",
                 "sleeper/projections-trade.json", "sleeper/state-nfl-week12.json", 12);
