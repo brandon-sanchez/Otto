@@ -2,7 +2,7 @@
 
 Otto is a fantasy football assistant that runs on AWS for one person. It follows every Sleeper league that person plays in, sends alerts to a Telegram chat, and answers questions in that chat. This page explains how the pieces fit together and why they are shaped the way they are. The decisions behind each part are recorded in [docs/adr/](adr/).
 
-One rule shapes most of the design: **code computes every number, and the model only explains.** Projections, ranks, trade values, FAAB bids and the legal lineup moves all come from Java. A language model turns those facts into a short message, and a check in code holds the message to the facts before anyone reads it.
+One rule shapes most of the design: **code computes every number, and the model only explains.** Projections, ranks, trade values, FAAB bids and the legal lineup moves all come from Java. A language model turns those facts into a short message. For advice, a check in code holds the message to the facts before anyone reads it.
 
 ## The big picture
 
@@ -132,7 +132,7 @@ sequenceDiagram
 
 The tools fall into two kinds:
 
-- **Fact tools** return computed data, such as the roster, the standings, a player's news or a league's scoring settings. The chat model reads the data and writes a short reply.
+- **Fact tools** return computed data, such as the roster, the standings, a player's news or a league's scoring settings. The chat model reads the data and writes a short reply, which doesn't go through the Advice Check.
 - **Advice tools** build an evidence bundle and have the model write the advice inside the tool, held by the Advice Check. Lineup advice, team weaknesses, trade offers, market values, buy-low and sell-high, player ceilings, stat answers and habits work this way. When the advice tool is the only tool the model called, Otto sends the checked text unchanged.
 
 `AskToolNamesTest` lists every tool name, so adding or renaming a tool is a deliberate change.
@@ -165,7 +165,7 @@ Every recommendation run also leaves a Decision Record in S3: what Otto knew, wh
 
 - Each provider has a circuit breaker. After three failures in a row, Otto skips that provider for five minutes, then tries one call.
 - Each kind of call has a deadline: 45 seconds for a chat answer, 150 seconds for advice and 30 seconds for phrasing an alert. The chain holds back time for later providers, so one provider that hangs can't use the whole deadline.
-- When every provider fails, Otto sends a short message that code writes instead of a guess.
+- When every provider fails, urgent alerts go out as plain facts that code writes. Advice that can't be checked is held back: a bench swap isn't sent, and the waiver board is replaced by a short note saying why.
 
 ## On AWS
 
