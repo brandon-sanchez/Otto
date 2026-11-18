@@ -30,8 +30,8 @@ import otto.offers.TradeShape;
 import otto.records.Candidate;
 import otto.records.RunKind;
 import otto.sleeper.SourceResult;
-import otto.trade.TradeDeadline;
-import otto.trade.TradeDeadlines;
+import otto.trade.TradeWindow;
+import otto.trade.TradeWindows;
 
 /**
  * Answers "what trades should I make and why?" in chat with named
@@ -92,18 +92,18 @@ public class TradeIdeas {
     private final TradeOffers offers;
     private final TeamWeaknesses weaknesses;
     private final HabitService habits;
-    private final TradeDeadlines deadlines;
+    private final TradeWindows tradeWindows;
     private final CheckedAdvice advice;
     private final AdviceCheck check;
 
     public TradeIdeas(UserWeekLoader loader, TradeOffers offers, TeamWeaknesses weaknesses,
-            HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
+            HabitService habits, TradeWindows tradeWindows, CheckedAdvice advice,
             AdviceCheck check) {
         this.loader = loader;
         this.offers = offers;
         this.weaknesses = weaknesses;
         this.habits = habits;
-        this.deadlines = deadlines;
+        this.tradeWindows = tradeWindows;
         this.advice = advice;
         this.check = check;
     }
@@ -172,8 +172,8 @@ public class TradeIdeas {
 
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,
             Instant now, AnswerDelivery delivery) {
-        Optional<TradeDeadline> deadline = deadlines.assess(league);
-        if (deadline.filter(TradeDeadline::closed).isPresent()) {
+        TradeWindow window = tradeWindows.read(league);
+        if (window.closed()) {
             ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null, now, delivery);
             return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
                     : ToolAnswer.of(new Answer(read.facts().message()));
@@ -190,18 +190,18 @@ public class TradeIdeas {
                         : "no trade I could build is a win for him that the other manager "
                                 + "would plausibly accept right now");
             case SourceResult.Ok<TradeOffers.Ideas> ideas -> explain(league, request,
-                    ideas.value().offers(), deadline, lean, now, delivery);
+                    ideas.value().offers(), window, lean, now, delivery);
         };
     }
 
     private ToolAnswer<Answer> explain(LeagueWeek league, TradeOffers.Request request,
-            List<Offer> found, Optional<TradeDeadline> deadline, HabitLean lean, Instant now,
+            List<Offer> found, TradeWindow window, HabitLean lean, Instant now,
             AnswerDelivery delivery) {
         int maxLength = Math.min(LONGEST, INTRO_LENGTH + LENGTH_PER_OFFER * found.size());
         EvidenceBundle bundle = QuietHabits.add(TradeIdeaEvidence.bundle(
                 new TradeIdeaEvidence.Facts(league.league().name(), found, request.count(),
                         request.skip(), request.shape().map(TradeShape::words),
-                        deadline.map(TradeDeadline::message)), maxLength, now), lean, now);
+                        window.note()), maxLength, now), lean, now);
         return advice.write(bundle, form(found), new CheckedAdvice.Run(RUN_ID_PREFIX,
                         List.of(league.league().leagueId()), RunKind.TRADE_IDEAS,
                         league.league(), candidates(found), "explanation"), now, delivery)

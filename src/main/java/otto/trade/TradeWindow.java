@@ -13,7 +13,7 @@ import otto.nflverse.Schedule;
 import otto.sleeper.SleeperAdapter;
 
 /**
- * Where trading in the league stands, when that matters to a trade: the
+ * Where trading in the league stands: open with nothing limiting it, the
  * deadline week itself, any time after trading closed, or a league whose
  * trades are turned off.
  *
@@ -22,10 +22,13 @@ import otto.sleeper.SleeperAdapter;
  * week for a day or two more. So inside the deadline week the week number
  * can't say whether trading is open; the games can.
  */
-public sealed interface TradeDeadline {
+public sealed interface TradeWindow {
 
-    /** Returns what this means for one trade the user is weighing, in a sentence or two. */
-    String message();
+    /**
+     * Returns what this means for one trade the user is weighing, in a
+     * sentence or two; empty when nothing limits trading.
+     */
+    Optional<String> note();
 
     /**
      * Returns why no trade can be made, as a clause that ends by pointing
@@ -50,25 +53,26 @@ public sealed interface TradeDeadline {
      * @param week the current week, empty when it is unknown
      * @param schedule reads the stored schedule; asked only in the
      *        deadline week, and empty when none is stored
-     * @return empty when trades are on and the league has no deadline, the
-     *         week is unknown, or the deadline week is still ahead
+     * @return {@link Open} when trades are on and the league has no
+     *         deadline, the week is unknown, or the deadline week is still
+     *         ahead
      */
-    static Optional<TradeDeadline> assess(SleeperAdapter.League league,
+    static TradeWindow assess(SleeperAdapter.League league,
             Optional<SeasonWeek> week, Supplier<Optional<Schedule>> schedule, Instant now) {
         if (league.tradesDisabled()) {
-            return Optional.of(new TradesOff());
+            return new TradesOff();
         }
         if (league.tradeDeadline().isEmpty() || week.isEmpty()) {
-            return Optional.empty();
+            return new Open();
         }
         int deadline = league.tradeDeadline().get();
         SeasonWeek current = week.get();
         if (current.number() < deadline) {
-            return Optional.empty();
+            return new Open();
         }
         boolean closed = current.number() > deadline
                 || lastGameEnded(current, schedule.get(), now);
-        return Optional.of(closed ? new Passed(deadline) : new FinalWeek(deadline));
+        return closed ? new Passed(deadline) : new FinalWeek(deadline);
     }
 
     private static boolean lastGameEnded(SeasonWeek week, Optional<Schedule> schedule,
@@ -81,15 +85,29 @@ public sealed interface TradeDeadline {
                 .orElse(false);
     }
 
-    /** This is the deadline week and its last game has not ended, so trades are open. */
-    record FinalWeek(int week) implements TradeDeadline {
+    /** Nothing limits trading this week. */
+    record Open() implements TradeWindow {
 
         @Override
-        public String message() {
-            return ("The trade deadline is this week. Trades close when week %d's last game "
-                    + "ends, usually Monday night. A trade has to be proposed and accepted "
-                    + "before then, and its review period can finish afterward.")
-                    .formatted(week);
+        public Optional<String> note() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<String> closedBecause() {
+            return Optional.empty();
+        }
+    }
+
+    /** This is the deadline week and its last game has not ended, so trades are open. */
+    record FinalWeek(int week) implements TradeWindow {
+
+        @Override
+        public Optional<String> note() {
+            return Optional.of(("The trade deadline is this week. Trades close when week "
+                    + "%d's last game ends, usually Monday night. A trade has to be proposed "
+                    + "and accepted before then, and its review period can finish afterward.")
+                    .formatted(week));
         }
 
         @Override
@@ -99,13 +117,13 @@ public sealed interface TradeDeadline {
     }
 
     /** The deadline week's last game has ended, so no trade can be made. */
-    record Passed(int week) implements TradeDeadline {
+    record Passed(int week) implements TradeWindow {
 
         @Override
-        public String message() {
-            return "The trade deadline passed after week %d. This trade can no longer be "
-                    .formatted(week)
-                    + "submitted, but here is what it would have been worth.";
+        public Optional<String> note() {
+            return Optional.of(("The trade deadline passed after week %d. This trade can no "
+                    + "longer be submitted, but here is what it would have been worth.")
+                    .formatted(week));
         }
 
         @Override
@@ -116,12 +134,12 @@ public sealed interface TradeDeadline {
     }
 
     /** The commissioner has turned trades off for the whole season. */
-    record TradesOff() implements TradeDeadline {
+    record TradesOff() implements TradeWindow {
 
         @Override
-        public String message() {
-            return "Trades are turned off in this league for the whole season. This trade "
-                    + "can't be submitted, but here is what it would be worth.";
+        public Optional<String> note() {
+            return Optional.of("Trades are turned off in this league for the whole season. "
+                    + "This trade can't be submitted, but here is what it would be worth.");
         }
 
         @Override
