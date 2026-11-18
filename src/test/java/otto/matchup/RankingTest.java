@@ -183,6 +183,6 @@ class RankingTest {
         assertThat(RankWords.line(ranking, ranking.placement("d").orElseThrow()))
                 .isEqualTo("🔴 Targets per game: <b>4th</b> of 4 (1.0)");
         assertThat(RankWords.header("Travis Kelce", Position.TE, WEEKS_1_TO_6))
-                .isEqualTo("Travis Kelce's rankings among TEs this season (weeks 1–6)");
+                .isEqualTo("Travis Kelce's season ranks among TEs (weeks 1–6)");
     }
 }
