@@ -17,6 +17,7 @@ import otto.directory.PlayerHealth;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
+import otto.format.TelegramHtml;
 import otto.snapshot.RosterSnapshot;
 import otto.snapshot.Snapshot;
 import otto.telegram.TelegramClient;
@@ -131,8 +132,8 @@ public class VerificationService {
                     .allMatch(alert -> muted(
                             alert.key().substring(ALERT_PREFIX.length()),
                             alert.facts().get("playerId")));
-            String text = ("All set. The %s problem is fixed and I can see it in the league, "
-                    + "so I'm closing this one.").formatted(player);
+            String text = "✅ Fixed: the %s problem\nI can see the change in the league, so "
+                    .formatted(TelegramHtml.bold(player)) + "I'm closing this one.";
             if (!silent && !telegram.sendMessage(text)) {
                 continue;
             }

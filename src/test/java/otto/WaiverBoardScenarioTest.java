@@ -182,10 +182,10 @@ class WaiverBoardScenarioTest extends WireSeamTest {
                 .satisfies(exchange -> assertThat(exchange.checkFailures()).isEmpty());
         List<String> messages = boardMessages();
         assertThat(messages).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\n" + OPENING)
-                .contains("1. Bucky Irving · RB, TB\nI'd bid $9. Anything from $7 to $12 makes sense.\n"
+                .startsWith("<b>Your waiver options</b>\n\n" + OPENING)
+                .contains("1. <b>Bucky Irving</b> · RB, TB\n💰 Bid <b>$9</b> (range $7–12)\n<blockquote expandable>"
                         + "Bucky Irving played 71% of offensive snaps")
-                .contains("2. Wandale Robinson · WR, NYG\nI'd bid $5. Anything from $3 to $8 makes sense.\n"
+                .contains("2. <b>Wandale Robinson</b> · WR, NYG\n💰 Bid <b>$5</b> (range $3–8)\n<blockquote expandable>"
                         + "Wandale Robinson drew 13 targets")
                 .doesNotContain("View all options")
                 .doesNotContainIgnoringCase("score")
@@ -445,7 +445,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(records.getLast().outcome()).isInstanceOf(Outcome.SentBoard.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB")))
+                .withRequestBody(matchingJsonPath("$.text", containing("<b>Bucky Irving</b> · RB, TB")))
                 .withRequestBody(matchingJsonPath(BUTTONS + "[0][0].callback_data",
                         equalTo("done:" + boardAlertId()))));
         assertThat(eventLog.all())
@@ -484,7 +484,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(onlyBoardRecord().exchanges()).singleElement()
                 .satisfies(exchange -> assertThat(exchange.checkFailures()).isEmpty());
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .contains("1. Bucky Irving · RB, TB")
+                .contains("1. <b>Bucky Irving</b> · RB, TB")
                 .contains("in Week 1, and his coach named him the starter. He projects 19.0 "
                         + "points this week.\nPast that you pay for more than a lead role.")
                 .doesNotContain("usage-10001")
@@ -600,8 +600,8 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         List<String> messages = boardMessages();
         assertThat(messages).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\n" + hold
-                        + "\n\nIf you still want to make a move\n\n1. Cade Otton · TE, TB"));
+                .startsWith("<b>Your waiver options</b>\n\n" + hold
+                        + "\n\n<b>If you still want to make a move</b>\n\n1. <b>Cade Otton</b> · TE, TB"));
     }
 
     @Test
@@ -626,7 +626,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", containing("All your waiver options")))
                 .withRequestBody(matchingJsonPath("$.text", containing("6. ")))
-                .withRequestBody(matchingJsonPath("$.text", containing("1. Bucky Irving"))));
+                .withRequestBody(matchingJsonPath("$.text", containing("1. <b>Bucky Irving</b>"))));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
                         equalTo("Here is every option on that board."))));

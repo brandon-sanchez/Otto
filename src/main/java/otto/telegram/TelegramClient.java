@@ -1,6 +1,7 @@
 package otto.telegram;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import otto.OttoProperties;
@@ -16,7 +18,10 @@ import otto.http.OutboundHttp;
 /**
  * The outbound wire to the user's Telegram chat. Every message starts
  * with the {@link MessageHeading} in force when it is sent, so a message
- * about one of several leagues names its league.
+ * about one of several leagues names its league. Text is HTML as
+ * {@link otto.format.TelegramHtml} writes it, sent in Telegram's HTML
+ * parse mode; a message whose formatting Telegram refuses goes again as
+ * plain text, so the user still gets the words.
  */
 @Component
 public class TelegramClient {
@@ -24,6 +29,16 @@ public class TelegramClient {
     private static final Logger log = LoggerFactory.getLogger(TelegramClient.class);
 
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
+
+    /** Telegram's 400 description when a message's HTML does not parse. */
+    private static final String PARSE_REFUSAL = "can't parse entities";
+
+    /** How one call to Telegram ended. */
+    private enum Posted {
+        SENT,
+        FORMATTING_REFUSED,
+        FAILED
+    }
 
     private final RestClient http;
     private final String botToken;
@@ -51,7 +66,7 @@ public class TelegramClient {
      */
     public boolean sendMessage(String text) {
         for (String part : TelegramText.parts(headed(text))) {
-            if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
+            if (!send(part, Map.of())) {
                 return false;
             }
         }
@@ -103,7 +118,7 @@ public class TelegramClient {
     private boolean sendWithKeyboard(String text, List<List<InlineButton>> rows) {
         List<String> parts = TelegramText.parts(headed(text));
         for (String part : parts.subList(0, parts.size() - 1)) {
-            if (!post("sendMessage", Map.of("chat_id", chatId, "text", part))) {
+            if (!send(part, Map.of())) {
                 return false;
             }
         }
@@ -113,10 +128,29 @@ public class TelegramClient {
                                 "callback_data", button.callbackData()))
                         .toList())
                 .toList();
-        return post("sendMessage", Map.of(
-                "chat_id", chatId,
-                "text", parts.getLast(),
-                "reply_markup", Map.of("inline_keyboard", keyboard)));
+        return send(parts.getLast(), Map.of("reply_markup", Map.of("inline_keyboard", keyboard)));
+    }
+
+    /**
+     * Sends one message in HTML mode. When Telegram refuses its
+     * formatting, which leaves nothing delivered, the same words go once
+     * more as plain text.
+     *
+     * @param extra fields the message carries besides its chat and text
+     */
+    private boolean send(String part, Map<String, Object> extra) {
+        Map<String, Object> body = new LinkedHashMap<>(extra);
+        body.put("chat_id", chatId);
+        body.put("text", part);
+        body.put("parse_mode", "HTML");
+        Posted posted = post("sendMessage", body);
+        if (posted != Posted.FORMATTING_REFUSED) {
+            return posted == Posted.SENT;
+        }
+        log.warn("Telegram refused a message's formatting; sending it as plain text");
+        body.remove("parse_mode");
+        body.put("text", TelegramText.plain(part));
+        return post("sendMessage", body) == Posted.SENT;
     }
 
     /**
@@ -126,14 +160,14 @@ public class TelegramClient {
     public boolean answerCallbackQuery(String callbackQueryId, String text) {
         return post("answerCallbackQuery", Map.of(
                 "callback_query_id", callbackQueryId,
-                "text", text));
+                "text", text)) == Posted.SENT;
     }
 
     private String headed(String text) {
         return heading.current().map(line -> line + "\n\n" + text).orElse(text);
     }
 
-    private boolean post(String method, Map<String, Object> body) {
+    private Posted post(String method, Map<String, Object> body) {
         try {
             http.post()
                     .uri("/bot{token}/{method}", botToken, method)
@@ -141,11 +175,15 @@ public class TelegramClient {
                     .body(body)
                     .retrieve()
                     .toBodilessEntity();
-            return true;
+            return Posted.SENT;
+        } catch (HttpClientErrorException.BadRequest e) {
+            String detail = e.getResponseBodyAsString();
+            log.warn("Telegram {} refused: {}", method, redactToken(detail));
+            return detail.contains(PARSE_REFUSAL) ? Posted.FORMATTING_REFUSED : Posted.FAILED;
         } catch (Exception e) {
             log.warn("Telegram {} failed: {}: {}", method,
                     e.getClass().getSimpleName(), redactToken(e.getMessage()));
-            return false;
+            return Posted.FAILED;
         }
     }
 

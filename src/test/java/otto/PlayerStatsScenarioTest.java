@@ -46,8 +46,10 @@ class PlayerStatsScenarioTest extends WireSeamTest {
             + "Next Gen Stats has him at 3.1 yards of separation on 22 targets, and he's scored "
             + "46.9 PPR points against 37.8 expected.";
 
-    private static final String BULLETED = "Isaiah Likely in week 5:\n- 52 snaps\n- 78% of the "
-            + "snaps";
+    private static final String RANKS = "Isaiah Likely's season ranks among TEs (weeks 1–5)\n"
+            + "🟡 Snap share: <b>2nd</b> of 3 (66%)";
+
+    private static final String RAMBLING = (LAST_WEEK + " ").repeat(3).strip();
 
     private static final String NARRATION = "Here are his numbers.";
 
@@ -264,14 +266,26 @@ class PlayerStatsScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aBulletListIsSentBackToBeWrittenAsSentences() {
+    void aRanksQuestionLeadsWithTheRankLinesCodeWrote() {
+        askAndAnswer("where does Likely rank in snap share?",
+                "{\"player\":\"Isaiah Likely\",\"asked\":\"snap share rank\"}", RANKS);
+
+        theEvidenceHolds(fact("header", "Isaiah Likely's season ranks among TEs (weeks 1–5)"),
+                "Snap share: <b>2nd</b> of 3 (66%)");
+        llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing("When he asks for ranks, the first line is")));
+        theUserReadsOnly(RANKS);
+    }
+
+    @Test
+    void aLongStatAnswerIsSentBackToBeShort() {
         OutboundStubs.llmCallsToolThenPhrases(llm, TOOL,
                 "{\"player\":\"Isaiah Likely\",\"weeksAgo\":1}", NARRATION);
-        OutboundStubs.llmAdvises(llm, answer(BULLETED), answer(LAST_WEEK));
+        OutboundStubs.llmAdvises(llm, answer(RAMBLING), answer(LAST_WEEK));
 
-        ask("Likely's usage last week?");
+        ask("Likely's snap share last week?");
 
-        theEvidenceHolds("Write the answer as sentences");
+        theEvidenceHolds("the limit is 600");
         theUserReadsOnly(LAST_WEEK);
         assertThat(statsRecords()).singleElement().satisfies(record ->
                 assertThat(record.outcome()).isEqualTo(new Outcome.Sent(LAST_WEEK)));

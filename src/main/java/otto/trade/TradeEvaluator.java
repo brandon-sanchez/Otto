@@ -124,6 +124,8 @@ public class TradeEvaluator {
     }
 
     /**
+     * @param headline the verdict as the answer's first line, such as
+     *        "⚖️ <b>Slight edge for you</b>", in Telegram HTML
      * @param yours the user's rest-of-season fit: what the trade does for
      *        his roster over the weeks left
      * @param verdict even, slight edge or clear edge, from the user's
@@ -143,7 +145,8 @@ public class TradeEvaluator {
      *        reason to turn down a trade that is good for the user
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record TradeEvaluation(String tradeDeadline, String week, String partner,
+    public record TradeEvaluation(String headline, String tradeDeadline, String week,
+            String partner,
             String restOfSeasonWeeks,
             Perspective yours, Perspective theirs, String verdict, String favours,
             String gap, String confidence, String drivenBy, String otherMeasure,

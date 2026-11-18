@@ -163,7 +163,7 @@ class LineupWeekScenarioTest extends WireSeamTest {
         assertThat(reply())
                 .contains("week 11")
                 .contains("Patrick Mahomes and Travis Kelce are on bye")
-                .contains("I'd start Dallas Goedert over Travis Kelce")
+                .contains("Start <b>Dallas Goedert</b> over Travis Kelce")
                 .contains("QB: Jordan Love")
                 .contains("139.0")
                 .contains("112.0");

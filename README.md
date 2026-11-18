@@ -52,20 +52,20 @@ Every alert has **Done**, **Ignore** and **Mute** buttons. The waiver board adds
 
 ## What it looks like
 
-These are real message formats. Code writes the fixed parts, such as the lineup, the bid line and the roster, and the model writes the sentences around them.
+These are real message formats. Messages go out as Telegram HTML, so the bold parts really are bold and nothing shows stray `**` marks. Code writes the fixed parts, such as the headline, the rank lines, the bid line and the lineup, and the model writes the short reason around them. Each colored dot means one thing everywhere: 🟢 good news, 🟡 fair, 🟠 worrying, 🔴 bad news, and health is never green. (Bold is lost inside the code blocks below.)
 
 A player decision when a starter gets hurt:
 
 ```text
-Move Christian McCaffrey to IR and start Josh Jacobs at RB. Christian
-McCaffrey is expected to miss about four weeks with a hamstring strain,
-which still leaves him time to help before the playoffs, and IR keeps him
-without using a roster spot.
+🔴 Christian McCaffrey is now Out
+Move Christian McCaffrey to IR and start Josh Jacobs at RB.
+He's expected to miss about four weeks with a hamstring strain, and IR
+keeps him without using a roster spot.
 
 [Done] [Ignore] [Mute]
 ```
 
-One entry on the waiver board:
+One entry on the waiver board, with the reasoning folded into a quote you tap to open:
 
 ```text
 Your waiver options
@@ -73,10 +73,10 @@ Your waiver options
 A pickup stands out this week, and a receiver is worth a claim behind him.
 
 1. Bucky Irving · RB, TB
-I'd bid $9. Anything from $7 to $12 makes sense.
-Bucky Irving played 71% of offensive snaps in his latest game, and his
-coach named him the starter. He projects 19.0 points this week.
-Past that you pay for more than a lead role.
+💰 Bid $9 (range $7–12)
+➖ Drop: Rachaad White
+│ Bucky Irving played 71% of offensive snaps in his latest game, and his
+│ coach named him the starter. He projects 19.0 points this week.
 
 [Done] [Ignore] [Mute]
 [View all options]
@@ -84,52 +84,73 @@ Past that you pay for more than a lead role.
 
 ## Ask it anything
 
-The chat model picks from 28 tools, each one a piece of Java that computes the answer.
+The chat model picks from 28 tools, each one a piece of Java that computes the answer. Answers lead with exactly what you asked.
+
+```text
+you:  where does Bucky Irving rank
+
+otto: Bucky Irving's season ranks among RBs (weeks 1–10)
+      🟢 Carries per game: 4th of 79 (18.6)
+      🟡 Target share: 16th of 60 (12%)
+```
+
+```text
+you:  what was Isaiah Likely's snap share last week
+
+otto: Isaiah Likely played 88% of snaps in week 10 (57 snaps).
+      🟢 Snap share: 13th of 143 (76%)
+```
 
 ```text
 you:  who should I start this week
 
 otto: Here's your week 2 lineup.
-
-      I'd start Josh Jacobs over James Cook, a gain of 3.5 points.
-      Your lineup as set projects 145.0 points, and this one projects 148.5.
+      ⬆️ Start Josh Jacobs over James Cook, +3.5 points
+      Projected 145.0 → 148.5
 
       ----- STARTERS -----
       QB: Josh Allen 24.1
-      RB: Josh Jacobs 16.5
-      ↳ Move to starter
+      RB: Josh Jacobs 16.5 ⬆️
+      WR: Justin Jefferson 19.0 🟡 Q
       ...
       ----- BENCH -----
-      RB: James Cook 13.0
-      ↳ Move to bench
+      RB: James Cook 13.0 ⬇️
+      QB: Patrick Mahomes 22.0 💤 BYE
+      ...
+```
+
+```text
+you:  is Jefferson for Bijan a good trade
+
+otto: ⚖️ Slight edge for you
+      You give: Bijan Robinson
+      You get: Justin Jefferson
+      🟢 Your lineup: +2.1 points a week
       ...
 ```
 
 ```text
 you:  what are my team's weaknesses
 
-otto: Your team is strong at QB and TE, but running back is thin and you
-      have more receivers than you can start.
+otto: Strong at QB and TE, thin at running back, with more receivers than
+      you can start.
 
-      At RB your starters rank 4th of 4 and your depth ranks 4th of 4.
-      At WR you have 6 startable WRs for 4 spots.
+      🟢 QB: 1st of 4 (strong)
+      🔴 RB: 4th of 4 (thin)
+      🟡 WR: 6 for 4 spots (surplus)
+      🟢 TE: 1st of 4 (strong)
 
-      Your lineup's big weeks rank 1st of 4, and Justin Jefferson has the
-      best chance of a boom week among your starters at 41%.
-
-      Claim a running back off waivers. The best one averages 13.0 points
-      a game and would be 2nd among your RBs.
+      • Claim a running back off waivers: the best one averages 13.0 points
+        a game and would be 2nd among your RBs.
 ```
 
 ```text
 you:  who should I buy low
 
-otto: George Pickens is a buy-low. His expected points from his targets
-      are down just 3% from last season, but he's scoring 4.6 points a
-      game below what that usage is worth, and his value is down 18% this
-      month while his targets held. On your team, Jaxon Smith-Njigba is a
-      sell-high: he's 12.5 points a game above his usage, so expect about
-      22.2 a game from here.
+otto: 📉 Buy low: George Pickens, 4.6 points a game below his usage
+      His targets held while his value fell 18% this month.
+      📈 Sell high: Jaxon Smith-Njigba, 12.5 points a game above his usage
+      Expect about 22.2 a game from here.
 ```
 
 You can ask about:
@@ -146,13 +167,13 @@ You can ask about:
 - **Keeper costs.** What keeping a player costs next season, using the keeper rule you tell it.
 - **Settings.** Your watchlist, mutes, alert switches, the bench-swap margin and your largest waiver bid.
 
-Simple questions get a few sentences, and answers like a lineup or a team breakdown take the space they need. Reply "why" or "more" for the full reasoning behind one.
+Simple questions get a line or two, one fact to a line, and answers like a lineup or a team breakdown take the space they need. Reply "why" or "more" for the full reasoning behind one.
 
 ## Every league you play in
 
 Otto follows every Sleeper league your account is in this season, and picks up a league you join within six hours. Each league keeps its own settings, mutes and alerts. Best-ball leagues are left out, because Sleeper sets those lineups itself.
 
-When Otto follows more than one league, every message starts with a `League: <name>` line. A question goes to the league you name ("in my dynasty league"), or to the league the chat was last about. If neither is clear, Otto asks which one. "In all my leagues" answers once per league.
+When Otto follows more than one league, every message about one league starts with a "🏈 **league name**" line. A question goes to the league you name ("in my dynasty league"), or to the league the chat was last about. If neither is clear, Otto asks which one. "In all my leagues" answers once per league.
 
 - `/leagues` lists the leagues Otto follows.
 - "Leave out the office league" stops alerts and answers for one league. "Bring back the office league" undoes it.

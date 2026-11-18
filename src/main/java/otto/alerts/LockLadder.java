@@ -157,8 +157,9 @@ class LockLadder {
 
             facts.put("playerId", playerId);
             facts.put("runId", written.get().runId());
-            sent.addAll(outbox.deliver(written.get().basis(), written.get()::text, List.of(
-                    new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
+            sent.addAll(outbox.deliver(written.get().basis(),
+                    () -> AlertHeadline.finalWarning(kickoff, now) + "\n" + written.get().text(),
+                    List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
     }
@@ -187,7 +188,8 @@ class LockLadder {
                 continue;
             }
             String team = roster.playerTeams().get(playerId);
-            if (lockInWindow(week.games().get(), team, now).isEmpty()) {
+            Optional<Instant> lock = lockInWindow(week.games().get(), team, now);
+            if (lock.isEmpty()) {
                 continue;
             }
             String key = "alert:final-ir:%s:%s".formatted(week.weekKey().get(), playerId);
@@ -212,7 +214,9 @@ class LockLadder {
                     "health", health.name(),
                     "irReminder", "true");
             sent.addAll(outbox.deliver(phraser.basis(facts, recommendation),
-                    () -> phraser.phrase(facts, recommendation), List.of(new Event(
+                    () -> AlertHeadline.finalWarning(lock.get(), now) + "\n"
+                            + phraser.phrase(facts, recommendation),
+                    List.of(new Event(
                             key, EventType.ALERT_SENT, now, AlertService.alertFacts(
                                     new AlertCandidate(AlertCandidate.Source.TRANSITION, key,
                                             playerId, team, recommendation, facts),

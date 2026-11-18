@@ -93,7 +93,7 @@ class MatchupAdviceScenarioTest extends WireSeamTest {
         checkWithTheFeedsStored(answer(MESSAGE, "4th"));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(MESSAGE))));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("matchup-opponent-8138"))
                 .withRequestBody(containing(DETROIT_ALLOWS))

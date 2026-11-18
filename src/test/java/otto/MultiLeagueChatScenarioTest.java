@@ -167,8 +167,8 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
 
         assertThat(sent()).containsExactly(
                 "Which league is that about? Raising Canes Demon, Dynasty Bros, or all of them?",
-                "League: " + TwoLeagues.CONFIG_LEAGUE_NAME + "\n\n" + REDRAFT_READ,
-                "League: " + TwoLeagues.DYNASTY_LEAGUE_NAME + "\n\n" + DYNASTY_READ);
+                "🏈 <b>" + TwoLeagues.CONFIG_LEAGUE_NAME + "</b>\n\n" + REDRAFT_READ,
+                "🏈 <b>" + TwoLeagues.DYNASTY_LEAGUE_NAME + "</b>\n\n" + DYNASTY_READ);
     }
 
     @Test
@@ -183,13 +183,13 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
 
         say("the dynasty one");
         assertThat(sent()).last().isEqualTo(
-                "League: Dynasty Bros\n\nStart your best lineup.");
+                "🏈 <b>Dynasty Bros</b>\n\nStart your best lineup.");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("who should I start this week?")));
 
         say("and who is on my bench?");
         assertThat(sent()).last().isEqualTo(
-                "League: Dynasty Bros\n\nStart your best lineup.");
+                "🏈 <b>Dynasty Bros</b>\n\nStart your best lineup.");
     }
 
     @Test
@@ -200,8 +200,8 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         say("what are the weaknesses on all my teams?");
 
         assertThat(sent()).containsExactly(
-                "League: " + TwoLeagues.CONFIG_LEAGUE_NAME + "\n\n" + REDRAFT_READ,
-                "League: " + TwoLeagues.DYNASTY_LEAGUE_NAME + "\n\n" + DYNASTY_READ);
+                "🏈 <b>" + TwoLeagues.CONFIG_LEAGUE_NAME + "</b>\n\n" + REDRAFT_READ,
+                "🏈 <b>" + TwoLeagues.DYNASTY_LEAGUE_NAME + "</b>\n\n" + DYNASTY_READ);
     }
 
     @Test
@@ -212,7 +212,7 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
         say("who should I start in Raising Canes Demon?");
 
         assertThat(sent()).containsExactly(
-                "League: Raising Canes Demon\n\nStart your best lineup.");
+                "🏈 <b>Raising Canes Demon</b>\n\nStart your best lineup.");
     }
 
     @Test

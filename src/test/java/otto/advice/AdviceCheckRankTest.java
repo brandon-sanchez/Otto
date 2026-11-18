@@ -224,4 +224,21 @@ class AdviceCheckRankTest {
                 .anySatisfy(failure -> assertThat(failure).contains("\"top-3\"")
                         .contains("3rd"));
     }
+
+    @Test
+    void formattingAndColouredDotsNeverFailACheck() {
+        List<String> failures = failures(bundle(3, 30),
+                "🔴 **Patrick Mahomes** faces MIN, <b>3rd</b> of 32 in pressure rate (tough).");
+
+        assertThat(failures).isEmpty();
+    }
+
+    @Test
+    void theLengthLimitCountsOnlyTheVisibleText() {
+        String text = "<b>Patrick Mahomes</b> faces MIN, <b>3rd</b> in pressure rate."
+                + " <b>He</b> is fine.".repeat(70);
+
+        assertThat(text.length()).isGreaterThan(1000);
+        assertThat(failures(bundle(3, 30), text)).isEmpty();
+    }
 }

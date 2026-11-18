@@ -148,7 +148,7 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\n" + OPENING)
+                .startsWith("<b>Your waiver options</b>\n\n" + OPENING)
                 .doesNotContain("not all in"));
     }
 
@@ -181,7 +181,7 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", containing(MISSING_GAME))));
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\nWeek 1's numbers aren't all in yet, "
+                .startsWith("<b>Your waiver options</b>\n\nWeek 1's numbers aren't all in yet, "
                         + "because " + MISSING_GAME + ".")
                 .contains("So this board uses the week 1 numbers that have arrived, "
                         + "this week's projections and the latest news")
@@ -236,8 +236,8 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("never present it as usage")));
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
                 .contains("I've marked any pickup who is on it only because he's trending in adds")
-                .contains("Wide Receiver Three · WR")
-                .contains("Wide Receiver Three · WR, NE\nHe's trending, but this week's usage "
+                .contains("<b>Wide Receiver Three</b> · WR")
+                .contains("<b>Wide Receiver Three</b> · WR, NE\nHe's trending, but this week's usage "
                         + "numbers aren't in yet."));
     }
 
@@ -268,7 +268,7 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         checkAt(FALLBACK);
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\n" + OPENING)
+                .startsWith("<b>Your waiver options</b>\n\n" + OPENING)
                 .doesNotContain("aren't all in yet"));
         DecisionRecord record = onlyBoardRecord();
         assertThat(record.evidence())
@@ -321,7 +321,7 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
         checkAt(FALLBACK);
 
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .startsWith("Your waiver options\n\nWeek 1's numbers aren't all in yet, "
+                .startsWith("<b>Your waiver options</b>\n\nWeek 1's numbers aren't all in yet, "
                         + "because " + MISSING_GAME + "."));
         assertThat(onlyBoardRecord().evidence()).extracting(Evidence::id)
                 .noneMatch(id -> id.contains("sleeper"));

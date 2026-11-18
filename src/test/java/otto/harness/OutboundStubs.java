@@ -1,8 +1,11 @@
 package otto.harness;
 
+import java.util.regex.Pattern;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 
 import otto.storage.OttoJson;
@@ -10,6 +13,7 @@ import otto.storage.OttoJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -37,6 +41,14 @@ public final class OutboundStubs {
     private static final String TOOL_CALLED = "tool-called";
 
     private OutboundStubs() {
+    }
+
+    /**
+     * Matches an Alert's text: one headline line, which code writes from
+     * the kind of news, then exactly the advice under it.
+     */
+    public static StringValuePattern underHeadline(String advice) {
+        return matching("(?s)[^\\n]+\\n" + Pattern.quote(advice));
     }
 
     /** Escapes a phrase into a valid JSON string literal. */

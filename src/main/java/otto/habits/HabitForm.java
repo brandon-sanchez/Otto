@@ -15,7 +15,8 @@ import otto.advice.FriendVoice;
 /**
  * The habits answer as a form of advice: the instructions it is written
  * under, and its checks. It must pass every {@link AdviceCheck} rule and
- * read as sentences, never as a list.
+ * read as short lines that lead with the cost, never as a bulleted or
+ * numbered list.
  */
 final class HabitForm implements AdviceForm<AdviceAnswer> {
 
@@ -24,14 +25,17 @@ final class HabitForm implements AdviceForm<AdviceAnswer> {
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
             Each "habit-" item is a habit his own results show cost him points or FAAB
-            dollars. Lead with what the costliest one cost him, then the pattern behind
+            dollars. Lead with what the costliest one cost him, on a line of its own: an
+            icon, what it cost in a few words and the number in bold, such as "🪑 Bench
+            points left: <b>38.2</b> over 10 weeks" (🪑 for bench points, 💸 for FAAB, 🔁
+            for trades, 📉 for anything else). Then one short line on the pattern behind
             it in plain words, then at most one fix, taken from its "fix" and offered as
             something to try rather than an order. Bring in a second habit the same way
-            only when it fits. Never mention a habit the evidence does not list, and never lecture.
-            The "activity" item sums up his waiver, FAAB and trade moves: use it only
-            when it helps explain a habit.
+            only when it fits. Never mention a habit the evidence does not list, and never
+            lecture. The "activity" item sums up his waiver, FAAB and trade moves: use it
+            only when it helps explain a habit.
 
-            Write one or two short paragraphs with no lists and no headings. Never write a
+            Write short lines with no bullets, numbers or headings. Never write a
             confidence label such as High or Medium. Stay under "maxLength" characters.
             """ + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
@@ -63,7 +67,7 @@ final class HabitForm implements AdviceForm<AdviceAnswer> {
         }
         List<String> failures = new ArrayList<>(verdict.failures());
         if (LIST_LINE.matcher(answer.get().message()).find()) {
-            failures.add("Write natural sentences, not a list.");
+            failures.add("Write short lines with no bullets or numbers, not a list.");
         }
         return AdviceCheck.Verdict.checked(answer.get(), failures);
     }

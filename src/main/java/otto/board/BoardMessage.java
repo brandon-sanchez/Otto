@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import otto.directory.DirectoryPlayer;
+import otto.format.TelegramHtml;
 import otto.telegram.TelegramText;
 
 /**
@@ -22,9 +23,11 @@ import otto.telegram.TelegramText;
  * #OUTSIDE_FOCUS}, and one only trending adds support on a fallback
  * board carries {@link #TRENDING_LABEL} under its heading. The text is
  * split between entries into Telegram messages that each stay under
- * Telegram's limit. The full list behind "View all options" and the
- * advice held for the board under "About your roster" are laid out here
- * too.
+ * Telegram's limit. An entry leads with the player in bold, then
+ * {@code 💰 Bid <b>$9</b> (range $7–12)} and {@code ➖ Drop: name} on
+ * lines of their own, with the model's reasoning in an expandable quote
+ * under them. The full list behind "View all options" and the advice held
+ * for the board under "About your roster" are laid out here too.
  */
 final class BoardMessage {
 
@@ -65,10 +68,10 @@ final class BoardMessage {
                     + ".");
         }
         opening.add(answer.opening().strip());
-        blocks.add(HEADING + BREAK + String.join(BREAK, opening));
+        blocks.add(TelegramHtml.bold(HEADING) + BREAK + String.join(BREAK, opening));
         List<BoardAnswer.Entry> entries = answer.entries();
         if (answer.hold() && !entries.isEmpty()) {
-            blocks.add(STILL_A_MOVE);
+            blocks.add(TelegramHtml.bold(STILL_A_MOVE));
         }
         for (int index = 0; index < Math.min(SHOWN, entries.size()); index++) {
             blocks.add((index + 1) + ". " + entry(entries.get(index), screen, leagueBudget));
@@ -95,7 +98,7 @@ final class BoardMessage {
             return List.of();
         }
         List<String> blocks = new ArrayList<>();
-        blocks.add(ALL_HEADING);
+        blocks.add(TelegramHtml.bold(ALL_HEADING));
         for (int index = 0; index < entries.size(); index++) {
             blocks.add((index + 1) + ". " + entry(entries.get(index), screen, leagueBudget));
         }
@@ -114,7 +117,7 @@ final class BoardMessage {
             return messages;
         }
         List<String> blocks = new ArrayList<>(messages);
-        blocks.add(ABOUT_YOUR_ROSTER);
+        blocks.add(TelegramHtml.bold(ABOUT_YOUR_ROSTER));
         blocks.addAll(held);
         return pack(blocks);
     }
@@ -134,22 +137,28 @@ final class BoardMessage {
         return text.toString();
     }
 
+    /**
+     * Lays out one entry: the player in bold with his position and team,
+     * the bid and the drop on lines of their own, and the model's
+     * reasoning in a quote the reader taps to open.
+     */
     private static String entry(BoardAnswer.Entry entry, WaiverEvidence.Screen screen,
             LeagueBudget leagueBudget) {
         List<String> lines = new ArrayList<>();
-        lines.add(heading(entry, screen.candidates()));
+        DirectoryPlayer player = screen.candidates().get(entry.playerId());
+        lines.add("%s · %s, %s".formatted(TelegramHtml.bold(player.fullName()),
+                player.position(), player.team()));
         if (screen.trendingOnly().contains(entry.playerId())) {
             lines.add(TRENDING_LABEL);
         }
         Optional.ofNullable(screen.bidding().consensus().get(entry.playerId()))
                 .flatMap(consensus -> consensus.line(leagueBudget))
                 .ifPresent(lines::add);
-        entry.bid().ifPresent(bid -> lines.add(
-                "I'd bid $%d. Anything from $%d to $%d makes sense.".formatted(
-                        (int) bid.target(), (int) bid.low(), (int) bid.high())));
-        lines.addAll(modelLines(entry));
-        entry.drop().ifPresent(drop -> lines.add("Drop %s to make room.".formatted(
-                screen.user().playerNames().getOrDefault(drop, drop))));
+        entry.bid().ifPresent(bid -> lines.add("💰 Bid <b>$%d</b> (range $%d–%d)".formatted(
+                (int) bid.target(), (int) bid.low(), (int) bid.high())));
+        entry.drop().ifPresent(drop -> lines.add("➖ Drop: %s".formatted(TelegramHtml.escape(
+                screen.user().playerNames().getOrDefault(drop, drop)))));
+        lines.add(TelegramHtml.expandable(String.join("\n", modelLines(entry))));
         return String.join("\n", lines);
     }
 
