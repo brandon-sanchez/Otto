@@ -426,6 +426,49 @@ class RoleSlipScenarioTest extends WireSeamTest {
         assertThat(roleSlips.heldForBoard()).isEmpty();
     }
 
+    private void aBoardGoesOutWhileAKeepNoteAboutCookIsHeld(int cooksValue) {
+        SleeperStubs.waiverWeek(sleeper);
+        NflverseStubs.waiverWeekReadyForTheBoard(nflverse);
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        OutboundStubs.llmAdvisesInOrderOn(llm, OutboundStubs.WAIVER_BOARD_REQUEST, BOARD);
+        checkRunner.runCheck();
+        feeds.updateIfDue();
+        MarketStubs.fantasyCalcValues(fantasyCalc, false, Map.ofEntries(
+                Map.entry(COOK, cooksValue), Map.entry("6813", 300), Map.entry("5850", 400),
+                Map.entry("1466", 3000), Map.entry("8112", 4000), Map.entry("8135", 5000),
+                Map.entry("9493", 6000), Map.entry("6794", 7000), Map.entry("9509", 8000),
+                Map.entry("4034", 8500), Map.entry("4046", 9000)));
+        roleSlips.hold(new RoleSlipLedger.Held("alert-held-keep", COOK, KEEP_MESSAGE,
+                "hold|none|+usage"));
+
+        clock.set(TUESDAY_EVENING);
+        checkRunner.runCheck();
+    }
+
+    @Test
+    void aHeldKeepNoteIsDroppedWhenHeIsNoLongerAmongTheLikeliestDrops() {
+        aBoardGoesOutWhileAKeepNoteAboutCookIsHeld(6500);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Your waiver options"))));
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("James Cook")));
+        assertThat(roleSlips.heldForBoard()).isEmpty();
+        assertThat(roleSlips.lastAdvice(COOK)).isEmpty();
+    }
+
+    @Test
+    void aHeldKeepNoteStillGoesOutWhileHeIsAmongTheLikeliestDrops() {
+        aBoardGoesOutWhileAKeepNoteAboutCookIsHeld(350);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("About your roster")))
+                .withRequestBody(matchingJsonPath("$.text", containing(KEEP_MESSAGE))));
+        assertThat(roleSlips.heldForBoard()).isEmpty();
+        assertThat(roleSlips.lastAdvice(COOK)).contains("hold|none|+usage");
+    }
+
     private List<Event> alertsSent() {
         return eventLog.all().stream()
                 .filter(event -> event.type() == EventType.ALERT_SENT)
