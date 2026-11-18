@@ -6,6 +6,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -21,6 +23,7 @@ import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
+import otto.format.TelegramHtml;
 import otto.directory.PlayerLookup;
 import otto.lineup.LeagueScoring;
 import otto.matchup.MatchupSources;
@@ -99,7 +102,15 @@ public class PlayerStatsAnswers {
         this.sources = sources;
         this.leaguePoints = leaguePoints;
         this.advice = advice;
-        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
+        this.form = AdviceForm.of(INSTRUCTIONS, (bundle, reply) -> {
+            AdviceCheck.Verdict<AdviceAnswer> verdict = check.check(bundle, reply);
+            if (verdict instanceof AdviceCheck.Verdict.Passed<AdviceAnswer> passed) {
+                AdviceAnswer answer = passed.answer();
+                return new AdviceCheck.Verdict.Passed<>(
+                        answer.withMessage(restoreRankRows(bundle, answer.message())));
+            }
+            return verdict;
+        });
     }
 
     /**
@@ -255,6 +266,25 @@ public class PlayerStatsAnswers {
                         List.of(new Candidate(player.playerId(), player.fullName(), true,
                                 "the player the user asked about")), "write-up"), now, delivery)
                 .answer(message -> new Answer(subject.name(), message), fallbacks(player));
+    }
+
+    private static String restoreRankRows(EvidenceBundle bundle, String message) {
+        List<String> ranks = bundle.evidence().stream()
+                .filter(item -> item.facts().containsKey("header"))
+                .map(item -> item.facts().get("line"))
+                .filter(line -> line != null && line.contains(": <b>"))
+                .toList();
+        return message.lines().map(line -> {
+            String visible = TelegramHtml.words(line).strip();
+            return ranks.stream().filter(rank -> {
+                String row = TelegramHtml.visible(rank);
+                String label = row.substring(row.indexOf(' ') + 1, row.indexOf(':') + 1);
+                String ordinal = rank.substring(rank.indexOf("<b>") + 3, rank.indexOf("</b>"));
+                return visible.regionMatches(true, 0, label, 0, label.length())
+                        && visible.substring(label.length()).stripLeading()
+                                .matches(Pattern.quote(ordinal) + "\\b.*");
+            }).findFirst().orElse(line);
+        }).collect(Collectors.joining("\n"));
     }
 
     private static String nothingPlayed(PlayerStatsEvidence.Subject subject) {

@@ -278,6 +278,15 @@ class PlayerStatsScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aParaphrasedRankRowKeepsItsComputedDot() {
+        askAndAnswer("What are Isaiah Likely's rankings?",
+                "{\"player\":\"Isaiah Likely\",\"asked\":\"snap share rank\"}",
+                RANKS.replace("🟡 ", "").replace(" of 3 (66%)", " of 3, 66%."));
+
+        theUserReadsOnly(RANKS);
+    }
+
+    @Test
     void anExplicitCombinedGroupRanksOnlyThosePositions() {
         String header = "Isaiah Likely's rankings among WRs and TEs this season (weeks 1–5)";
         String message = header + "\n\n🟠 Snap share: <b>5th</b> of 6 (66%)";

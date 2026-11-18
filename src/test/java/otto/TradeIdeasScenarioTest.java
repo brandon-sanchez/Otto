@@ -294,6 +294,17 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aRequestedPositionCanUpgradeTheLineupWithoutAnExplicitShape() {
+        redraftLeague("sleeper/rosters-offers.json");
+
+        Map<String, Map<String, String>> evidence = askForTrades(
+                "{\"count\":1,\"position\":\"RB\"}");
+
+        assertThat(evidence.get("offer-1")).containsEntry("youGet", "Saquon Barkley");
+        assertThat(evidence).doesNotContainKey("offer-2");
+    }
+
+    @Test
     void aTradeOfMoreThanFourPiecesASideIsDeclinedInPlainWords() {
         redraftLeague("sleeper/rosters-offers.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades",

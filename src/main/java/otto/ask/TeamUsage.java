@@ -10,6 +10,7 @@ import java.util.function.ToIntFunction;
 import org.springframework.stereotype.Component;
 
 import otto.advice.ToolAnswer;
+import otto.format.TelegramHtml;
 import otto.matchup.Position;
 import otto.matchup.TeamNames;
 import otto.nflverse.NflverseStore;
@@ -80,6 +81,11 @@ public class TeamUsage {
      *        or "running backs"; null, blank or "all" for every group
      */
     public ToolAnswer<Report> forTeam(String team, String position) {
+        return forTeam(team, position, null, null, false);
+    }
+
+    ToolAnswer<Report> forTeam(String team, String position, Integer week, Integer weeksAgo,
+            boolean snapShareOnly) {
         Optional<String> code = TeamNames.resolve(team);
         if (code.isEmpty()) {
             return ToolAnswer.unavailable(("\"%s\" names no single NFL team; use a nickname "
@@ -100,16 +106,31 @@ public class TeamUsage {
         if (schedule.isEmpty()) {
             return ToolAnswer.unavailable("no NFL schedule is stored yet");
         }
+        if (week != null || weeksAgo != null) {
+            return switch (StatsSpan.parse(week, weeksAgo, null)) {
+                case StatsSpan.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
+                case StatsSpan.Parsed.Ok parsed -> {
+                    ToolAnswer<StatsSpan.Window> window = parsed.span().window(schedule.get(),
+                            usage.get().season(), usage.get().priorSeasonFinal(), code.get());
+                    yield window.facts() == null ? ToolAnswer.unavailable(window.unavailable())
+                            : ToolAnswer.of(report(usage.get(), code.get(), group.orElse(null),
+                                    window.facts().weeks(), snapShareOnly));
+                }
+            };
+        }
         List<Integer> weeks = finishedWeeks(schedule.get(), usage.get().season(), code.get());
         if (weeks.isEmpty()) {
             return ToolAnswer.unavailable("%s has no finished game in the %s season stored"
                     .formatted(code.get(), usage.get().season()));
         }
-        return ToolAnswer.of(report(usage.get(), code.get(), group.orElse(null), weeks));
+        return ToolAnswer.of(report(usage.get(), code.get(), group.orElse(null), weeks, snapShareOnly));
     }
 
     private static Report report(PlayerUsage usage, String team, Position group,
-            List<Integer> weeks) {
+            List<Integer> weeks, boolean snapShareOnly) {
+        if (snapShareOnly) {
+            return snapShares(usage, team, group, weeks);
+        }
         StringBuilder table = new StringBuilder("%s %s usage, %s season%s\n".formatted(team,
                 group == null ? "position group" : group.name(), usage.season(),
                 usage.priorSeasonFinal() ? " (last season's final weeks)" : ""));
@@ -130,6 +151,34 @@ public class TeamUsage {
         return new Report(team, usage.season(), usage.priorSeasonFinal(),
                 group == null ? null : group.name(), weeks, missing,
                 table.toString());
+    }
+
+    private static Report snapShares(PlayerUsage usage, String team, Position group,
+            List<Integer> weeks) {
+        String groupName = group == null ? null : group.name();
+        StringBuilder table = new StringBuilder("<b>%s%s snap share</b> (%s)".formatted(
+                team, group == null ? "" : " " + groupName, usage.season()));
+        List<Integer> missing = new ArrayList<>();
+        for (int week : weeks) {
+            List<PlayerUsage.Game> games = usage.team(team, week);
+            List<PlayerUsage.Game> players = (group == null ? games : inGroup(games, group))
+                    .stream().filter(TeamUsage::played).sorted(MOST_USED_FIRST).toList();
+            table.append("\n\n<b>Week %d</b>\n".formatted(week));
+            if (players.stream().noneMatch(player -> player.snaps() != null)) {
+                missing.add(week);
+                table.append("No snap counts are available.");
+                continue;
+            }
+            for (PlayerUsage.Game player : players.stream().limit(PLAYERS_SHOWN).toList()) {
+                table.append("%s · %s\n".formatted(TelegramHtml.escape(name(player)),
+                        player.snaps() == null ? "snap share unavailable"
+                                : "<b>%d%%</b> (%d snaps)".formatted(
+                                        Math.round(100 * player.snaps().share()),
+                                        player.snaps().offenseSnaps())));
+            }
+        }
+        return new Report(team, usage.season(), usage.priorSeasonFinal(), groupName, weeks,
+                missing, table.toString().stripTrailing());
     }
 
     private static String everyGroup(int week, List<PlayerUsage.Game> games,

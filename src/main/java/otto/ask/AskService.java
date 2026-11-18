@@ -127,7 +127,9 @@ public class AskService {
             shows each team with its status: ✅ Clinched, 🟡 In the hunt or
             ❌ Eliminated. Lists of settings and watchlist entries use labeled
             headings. A team usage answer shows the tool's table line for line and adds
-            at most two lines. A ceiling answer sends the tool's message word for word
+            at most two lines. When quoting a stats ranking or leaderboard, keep
+            each computed colored dot and rank row. A ceiling answer sends the tool's
+            message word for word
             and adds nothing. A single setting change stays conversational, in plain
             words with no dots.
             """;

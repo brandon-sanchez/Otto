@@ -126,13 +126,15 @@ public class PlayerTools {
 
     @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "get_team_usage", description = """
-            One NFL team's usage by position group over its last four
-            finished games, week by week, from nflverse: each player's
+            One NFL team's usage by position group from nflverse, for a
+            specific NFL week when requested or the last four finished games: each player's
             snaps and snap share, targets and target share, carries and
             carry share, and the group's share of the team's targets and
             carries. Its table is written to fit one message; show it as
             it is. Call this for "Chargers RB usage", "Lions targets by
-            position", backfield splits and target shares.""")
+            position", backfield splits and target shares. For "that week",
+            use the exact NFL week established in the conversation. For a snap
+            share comparison, request snapShareOnly.""")
     public ToolAnswer<TeamUsage.Report> getTeamUsage(
             @ToolParam(description = """
                     The NFL team as the user wrote it: a nickname, a city
@@ -141,9 +143,22 @@ public class PlayerTools {
             @ToolParam(required = false, description = """
                     QB, RB, WR or TE. Leave it out to compare every
                     group's share of the team's targets and carries.""")
-            String position, ToolContext context) {
-        return CheckedAnswers.of(context).offer(teamUsage.forTeam(team, position),
-                TeamUsage.Report::table);
+            String position,
+            @ToolParam(required = false, description = """
+                    Exact NFL week. For "that week" or "the same week",
+                    reuse the week number in the previous answer. Leave
+                    it out only when no single week is intended.""")
+            Integer week,
+            @ToolParam(required = false, description = """
+                    Weeks back from the last finished NFL week: 1 for
+                    last week, 2 for the week before last. Omit when
+                    week is known or when no single week is intended.""")
+            Integer weeksAgo,
+            @ToolParam(required = false, description = """
+                    True for a snap share comparison. Omit targets and carries.""")
+            Boolean snapShareOnly, ToolContext context) {
+        return CheckedAnswers.of(context).offer(teamUsage.forTeam(team, position, week, weeksAgo,
+                Boolean.TRUE.equals(snapShareOnly)), TeamUsage.Report::table);
     }
 
     @LeagueNeed(LeagueNeed.When.RANKED_IN_FANTASY_POINTS)
