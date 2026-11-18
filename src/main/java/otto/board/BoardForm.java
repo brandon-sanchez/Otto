@@ -3,11 +3,14 @@ package otto.board;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,8 +19,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
 import otto.advice.AdviceForm;
+import otto.advice.Citations;
 import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
+import otto.advice.NamedIds;
 import otto.advice.RankConvention;
 import otto.directory.DirectoryPlayer;
 import otto.storage.OttoJson;
@@ -31,6 +36,13 @@ import otto.storage.OttoJson;
  * be. When the user asked to focus the round on some positions, every
  * entry outside them must say why it beats them, and no other entry may.
  * Its bids and drops must pass {@link BidCheck}.
+ *
+ * <p>Slips that change no fact are put right when the reply is read,
+ * not failed: a player written by exact full name where an id belongs,
+ * bracketed lists of evidence ids in the text, moves listed under
+ * "optional" on a board that does not hold, and an "outsideFocus" in a
+ * round with no focus. Every check then runs in one pass, so the one
+ * correction attempt is handed every failure at once.
  */
 final class BoardForm implements AdviceForm<BoardAnswer> {
 
@@ -88,8 +100,9 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             costs him. When bids are withheld or the league claims by priority, leave
             out "bid", leave "limit" empty and state no dollar amount anywhere.
 
-            When the user's roster has no open spot, name in "drop" the rostered player
-            each claim replaces. List in "together" the picks meant to land together:
+            When the user's roster has no open spot, put in "drop" the playerId, from
+            "players", of the rostered player each claim replaces: his id, never his
+            name. List in "together" the picks meant to land together:
             they must drop different players and stay affordable together at the top of
             their ranges. Every pick not in "together" is an alternative for the same
             roster spot.
@@ -114,7 +127,16 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
               "together": ["<playerId of a pick>"],
               "claims": [{"text": "<one factual statement>", "evidence": ["<evidence id>"]}]
             }
-            """;
+            """ + Citations.RULE;
+
+    /**
+     * A board as it is checked and sent.
+     *
+     * @param cited the evidence ids the citation lists taken out of its
+     *        text named
+     */
+    private record Read(BoardAnswer answer, Set<String> cited) {
+    }
 
     private static final Pattern CODE_FENCE =
             Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
@@ -152,15 +174,16 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
             return AdviceCheck.Verdict.unreadable("The answer is not the JSON object the "
                     + "instructions ask for, with a non-empty \"opening\".");
         }
-        BoardAnswer answer = parsed.get();
+        Read read = read(bundle, parsed.get());
+        BoardAnswer answer = read.answer();
         List<String> failures = new ArrayList<>(checkShape(answer));
-        if (failures.isEmpty()) {
-            failures.addAll(bids.check(answer));
+        failures.addAll(bids.check(answer));
+        List<String> named = answer.entries().stream().map(BoardAnswer.Entry::playerId).toList();
+        if (candidates.keySet().containsAll(named)) {
             String text = BoardMessage.checkedText(answer, candidates);
-            List<String> named = answer.entries().stream().map(BoardAnswer.Entry::playerId)
-                    .toList();
             failures.addAll(check.checkAnswer(bundle, new AdviceAnswer(text, Optional.empty(),
-                    named, answer.claims(), List.of(), Optional.empty(), List.of())));
+                    named, answer.claims(), List.of(), Optional.empty(), List.of()),
+                    read.cited()));
             if (SCORE.matcher(text).find()) {
                 failures.add("Never write a score; give the reasons instead.");
             }
@@ -171,6 +194,33 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         return AdviceCheck.Verdict.checked(answer, failures);
     }
 
+    /**
+     * Returns the board with its harmless slips put right: names read as
+     * ids, citation lists out of every text, "optional" emptied unless
+     * the board holds, and "outsideFocus" emptied when the round has no
+     * focus.
+     */
+    private Read read(EvidenceBundle bundle, BoardAnswer answer) {
+        Set<String> cited = new LinkedHashSet<>();
+        UnaryOperator<String> prose = text -> {
+            Citations.Stripped stripped = Citations.strip(text, bundle);
+            cited.addAll(stripped.cited());
+            return stripped.text();
+        };
+        Map<String, String> names = new LinkedHashMap<>();
+        candidates.forEach((playerId, player) -> names.put(playerId, player.fullName()));
+        UnaryOperator<BoardAnswer.Entry> entry = written -> new BoardAnswer.Entry(
+                NamedIds.resolve(written.playerId(), names), prose.apply(written.reasoning()),
+                focus.isEmpty() ? "" : prose.apply(written.outsideFocus()), written.bid(),
+                prose.apply(written.limit()), written.drop().map(bids::rostered));
+        BoardAnswer read = new BoardAnswer(answer.hold(), prose.apply(answer.opening()),
+                answer.picks().stream().map(entry).toList(),
+                answer.hold() ? answer.optional().stream().map(entry).toList() : List.of(),
+                answer.together().stream().map(id -> NamedIds.resolve(id, names)).toList(),
+                AdviceCheck.withoutCitations(bundle, answer.claims()));
+        return new Read(read, cited);
+    }
+
     private List<String> checkShape(BoardAnswer answer) {
         List<String> failures = new ArrayList<>();
         if (answer.hold() && !answer.picks().isEmpty()) {
@@ -179,9 +229,6 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         }
         if (!answer.hold() && answer.picks().isEmpty()) {
             failures.add("A board that does not hold must recommend at least one pick.");
-        }
-        if (!answer.hold() && !answer.optional().isEmpty()) {
-            failures.add("Only a holding board lists optional moves.");
         }
         if (answer.opening().length() > WaiverEvidence.PART_MAX_LENGTH) {
             failures.add("The opening is %d characters; the limit is %d."
@@ -213,11 +260,10 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
         if (player == null) {
             return List.of();
         }
-        boolean explained = !entry.outsideFocus().isBlank();
         if (focus.isEmpty()) {
-            return explained ? List.of("There is no focus this round: leave \"outsideFocus\" "
-                    + "empty for %s.".formatted(player.fullName())) : List.of();
+            return List.of();
         }
+        boolean explained = !entry.outsideFocus().isBlank();
         boolean outside = !focus.contains(player.position());
         if (outside && !explained) {
             return List.of("%s is outside the focus on %s: say in \"outsideFocus\" why he "
