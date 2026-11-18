@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.advice.AdviceAnswer;
@@ -16,6 +18,7 @@ import otto.advice.LineupMove;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
 import otto.claims.RoleSlipLedger;
+import otto.decisions.DropRanking;
 import otto.decisions.DropRankings;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
@@ -35,6 +38,11 @@ import otto.snapshot.RosterSnapshot;
  */
 @Component
 public class RoleSlipAdvice {
+
+    /** How the {@link #signature} of advice to keep a player with no lineup change begins. */
+    private static final String HOLD_WITH_NO_MOVE = RosterPlans.HOLD + "|none|";
+
+    private static final Logger log = LoggerFactory.getLogger(RoleSlipAdvice.class);
 
     private final LineupAdvice lineupAdvice;
     private final RoleSlipLedger ledger;
@@ -107,6 +115,42 @@ public class RoleSlipAdvice {
             ledger.settle(slip.key());
         }
         return LineupAdvice.sent(run);
+    }
+
+    /**
+     * Drops held advice to keep a player once dropping him is no longer
+     * a mistake the user could plausibly make: he is not among the
+     * roster's likeliest drops as {@link DropRankings} ranks them now.
+     * Advice is held for days, and a hold written under an older rule or
+     * an older ranking would otherwise go out under the next board.
+     * Held advice that changes the lineup or the roster is left alone,
+     * and so is everything when the roster cannot be ranked.
+     *
+     * <p>Side effects: the reads of {@link DropRankings#rank} when any
+     * hold is held, and one ledger write when one is dropped.
+     */
+    public void reviewHeld(LeagueWeek leagueWeek, Instant now) {
+        List<RoleSlipLedger.Held> holds = ledger.heldForBoard().stream()
+                .filter(advice -> advice.signature() != null
+                        && advice.signature().startsWith(HOLD_WITH_NO_MOVE))
+                .toList();
+        Optional<RosterSnapshot> roster = leagueWeek.userRoster();
+        if (holds.isEmpty() || roster.isEmpty()) {
+            return;
+        }
+        DropRanking ranking = dropRankings.rank(leagueWeek, roster.get(), now);
+        if (!ranking.known()) {
+            return;
+        }
+        List<String> stale = holds.stream()
+                .filter(advice -> ranking.likeliest().stream()
+                        .noneMatch(player -> player.playerId().equals(advice.playerId())))
+                .map(RoleSlipLedger.Held::runId)
+                .toList();
+        if (!stale.isEmpty()) {
+            log.info("Dropped held keep-him advice no longer worth sending: {}", stale);
+            ledger.discardHeld(stale);
+        }
     }
 
     /**
