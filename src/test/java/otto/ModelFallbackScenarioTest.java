@@ -271,7 +271,7 @@ class ModelFallbackScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("Christian McCaffrey is Out and cannot play"))));
+                        containing(": Christian McCaffrey is Out.\n"))));
         claude.verify(postRequestedFor(urlEqualTo(ANTHROPIC_MESSAGES)));
         gemini.verify(postRequestedFor(urlPathMatching(GEMINI_GENERATE)));
         assertThat(records()).isNotEmpty().allSatisfy(record -> {
