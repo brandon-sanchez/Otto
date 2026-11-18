@@ -76,10 +76,11 @@ public class TeamTools {
             chasing last week's big game, starting Questionable players,
             favouring one NFL team, and his waiver, FAAB and trade
             activity. It reports only the habits that cost him points.
-            Call this only when he asks about his habits, his mistakes
-            or how he can improve as a manager, and never bring habits up
-            otherwise. Its message is already written and fact-checked:
-            send it exactly as it is, adding nothing.""")
+            Call this only when he asks about himself as a manager, for
+            "what are my habits", "what mistakes am I making", "how can
+            I improve?" and "how do I get better at this", and never
+            bring habits up otherwise. Its message is already written and
+            fact-checked: send it exactly as it is, adding nothing.""")
     public ToolAnswer<HabitService.Answer.Written> reviewHabits(ToolContext context) {
         return CheckedAnswers.of(context).offer(habitsAnswer(),
                 HabitService.Answer.Written::message);
@@ -92,9 +93,11 @@ public class TeamTools {
             included, with his team's direction, how high its big weeks
             reach and up to three waiver or trade moves, already written
             and fact-checked. Send
-            its message word for word. Call this only when he asks, for
-            "what are my team's weaknesses", "how can I improve my team"
-            and "where is my roster thin".""")
+            its message word for word. Call this only when he asks about
+            his team or roster, for "what are my team's weaknesses", "how
+            can I improve my team" and "where is my roster thin". "How
+            can I improve?" with no team or roster named asks about him
+            as a manager: call review_habits for it instead.""")
     public ToolAnswer<TeamWeaknesses.Answer> getTeamWeaknesses(
             @ToolParam(required = false, description = """
                     The league he named, or his words such as "all of
