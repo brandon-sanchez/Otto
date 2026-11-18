@@ -15,6 +15,12 @@ import otto.sleeper.SleeperAdapter;
  */
 public record GameWeek(Map<String, SleeperAdapter.Game> byTeam) {
 
+    /**
+     * The last week of the NFL regular season. Weeks after it are the NFL
+     * playoffs, which no fantasy league plays, projects or scores.
+     */
+    public static final int LAST_NFL_WEEK = 18;
+
     private static final String COMPLETE = "complete";
 
     public static GameWeek of(List<SleeperAdapter.Game> games) {
