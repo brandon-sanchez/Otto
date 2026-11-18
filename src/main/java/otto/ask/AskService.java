@@ -3,8 +3,10 @@ package otto.ask;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -258,10 +260,13 @@ public class AskService {
      * <p>Side effects: model calls, whatever the tools it calls do, and
      * one write of the conversation.
      *
+     * @param pick how the league in scope was picked, which the chat
+     *        tools read from their context
      * @return the reply to send back to the chat
      */
-    public Reply.Answered answer(String question) {
-        if (ask(question, Mode.LEAGUE_IN_SCOPE) instanceof Reply.Answered answered) {
+    public Reply.Answered answer(String question, LeaguePick pick) {
+        if (ask(question, Mode.LEAGUE_IN_SCOPE, pick.toolContext())
+                instanceof Reply.Answered answered) {
             return answered;
         }
         throw new IllegalStateException("The Ask loop asked for a league while one was in scope.");
@@ -279,7 +284,7 @@ public class AskService {
      * calls do, and one write of the conversation when it answers.
      */
     public Reply answerBeforeLeague(String question) {
-        return ask(question, Mode.NO_LEAGUE);
+        return ask(question, Mode.NO_LEAGUE, Map.of());
     }
 
     /**
@@ -288,10 +293,10 @@ public class AskService {
      * nothing, and claiming the wrong one would be a lie about what
      * the assistant can see.
      */
-    private Reply ask(String question, Mode mode) {
+    private Reply ask(String question, Mode mode, Map<String, Object> leagueContext) {
         Instant now = clock.instant();
         List<ConversationStore.Turn> window = mode.window(conversation, now);
-        return switch (run(prompt(question, window, mode), mode)) {
+        return switch (run(prompt(question, window, mode), mode, leagueContext)) {
             case ModelChain.Result.Exhausted<Loop> exhausted -> {
                 log.warn("Ask loop failed: {}", exhausted.reason());
                 yield new Reply.Answered(exhausted.anyReached() ? EMPTY_ANSWER : UNREACHABLE,
@@ -326,9 +331,11 @@ public class AskService {
         };
     }
 
-    private ModelChain.Result<Loop> run(List<Message> messages, Mode mode) {
+    private ModelChain.Result<Loop> run(List<Message> messages, Mode mode,
+            Map<String, Object> leagueContext) {
         return chain.call(ModelChain.CallSite.ASK, turn -> {
-            Loop loop = turn.timed(() -> converse(turn.provider().chat(), messages, mode));
+            Loop loop = turn.timed(() -> converse(turn.provider().chat(), messages, mode,
+                    leagueContext));
             if (loop instanceof Loop.Said said && (said.text() == null || said.text().isBlank())) {
                 throw new ModelChain.UnusableReply("The model answered with no content.");
             }
@@ -343,7 +350,8 @@ public class AskService {
      * answer goes out as it is depends on what else the model called, so
      * the loop runs here.
      */
-    private Loop converse(ChatClient chat, List<Message> start, Mode mode) {
+    private Loop converse(ChatClient chat, List<Message> start, Mode mode,
+            Map<String, Object> leagueContext) {
         List<Message> history = start;
         ToolUse tools = ToolUse.NONE;
         while (true) {
@@ -369,7 +377,7 @@ public class AskService {
             ToolExecutionResult executed = toolCalling.executeToolCalls(
                     new Prompt(history, ToolCallingChatOptions.builder()
                             .toolCallbacks(toolCallbacks)
-                            .toolContext(round.toolContext())
+                            .toolContext(toolContext(round, leagueContext))
                             .build()),
                     response);
             Optional<String> checked = round.answerToSendAsIs();
@@ -378,6 +386,13 @@ public class AskService {
             }
             history = executed.conversationHistory();
         }
+    }
+
+    private static Map<String, Object> toolContext(CheckedAnswers round,
+            Map<String, Object> leagueContext) {
+        Map<String, Object> context = new HashMap<>(round.toolContext());
+        context.putAll(leagueContext);
+        return context;
     }
 
     private static List<AssistantMessage.ToolCall> toolCalls(ChatResponse response) {

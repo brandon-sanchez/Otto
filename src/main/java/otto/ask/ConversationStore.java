@@ -33,11 +33,11 @@ public class ConversationStore {
     private static final Duration WINDOW = Duration.ofHours(24);
     private static final int MAX_MESSAGES = 20;
 
-    /** What a turn notes as its league when its answer is the same in every league. */
+    /** What a stored turn notes as its league when its answer is the same in every league. */
     private static final String EVERY_LEAGUE = "*";
 
-    private static final JavaType LIST_TYPE =
-            OttoJson.MAPPER.getTypeFactory().constructCollectionType(List.class, Turn.class);
+    private static final JavaType LIST_TYPE = OttoJson.MAPPER.getTypeFactory()
+            .constructCollectionType(List.class, StoredTurn.class);
 
     private final JsonStore store;
     private final String configLeagueId;
@@ -50,21 +50,42 @@ public class ConversationStore {
     /**
      * One message in the conversation, from the user or the assistant.
      *
-     * @param leagueId the league the exchange was about, or "*" when its
-     *        answer is the same in every league; null in a turn stored
-     *        before turns named their league, which was about the config
-     *        league
+     * @param league the league the exchange was about, or every league
+     *        when its answer is the same in every league
      */
-    public record Turn(Role role, String text, Instant at, String leagueId) {
+    public record Turn(Role role, String text, Instant at, League league) {
 
         public enum Role {
             USER, ASSISTANT
         }
 
+        /** Which league an exchange was about. */
+        public sealed interface League {
+
+            /** The answer is the same in every league. */
+            record EveryLeague() implements League {
+            }
+
+            /** The answer depends on this one league. */
+            record One(String leagueId) implements League {
+            }
+        }
+
         /** Returns whether the exchange was about every league rather than one. */
         public boolean aboutEveryLeague() {
-            return EVERY_LEAGUE.equals(leagueId);
+            return league instanceof League.EveryLeague;
         }
+    }
+
+    /**
+     * A turn as the conversation document stores it. The shape is the
+     * one older code reads, so a rollback reads new turns too.
+     *
+     * @param leagueId the league's id, or {@link #EVERY_LEAGUE}; null in
+     *        a turn stored before turns named their league, which was
+     *        about the config league
+     */
+    private record StoredTurn(Turn.Role role, String text, Instant at, String leagueId) {
     }
 
     /**
@@ -73,9 +94,8 @@ public class ConversationStore {
      * league.
      */
     public List<Turn> window(Instant now) {
-        String league = leagueInScope();
-        return recent(now, turn -> turn.aboutEveryLeague() || league.equals(
-                turn.leagueId() == null ? configLeagueId : turn.leagueId()));
+        Turn.League league = new Turn.League.One(leagueInScope());
+        return recent(now, turn -> turn.aboutEveryLeague() || turn.league().equals(league));
     }
 
     /**
@@ -89,22 +109,22 @@ public class ConversationStore {
 
     /** Records one exchange about the league in scope: what the user asked and what Otto answered. */
     public void record(Instant now, String question, String answer) {
-        record(now, question, answer, leagueInScope());
+        record(now, question, answer, new Turn.League.One(leagueInScope()));
     }
 
     /** Records one exchange whose answer is the same in every league. */
     public void recordForEveryLeague(Instant now, String question, String answer) {
-        record(now, question, answer, EVERY_LEAGUE);
+        record(now, question, answer, new Turn.League.EveryLeague());
     }
 
     private synchronized void record(Instant now, String question, String answer,
-            String league) {
+            Turn.League league) {
         List<Turn> turns = new ArrayList<>(all());
         turns.add(new Turn(Turn.Role.USER, question, now, league));
         turns.add(new Turn(Turn.Role.ASSISTANT, answer, now, league));
         // The stored document stays bounded by the same cap the window
         // reads with: nothing beyond it can ever come back.
-        store.write(DOCUMENT, newest(turns));
+        store.write(DOCUMENT, newest(turns).stream().map(ConversationStore::stored).toList());
     }
 
     private List<Turn> recent(Instant now, Predicate<Turn> shown) {
@@ -126,6 +146,23 @@ public class ConversationStore {
     }
 
     private List<Turn> all() {
-        return store.<List<Turn>>read(DOCUMENT, LIST_TYPE).orElseGet(List::of);
+        return store.<List<StoredTurn>>read(DOCUMENT, LIST_TYPE).orElseGet(List::of).stream()
+                .map(stored -> new Turn(stored.role(), stored.text(), stored.at(),
+                        league(stored.leagueId())))
+                .toList();
+    }
+
+    private Turn.League league(String storedId) {
+        if (EVERY_LEAGUE.equals(storedId)) {
+            return new Turn.League.EveryLeague();
+        }
+        return new Turn.League.One(storedId == null ? configLeagueId : storedId);
+    }
+
+    private static StoredTurn stored(Turn turn) {
+        return new StoredTurn(turn.role(), turn.text(), turn.at(), switch (turn.league()) {
+            case Turn.League.EveryLeague _ -> EVERY_LEAGUE;
+            case Turn.League.One one -> one.leagueId();
+        });
     }
 }

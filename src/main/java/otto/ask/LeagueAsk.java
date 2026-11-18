@@ -18,26 +18,19 @@ import org.springframework.stereotype.Component;
 import otto.followed.FollowedLeague;
 import otto.followed.FollowedLeagues;
 import otto.followed.LeagueListChat;
-import otto.followed.LeagueMentions;
 import otto.scope.LeagueScope;
 
 /**
  * The chat's front door: decides which league a message is about, then
- * has the {@link AskService} answer it. The choice is code (ADR-0012):
- *
- * <ol>
- *   <li>a message that names leagues is about them, and one that says
- *       "every league" is about every league;</li>
- *   <li>otherwise it is about the league the chat was last about;</li>
- *   <li>otherwise the Ask loop starts with no league chosen. An answer
- *       that is the same in every league goes out as it is. When the
- *       answer depends on a league, Otto asks which one, and a short
- *       reply that names one answers the question that was waiting.</li>
- * </ol>
+ * has the {@link AskService} answer it. {@link LeagueChoice} makes the
+ * choice in code (ADR-0012). When it chooses no league, the Ask loop
+ * starts with none: an answer that is the same in every league goes out
+ * as it is, and when the answer depends on a league, Otto asks which
+ * one, and a short reply that names one answers the question that was
+ * waiting.
  *
  * <p>A reply names its league when the message named that league or
- * the answer depends on it. With one league followed, every message is
- * about it.
+ * the answer depends on it.
  */
 @Component
 public class LeagueAsk {
@@ -85,33 +78,25 @@ public class LeagueAsk {
             return List.of(new Reply(Optional.empty(), listReply.get()));
         }
         List<FollowedLeague> followed = leagues.followed();
-        if (followed.size() == 1) {
-            return List.of(answerIn(followed.getFirst(), message, false));
-        }
         Instant now = clock.instant();
-        Optional<String> waited = chatLeague.waiting(now)
-                .filter(waiting -> LeagueMentions.onlyAChoice(message, followed));
-        String question = waited.orElse(message);
-        List<FollowedLeague> named = LeagueMentions.named(message, followed);
-        if (named.isEmpty() && LeagueMentions.everyLeague(message)) {
-            named = followed;
-        }
-        if (named.size() > 1) {
-            return inSeveral(named, question, waited.isPresent(), now);
-        }
-        Optional<FollowedLeague> league = named.stream().findFirst()
-                .or(() -> chatLeague.current(now).flatMap(leagues::find));
-        if (league.isEmpty()) {
-            return List.of(sameInEveryLeague(question).orElseGet(() -> {
-                chatLeague.waitFor(question, now);
-                return new Reply(Optional.empty(), whichLeague(followed));
-            }));
-        }
-        Reply reply = answerIn(league.get(), question, !named.isEmpty());
-        if (reply.leagueId().isPresent()) {
-            chatLeague.answered(league.get().leagueId(), now);
-        }
-        return List.of(reply);
+        LeagueChoice.Choice choice = LeagueChoice.of(message, followed,
+                chatLeague.waiting(now), chatLeague.current(now));
+        return switch (choice) {
+            case LeagueChoice.Choice.InEach each ->
+                    inSeveral(each.leagues(), each.question(), each.waited(), now);
+            case LeagueChoice.Choice.NoneYet none ->
+                    List.of(sameInEveryLeague(none.question()).orElseGet(() -> {
+                        chatLeague.waitFor(none.question(), now);
+                        return new Reply(Optional.empty(), whichLeague(followed));
+                    }));
+            case LeagueChoice.Choice.InOne one -> {
+                Reply reply = answerIn(one.league(), one.question(), one.named(), one.pick());
+                if (one.pick() == LeaguePick.CHOSEN && reply.leagueId().isPresent()) {
+                    chatLeague.answered(one.league().leagueId(), now);
+                }
+                yield List.of(reply);
+            }
+        };
     }
 
     /**
@@ -149,9 +134,10 @@ public class LeagueAsk {
      * Answers in one league. The reply names the league when the message
      * named it or the answer depends on it.
      */
-    private Reply answerIn(FollowedLeague league, String question, boolean named) {
+    private Reply answerIn(FollowedLeague league, String question, boolean named,
+            LeaguePick pick) {
         AskService.Reply.Answered answered =
-                LeagueScope.call(league.leagueId(), () -> ask.answer(question));
+                LeagueScope.call(league.leagueId(), () -> ask.answer(question, pick));
         boolean namesLeague = named || answered.about() == AskService.About.LEAGUE;
         return new Reply(namesLeague ? Optional.of(league.leagueId()) : Optional.empty(),
                 answered.text());
@@ -165,7 +151,8 @@ public class LeagueAsk {
     private List<Reply> everyLeague(List<FollowedLeague> each, String question) {
         try (ExecutorService answering = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<Reply>> answers = each.stream()
-                    .map(league -> answering.submit(() -> answerIn(league, question, true)))
+                    .map(league -> answering.submit(
+                            () -> answerIn(league, question, true, LeaguePick.CHOSEN)))
                     .toList();
             List<Reply> replies = new ArrayList<>();
             for (int index = 0; index < each.size(); index++) {

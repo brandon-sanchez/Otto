@@ -97,7 +97,8 @@ public class TeamTools {
                     when he named none.""")
             String league, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
-        return checked.offer(weaknesses.answer(league, clock.instant(), checked.delivery()),
+        return checked.offer(weaknesses.answer(league, LeaguePick.of(context), clock.instant(),
+                        checked.delivery()),
                 TeamWeaknesses.Answer::message);
     }
 

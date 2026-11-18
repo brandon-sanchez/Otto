@@ -9,7 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -32,7 +31,7 @@ import otto.directory.PlayerDirectoryStore;
 import otto.directory.PlayerHealth;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
-import otto.followed.FollowedLeagues;
+import otto.followed.LeagueMentions;
 import otto.league.LeagueShapes;
 import otto.league.LeagueWeek;
 import otto.market.MarketDay;
@@ -73,9 +72,6 @@ public class TeamWeaknesses {
     private static final int MAX_LENGTH = 1800;
 
     private static final String RUN_ID_PREFIX = "team-weaknesses-";
-
-    private static final Pattern EVERY_LEAGUE =
-            Pattern.compile("(?i)\\b(?:all|every|each|both)\\b");
 
     private static final String INSTRUCTIONS = AdvicePrompt.preamble("about his team",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
@@ -128,15 +124,13 @@ public class TeamWeaknesses {
     private final TradeDeadlines deadlines;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
-    private final FollowedLeagues leagues;
 
     public TeamWeaknesses(UserWeekLoader loader, RestOfSeasonProjections restOfSeason,
             TeamProfiler profiler, LeagueShapes shapes, PlayerDirectoryStore directory,
             MarketValues market, TeamDirections directions, TradeOffers offers,
             HabitService habits, TradeDeadlines deadlines, CheckedAdvice advice,
-            AdviceCheck check, FollowedLeagues leagues) {
+            AdviceCheck check) {
         this.loader = loader;
-        this.leagues = leagues;
         this.restOfSeason = restOfSeason;
         this.profiler = profiler;
         this.shapes = shapes;
@@ -172,27 +166,35 @@ public class TeamWeaknesses {
      * {@link RunKind#TEAM_WEAKNESSES} whatever the outcome.
      *
      * @param leagueReference the league the user named; null or blank for
-     *        the league in the conversation, or words such as "all of
-     *        them" for every league he has. With one league followed,
-     *        "all" answers that one and says so; with several, the chat
-     *        has already picked the league in scope, and this is not read.
+     *        the league in the conversation. Read only when Otto follows
+     *        one league, to name back a league he does not follow rather
+     *        than answer for the wrong one.
+     * @param pick how the chat picked the league in scope; with one
+     *        league followed and every league asked about, the answer
+     *        says it covers that one league
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in plain words
      */
-    public ToolAnswer<Answer> answer(String leagueReference, Instant now,
+    public ToolAnswer<Answer> answer(String leagueReference, LeaguePick pick, Instant now,
             AnswerDelivery delivery) {
         return ToolAnswer.from(loader.leagueWeek(),
-                league -> answer(league, leagueReference, now, delivery));
+                league -> answer(league, leagueReference, pick, now, delivery));
     }
 
-    private ToolAnswer<Answer> answer(LeagueWeek league, String reference, Instant now,
-            AnswerDelivery delivery) {
+    /**
+     * Profiles the user's team in the league in scope, with no league
+     * named, as {@link #answer(String, LeaguePick, Instant, AnswerDelivery)}
+     * does.
+     */
+    public ToolAnswer<Answer> answer(Instant now, AnswerDelivery delivery) {
+        return answer(null, LeaguePick.CHOSEN, now, delivery);
+    }
+
+    private ToolAnswer<Answer> answer(LeagueWeek league, String reference, LeaguePick pick,
+            Instant now, AnswerDelivery delivery) {
         String name = league.league().name();
-        boolean chatPickedLeague = leagues.several();
-        boolean everyLeague = !chatPickedLeague && reference != null
-                && EVERY_LEAGUE.matcher(reference).find();
-        if (!chatPickedLeague && !everyLeague && !names(reference, name)) {
+        if (pick == LeaguePick.ONLY_LEAGUE && !names(reference, name)) {
             return ToolAnswer.unavailable(("I follow one league, %s, and no other, so I "
                     + "cannot read \"%s\"").formatted(name, reference));
         }
@@ -207,7 +209,8 @@ public class TeamWeaknesses {
             case SourceResult.Unavailable<RestOfSeason> unavailable ->
                 ToolAnswer.unavailable(unavailable.reason());
             case SourceResult.Ok<RestOfSeason> season -> explain(league, mine.get(),
-                    freeAgents, season.value(), everyLeague, now, delivery);
+                    freeAgents, season.value(), pick == LeaguePick.EVERY_LEAGUE_ASKED, now,
+                    delivery);
         };
     }
 
@@ -257,8 +260,12 @@ public class TeamWeaknesses {
         };
     }
 
+    /**
+     * True when the reference names this league, names none, or is the
+     * owner's words for every league, read the way the chat reads them.
+     */
     private static boolean names(String reference, String league) {
-        if (reference == null || reference.isBlank()) {
+        if (reference == null || reference.isBlank() || LeagueMentions.everyLeague(reference)) {
             return true;
         }
         String asked = reference.strip().toLowerCase(Locale.ROOT);

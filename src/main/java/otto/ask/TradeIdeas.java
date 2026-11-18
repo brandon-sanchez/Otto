@@ -174,7 +174,7 @@ public class TradeIdeas {
             Instant now, AnswerDelivery delivery) {
         Optional<TradeDeadline> deadline = deadlines.assess(league);
         if (deadline.filter(TradeDeadline::closed).isPresent()) {
-            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null, now, delivery);
+            ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(now, delivery);
             return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
                     : ToolAnswer.of(new Answer(read.facts().message()));
         }
