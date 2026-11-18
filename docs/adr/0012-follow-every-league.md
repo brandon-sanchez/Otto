@@ -48,9 +48,9 @@ This makes the move from one league to many free: nothing is renamed, nothing is
 
 Alert dedup keys repeat across leagues: two leagues can have the same illegal-lineup week. The outbox's key and lease documents belong to a league, so each league dedups its own Alerts. Alert ids stay global, from the one `alert-id-sequence`, so a button's callback data (`done:42`) still names exactly one Alert and still fits Telegram's 64-byte limit.
 
-Each delivery record keeps the league it was sent for. A tap looks up the delivery by its Alert id, binds that league, and only then acts, so Done, Ignore, Mute and View all options act on the league the Alert came from. A delivery stored before this change has no league, which reads as the config league, and that is where it came from.
+Each delivery record keeps the league it was sent for, and a delivery sent with no league bound keeps the config league. A tap looks up the delivery by its Alert id, binds that league, and only then acts, so Done, Ignore, Mute and View all options act on the league the Alert came from. A delivery stored before this change has no league, which reads as the config league, and that is where it came from.
 
-When Otto follows more than one league, every message it sends for a league starts with a `League: <name>` line. The Telegram client adds the line for whatever league is bound, so Alerts, waiver boards, follow-ups, fix confirmations and Otto's own outage reports all name their league without each one remembering to. When Otto follows one league, nothing is added, and every message reads as before.
+When Otto follows more than one league, every message it sends for a league starts with a `League: <name>` line. The Telegram client adds the line for whatever league is bound, so Alerts, waiver boards, follow-ups, fix confirmations and the outage report for one league's own Sleeper data all name their league without each one remembering to. An outage of a feed every league shares, such as nflverse or Sleeper's projections, is about no one league: Otto reports it once, with no league line, and dedups it in the config league's Event Log. When Otto follows one league, nothing is added, and every message reads as before.
 
 ## One Check, every league
 

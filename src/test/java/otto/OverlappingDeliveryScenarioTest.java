@@ -54,6 +54,9 @@ class OverlappingDeliveryScenarioTest extends WireSeamTest {
     @Autowired
     private Clock injectedClock;
 
+    @Autowired
+    private OttoProperties properties;
+
     @Test
     void anAlertTwoOverlappingChecksBothDeliverGoesOutOnce() throws Exception {
         telegram.stubFor(post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)).willReturn(
@@ -62,7 +65,7 @@ class OverlappingDeliveryScenarioTest extends WireSeamTest {
                         .withBody("{\"ok\":true,\"result\":{\"message_id\":1}}")
                         .withFixedDelay(1000)));
         AlertDeliveryOutbox otherContainer = new AlertDeliveryOutbox(store, ids, telegramClient,
-                eventLog, injectedClock);
+                eventLog, injectedClock, properties);
         Event alert = new Event(KEY, EventType.ALERT_SENT, clock.instant(), Map.of());
 
         CompletableFuture<List<Event>> first = CompletableFuture.supplyAsync(
