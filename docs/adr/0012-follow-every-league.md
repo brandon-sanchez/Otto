@@ -62,18 +62,42 @@ The work that calls no model costs a few conditional Sleeper GETs per league per
 
 ## Which league a chat answer is about
 
-A chat message picks its league before the Ask loop runs, in code, with no model call:
+Some answers are the same in every league: a player's snap share, his targets and air yards, his Next Gen Stats, his news, an NFL team's usage, the stat leaders and real-world ranks. Otto answers those without asking which league and without a `League: <name>` line. Other answers depend on the league: a roster, a lineup, waivers and FAAB, a trade, market value in the league's format, standings, the playoff race, Settings and Mutes, habits, keeper costs, and anything counted in fantasy points, because each league scores its own way.
+
+Code decides which league a message is about. The model never does:
 
 1. A message that names a league is about that league. It names one by its whole name, or by a distinctive word of its name or its format followed by "league", "team" or "one" ("the Canes league", "my dynasty league"), when only one followed league has that word or format. A bare "Mahomes" or "dynasty value" names no league, so a league called "Mahomes Mafia" does not take over a question about the player.
 2. A message that says "every league", "all my leagues", "both leagues" or "all my teams" is about every league. "All of them" and "both" count only as a short reply to "which league?": in a question they usually mean players.
 3. Otherwise the message is about the league the chat was last about, which Otto keeps for 24 hours, the length of the conversation window. After an answer about every league, the chat is about no one league, so the next question that names none is asked about.
-4. Otherwise, when Otto follows more than one league, it asks which one, and lists them by name. A short reply that names a league, even by a bare word ("dynasty"), or says "all of them", answers the question that was waiting.
+4. Otherwise, when Otto follows more than one league, the Ask loop starts with no league chosen. The model reads the question and calls tools as usual. If it calls only tools whose answer is the same in every league, the answer goes out. At the first call to a tool that needs a league, the loop stops before any tool of that round runs, and Otto asks which league, listing them by name. A short reply that names a league, even by a bare word ("dynasty"), or says "all of them", answers the question that was waiting. The question keeps waiting through an answer that needed no league.
 
 With one league followed, these steps always pick it, so the Ask loop sees exactly what it saw before.
 
-Each conversation turn records its league, and the Ask loop's window shows the model only the turns about the league in scope. An answer about one league's roster never steers an answer about another's. A turn stored before this change has no league, which reads as the config league.
+### Which tools need a league
 
-"All of them" runs one Ask loop per league, each with its league bound, at the same time on separate virtual threads. Each answer starts with its league's name, and each goes out as its own Telegram messages, split inside Telegram's 4,096-character limit. Running them side by side keeps the reply inside the webhook's 60-second timeout. Run one after another, three leagues could take three times the Ask deadline.
+One class, `ToolLeagueNeed`, lists every chat tool by name and says whether its answer depends on the league. A test fails when a chat tool is missing from the list. A tool the list does not know needs a league, because asking once too often is the safer mistake.
+
+| Needs no league | Needs a league |
+|---|---|
+| `get_player_news`, `get_team_usage`, `get_stat_leaders`, `manage_watchlist` | every lineup, waiver, trade, market-value, team, standings, habits, keeper and settings tool, and `get_player_ceiling` |
+| `get_player_stats`, unless the call is made for fantasy points | `get_player_stats` when what he asked about is fantasy points |
+| `get_league_rank` on a real-world stat, such as target share or pressure rate | `get_league_rank` on fantasy points a defense allows, or on the remaining schedule built from them |
+
+Two tools turn on their arguments. `get_player_stats` carries the user's wording in its `asked` argument, and a call whose wording is about fantasy points waits for a league. `get_league_rank` waits for a league when its stat is counted in fantasy points.
+
+The other way to do this was to sort questions by their words before the model runs. That needs a keyword list that grows with every new way to phrase a question, and it gets "how did Likely do?" wrong in both directions. The model already decides which tool answers a question, so the tool it picks is the most reliable sign of what the question depends on.
+
+While no league is chosen, the tools that need no league run with no league bound, which reads as the config league wherever a league is read. Their answers do not depend on it. The one trace is bookkeeping: the Decision Record of a stats answer and the Event Log entry of a Watchlist change are filed under the config league.
+
+### Headings and the conversation window
+
+A reply starts with its `League: <name>` line when the message named that league or the answer depended on it. A reply that is the same in every league has no such line, whether or not the chat is about a league at the time. A reply that called no tool, such as an answer to "why?", carries on from the exchange before it.
+
+Each conversation turn records its league, and the Ask loop's window shows the model only the turns about the league in scope, plus the turns that are about every league. An answer about one league's roster never steers an answer about another's. While no league is chosen, the window shows only the turns about every league. A turn stored before turns named their league has none, which reads as the config league.
+
+An answer that is the same in every league leaves the chat's league as it was: it neither sets one nor extends the 24 hours.
+
+"All of them" runs one Ask loop per league, each with its league bound, at the same time on separate virtual threads. A question asked about every league in one message first runs once with no league chosen, so an answer that is the same in every league is given once. "All of them" as the reply to "which league?" skips that run, because the question is already known to depend on the league. Each league's answer starts with its league's name, and each goes out as its own Telegram messages, split inside Telegram's 4,096-character limit. Running them side by side keeps the reply inside the webhook's 60-second timeout. Run one after another, three leagues could take three times the Ask deadline.
 
 The owner manages the list in chat with `/leagues`, or in words: "which leagues do you follow", "leave out the office league", "bring back the office league". These are recognized in code before the Ask loop, so they cost no model call and work when the model is down.
 
@@ -82,13 +106,14 @@ The owner manages the list in chat with `/leagues`, or in words: "which leagues 
 Model cost grows with what the owner sees, not with the number of leagues:
 
 - A Check calls a model only for an Alert or a board that is about to go out. Two leagues with Alerts in the same minute cost two runs, which is what two Alerts cost before.
-- League choice, the league list commands and the league heading are code, not model calls.
+- The league list commands and the league heading are code, not model calls. So is the league choice whenever the message or the conversation settles it.
+- A question that depends on a league, asked while none is chosen, costs one extra model call: the one that showed it needed a league. The question is asked again once the owner picks. A question asked about every league in one message costs the same one extra call.
 - "All of them" costs one Ask loop per league. It is the only path that multiplies cost, and only when the owner asks for it.
 - Discovery costs one Sleeper GET every six hours.
 
 ## Testing
 
-The scenario tests run two leagues side by side, a redraft league and a dynasty league, through the same stub Sleeper. They cover an Alert in each league that names its league, a button that acts on the right league, an "all of them" weaknesses answer, leaving a league out in chat and bringing it back, and the config league unchanged when it is the only one. Every scenario test written for one league still passes unchanged, which is the check that the config league behaves as before.
+The scenario tests run two leagues side by side, a redraft league and a dynasty league, through the same stub Sleeper. They cover an Alert in each league that names its league, a button that acts on the right league, an "all of them" weaknesses answer, a snap-share question and a stat-leaders question answered with no league question and no league heading, a fantasy-points question and a lineup question that still ask which league, leaving a league out in chat and bringing it back, and the config league unchanged when it is the only one. Every scenario test written for one league still passes unchanged, which is the check that the config league behaves as before.
 
 ## Not done here
 
