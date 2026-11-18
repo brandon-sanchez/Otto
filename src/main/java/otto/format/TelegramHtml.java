@@ -52,10 +52,15 @@ public final class TelegramHtml {
     private static final Pattern BACKTICKS = Pattern.compile("`([^`\\n]+)`");
 
     /**
-     * Emoji and the joiners that build them. Facts are compared without
+     * Emoji, arrows and the joiners that build them, and nothing that can
+     * carry a fact such as a degree sign. Facts are compared without
      * them, so a coloured dot never counts as part of a name or number.
      */
-    private static final Pattern EMOJI = Pattern.compile("[\\p{So}\\x{FE0F}\\x{200D}]+[ \\t]?");
+    private static final Pattern EMOJI = Pattern.compile("[\\x{1F000}-\\x{1FAFF}"
+            + "\\x{2190}-\\x{21FF}\\x{2300}-\\x{23FF}\\x{2600}-\\x{27BF}\\x{2B00}-\\x{2BFF}"
+            + "\\x{FE0F}\\x{200D}]+");
+    private static final Pattern LEADING_SPACES = Pattern.compile("(?m)^[ \\t]+");
+    private static final Pattern REPEATED_SPACES = Pattern.compile(" {2,}");
 
     private TelegramHtml() {
     }
@@ -113,7 +118,9 @@ public final class TelegramHtml {
      * {@link #visible} text of its normalised form, without emoji.
      */
     public static String words(String text) {
-        return EMOJI.matcher(visible(normalize(text))).replaceAll("");
+        String words = EMOJI.matcher(visible(normalize(text))).replaceAll(" ");
+        words = LEADING_SPACES.matcher(words).replaceAll("");
+        return REPEATED_SPACES.matcher(words).replaceAll(" ");
     }
 
     private static String withoutMarkdown(String text) {
@@ -143,7 +150,8 @@ public final class TelegramHtml {
                     html.append(escape(tag.group()));
                 }
                 at = tag.end();
-            } else if (next == '&' && entity.region(at, text.length()).lookingAt()) {
+            } else if (next == '&' && entity.region(at, text.length()).lookingAt()
+                    && !decode(entity.group()).isEmpty()) {
                 html.append(entity.group());
                 at = entity.end();
             } else {
@@ -177,6 +185,9 @@ public final class TelegramHtml {
             return true;
         }
         if (DROPPED.contains(name)) {
+            return true;
+        }
+        if (tag.group().endsWith("/>")) {
             return true;
         }
         if (!SUPPORTED.contains(name)) {
@@ -229,7 +240,10 @@ public final class TelegramHtml {
                 boolean hex = entity.startsWith("&#x");
                 int codePoint = Integer.parseInt(
                         entity.substring(hex ? 3 : 2, entity.length() - 1), hex ? 16 : 10);
-                yield Character.isValidCodePoint(codePoint) ? Character.toString(codePoint) : "";
+                boolean character = Character.isValidCodePoint(codePoint) && codePoint != 0
+                        && (codePoint < Character.MIN_SURROGATE
+                                || codePoint > Character.MAX_SURROGATE);
+                yield character ? Character.toString(codePoint) : "";
             }
         };
     }

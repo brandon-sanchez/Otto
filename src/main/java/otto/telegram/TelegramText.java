@@ -173,6 +173,9 @@ public final class TelegramText {
         if (entity >= 0 && line.indexOf(';', entity) >= end) {
             end = entity;
         }
+        if (end > 0 && Character.isHighSurrogate(line.charAt(end - 1))) {
+            end--;
+        }
         return end > 0 ? end : LIMIT;
     }
 

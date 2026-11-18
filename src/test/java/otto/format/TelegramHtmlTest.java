@@ -44,6 +44,8 @@ class TelegramHtmlTest {
             "<b onclick=\"x\">y</b>|&lt;b onclick=\"x\"&gt;y",
             "<blockquote expandable>why</blockquote>|<blockquote expandable>why</blockquote>",
             "<a href=\"https://sleeper.com\">Sleeper</a>|<a href=\"https://sleeper.com\">Sleeper</a>",
+            "Team <b/> rest|Team  rest",
+            "bad &#xD800; and &#0; entities|bad &amp;#xD800; and &amp;#0; entities",
             "<a>no link</a>|&lt;a&gt;no link"})
     void onlyBalancedSupportedTagsSurvive(String text, String html) {
         assertThat(TelegramHtml.normalize(text)).isEqualTo(html);
@@ -65,6 +67,12 @@ class TelegramHtmlTest {
     void theVisibleTextHasNoTagsAndDecodedEntities() {
         assertThat(TelegramHtml.visible("🟢 Carries: <b>4th</b> of 79 &amp; &lt;3 &#127944;"))
                 .isEqualTo("🟢 Carries: 4th of 79 & <3 🏈");
+    }
+
+    @Test
+    void theWordsAFactCheckReadsKeepSymbolsThatCarryFacts() {
+        assertThat(TelegramHtml.words("It is 72° and windy; Kelce🔴out")).isEqualTo(
+                "It is 72° and windy; Kelce out");
     }
 
     @Test
