@@ -14,11 +14,13 @@ import otto.advice.AdvicePrompt;
 import otto.advice.AnswerDelivery;
 import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
+import otto.advice.EvidenceItem;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerLookup;
+import otto.lineup.LeagueScoring;
 import otto.matchup.MatchupSources;
 import otto.matchup.MatchupSourcesFactory;
 import otto.matchup.Position;
@@ -48,7 +50,7 @@ public class PlayerStatsAnswers {
 
             Lead with exactly what he asked, in a layout he can scan, one fact to a line.
             When he asks for a stat, the first line is one short sentence with that number
-            in bold and its sample, in the shape: He played <b>N%</b> of snaps in week W
+            in bold and its sample, in the shape: He played <b>N%%</b> of snaps in week W
             (S snaps). Then add at most two of his season ranks that say the most
             about that stat or his role, each as its rank item's "line" fact, word for word.
             When he asks for ranks, the first line is a rank item's "header" fact, then the
@@ -63,22 +65,31 @@ public class PlayerStatsAnswers {
             zero: if he asked about it, say plainly that you don't have it and give the
             reason the evidence states, and never say you cannot see a stat the evidence
             holds. Add at most one short line of reason or context, never a paragraph.
+            When the evidence holds a league-points item, he asked for fantasy points: the
+            first line is its "%s" fact word for word, or its "%s" fact when he
+            asked for a per-game average; add its "%s" fact, word for word, when he
+            asks where he ranks. Those are his points in his league's scoring; never give
+            ffopportunity's full-PPR figures as his points.
             Never write a confidence label such as High or Medium. Stay under "maxLength"
             characters.
-            """ + FriendVoice.RULE
+            """.formatted(LeaguePointsEvidence.LINE_FACT, LeaguePointsEvidence.PER_GAME_LINE_FACT,
+                    LeaguePointsEvidence.RANK_LINE_FACT) + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
     private final UserWeekLoader loader;
     private final PlayerLookup lookup;
     private final MatchupSourcesFactory sources;
+    private final LeaguePoints leaguePoints;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
 
-    public PlayerStatsAnswers(UserWeekLoader loader, PlayerLookup lookup,
-            MatchupSourcesFactory sources, CheckedAdvice advice, AdviceCheck check) {
+    PlayerStatsAnswers(UserWeekLoader loader, PlayerLookup lookup,
+            MatchupSourcesFactory sources, LeaguePoints leaguePoints, CheckedAdvice advice,
+            AdviceCheck check) {
         this.loader = loader;
         this.lookup = lookup;
         this.sources = sources;
+        this.leaguePoints = leaguePoints;
         this.advice = advice;
         this.form = AdviceForm.of(INSTRUCTIONS, check::check);
     }
@@ -99,10 +110,14 @@ public class PlayerStatsAnswers {
      * <p>Side effects: reads the stored nflverse documents and the player
      * directory, makes one or two model calls, and saves one Decision
      * Record of kind {@link RunKind#PLAYER_STATS} once the stats are read.
+     * With {@code fantasyPoints}, also reads Sleeper's stats for the weeks
+     * and the bound league's matchups and rosters (see {@link LeaguePoints}).
      *
      * @param reference the player, by name or Sleeper player id
      * @param span the week, recent games or season the stats cover
      * @param asked what the user asked about, in his words, or null
+     * @param fantasyPoints true when he asked for fantasy points, which the
+     *        answer then gives in the bound league's own scoring
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in words fit to
@@ -110,17 +125,19 @@ public class PlayerStatsAnswers {
      *         position, the week is a bye or not finished, no source holds
      *         his games, or the answer failed its checks
      */
-    public ToolAnswer<Answer> answer(String reference, StatsSpan span, String asked, Instant now,
-            AnswerDelivery delivery) {
+    public ToolAnswer<Answer> answer(String reference, StatsSpan span, String asked,
+            boolean fantasyPoints, Instant now, AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
-                    league -> read(found.player(), league, span, asked, now, delivery));
+                    league -> read(found.player(), league, span, asked, fantasyPoints, now,
+                            delivery));
         };
     }
 
     private ToolAnswer<Answer> read(DirectoryPlayer player, SleeperAdapter.League league,
-            StatsSpan span, String asked, Instant now, AnswerDelivery delivery) {
+            StatsSpan span, String asked, boolean fantasyPoints, Instant now,
+            AnswerDelivery delivery) {
         Optional<Position> position = Position.of(player.position());
         if (position.isEmpty()) {
             return ToolAnswer.unavailable(("I keep usage stats for quarterbacks, running backs, "
@@ -150,8 +167,27 @@ public class PlayerStatsAnswers {
         if (window.facts() == null) {
             return ToolAnswer.unavailable(window.unavailable());
         }
-        return written(subject(player, gsisId.get(), position.get(), team, window.facts(),
-                usage.get(), games, asked), opened, usage.get().season(), league, now, delivery);
+        PlayerStatsEvidence.Subject subject = subject(player, gsisId.get(), position.get(),
+                team, window.facts(), usage.get(), games, asked);
+        if (subject.games().isEmpty()) {
+            return ToolAnswer.unavailable(nothingPlayed(subject));
+        }
+        Optional<EvidenceItem> points = fantasyPoints
+                ? Optional.of(leaguePoints(subject, league, usage.get(), now))
+                : Optional.empty();
+        return written(subject, points, opened, usage.get().season(), league, now, delivery);
+    }
+
+    private EvidenceItem leaguePoints(PlayerStatsEvidence.Subject subject,
+            SleeperAdapter.League league, PlayerUsage usage, Instant now) {
+        LeagueScoring scoring = new LeagueScoring(league.scoringSettings());
+        if (scoring.isEmpty()) {
+            return LeaguePointsEvidence.unscored(subject, league.name(), now);
+        }
+        LeaguePoints.Report report = leaguePoints.read(new LeaguePoints.Request(scoring,
+                usage.season(), !usage.priorSeasonFinal(), subject.player(), subject.team(),
+                subject.window().weeks()));
+        return LeaguePointsEvidence.item(subject, report, league.name(), scoring, now);
     }
 
     private static PlayerStatsEvidence.Subject subject(DirectoryPlayer player, String gsisId,
@@ -177,12 +213,10 @@ public class PlayerStatsAnswers {
     }
 
     private ToolAnswer<Answer> written(PlayerStatsEvidence.Subject subject,
-            MatchupSources opened, String season, SleeperAdapter.League league, Instant now,
-            AnswerDelivery delivery) {
-        if (subject.games().isEmpty()) {
-            return ToolAnswer.unavailable(nothingPlayed(subject));
-        }
-        EvidenceBundle bundle = PlayerStatsEvidence.bundle(subject, opened, season, now);
+            Optional<EvidenceItem> leaguePoints, MatchupSources opened, String season,
+            SleeperAdapter.League league, Instant now, AnswerDelivery delivery) {
+        EvidenceBundle bundle = PlayerStatsEvidence.bundle(subject, leaguePoints, opened, season,
+                now);
         DirectoryPlayer player = subject.player();
         return advice.write(bundle, form, new CheckedAdvice.Run(RUN_ID_PREFIX,
                         List.of(player.playerId()), RunKind.PLAYER_STATS, league,

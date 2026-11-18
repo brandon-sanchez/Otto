@@ -35,6 +35,7 @@ public class TeamTools {
         this.clock = clock;
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_standings", description = """
             The league table: every team with its record, points for and
             against, in seed order, and where the user sits. Call this
@@ -44,6 +45,7 @@ public class TeamTools {
                 week -> ToolAnswer.of(league.standings(week)));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "analyze_playoff_race", description = """
             What each team still needs: who has clinched a playoff place,
             who is out, and how many of his remaining games the user must
@@ -53,6 +55,7 @@ public class TeamTools {
         return ToolAnswer.from(loader.leagueWeek(), league::playoffRace);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_team_roster", description = """
             Any league mate's team: the lineup they have set with
             projections, their bench, IR and taxi sections, and where they are deep or short
@@ -65,6 +68,7 @@ public class TeamTools {
                 roster -> league.teamRoster(week, roster, clock.instant())));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "review_habits", description = """
             How the user manages his team, measured from his own results
             this season: points left on his bench, how following or
@@ -81,6 +85,7 @@ public class TeamTools {
                 HabitService.Answer.Written::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_team_weaknesses", description = """
             Where the user's team is strong, thin or in surplus, position
             by position against every team in his league, bench and depth
@@ -101,6 +106,7 @@ public class TeamTools {
                 TeamWeaknesses.Answer::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_team_directions", description = """
             Every team in the user's league labelled contending, in the
             middle or rebuilding, his own included, each with a one-line
@@ -114,6 +120,7 @@ public class TeamTools {
                 TeamDirectionAnswers.Answer::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_team_direction", description = """
             The direction the user gives his own team: contending, middle
             or rebuilding. Otto uses his choice in place of the label it
