@@ -158,8 +158,9 @@ public final class RankWords {
         String span = weeks.firstWeek() == weeks.lastWeek()
                 ? "week %d".formatted(weeks.firstWeek())
                 : "weeks %d–%d".formatted(weeks.firstWeek(), weeks.lastWeek());
-        return "%s's %s ranks among %ss (%s)".formatted(name,
-                weeks.priorSeasonFinal() ? "last season's" : "season", position.name(), span);
+        return weeks.priorSeasonFinal()
+                ? "%s's ranks among %ss last season (%s)".formatted(name, position.name(), span)
+                : "%s's season ranks among %ss (%s)".formatted(name, position.name(), span);
     }
 
     /** Returns one player of the position in words, such as "running back". */

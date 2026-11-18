@@ -29,8 +29,9 @@ public final class FriendVoice {
             The message is shown as Telegram HTML. Bold the one thing he asked for, such as \
             the rank, the stat or the player to start, as <b>like this</b>. Never write \
             Markdown such as ** or #, and use no other tag. When the evidence gives a ready \
-            "line", copy it exactly, coloured dot and bold included; never add a coloured \
-            dot of your own.
+            "line", copy it exactly, coloured dot and bold included, and never change a \
+            line's dot. Use a coloured dot only where these instructions or the evidence \
+            give one.
             The examples below show style only; never use them as facts.
             Bad: "Start: him. Reason: higher projection. Risk: questionable tag."
             Bad: "I'd start him this week. He's projected to outscore the player he'd \

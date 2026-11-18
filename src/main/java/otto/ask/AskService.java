@@ -105,9 +105,10 @@ public class AskService {
             supplied it.
 
             A trade answer starts with the tool's "headline" word for word on its own
-            line. Then "You give" and "You get", each followed by one player per line,
-            and one line per side on what it does to the starting lineup, with 🟢 when
-            it gains points and 🔴 when it loses them. Then both complete post-trade
+            line; with no headline, it gives no verdict. Then "You give" and "You get",
+            each followed by one player per line, and one line per side on what it
+            does to the starting lineup, with 🟢 when it gains points and 🔴 when it
+            loses them. Then both complete post-trade
             rosters under ----- YOUR ROSTER AFTER TRADE ----- and
             ----- OTHER TEAM AFTER TRADE -----. If the tool cannot construct both
             rosters confidently, withhold the verdict and state why.

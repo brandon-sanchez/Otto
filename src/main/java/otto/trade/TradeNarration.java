@@ -62,7 +62,7 @@ class TradeNarration {
         TradeMath.Pricing pricing = priced.pricing();
         TradeCall call = priced.call();
         return new TradeEvaluator.TradeEvaluation(
-                call.headline(),
+                unpriced(priced) ? null : call.headline(),
                 deadline.map(TradeDeadline::message).orElse(null),
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),
@@ -85,12 +85,18 @@ class TradeNarration {
                 notes(leagueWeek, basis, partner, gets, gives, priced));
     }
 
+    /** True when nothing on either side is priced, so there is no verdict to give. */
+    private static boolean unpriced(PricedTrade priced) {
+        TradeMath.Pricing pricing = priced.pricing();
+        return !priced.call().marketDecides()
+                && Math.max(pricing.myGain().total(), pricing.myCost().total()) == 0;
+    }
+
     private static List<String> notes(LeagueWeek leagueWeek, TradeEvaluator.Basis basis,
             RosterSnapshot partner, List<TradePiece> gets, List<TradePiece> gives,
             PricedTrade priced) {
         TradeMath.Pricing pricing = priced.pricing();
         TradeCall call = priced.call();
-        double larger = Math.max(pricing.myGain().total(), pricing.myCost().total());
         List<String> notes = new ArrayList<>(basis.season().notes());
         notes.add(basis.shape().describe());
         notes.add("Each player's points are then multiplied by his position's scarcity and by "
@@ -104,7 +110,7 @@ class TradeNarration {
                 + "point different ways. The net asks whether the value is fair, and counts "
                 + "positional scarcity. The starting lineup asks what the team would actually "
                 + "score, and counts none");
-        if (!call.marketDecides() && larger == 0) {
+        if (unpriced(priced)) {
             notes.add("Nothing on either side of this trade carries a price above Replacement "
                     + "Level, so there is no verdict here to read");
         } else if (VerdictBand.EVEN.equals(call.band().verdict())) {

@@ -61,8 +61,12 @@ public class AdviceCheck {
 
     private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
 
-    /** Where one sentence ends; a decimal point is never followed by a space. */
-    private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
+    /**
+     * Where one sentence or line ends; a decimal point is never followed
+     * by a space. A line break ends one, because an answer laid out one
+     * fact to a line often leaves its lines without a period.
+     */
+    private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+|\\s*\\n\\s*");
 
     private final PlayerDirectoryStore directory;
 

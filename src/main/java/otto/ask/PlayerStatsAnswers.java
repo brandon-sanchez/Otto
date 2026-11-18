@@ -48,8 +48,8 @@ public class PlayerStatsAnswers {
 
             Lead with exactly what he asked, in a layout he can scan, one fact to a line.
             When he asks for a stat, the first line is one short sentence with that number
-            in bold and its sample, such as: Isaiah Likely played <b>88%</b> of snaps in
-            week 10 (57 snaps). Then add at most two of his season ranks that say the most
+            in bold and its sample, in the shape: He played <b>N%</b> of snaps in week W
+            (S snaps). Then add at most two of his season ranks that say the most
             about that stat or his role, each as its rank item's "line" fact, word for word.
             When he asks for ranks, the first line is a rank item's "header" fact, then the
             "line" fact of every rank he asked about, word for word, the ones he named
