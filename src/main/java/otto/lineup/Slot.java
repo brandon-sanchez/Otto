@@ -1,8 +1,10 @@
 package otto.lineup;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * One starting lineup slot with the positions it accepts. Built from
@@ -31,6 +33,12 @@ public record Slot(String name, Set<String> eligible) {
             PlayerPositions.KICKER, Set.of(PlayerPositions.KICKER),
             PlayerPositions.DEFENSE, Set.of(PlayerPositions.DEFENSE));
 
+    /** The plain names of the slots whose Sleeper code does not spell them out. */
+    private static final Map<String, String> LABELS = Map.of(
+            "SUPER_FLEX", "Superflex",
+            "REC_FLEX", "WR/TE Flex",
+            "WRRB_FLEX", "WR/RB Flex");
+
     /**
      * The starting slots of a league, in the order Sleeper aligns the
      * starters array to.
@@ -41,6 +49,30 @@ public record Slot(String name, Set<String> eligible) {
                 .map(position -> new Slot(position,
                         ELIGIBILITY.getOrDefault(position, ALL_POSITIONS)))
                 .toList();
+    }
+
+    /**
+     * Returns the slot's name as the user reads it: "Superflex" for
+     * SUPER_FLEX, "Flex" for FLEX, "WR/TE Flex" for REC_FLEX. A position
+     * code such as QB or DEF stays as it is, and any other name with an
+     * underscore is written as words, such as "IDP Flex".
+     */
+    public String label() {
+        return label(name);
+    }
+
+    /**
+     * Returns a Sleeper roster position as the user reads it; see
+     * {@link #label()}.
+     */
+    public static String label(String name) {
+        String known = LABELS.get(name);
+        if (known != null) {
+            return known;
+        }
+        return Arrays.stream(name.split("_"))
+                .map(word -> word.equals("FLEX") ? "Flex" : word)
+                .collect(Collectors.joining(" "));
     }
 
     /**

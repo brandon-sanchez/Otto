@@ -395,9 +395,9 @@ final class DecisionEvidence {
         builder.addProblem(problem);
         List<LineupMove> moves = builder.legalStarts(slotIndex);
         return builder.decisionDraft(task + " He is in your %s slot, so also advise whether to "
-                        .formatted(slot.name()) + "replace him there from legalMoves.", moves,
+                        .formatted(slot.label()) + "replace him there from legalMoves.", moves,
                 true, plans.legal(), unknowns,
-                Optional.of(TelegramHtml.bold("Replace him in your %s slot".formatted(slot.name()))
+                Optional.of(TelegramHtml.bold("Replace him in your %s slot".formatted(slot.label()))
                         + ": " + announcement + ".\n" + builder.bestOption(moves)), false);
     }
 

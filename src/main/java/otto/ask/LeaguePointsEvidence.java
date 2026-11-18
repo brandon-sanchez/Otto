@@ -32,6 +32,17 @@ final class LeaguePointsEvidence {
     /** The fact holding his rank at his position as a coloured tier. */
     static final String RANK_LINE_FACT = "rankLine";
 
+    /**
+     * The fact holding his season points rank as one row of a ranks
+     * answer, such as "🟢 Fantasy points: <b>RB6</b> of 147 (159.1)". Only
+     * a season's points have one, because the rows beside it are season
+     * ranks.
+     */
+    static final String RANK_ROW_FACT = "rankRow";
+
+    /** What every league-points item's id starts with. */
+    static final String ID_PREFIX = "stats-league-points-";
+
     private static final String UNKNOWN = "unknown: ";
 
     private static final String SAT_OUT = "Sleeper's stats show him not playing in week ";
@@ -69,8 +80,13 @@ final class LeaguePointsEvidence {
         report.rank().ifPresent(rank -> {
             facts.put(Ordinal.RANK_FACT, Ordinal.of(rank.rank()));
             facts.put(RANK_LINE_FACT, rankLine(subject, rank, leagueName, report.total()));
+            if (subject.window().reach() == StatsSpan.Reach.SEASON) {
+                facts.put(RANK_ROW_FACT, "%sFantasy points: <b>%s%d</b> of %d (%s)".formatted(
+                        dot(rank), subject.position().name(), rank.rank(), rank.of(),
+                        points(report.total())));
+            }
         });
-        return new EvidenceItem("stats-league-points-" + subject.id(), "sleeper:stats",
+        return new EvidenceItem(ID_PREFIX + subject.id(), "sleeper:stats",
                 Optional.empty(), now, "what he scored in %s's own scoring".formatted(leagueName),
                 facts);
     }
@@ -78,7 +94,7 @@ final class LeaguePointsEvidence {
     /** Returns the item for a league whose scoring settings Sleeper left empty. */
     static EvidenceItem unscored(PlayerStatsEvidence.Subject subject, String leagueName,
             Instant now) {
-        return new EvidenceItem("stats-league-points-" + subject.id(), "sleeper:league",
+        return new EvidenceItem(ID_PREFIX + subject.id(), "sleeper:league",
                 Optional.empty(), now, "what he scored in %s's own scoring".formatted(leagueName),
                 Map.of("league", leagueName, "fantasyPoints", UNKNOWN
                         + "Sleeper sent no scoring settings for this league"));
@@ -136,12 +152,16 @@ final class LeaguePointsEvidence {
     private static String rankLine(PlayerStatsEvidence.Subject subject, LeaguePoints.Rank rank,
             String leagueName, double total) {
         Position position = subject.position();
-        String dot = rank.teams().isPresent()
+        return "%s<b>%s%d</b> of %d %s in %s scoring (%s points, %s)".formatted(
+                dot(rank), position.name(), rank.rank(), rank.of(), position.plural(),
+                TelegramHtml.escape(leagueName), points(total), subject.window().label());
+    }
+
+    /** Returns the tier dot with the space after it, or nothing with no league size. */
+    private static String dot(LeaguePoints.Rank rank) {
+        return rank.teams().isPresent()
                 ? Dot.tier(rank.rank(), rank.teams().getAsInt()).emoji() + " "
                 : "";
-        return "%s<b>%s%d</b> of %d %s in %s scoring (%s points, %s)".formatted(dot,
-                position.name(), rank.rank(), rank.of(), position.plural(),
-                TelegramHtml.escape(leagueName), points(total), subject.window().label());
     }
 
     private static String scoredBy(List<LeaguePoints.Scored> scored) {

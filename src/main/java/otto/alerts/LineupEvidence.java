@@ -136,7 +136,7 @@ final class LineupEvidence {
         problem.put("slot", slot.name());
         builder.addProblem(problem);
         String fact = "%s in your %s slot.".formatted(TelegramHtml.bold("%s is still %s"
-                .formatted(builder.name(playerId), builder.designation(playerId))), slot.name());
+                .formatted(builder.name(playerId), builder.designation(playerId))), slot.label());
         return builder.draft("Advise whether to keep this starter in or replace him.",
                 builder.legalStarts(slotIndex), true, kickoff, Optional.of(fact),
                 false);
@@ -206,7 +206,7 @@ final class LineupEvidence {
                         .thenComparing(Comparator.naturalOrder()))
                 .forEach(playerId -> {
                     addPlayer(playerId, "playable bench option for the %s slot"
-                            .formatted(slot.name()), !moves.isEmpty());
+                            .formatted(slot.label()), !moves.isEmpty());
                     moves.add(new LineupMove(playerId, bench, slot.name()));
                 });
         return moves;
@@ -227,7 +227,7 @@ final class LineupEvidence {
     }
 
     static String fillSlot(Slot slot) {
-        return TelegramHtml.bold("Fill your %s slot".formatted(slot.name()));
+        return TelegramHtml.bold("Fill your %s slot".formatted(slot.label()));
     }
 
     void addPlayer(String playerId, String reason) {
@@ -294,7 +294,7 @@ final class LineupEvidence {
     private String lineupRole(String playerId) {
         int index = roster.starters().indexOf(playerId);
         if (index >= 0 && index < week.startingSlots().size()) {
-            return "starting in the %s slot".formatted(week.startingSlots().get(index).name());
+            return "starting in the %s slot".formatted(week.startingSlots().get(index).label());
         }
         if (roster.reserve().contains(playerId)) {
             return "on IR";

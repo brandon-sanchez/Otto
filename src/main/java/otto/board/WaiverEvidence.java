@@ -387,7 +387,7 @@ public class WaiverEvidence {
             return Facts.UNKNOWN;
         }
         return standings.stream()
-                .map(standing -> "%s: %s, %s, league median %s".formatted(standing.slot(),
+                .map(standing -> "%s: %s, %s, league median %s".formatted(Slot.label(standing.slot()),
                         standing.points().map(points -> Facts.points(points) + " points "
                                 + basis).orElse("points unknown"),
                         standing.rank().map(rank -> Ordinal.standing(rank,

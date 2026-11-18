@@ -165,6 +165,9 @@ class LineupWeekScenarioTest extends WireSeamTest {
                 .contains("Patrick Mahomes and Travis Kelce are on bye")
                 .contains("Start <b>Dallas Goedert</b> over Travis Kelce")
                 .contains("QB: Jordan Love")
+                .contains("Superflex: ")
+                .doesNotContain("SUPER_FLEX")
+                .doesNotContain("FLEX:")
                 .contains("139.0")
                 .contains("112.0");
     }

@@ -103,7 +103,7 @@ public class BenchEdgeDetector {
                 List.of("%s projects %s points and %s projects %s".formatted(
                                 inName, inPoints, outName, outPoints),
                         "Your best legal lineup makes this swap in the %s slot"
-                                .formatted(slotName)),
+                                .formatted(Slot.label(slotName))),
                 List.of("Projections are estimates, so a %s-point edge can flip on game day"
                         .formatted(edgeText)));
 

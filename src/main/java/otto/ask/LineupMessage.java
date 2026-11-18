@@ -18,6 +18,7 @@ import otto.format.TelegramHtml;
 import otto.league.UserWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.ProjectionTable;
+import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
 
 /**
@@ -190,7 +191,7 @@ final class LineupMessage {
         List<String> lines = new ArrayList<>();
         lines.add("----- STARTERS -----");
         for (LineupPlanner.SlotLine line : plan.optimal()) {
-            lines.add("%s: %s".formatted(line.slot(), line.player() == null
+            lines.add("%s: %s".formatted(Slot.label(line.slot()), line.player() == null
                     ? "Empty"
                     : player(line.player(), line.projection(), line.note())
                             + (starting.contains(line.player()) ? " " + START : "")));

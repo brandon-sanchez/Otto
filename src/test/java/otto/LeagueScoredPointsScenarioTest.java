@@ -187,4 +187,21 @@ class LeagueScoredPointsScenarioTest extends WireSeamTest {
                 fact("pointsByWeek", "week 1 6.0, week 2 8.0, week 4 8.0, week 5 16.0"),
                 fact("rank", "2nd"));
     }
+
+    @Test
+    void aSeasonRanksQuestionLeadsWithHisUsageRanksAndKeepsPointsToOneRow() {
+        ask("What were Isaiah Likely's season ranks among TEs?",
+                "{\"player\":\"Isaiah Likely\",\"asked\":\"season ranks among TEs\","
+                        + "\"fantasyPoints\":true}",
+                "Isaiah Likely has <b>38.0</b> points over 4 games (9.5 per game).\n\n"
+                        + "Isaiah Likely's season ranks among TEs (weeks 1–5)\n\n"
+                        + "🟢 <b>TE2</b> of 4 tight ends in Raising Canes Demon scoring "
+                        + "(38.0 points, the season so far, weeks 1 to 5 of 2026)");
+
+        theOwnerReadsOnly("Isaiah Likely's season ranks among TEs (weeks 1–5)\n"
+                + "🟡 Snap share: <b>2nd</b> of 3 (66%)\n"
+                + "🟡 Target share: <b>2nd</b> of 3 (18%)\n"
+                + "🟡 Targets per game: <b>2nd</b> of 3 (5.5)\n"
+                + "🟢 Fantasy points: <b>TE2</b> of 4 (38.0)");
+    }
 }
