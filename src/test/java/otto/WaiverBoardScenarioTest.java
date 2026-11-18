@@ -593,6 +593,17 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void pointsAPlayerScoredAreAStatNotABoardScore() {
+        tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(IRVING),
+                List.of(entry("10003", "Cade Otton scored 10.0 points in week 1 and is a "
+                        + "tight end stash."))));
+
+        DecisionRecord record = onlyBoardRecord();
+        assertThat(record.exchanges().getFirst().checkFailures()).isEmpty();
+        assertThat(record.outcome()).isInstanceOf(Outcome.SentBoard.class);
+    }
+
+    @Test
     void aBoardWithNothingWorthClaimingOpensWithTheHold() {
         String hold = "Hold this week and save your FAAB: your starters are covered.";
         tuesdayEveningWithTheModelAnswering(board(true, hold, List.of(),
