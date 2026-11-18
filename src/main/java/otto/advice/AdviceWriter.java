@@ -47,17 +47,18 @@ public class AdviceWriter {
             """ + RankConvention.ADVICE_RULES + """
 
             Decide what the user should do. Choose one of "legalMoves", or no change
-            when "noChangeAllowed" is true. Lead with the recommendation, then explain
-            it in two to four sentences of plain text that tell him why, the way you
-            would say it out loud.
+            when "noChangeAllowed" is true. Put the recommendation on the first line,
+            in bold, such as <b>Start one player over another</b>. Then give the
+            reason that matters most in one short line, and at most one more short
+            line for what is uncertain or what would change the call.
 
             """;
 
     private static final String PLAYER_DECISION = """
             Also decide what to do with the player the decision is about: choose
-            exactly one of "rosterPlans" by its "id", lead with it, and explain it in
-            one natural paragraph that connects his news, the league's format and
-            rules, and the roster. Name every player the plan drops or adds. Weigh the
+            exactly one of "rosterPlans" by its "id", lead with it in bold, and explain
+            it in two or three short lines that connect his news, the league's format
+            and rules, and the roster. Name every player the plan drops or adds. Weigh the
             league's format: redraft is about this season, dynasty and keeper leagues
             also value the seasons after it. A missing projection or report is
             unknown, never zero. When "unknowns" lists evidence ids, the decision

@@ -185,7 +185,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         checkWithAdvice(BENCH_AND_KEEP);
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(BENCH_AND_KEEP_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(BENCH_AND_KEEP_MESSAGE))));
         assertThat(onlyRoleSlipRecord().outcome())
                 .isEqualTo(new Outcome.Sent(BENCH_AND_KEEP_MESSAGE));
         assertThat(alertsSent()).extracting(Event::key)
@@ -248,7 +248,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         checkWithProjections("sleeper/projections-role-slip-tempting-drop.json", KEEP);
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(KEEP_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(KEEP_MESSAGE))));
         assertThat(onlyRoleSlipRecord().outcome()).isEqualTo(new Outcome.Sent(KEEP_MESSAGE));
     }
 
@@ -266,7 +266,8 @@ class RoleSlipScenarioTest extends WireSeamTest {
         assertThat(alertsSent()).filteredOn(event -> event.key().startsWith("alert:edge"))
                 .singleElement()
                 .satisfies(edge -> assertThat(edge.facts())
-                        .containsEntry("text", BENCH_AND_KEEP_MESSAGE));
+                        .containsEntry("text", "⬆️ <b>Your lineup can score more</b>\n"
+                                + BENCH_AND_KEEP_MESSAGE));
     }
 
     @Test
@@ -282,7 +283,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo(AdviceStubs.message(AdviceStubs.JACOBS_OVER_COOK)))));
+                        OutboundStubs.underHeadline(AdviceStubs.message(AdviceStubs.JACOBS_OVER_COOK)))));
         assertThat(alertsSent()).extracting(Event::key)
                 .contains("alert:edge:2026-w2:5850-over-8138")
                 .doesNotContain("alert:role-slip:8138:usage-w3");
@@ -333,7 +334,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(BENCH_AND_KEEP_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(BENCH_AND_KEEP_MESSAGE))));
         List<DecisionRecord> records = roleSlipRecords();
         assertThat(records).hasSize(3);
         assertThat(records.getLast().outcome()).isEqualTo(new Outcome.Withheld(
@@ -355,7 +356,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(BENCH_AND_KEEP_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(BENCH_AND_KEEP_MESSAGE))));
     }
 
     @Test

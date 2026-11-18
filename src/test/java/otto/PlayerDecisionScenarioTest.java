@@ -143,7 +143,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
         mccaffreyRuledOut(FOUR_WEEKS, answer(REDRAFT_IR, "ir", "\"4034\", \"5850\"", ""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(REDRAFT_IR)))
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(REDRAFT_IR)))
                 .withRequestBody(matchingJsonPath(
                         "$.reply_markup.inline_keyboard[0][0].callback_data",
                         containing("done:")))
@@ -177,7 +177,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
         mccaffreyRuledOut(TEN_WEEKS, answer(DYNASTY_IR, "ir", "\"4034\", \"5850\"", ""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(DYNASTY_IR))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(DYNASTY_IR))));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("format\\\":\\\"dynasty"))
                 .withRequestBody(containing(TEN_WEEKS)));
@@ -197,7 +197,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
                 answer(CONDITIONAL_HOLD, "hold", "\"4034\", \"5850\"", "\"unknown-recovery\""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(CONDITIONAL_HOLD))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(CONDITIONAL_HOLD))));
         DecisionRecord record = onlyRecord();
         assertThat(record.exchanges()).hasSize(2);
         ModelExchange first = record.exchanges().getFirst();
@@ -251,7 +251,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
                 answer(named, "ir-add", "\"4034\", \"5850\", \"7588\"", ""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(named))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(named))));
         assertThat(onlyRecord().exchanges().getFirst().checkFailures())
                 .anySatisfy(failure -> assertThat(failure).contains("Kenneth Gainwell"));
     }
@@ -266,7 +266,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
                 "\"4034\", \"5850\", \"6813\", \"7588\"", ""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(message))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(message))));
         assertThat(onlyRecord().comparisons().path("rosterPlans").toString())
                 .contains("\"drop-other-5850\"", "\"drop-other-6813\"")
                 .doesNotContain("\"hold-add\"");

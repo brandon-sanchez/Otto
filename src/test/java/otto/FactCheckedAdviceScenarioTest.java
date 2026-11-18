@@ -102,7 +102,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         checkWithAnEdge(EDGE_ANSWER);
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(EDGE_MESSAGE))));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("State facts only from"))
                 .withRequestBody(containing("Never put a label in front of an explanation"))
@@ -174,7 +174,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         checkWithAnEdge(badAnswer, EDGE_ANSWER);
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(EDGE_MESSAGE))));
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
 
         DecisionRecord record = onlyRecord();
@@ -209,7 +209,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(EDGE_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(EDGE_MESSAGE))));
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
         assertThat(records()).hasSize(1);
     }
@@ -338,7 +338,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         runQuestionableStarterIntoTheFinalWindow(finalAnswer(message));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(message))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(message))));
         assertThat(eventLog.contains("alert:final:2026-w2:4034")).isTrue();
     }
 

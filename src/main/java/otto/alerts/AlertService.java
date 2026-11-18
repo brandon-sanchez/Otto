@@ -302,16 +302,18 @@ public class AlertService {
                             EventType.ALERT_SENT, now,
                             alertFacts(candidate, research, written.get())))
                     .toList();
-            sent.addAll(outbox.deliver(written.get().basis(), compose(written.get()), templates));
+            sent.addAll(outbox.deliver(written.get().basis(),
+                    compose(AlertHeadline.of(primary), written.get()), templates));
         }
         return sent;
     }
 
-    private Supplier<String> compose(AlertText written) {
+    /** The Alert as sent: its headline, then the checked or phrased advice. */
+    private Supplier<String> compose(String headline, AlertText written) {
         return switch (written) {
-            case AlertText.Advised advised -> advised::text;
-            case AlertText.Phrased phrased ->
-                    () -> phraser.phrase(phrased.facts(), phrased.recommendation());
+            case AlertText.Advised advised -> () -> headline + "\n" + advised.text();
+            case AlertText.Phrased phrased -> () -> headline + "\n"
+                    + phraser.phrase(phrased.facts(), phrased.recommendation());
         };
     }
 
