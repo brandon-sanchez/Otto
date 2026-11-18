@@ -1,74 +1,33 @@
 package otto.board;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import otto.advice.EvidenceItem;
 import otto.directory.DirectoryPlayer;
-import otto.nflverse.NflverseStore;
-import otto.nflverse.PlayerIdMap;
 import otto.nflverse.PlayerUsage;
 import otto.nflverse.WeeklyStats;
 
 /**
  * Role and opportunity: each candidate's snaps, targets, carries, air
  * yards, red-zone, end-zone and first-read work and expected points in
- * his most recent games, from {@link PlayerUsage}. A part a source does
- * not hold is written as unknown.
+ * his most recent games, read from {@link RecentGames}. A part a source
+ * does not hold is written as unknown.
  *
- * <p>When Sleeper fills the latest week for his team, the snaps or the
- * targets and carries nflverse lacks come from Sleeper, and that week
- * is its own evidence item, labelled with the parts each source gave.
- *
- * <p>The usage is built once per board, which is once per claim round,
- * because it parses the stored play-by-play and charting.
+ * <p>A game Sleeper filled part of is its own evidence item, labelled
+ * with the parts each source gave.
  */
 @Component
 @Order(1)
 class UsageLane implements EvidenceLane {
-
-    /** How many of a player's most recent games the evidence shows. */
-    static final int RECENT_GAMES = 3;
-
-    private final NflverseStore nflverse;
-
-    UsageLane(NflverseStore nflverse) {
-        this.nflverse = nflverse;
-    }
-
-    /** A part of a game Sleeper can give in place of nflverse. */
-    private enum Part {
-        SNAPS("snaps"),
-        VOLUME("targets and carries");
-
-        private final String words;
-
-        Part(String words) {
-            this.words = words;
-        }
-
-        static String join(Set<Part> parts) {
-            return parts.stream().map(part -> part.words).collect(Collectors.joining(" and "));
-        }
-    }
-
-    /**
-     * One game of a player's, and the parts of it Sleeper gave.
-     *
-     * @param fromSleeper empty for a game nflverse gave in full
-     */
-    private record Played(PlayerUsage.Game game, Set<Part> fromSleeper) {
-    }
 
     @Override
     public String name() {
@@ -77,14 +36,9 @@ class UsageLane implements EvidenceLane {
 
     @Override
     public Read read(Inputs inputs) {
-        Optional<PlayerUsage> usage = PlayerUsage.from(nflverse);
-        Optional<PlayerIdMap> ids = nflverse.playerIds();
-        Optional<WeeklyStats> stats = nflverse.weeklyStats();
-        SleeperFill sleeper = inputs.sleeper();
-        int latestWeek = Math.max(sleeper.week(), stats.flatMap(feed -> feed.rows().stream()
-                        .map(WeeklyStats.StatLine::week)
-                        .max(Integer::compare))
-                .orElse(0));
+        RecentGames recent = inputs.recent();
+        Optional<PlayerUsage> usage = recent.usage();
+        Optional<WeeklyStats> stats = recent.weeklyStats();
         boolean priorSeason = usage.filter(PlayerUsage::priorSeasonFinal).isPresent();
         String basis = priorSeason
                 ? "role and opportunity last season, early-season context only"
@@ -105,7 +59,7 @@ class UsageLane implements EvidenceLane {
                 if (usage.isEmpty()) {
                     return List.of();
                 }
-                List<Played> games = games(player);
+                List<RecentGames.Usage> games = recent.usage(player);
                 Map<String, String> facts = new LinkedHashMap<>();
                 facts.put("season", usage.get().season());
                 if (games.isEmpty()) {
@@ -132,21 +86,22 @@ class UsageLane implements EvidenceLane {
                 if (usage.isEmpty()) {
                     gaps.add("no weekly stats are stored, so no role or opportunity is known");
                 }
-                if (ids.isEmpty()) {
+                if (!recent.idsKnown()) {
                     gaps.add("no player-id map is stored, so no free agent's usage can be joined");
                 }
                 return gaps;
             }
 
-            private EvidenceItem sleeperItem(DirectoryPlayer player, Played played) {
+            private EvidenceItem sleeperItem(DirectoryPlayer player, RecentGames.Usage played) {
                 int week = played.game().week();
-                Set<Part> fromNflverse = EnumSet.complementOf(EnumSet.copyOf(played.fromSleeper()));
+                Set<RecentGames.Part> fromNflverse = EnumSet.complementOf(
+                        EnumSet.copyOf(played.fromSleeper()));
                 Map<String, String> facts = new LinkedHashMap<>();
                 facts.put("season", usage.get().season());
                 facts.put("week " + week, describe(played.game()));
-                facts.put("fromSleeper", Part.join(played.fromSleeper()));
+                facts.put("fromSleeper", RecentGames.Part.join(played.fromSleeper()));
                 facts.put("fromNflverse", fromNflverse.isEmpty() ? "everything else shown"
-                        : Part.join(fromNflverse) + ", and everything else shown");
+                        : RecentGames.Part.join(fromNflverse) + ", and everything else shown");
                 return new EvidenceItem("usage-sleeper-" + player.playerId(),
                         SleeperFill.SOURCE, Optional.empty(), inputs.now(),
                         "role and opportunity in week %d, with what nflverse had not "
@@ -154,61 +109,11 @@ class UsageLane implements EvidenceLane {
                         facts);
             }
 
-            private List<Played> games(DirectoryPlayer player) {
-                List<Played> all = new ArrayList<>(usage.flatMap(held -> ids
-                                .flatMap(map -> map.gsisFor(player.playerId()))
-                                .map(held::games))
-                        .orElse(List.of())
-                        .stream()
-                        .map(game -> new Played(game, Set.of()))
-                        .toList());
-                filled(player, all).ifPresent(played -> {
-                    all.removeIf(held -> held.game().week() == played.game().week());
-                    all.add(played);
-                    all.sort(Comparator.comparingInt(held -> held.game().week()));
-                });
-                return all.subList(Math.max(0, all.size() - RECENT_GAMES), all.size());
-            }
-
-            /**
-             * Returns the player's game in the week Sleeper fills, with
-             * each part nflverse lacks taken from Sleeper; empty when
-             * Sleeper gives nothing nflverse lacks.
-             */
-            private Optional<Played> filled(DirectoryPlayer player, List<Played> held) {
-                if (sleeper.week() == 0) {
-                    return Optional.empty();
-                }
-                PlayerUsage.Game game = held.stream()
-                        .map(Played::game)
-                        .filter(candidate -> candidate.week() == sleeper.week())
-                        .findFirst()
-                        .orElseGet(() -> new PlayerUsage.Game(ids
-                                .flatMap(map -> map.gsisFor(player.playerId()))
-                                .orElse(player.playerId()), player.fullName(),
-                                player.position(), player.team(), sleeper.week(), null, null,
-                                null, null, null));
-                Optional<PlayerUsage.Snaps> snaps = game.snaps() == null
-                        ? sleeper.snaps(player) : Optional.empty();
-                Optional<PlayerUsage.Volume> volume = game.volume() == null
-                        ? sleeper.volume(player) : Optional.empty();
-                Set<Part> fromSleeper = EnumSet.noneOf(Part.class);
-                snaps.ifPresent(ignored -> fromSleeper.add(Part.SNAPS));
-                volume.ifPresent(ignored -> fromSleeper.add(Part.VOLUME));
-                if (fromSleeper.isEmpty()) {
-                    return Optional.empty();
-                }
-                return Optional.of(new Played(new PlayerUsage.Game(game.gsisId(),
-                        game.player(), game.position(), game.team(), game.week(),
-                        snaps.orElse(game.snaps()), volume.orElse(game.volume()),
-                        game.receiving(), game.opportunities(), game.expected()),
-                        fromSleeper));
-            }
-
             private Optional<Double> latestSnapShare(DirectoryPlayer player) {
-                return games(player).stream()
-                        .map(Played::game)
-                        .filter(game -> game.week() == latestWeek && game.snaps() != null)
+                return recent.usage(player).stream()
+                        .map(RecentGames.Usage::game)
+                        .filter(game -> game.week() == recent.latestWeek()
+                                && game.snaps() != null)
                         .map(game -> game.snaps().share())
                         .findFirst();
             }

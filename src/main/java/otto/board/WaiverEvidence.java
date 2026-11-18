@@ -34,6 +34,7 @@ import otto.league.LeagueWeek;
 import otto.lineup.Slot;
 import otto.needs.RosterNeeds;
 import otto.needs.RosterNeedsService;
+import otto.nflverse.NflverseStore;
 import otto.records.Candidate;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
@@ -84,14 +85,17 @@ public class WaiverEvidence {
     private final List<EvidenceLane> lanes;
     private final FaabEvidence faab;
     private final DropRankings dropRankings;
+    private final NflverseStore nflverse;
 
     WaiverEvidence(PlayerDirectoryStore directory, RosterNeedsService needs,
-            List<EvidenceLane> lanes, FaabEvidence faab, DropRankings dropRankings) {
+            List<EvidenceLane> lanes, FaabEvidence faab, DropRankings dropRankings,
+            NflverseStore nflverse) {
         this.directory = directory;
         this.needs = needs;
         this.lanes = List.copyOf(lanes);
         this.faab = faab;
         this.dropRankings = dropRankings;
+        this.nflverse = nflverse;
     }
 
     /**
@@ -162,7 +166,7 @@ public class WaiverEvidence {
                 .toList();
 
         EvidenceLane.Inputs inputs = new EvidenceLane.Inputs(league, user.get(), now,
-                latestWeek.sleeper());
+                RecentGames.read(nflverse, latestWeek.sleeper()));
         List<LaneRead> reads = lanes.stream()
                 .map(lane -> new LaneRead(lane, lane.read(inputs)))
                 .toList();
