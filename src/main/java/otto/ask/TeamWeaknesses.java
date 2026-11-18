@@ -80,19 +80,18 @@ public class TeamWeaknesses {
     private static final String INSTRUCTIONS = AdvicePrompt.preamble("about his team",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
-            Write plain text in four parts, with a blank line between parts:
-            1. Two or three sentences that sum up the team: where it is strong and where it
-               is thin, and its direction from "direction" with that item's reason. When
-               "leagues" is present, open by saying it.
-            2. One short paragraph for each position in "position-" items, in the order
-               QB, RB, WR, TE. Say whether it is strong, thin, in surplus or in the middle,
-               with the numbers behind that: the starter and depth ranks as "4th of 4",
-               and for a surplus how many startable players it has for how many spots. Use
-               the market shape when it adds something, such as no WR1.
-            3. One sentence on the lineup's ceiling from "ceiling".
-            4. Each suggestion in the "suggestion-" items, in order, with its reason. For a
-               trade, say which manager to send it to ("sendTo"), what he gives and gets,
-               and why the other manager would say yes from its "why" facts and its
+            Write it in four short parts, with a blank line between parts:
+            1. One or two short sentences that sum up the team: where it is strong and
+               where it is thin, and its direction from "direction" with that item's
+               reason. When "leagues" is present, open by saying it.
+            2. One line for each position in "position-" items, in the order QB, RB, WR,
+               TE: its "line" fact word for word. Add a short clause after it only when
+               the market shape adds something, such as no WR1.
+            3. One short sentence on the lineup's ceiling from "ceiling".
+            4. Up to three moves from the "suggestion-" items, in order, each as a line
+               starting with "• " and its short reason. For a trade, say which manager to
+               send it to ("sendTo") in bold, what he gives and gets, and in one clause
+               why the other manager would say yes, from its "why" facts and its
                "playoffWeeks" fact when it has one. Offer none that the evidence lacks.
                When "trade-deadline" is present, say trades are closed and point to waivers.
             When "direction" has a "question", end the message by asking it.

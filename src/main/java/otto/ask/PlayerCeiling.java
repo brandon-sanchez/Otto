@@ -49,10 +49,10 @@ public class PlayerCeiling {
     private static final String INSTRUCTIONS = AdvicePrompt.preamble("about a player",
             AdvicePrompt.Naming.LISTED_BY_FULL_NAME) + """
 
-            Explain the player's ceiling and floor in two to four natural sentences of
-            plain text: the range most of his weeks land in, how low a bad week goes,
-            how high a big week goes, and his chance of a boom week, which is the
-            finish the evidence names. You may compare him to a kind of player in
+            Give the player's ceiling and floor as short lines, one fact to a line: the
+            range most of his weeks land in, with the range in bold, how low a bad week
+            goes, how high a big week goes, and his chance of a boom week, which is the
+            finish the evidence names, with the chance in bold. You may compare him to a kind of player in
             words, such as a steady receiver, but never with a number the evidence
             lacks. Past boom weeks are history: mention them only after the estimate,
             say they are history, and never give them as a reason the chance is higher

@@ -20,6 +20,7 @@ import otto.advice.EvidenceBundle;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.advice.ToolAnswer;
+import otto.format.TelegramHtml;
 import otto.habits.HabitLean;
 import otto.habits.HabitService;
 import otto.league.LeagueWeek;
@@ -61,14 +62,16 @@ public class TradeIdeas {
             "about trades he could offer", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + RankConvention.ADVICE_RULES + FriendVoice.RULE + QuietHabits.RULE + """
 
-            Write plain text. When "trade-deadline" is present, open with it. Then give
-            each "offer-" item in order, one short paragraph each, numbered 1, 2, 3. Each
-            paragraph says which manager to send it to ("sendTo"), what the user gives
-            ("youGive") and what he gets ("youGet"), in those words, then why it works for
-            him ("yourEdge", and "yourLineup" when it adds something) and why the other
-            manager would say yes, drawn from the "why" facts and "partnerDirection". When
-            an offer has "playoffWeeks", give it as one more reason he would say yes, in
-            one sentence, with its weeks, opponents and ranks exactly as written. When
+            When "trade-deadline" is present, open with it. Then give each "offer-" item
+            in order, numbered 1, 2, 3, with a blank line between offers, laid out as:
+            1. Send to <b>manager</b>
+            You give: what "youGive" says, in those words
+            You get: what "youGet" says, in those words
+            Then one short line on why it works for him ("yourEdge", and "yourLineup"
+            when it adds something), and one short line on why the other manager would
+            say yes, drawn from the "why" facts and "partnerDirection". When an offer
+            has "playoffWeeks", add it to that line with its weeks, opponents and ranks
+            exactly as written. When
             a player in the offer has a buy-low or sell-high item, say so in a clause and
             why. When a player in the offer has an "injury-" item, say what he is worth
             while hurt from its "worth", give his timeline exactly as its "timeline" states
@@ -223,7 +226,8 @@ public class TradeIdeas {
                 return verdict;
             }
             List<String> failures = new ArrayList<>(verdict.failures());
-            failures.addAll(misplaced(bundle, found, answer.get().message()));
+            failures.addAll(misplaced(bundle, found,
+                    TelegramHtml.words(answer.get().message())));
             return AdviceCheck.Verdict.checked(answer.get(), failures);
         });
     }

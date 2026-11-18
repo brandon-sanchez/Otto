@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
+import otto.format.Dot;
+
 /**
  * One stat ranked across the league: every player at one position, or
  * every defense against one position.
@@ -184,6 +186,21 @@ public record Ranking(RankedStat stat, Position position, Weeks weeks, Populatio
         };
         return Tone.of(placement.rank(), placement.rankFromBottom(), population.size(),
                 firstIsGood);
+    }
+
+    /**
+     * Returns the coloured dot a message shows beside the place: a
+     * defense or remaining schedule by its {@link Dot#matchup} band, a
+     * player stat by the {@link Dot#quarter} it falls in, counted from
+     * the end that is good for his fantasy output.
+     */
+    public Dot dot(Placement placement) {
+        return switch (stat) {
+            case DefenseStat _, ScheduleStat _ -> Dot.matchup(placement.rank());
+            case PlayerStat player -> Dot.quarter(player.direction() == Direction.HIGHER_IS_BETTER
+                    ? placement.rank()
+                    : placement.rankFromBottom(), population.size());
+        };
     }
 
     private static List<Placement> placements(List<Measurement> inOrder) {

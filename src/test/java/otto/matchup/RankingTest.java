@@ -169,4 +169,20 @@ class RankingTest {
         assertThat(ranking.weeks().priorSeasonFinal()).isTrue();
         assertThat(ranking.placement("NO").orElseThrow().rank()).isEqualTo(2);
     }
+
+    @Test
+    void aRankLineLeadsWithTheBoldRankColouredByItsQuarter() {
+        Ranking ranking = Ranking.rank(PlayerStat.TARGETS_PER_GAME, Position.TE, WEEKS_1_TO_6, List.of(
+                tightEnd("a", 5.5, 33),
+                tightEnd("b", 8.0, 48),
+                tightEnd("c", 3.0, 18),
+                tightEnd("d", 1.0, 6)));
+
+        assertThat(RankWords.line(ranking, ranking.placement("b").orElseThrow()))
+                .isEqualTo("🟢 Targets per game: <b>1st</b> of 4 (8.0)");
+        assertThat(RankWords.line(ranking, ranking.placement("d").orElseThrow()))
+                .isEqualTo("🔴 Targets per game: <b>4th</b> of 4 (1.0)");
+        assertThat(RankWords.header("Travis Kelce", Position.TE, WEEKS_1_TO_6))
+                .isEqualTo("Travis Kelce's season ranks among TEs (weeks 1–6)");
+    }
 }

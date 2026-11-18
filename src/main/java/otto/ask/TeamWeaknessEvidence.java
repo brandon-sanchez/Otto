@@ -14,6 +14,7 @@ import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
+import otto.format.Dot;
 import otto.market.MarketDay;
 import otto.market.MarketFormat;
 import otto.market.MarketPlayer;
@@ -187,8 +188,27 @@ final class TeamWeaknessEvidence {
                     + "of the last rostered %s who makes a best lineup in this league")
                     .formatted(decimal(profile.startableLine()), position));
         }
+        facts.put("line", line(profile));
         market.ifPresent(value -> facts.put("marketShape", marketShape(profile, value)));
         return facts;
+    }
+
+    /**
+     * The position as the answer's line for it: "🔴 RB: <b>11th</b> of 12
+     * (thin)", coloured by the quarter of the league its starters rank
+     * in, or for a surplus "🟡 WR: <b>6</b> for 4 spots (surplus)", a
+     * trade chip rather than good or bad news.
+     */
+    private static String line(PositionProfile profile) {
+        if (profile.strength() == PositionProfile.Strength.SURPLUS
+                && Double.isFinite(profile.startableLine())) {
+            return "%s %s: <b>%d</b> for %d %s (surplus)".formatted(Dot.YELLOW.emoji(),
+                    profile.position(), profile.startable(), profile.spots(),
+                    profile.spots() == 1 ? "spot" : "spots");
+        }
+        return "%s %s: <b>%s</b> of %d (%s)".formatted(
+                Dot.quarter(profile.starterRank(), profile.teams()).emoji(), profile.position(),
+                Ordinal.of(profile.starterRank()), profile.teams(), words(profile.strength()));
     }
 
     private static Map<String, String> player(RatedPlayer player) {

@@ -132,6 +132,37 @@ public final class RankWords {
                 : overall;
     }
 
+    /**
+     * Returns a player's rank as the line a ranks answer shows, rank
+     * first and bold, coloured by {@link Ranking#dot}: "🟢 Carries per
+     * game: <b>4th</b> of 79 (18.6)". A per-attempt stat adds its
+     * sample: "(5.1, on 40 carries)".
+     */
+    public static String line(Ranking ranking, Ranking.Placement placement) {
+        String value = value(ranking.stat(), placement.value());
+        String figure = ranking.stat() instanceof PlayerStat player && player.perAttempt()
+                ? "%s, on %s".formatted(value, count(placement.sample(), player.sampleUnit()))
+                : value;
+        String label = ranking.stat().label();
+        return "%s %s: <b>%s</b> of %d (%s)".formatted(ranking.dot(placement).emoji(),
+                label.substring(0, 1).toUpperCase(Locale.ROOT) + label.substring(1),
+                Ordinal.of(placement.rank()), ranking.population().size(), figure);
+    }
+
+    /**
+     * Returns the line above a player's {@link #line ranks}, naming who
+     * he is ranked among and over which weeks: "Bucky Irving's season
+     * ranks among RBs (weeks 1–10)".
+     */
+    public static String header(String name, Position position, Ranking.Weeks weeks) {
+        String span = weeks.firstWeek() == weeks.lastWeek()
+                ? "week %d".formatted(weeks.firstWeek())
+                : "weeks %d–%d".formatted(weeks.firstWeek(), weeks.lastWeek());
+        return weeks.priorSeasonFinal()
+                ? "%s's ranks among %ss last season (%s)".formatted(name, position.name(), span)
+                : "%s's season ranks among %ss (%s)".formatted(name, position.name(), span);
+    }
+
     /** Returns one player of the position in words, such as "running back". */
     public static String singular(Position position) {
         return position.plural().substring(0, position.plural().length() - 1);

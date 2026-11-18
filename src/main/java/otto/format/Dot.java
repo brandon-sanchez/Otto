@@ -154,6 +154,28 @@ public enum Dot {
         return injury(health);
     }
 
+    /**
+     * Returns the short status shown beside a player's name: his
+     * {@link #injury(PlayerHealth) dot} and the abbreviation Sleeper
+     * uses, such as "🟡 Q", "🔴 O" or "🔴 IR"; "NA" for not active, with
+     * no dot; and empty for a healthy or probable player.
+     */
+    public static String healthTag(PlayerHealth health) {
+        String label = switch (health) {
+            case ACTIVE, PROBABLE -> "";
+            case QUESTIONABLE -> "Q";
+            case DOUBTFUL -> "D";
+            case UNKNOWN -> "status unclear";
+            case OUT -> "O";
+            case NOT_ACTIVE -> "NA";
+            case DID_NOT_REPORT -> "DNR";
+            case SUSPENDED -> "SUS";
+            case PUP -> "PUP";
+            case IR -> "IR";
+        };
+        return injury(health).map(dot -> dot.emoji() + " " + label).orElse(label);
+    }
+
     private static int band(int rank) {
         requirePositive(rank, "rank");
         return Math.min(QUARTERS - 1, (rank - 1) / DEFENSES_PER_BAND);

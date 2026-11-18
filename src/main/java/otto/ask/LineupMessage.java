@@ -12,15 +12,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import otto.advice.Prose;
+import otto.directory.PlayerHealth;
+import otto.format.Dot;
+import otto.format.TelegramHtml;
 import otto.league.UserWeek;
 import otto.lineup.GameWeek;
 import otto.lineup.ProjectionTable;
 import otto.sleeper.SleeperAdapter;
 
 /**
- * Writes a lineup recommendation as the user reads it: a few sentences
- * that name the week, say what is left of it when it is under way, and
- * give the call with its reason, then the lineup as a short list.
+ * Writes a lineup recommendation as the user reads it: a sentence or two
+ * that name the week and say what is left of it when it is under way,
+ * then each move on a line of its own ("⬆️ Start <b>A</b> over B, +3.4
+ * points"), the projected total before and after, and the lineup as a
+ * short list with each player's status beside him.
  *
  * Every name and number comes from the {@link LineupPlanner.LineupPlan}
  * and the week's games, so the text needs no further check and goes to
@@ -32,6 +37,10 @@ final class LineupMessage {
     private static final ZoneId NFL_ZONE = ZoneId.of("America/New_York");
 
     private static final int NIGHT_KICKOFF_HOUR = 19;
+
+    private static final String START = "⬆️";
+
+    private static final String SIT = "⬇️";
 
     /**
      * Once this share of the week's games has kicked off, the week is
@@ -71,14 +80,16 @@ final class LineupMessage {
             sentences.add("Here's your week %d lineup.".formatted(week));
         }
         cannotPlay(team, now, week).ifPresent(sentences::add);
-        sentences.addAll(recommendation(plan, movable));
+        List<String> lines = new ArrayList<>();
+        lines.add(String.join(" ", sentences));
+        lines.addAll(recommendation(plan, movable));
 
         boolean late = !schedule.isEmpty() && finishedWeek == null
                 && kickedOff >= LATE_IN_WEEK_SHARE * schedule.size();
         if (late) {
-            sentences.add("You can also ask me about week %d.".formatted(week + 1));
+            lines.add("You can also ask me about week %d.".formatted(week + 1));
         }
-        return String.join(" ", sentences) + "\n\n" + lineup(plan);
+        return String.join("\n", lines) + "\n\n" + lineup(plan);
     }
 
     private static List<String> gamesLeft(List<SleeperAdapter.Game> schedule, Instant now) {
@@ -157,14 +168,15 @@ final class LineupMessage {
             return List.of("I'd keep your lineup as it is, because nobody you can still move "
                     + "projects more than the starter he'd replace.");
         }
-        List<String> sentences = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
         for (LineupPlanner.Swap swap : plan.swaps()) {
-            sentences.add("I'd start %s over %s, a gain of %s points.".formatted(
-                    swap.start(), swap.sit(), swap.gain().replaceFirst("^\\+", "")));
+            lines.add("%s Start %s over %s, %s points".formatted(START,
+                    TelegramHtml.bold(swap.start()), TelegramHtml.escape(swap.sit()),
+                    swap.gain()));
         }
-        sentences.add("Your lineup as set projects %s points, and this one projects %s."
-                .formatted(plan.currentProjected(), plan.optimalProjected()));
-        return sentences;
+        lines.add("Projected <b>%s → %s</b>".formatted(plan.currentProjected(),
+                plan.optimalProjected()));
+        return lines;
     }
 
     private static String lineup(LineupPlanner.LineupPlan plan) {
@@ -180,10 +192,8 @@ final class LineupMessage {
         for (LineupPlanner.SlotLine line : plan.optimal()) {
             lines.add("%s: %s".formatted(line.slot(), line.player() == null
                     ? "Empty"
-                    : player(line.player(), line.projection(), line.note())));
-            if (starting.contains(line.player())) {
-                lines.add("↳ Move to starter");
-            }
+                    : player(line.player(), line.projection(), line.note())
+                            + (starting.contains(line.player()) ? " " + START : "")));
         }
         lines.addAll(section("BENCH", plan.bench(), sitting));
         if (plan.reserve() != null) {
@@ -204,26 +214,40 @@ final class LineupMessage {
         }
         for (LineupPlanner.BenchLine line : players) {
             lines.add("%s: %s".formatted(line.position(),
-                    player(line.player(), line.projection(), line.note())));
-            if (sitting.contains(line.player())) {
-                lines.add("↳ Move to bench");
-            }
+                    player(line.player(), line.projection(), line.note())
+                            + (sitting.contains(line.player()) ? " " + SIT : "")));
         }
         return lines;
     }
 
+    /**
+     * Writes one player as "Bucky Irving 14.2 🟡 Q": his projection and
+     * his status, a bye as "💤 BYE" and an injury as its dot and short
+     * tag.
+     */
     private static String player(String name, String projection, String note) {
-        List<String> notes = new ArrayList<>();
-        String points = "";
-        if (ProjectionTable.NO_PROJECTION.equals(projection)) {
-            notes.add("no projection");
-        } else {
-            points = " " + projection;
+        String points = ProjectionTable.NO_PROJECTION.equals(projection)
+                ? " (no projection)"
+                : " " + projection;
+        String status = status(note);
+        return TelegramHtml.escape(name) + points + (status.isEmpty() ? "" : " " + status);
+    }
+
+    /** The planner's note on a player as the lineup shows it beside his name. */
+    private static String status(String note) {
+        if (note == null) {
+            return "";
         }
-        if (note != null) {
-            notes.add(note);
+        if (note.equals(LineupPlanner.ON_BYE)) {
+            return "💤 BYE";
         }
-        return name + points + (notes.isEmpty() ? "" : " (" + String.join(", ", notes) + ")");
+        if (note.equals(LineupPlanner.LOCKED)) {
+            return "🔒 locked";
+        }
+        String health = note.startsWith(LineupPlanner.CANNOT_PLAY)
+                ? note.substring(LineupPlanner.CANNOT_PLAY.length())
+                : note;
+        return Dot.healthTag(PlayerHealth.valueOf(health.toUpperCase(Locale.ROOT)));
     }
 
     /**

@@ -11,6 +11,7 @@ import java.util.stream.IntStream;
 
 import otto.advice.Ordinal;
 import otto.advice.ToolAnswer;
+import otto.format.TelegramHtml;
 import otto.matchup.LeagueRankings;
 import otto.matchup.PlayerStat;
 import otto.matchup.Position;
@@ -129,9 +130,9 @@ public final class StatLeaders {
         String group = ranking.population().group();
         String weeks = RankWords.weeks(ranking.weeks());
         String opening = leaders.size() < wanted
-                ? "Only %d %s have %s for %s, so here they all are:".formatted(leaders.size(),
-                        group, stat.label(), weeks)
-                : "Here are the top %d %s in %s for %s:".formatted(leaders.size(), group,
+                ? "<b>All %d %s with %s</b> (%s)".formatted(leaders.size(), group, stat.label(),
+                        weeks)
+                : "<b>Top %d %s in %s</b> (%s)".formatted(leaders.size(), group,
                         stat.label(), weeks);
         boolean everyPosition = ranking.position() == null;
         String lines = IntStream.range(0, listed.size())
@@ -155,19 +156,23 @@ public final class StatLeaders {
                 .toList();
     }
 
-    /** Writes one leader as "3. Chase Brown (RB), 412 air yards in 4 games". */
+    /**
+     * Writes one leader with the stat in bold, as
+     * "3. Chase Brown (RB) · <b>412</b> air yards in 4 games". Leaders
+     * get no coloured dot: every one of them would be green.
+     */
     private static String line(int rank, Entry entry, PlayerStat stat, boolean everyPosition) {
         String who = everyPosition && entry.position() != null
-                ? "%s (%s)".formatted(entry.name(), entry.position())
-                : entry.name();
+                ? "%s (%s)".formatted(TelegramHtml.escape(entry.name()), entry.position())
+                : TelegramHtml.escape(entry.name());
         String sample = stat.sampleUnit().equals("games")
                 ? "in " + entry.sample()
                 : "on " + entry.sample();
-        String figure = stat.figure() == PlayerStat.Figure.TOTAL
+        String label = stat.figure() == PlayerStat.Figure.TOTAL
                 && entry.value().equals("1") && stat.label().endsWith("s")
-                ? "1 " + stat.label().substring(0, stat.label().length() - 1)
-                : entry.value() + " " + stat.label();
-        return "%d. %s, %s %s".formatted(rank, who, figure, sample);
+                ? stat.label().substring(0, stat.label().length() - 1)
+                : stat.label();
+        return "%d. %s · <b>%s</b> %s %s".formatted(rank, who, entry.value(), label, sample);
     }
 
     private static Optional<PlayerStat> parse(String stat) {
