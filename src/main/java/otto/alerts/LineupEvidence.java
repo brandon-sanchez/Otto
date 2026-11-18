@@ -218,7 +218,7 @@ final class LineupEvidence {
      */
     String bestOption(List<LineupMove> moves) {
         if (moves.isEmpty()) {
-            return "No playable bench player fits that slot.";
+            return "No playable bench player fits it.";
         }
         String best = moves.getFirst().start();
         return "Best bench option: %s, %s.".formatted(TelegramHtml.escape(name(best)),

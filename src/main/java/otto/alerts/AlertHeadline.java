@@ -19,6 +19,8 @@ import otto.research.OfficialUpdate;
  */
 final class AlertHeadline {
 
+    private static final String LOCK_PREFIX = "⏰ <b>Locks in ";
+
     private AlertHeadline() {
     }
 
@@ -29,7 +31,15 @@ final class AlertHeadline {
      */
     static String finalWarning(Instant kickoff, Instant now) {
         long minutes = Math.max(1, Duration.between(now, kickoff).toMinutes());
-        return "⏰ <b>Locks in %d min</b>".formatted(minutes);
+        return LOCK_PREFIX + minutes + " min</b>";
+    }
+
+    static String refreshFinalWarning(String text, Instant kickoff, Instant now) {
+        int bodyStart = text.indexOf('\n');
+        if (!text.startsWith(LOCK_PREFIX) || bodyStart < 0) {
+            return text;
+        }
+        return finalWarning(kickoff, now) + text.substring(bodyStart);
     }
 
     /**

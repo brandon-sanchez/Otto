@@ -350,6 +350,7 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo("""
                         ⏰ <b>Locks in 25 min</b>
+
                         <b>Christian McCaffrey is still Questionable</b> in your RB slot.
                         Best bench option: Josh Jacobs, projected 12.5."""))));
         DecisionRecord record = records().getLast();

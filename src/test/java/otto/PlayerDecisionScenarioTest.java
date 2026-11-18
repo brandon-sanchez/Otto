@@ -288,6 +288,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo("""
                         🔴 <b>Christian McCaffrey</b> is now Out
+
                         <b>Fill your RB slot</b>: it scores zero with him in it.
                         Best bench option: Josh Jacobs, projected 12.5."""))));
         assertThat(onlyRecord().outcome()).isInstanceOf(Outcome.Sent.class);

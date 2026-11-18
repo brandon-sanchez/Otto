@@ -75,4 +75,13 @@ class AlertHeadlineTest {
         assertThat(AlertHeadline.finalWarning(kickoff, kickoff))
                 .isEqualTo("⏰ <b>Locks in 1 min</b>");
     }
+
+    @Test
+    void refreshingAPendingWarningChangesOnlyItsHeadline() {
+        Instant kickoff = Instant.parse("2026-09-13T17:00:00Z");
+        String stored = "⏰ <b>Locks in 25 min</b>\nStart <b>Josh Jacobs</b>.\nReason";
+
+        assertThat(AlertHeadline.refreshFinalWarning(stored, kickoff, kickoff.minusSeconds(900)))
+                .isEqualTo("⏰ <b>Locks in 15 min</b>\nStart <b>Josh Jacobs</b>.\nReason");
+    }
 }

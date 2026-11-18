@@ -46,6 +46,7 @@ public class SettingsTools {
             Map<String, Double> scoring, String edgeThreshold) {
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_league_settings", description = """
             The league's scoring settings, starting slots and status.
             Call this whenever the answer depends on how the league
@@ -59,6 +60,7 @@ public class SettingsTools {
                 String.format(Locale.ROOT, "%.1f", settingsStore.edgeThreshold()))));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_keeper_rule", description = """
             How the user's keeper league prices keeping a player for next
             season. Sleeper never records it, so until he says, Otto reads
@@ -95,6 +97,7 @@ public class SettingsTools {
                 new KeeperRuleChat.Stated(rule, amount, minimum, undrafted, yearLimit)));
     }
 
+    @LeagueNeed(LeagueNeed.When.NEVER)
     @Tool(name = "manage_watchlist", description = """
             The user's watchlist: the players he wants watched wherever
             they are, rostered or not. Watched players alert him when
@@ -113,6 +116,7 @@ public class SettingsTools {
         return watchlist.apply(action, player, clock.instant());
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_settings", description = """
             The assistant's own settings and the mute list: which alert
             triggers are on, how many projected points make an edge worth

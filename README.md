@@ -111,7 +111,7 @@ otto: Here's your week 2 lineup.
       ----- STARTERS -----
       QB: Josh Allen 24.1
       RB: Josh Jacobs 16.5 ⬆️
-      WR: Justin Jefferson 19.0 🟡 Q
+      WR: Justin Jefferson 19.0 🟡 Questionable
       ...
       ----- BENCH -----
       RB: James Cook 13.0 ⬇️

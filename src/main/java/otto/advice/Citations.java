@@ -70,6 +70,15 @@ public final class Citations {
         return new Stripped(stripped.toString().strip(), cited);
     }
 
+    /** Returns the claims with every citation list taken out of their text. */
+    public static List<AdviceAnswer.Claim> strip(List<AdviceAnswer.Claim> claims,
+            EvidenceBundle bundle) {
+        return claims.stream()
+                .map(claim -> new AdviceAnswer.Claim(strip(claim.text(), bundle).text(),
+                        claim.evidence()))
+                .toList();
+    }
+
     /**
      * Returns the evidence ids the text still writes out, such as
      * "usage-12499" in the middle of a sentence. An id that is also an
