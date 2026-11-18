@@ -75,15 +75,15 @@ With one league followed, these steps always pick it, so the Ask loop sees exact
 
 ### Which tools need a league
 
-One class, `ToolLeagueNeed`, lists every chat tool by name and says whether its answer depends on the league. A test fails when a chat tool is missing from the list. A tool the list does not know needs a league, because asking once too often is the safer mistake.
+Each chat tool declares whether its answer depends on the league with a `@LeagueNeed` annotation beside its `@Tool`, and `ToolLeagueNeed` reads them. A tool without one stops Otto from starting, and a test fails on it. A tool name nobody declared needs a league, because asking once too often is the safer mistake.
 
 | Needs no league | Needs a league |
 |---|---|
 | `get_player_news`, `get_team_usage`, `get_stat_leaders`, `manage_watchlist` | every lineup, waiver, trade, market-value, team, standings, habits, keeper and settings tool, and `get_player_ceiling` |
-| `get_player_stats`, unless the call is made for fantasy points | `get_player_stats` when what he asked about is fantasy points |
+| `get_player_stats`, unless the call is made for fantasy points | `get_player_stats` when the call asks for fantasy points |
 | `get_league_rank` on a real-world stat, such as target share or pressure rate | `get_league_rank` on fantasy points a defense allows, or on the remaining schedule built from them |
 
-Two tools turn on their arguments. `get_player_stats` carries the user's wording in its `asked` argument, and a call whose wording is about fantasy points waits for a league. `get_league_rank` waits for a league when its stat is counted in fantasy points.
+Two tools turn on their arguments. `get_player_stats` has a `fantasyPoints` argument the model sets when he asks what a player scored, and such a call waits for a league, because each league scores its own way. The answer then gives the points in that league's scoring. `get_league_rank` waits for a league when its stat is counted in fantasy points.
 
 The other way to do this was to sort questions by their words before the model runs. That needs a keyword list that grows with every new way to phrase a question, and it gets "how did Likely do?" wrong in both directions. The model already decides which tool answers a question, so the tool it picks is the most reliable sign of what the question depends on.
 

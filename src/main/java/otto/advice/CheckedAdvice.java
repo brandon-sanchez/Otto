@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 
@@ -108,13 +109,28 @@ public class CheckedAdvice {
      */
     public Checked write(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form, Run run,
             Instant now, AnswerDelivery delivery) {
+        return write(bundle, form, run, now, delivery, null);
+    }
+
+    /** Uses a verified, code-written answer when the model cannot explain the same facts. */
+    public Checked write(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form, Run run,
+            Instant now, AnswerDelivery delivery, Supplier<String> verifiedFallback) {
         AdviceResult<AdviceAnswer> result = writer.write(bundle, form);
-        Outcome outcome = runs.record(record(bundle, form, run, result, now, delivery));
-        return new Checked(outcome, result);
+        Outcome outcome = switch (result) {
+            case AdviceResult.Approved<AdviceAnswer> approved ->
+                delivered(approved.answer().message(), delivery);
+            case AdviceResult.Rejected<AdviceAnswer> rejected ->
+                fallbackOrWithheld(verifiedFallback, delivery,
+                        "The %s failed its checks twice: ".formatted(run.writeUp())
+                                + String.join(" ", rejected.failures()));
+            case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
+                fallbackOrWithheld(verifiedFallback, delivery, unavailable.reason());
+        };
+        return new Checked(runs.record(record(bundle, form, run, result, now, outcome)), result);
     }
 
     private DecisionRecord record(EvidenceBundle bundle, AdviceForm<AdviceAnswer> form, Run run,
-            AdviceResult<AdviceAnswer> result, Instant now, AnswerDelivery delivery) {
+            AdviceResult<AdviceAnswer> result, Instant now, Outcome outcome) {
         List<String> parts = new ArrayList<>(run.keys());
         parts.add(bundle.identity());
         parts.add(now.toString());
@@ -125,17 +141,20 @@ public class CheckedAdvice {
                 .evidence(bundle.recorded())
                 .versions(bundle.versions(form, result))
                 .exchanges(result.exchanges())
-                .outcome(switch (result) {
-                    case AdviceResult.Approved<AdviceAnswer> approved -> switch (delivery) {
-                        case UNCHANGED -> new Outcome.Sent(approved.answer().message());
-                        case THROUGH_CHAT_MODEL ->
-                            new Outcome.HandedToChat(approved.answer().message());
-                    };
-                    case AdviceResult.Rejected<AdviceAnswer> rejected -> new Outcome.Withheld(
-                            "The %s failed its checks twice: ".formatted(run.writeUp())
-                                    + String.join(" ", rejected.failures()));
-                    case AdviceResult.Unavailable<AdviceAnswer> unavailable ->
-                        new Outcome.Withheld(unavailable.reason());
-                });
+                .outcome(outcome);
+    }
+
+    private static Outcome delivered(String message, AnswerDelivery delivery) {
+        return switch (delivery) {
+            case UNCHANGED -> new Outcome.Sent(message);
+            case THROUGH_CHAT_MODEL -> new Outcome.HandedToChat(message);
+        };
+    }
+
+    private static Outcome fallbackOrWithheld(Supplier<String> verifiedFallback,
+            AnswerDelivery delivery, String reason) {
+        return verifiedFallback == null
+                ? new Outcome.Withheld(reason)
+                : delivered(verifiedFallback.get(), delivery);
     }
 }

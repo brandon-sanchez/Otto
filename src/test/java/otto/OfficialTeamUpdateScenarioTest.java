@@ -233,10 +233,35 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing(
-                        "The 49ers announced that Christian McCaffrey will not play")))
-                .withRequestBody(matchingJsonPath("$.text", containing(
-                        "Sleeper still lists him as Active"))));
+                .withRequestBody(matchingJsonPath("$.text", equalTo("""
+                        🔴 <b>Christian McCaffrey</b> won't play, his team says
+
+                        <b>Replace him in your RB slot</b>: the 49ers announced it, but Sleeper \
+                        still lists him as Active.
+                        Best bench option: Josh Jacobs, projected 12.5."""))));
+    }
+
+    @Test
+    void anEarlierTeamUpdateSleeperContradictsIsItsOwnLineWhenTheModelIsDown() {
+        baseline();
+        newsArrives(newsItem("49ers", "9002", "Christian McCaffrey will play Sunday",
+                "Coach Kyle Shanahan said McCaffrey will play.",
+                "https://www.49ers.com/news/mccaffrey-will-play"));
+        clock.advance(Duration.ofSeconds(61));
+        SleeperStubs.allNotModified(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-decisions-mccaffrey-out.json", "players-v2");
+        llm.resetAll();
+        OutboundStubs.llmRefuses(llm);
+        checkRunner.runCheck();
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo("""
+                        🔴 <b>Christian McCaffrey</b> is now Out
+
+                        <b>Fill your RB slot</b>: it scores zero with him in it.
+                        Best bench option: Josh Jacobs, projected 12.5.
+                        The 49ers said earlier that he will play."""))));
     }
 
     private static String newsItem(String source, String sourceKey, String title,

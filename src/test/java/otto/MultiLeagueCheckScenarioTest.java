@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
     private static final String PHRASE = "McCaffrey is Out. Bench him.";
-    private static final String NEWS = "Christian McCaffrey went from Active to Out.";
+    private static final String NEWS = "<b>Fill your RB slot</b>: it scores zero with him in it.";
     private static final String MCCAFFREY = "4034";
 
     @Autowired
@@ -143,7 +143,7 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
         assertThat(alertsSent()).singleElement().satisfies(alert ->
                 assertThat(alert.path("text").asText())
-                        .startsWith("🔴 <b>Christian McCaffrey</b> is now Out\n" + NEWS));
+                        .startsWith("🔴 <b>Christian McCaffrey</b> is now Out\n\n" + NEWS));
     }
 
     @Test

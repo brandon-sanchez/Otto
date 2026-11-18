@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @param beatsSomebodyNamed whether he out-projects at least one of
  *        them, or null when the user named nobody
  * @param reasons why the score and the bid are what they are
+ * @param latestNews the recent report behind the news reason, or null
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record WaiverCandidate(
@@ -35,7 +36,12 @@ public record WaiverCandidate(
         DropRecommendation recommendedDrop,
         List<Gain> gains,
         Boolean beatsSomebodyNamed,
-        List<String> reasons) {
+        List<String> reasons,
+        RecentNews latestNews) {
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record RecentNews(String headline, String detail, String source) {
+    }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record DropRecommendation(String player, String reason) {

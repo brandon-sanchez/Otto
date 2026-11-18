@@ -156,5 +156,21 @@ class AdviceCheckSlipsTest {
 
         assertThat(verdict(bundle, "Keep Elic Ayomanor in against Washington.", "\"1\"", "")
                 .failures()).isEmpty();
+        assertThat(verdict(bundle, "Keep Elic Ayomanor in. Washington drew 10 targets.",
+                "\"1\"", "").failures())
+                .contains("Introduce Parker Washington by full name before using his surname "
+                        + "alone.");
+    }
+
+    @Test
+    void aFigureInAFactThatOnlyEndsInWeekIsNotAWeekTheEvidenceCovers() {
+        BundlePlayer other = new BundlePlayer("9", "Khalil Shakir", Optional.empty());
+        EvidenceBundle bundle = new EvidenceBundle("Write lineup advice.", List.of(
+                item("usage-9", Map.of("targetsPerWeek", "7"))), List.of(AYOMANOR, other),
+                List.of(), true, Optional.empty(), 1000, Optional.empty(), List.of(), List.of());
+
+        assertThat(verdict(bundle, "Keep Elic Ayomanor in after Week 7.", "\"1\"", "")
+                .failures())
+                .containsExactly("The number 7 is not in the evidence about Elic Ayomanor.");
     }
 }

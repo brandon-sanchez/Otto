@@ -2,8 +2,12 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -14,11 +18,14 @@ import otto.advice.AdvicePrompt;
 import otto.advice.AnswerDelivery;
 import otto.advice.CheckedAdvice;
 import otto.advice.EvidenceBundle;
+import otto.advice.EvidenceItem;
 import otto.advice.FriendVoice;
 import otto.advice.RankConvention;
 import otto.advice.ToolAnswer;
 import otto.directory.DirectoryPlayer;
+import otto.format.TelegramHtml;
 import otto.directory.PlayerLookup;
+import otto.lineup.LeagueScoring;
 import otto.matchup.MatchupSources;
 import otto.matchup.MatchupSourcesFactory;
 import otto.matchup.Position;
@@ -48,13 +55,19 @@ public class PlayerStatsAnswers {
 
             Lead with exactly what he asked, in a layout he can scan, one fact to a line.
             When he asks for a stat, the first line is one short sentence with that number
-            in bold and its sample, in the shape: He played <b>N%</b> of snaps in week W
-            (S snaps). Then add at most two of his season ranks that say the most
-            about that stat or his role, each as its rank item's "line" fact, word for word.
-            When he asks for ranks, the first line is a rank item's "header" fact, then the
-            "line" fact of every rank he asked about, word for word, the ones he named
-            first; with no stat named, give the lines that say the most about his role.
-            When a rank item has an "amongAllPlayers" fact, add it as one short sentence.
+            in bold and its sample, in the shape: He played <b>N%%</b> of snaps in week W
+            (S snaps). When adding season ranks for context, leave a blank line, show the
+            rank item's "header" fact to name the comparison group, then add at most two
+            "line" facts that describe that stat or his role. Copy those facts word for word.
+            When he asks for ranks, stats among a position group, or general season stats,
+            the first line is a rank item's "header" fact, word for word. Leave a blank
+            line after it, then use the "line" fact of every rank he asked about, word for
+            word, the ones he named first. With no stat named, give up to four lines that
+            best show his fantasy role. Do not repeat the same values in prose. A brief note
+            can explain what the usage means, such as whether he owns most of the backfield
+            work or gets involved as a receiver, when the evidence supports it.
+            The header names exactly the group used for every rank line. Never relabel the
+            group or add another group unless he explicitly asks for it.
             A rank is season to date: when the stats he asked about are for a single week
             or a few weeks, the header or a short sentence says so.
             When he asks what stats you can see, say what the evidence holds for this player
@@ -63,24 +76,41 @@ public class PlayerStatsAnswers {
             zero: if he asked about it, say plainly that you don't have it and give the
             reason the evidence states, and never say you cannot see a stat the evidence
             holds. Add at most one short line of reason or context, never a paragraph.
+            When the evidence holds a league-points item, he asked for fantasy points: the
+            first line is its "%s" fact word for word, or its "%s" fact when he
+            asked for a per-game average; add its "%s" fact, word for word, when he
+            asks where he ranks. Those are his points in his league's scoring; never give
+            ffopportunity's full-PPR figures as his points.
             Never write a confidence label such as High or Medium. Stay under "maxLength"
             characters.
-            """ + FriendVoice.RULE
+            """.formatted(LeaguePointsEvidence.LINE_FACT, LeaguePointsEvidence.PER_GAME_LINE_FACT,
+                    LeaguePointsEvidence.RANK_LINE_FACT) + FriendVoice.RULE
             + AdvicePrompt.answerShape(AdvicePrompt.Naming.LISTED_BY_FULL_NAME);
 
     private final UserWeekLoader loader;
     private final PlayerLookup lookup;
     private final MatchupSourcesFactory sources;
+    private final LeaguePoints leaguePoints;
     private final CheckedAdvice advice;
     private final AdviceForm<AdviceAnswer> form;
 
-    public PlayerStatsAnswers(UserWeekLoader loader, PlayerLookup lookup,
-            MatchupSourcesFactory sources, CheckedAdvice advice, AdviceCheck check) {
+    PlayerStatsAnswers(UserWeekLoader loader, PlayerLookup lookup,
+            MatchupSourcesFactory sources, LeaguePoints leaguePoints, CheckedAdvice advice,
+            AdviceCheck check) {
         this.loader = loader;
         this.lookup = lookup;
         this.sources = sources;
+        this.leaguePoints = leaguePoints;
         this.advice = advice;
-        this.form = AdviceForm.of(INSTRUCTIONS, check::check);
+        this.form = AdviceForm.of(INSTRUCTIONS, (bundle, reply) -> {
+            AdviceCheck.Verdict<AdviceAnswer> verdict = check.check(bundle, reply);
+            if (verdict instanceof AdviceCheck.Verdict.Passed<AdviceAnswer> passed) {
+                AdviceAnswer answer = passed.answer();
+                return new AdviceCheck.Verdict.Passed<>(
+                        answer.withMessage(restoreRankRows(bundle, answer.message())));
+            }
+            return verdict;
+        });
     }
 
     /**
@@ -99,10 +129,16 @@ public class PlayerStatsAnswers {
      * <p>Side effects: reads the stored nflverse documents and the player
      * directory, makes one or two model calls, and saves one Decision
      * Record of kind {@link RunKind#PLAYER_STATS} once the stats are read.
+     * With {@code fantasyPoints}, also reads Sleeper's stats for the weeks
+     * and the bound league's matchups and rosters (see {@link LeaguePoints}).
      *
      * @param reference the player, by name or Sleeper player id
      * @param span the week, recent games or season the stats cover
      * @param asked what the user asked about, in his words, or null
+     * @param fantasyPoints true when he asked for fantasy points, which the
+     *        answer then gives in the bound league's own scoring
+     * @param rankPositions the positions the user wants ranked against each other, or
+     *        null or empty to use the player's own position
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in words fit to
@@ -110,22 +146,46 @@ public class PlayerStatsAnswers {
      *         position, the week is a bye or not finished, no source holds
      *         his games, or the answer failed its checks
      */
-    public ToolAnswer<Answer> answer(String reference, StatsSpan span, String asked, Instant now,
+    public ToolAnswer<Answer> answer(String reference, StatsSpan span, String asked,
+            boolean fantasyPoints, List<String> rankPositions, Instant now,
             AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
-                    league -> read(found.player(), league, span, asked, now, delivery));
+                    league -> read(found.player(), league, span, asked, fantasyPoints, rankPositions,
+                            now, delivery));
         };
     }
 
     private ToolAnswer<Answer> read(DirectoryPlayer player, SleeperAdapter.League league,
-            StatsSpan span, String asked, Instant now, AnswerDelivery delivery) {
+            StatsSpan span, String asked, boolean fantasyPoints, List<String> rankPositions,
+            Instant now, AnswerDelivery delivery) {
         Optional<Position> position = Position.of(player.position());
         if (position.isEmpty()) {
             return ToolAnswer.unavailable(("I keep usage stats for quarterbacks, running backs, "
                     + "receivers and tight ends, and %s plays %s").formatted(player.fullName(),
                     player.position()));
+        }
+        Set<Position> comparison = EnumSet.noneOf(Position.class);
+        if (rankPositions == null || rankPositions.isEmpty()) {
+            comparison.add(position.get());
+        } else {
+            for (String code : rankPositions) {
+                Optional<Position> parsed = Position.parse(code);
+                if (parsed.isEmpty()) {
+                    return ToolAnswer.unavailable("I can rank QB, RB, WR and TE together or "
+                            + "in any combination.");
+                }
+                comparison.add(parsed.get());
+            }
+        }
+        if (!comparison.contains(position.get())) {
+            return ToolAnswer.unavailable("%s plays %s and is outside that comparison group."
+                    .formatted(player.fullName(), position.get().name()));
+        }
+        if (fantasyPoints && comparison.size() > 1) {
+            return ToolAnswer.unavailable("I rank fantasy points within one position. "
+                    + "I can compare usage stats across positions.");
         }
         MatchupSources opened = sources.open();
         Optional<PlayerUsage> usage = opened.usage();
@@ -150,13 +210,32 @@ public class PlayerStatsAnswers {
         if (window.facts() == null) {
             return ToolAnswer.unavailable(window.unavailable());
         }
-        return written(subject(player, gsisId.get(), position.get(), team, window.facts(),
-                usage.get(), games, asked), opened, usage.get().season(), league, now, delivery);
+        PlayerStatsEvidence.Subject subject = subject(player, gsisId.get(), position.get(),
+                team, window.facts(), usage.get(), games, asked, comparison);
+        if (subject.games().isEmpty()) {
+            return ToolAnswer.unavailable(nothingPlayed(subject));
+        }
+        Optional<EvidenceItem> points = fantasyPoints
+                ? Optional.of(leaguePoints(subject, league, usage.get(), now))
+                : Optional.empty();
+        return written(subject, points, opened, usage.get().season(), league, now, delivery);
+    }
+
+    private EvidenceItem leaguePoints(PlayerStatsEvidence.Subject subject,
+            SleeperAdapter.League league, PlayerUsage usage, Instant now) {
+        LeagueScoring scoring = new LeagueScoring(league.scoringSettings());
+        if (scoring.isEmpty()) {
+            return LeaguePointsEvidence.unscored(subject, league.name(), now);
+        }
+        LeaguePoints.Report report = leaguePoints.read(new LeaguePoints.Request(scoring,
+                usage.season(), !usage.priorSeasonFinal(), subject.player(), subject.team(),
+                subject.window().weeks()));
+        return LeaguePointsEvidence.item(subject, report, league.name(), scoring, now);
     }
 
     private static PlayerStatsEvidence.Subject subject(DirectoryPlayer player, String gsisId,
             Position position, String team, StatsSpan.Window window, PlayerUsage usage,
-            List<PlayerUsage.Game> games, String asked) {
+            List<PlayerUsage.Game> games, String asked, Set<Position> comparison) {
         List<PlayerUsage.Game> played = new ArrayList<>();
         List<Integer> didNotPlay = new ArrayList<>();
         List<Integer> notPublished = new ArrayList<>();
@@ -173,22 +252,39 @@ public class PlayerStatsAnswers {
             }
         }
         return new PlayerStatsEvidence.Subject(player, gsisId, position, team, window, played,
-                didNotPlay, notPublished, asked);
+                didNotPlay, notPublished, asked, comparison);
     }
 
     private ToolAnswer<Answer> written(PlayerStatsEvidence.Subject subject,
-            MatchupSources opened, String season, SleeperAdapter.League league, Instant now,
-            AnswerDelivery delivery) {
-        if (subject.games().isEmpty()) {
-            return ToolAnswer.unavailable(nothingPlayed(subject));
-        }
-        EvidenceBundle bundle = PlayerStatsEvidence.bundle(subject, opened, season, now);
+            Optional<EvidenceItem> leaguePoints, MatchupSources opened, String season,
+            SleeperAdapter.League league, Instant now, AnswerDelivery delivery) {
+        EvidenceBundle bundle = PlayerStatsEvidence.bundle(subject, leaguePoints, opened, season,
+                now);
         DirectoryPlayer player = subject.player();
         return advice.write(bundle, form, new CheckedAdvice.Run(RUN_ID_PREFIX,
                         List.of(player.playerId()), RunKind.PLAYER_STATS, league,
                         List.of(new Candidate(player.playerId(), player.fullName(), true,
                                 "the player the user asked about")), "write-up"), now, delivery)
                 .answer(message -> new Answer(subject.name(), message), fallbacks(player));
+    }
+
+    private static String restoreRankRows(EvidenceBundle bundle, String message) {
+        List<String> ranks = bundle.evidence().stream()
+                .filter(item -> item.facts().containsKey("header"))
+                .map(item -> item.facts().get("line"))
+                .filter(line -> line != null && line.contains(": <b>"))
+                .toList();
+        return message.lines().map(line -> {
+            String visible = TelegramHtml.words(line).strip();
+            return ranks.stream().filter(rank -> {
+                String row = TelegramHtml.visible(rank);
+                String label = row.substring(row.indexOf(' ') + 1, row.indexOf(':') + 1);
+                String ordinal = rank.substring(rank.indexOf("<b>") + 3, rank.indexOf("</b>"));
+                return visible.regionMatches(true, 0, label, 0, label.length())
+                        && visible.substring(label.length()).stripLeading()
+                                .matches(Pattern.quote(ordinal) + "\\b.*");
+            }).findFirst().orElse(line);
+        }).collect(Collectors.joining("\n"));
     }
 
     private static String nothingPlayed(PlayerStatsEvidence.Subject subject) {
