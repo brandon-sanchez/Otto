@@ -35,6 +35,11 @@ public record AdviceAnswer(
         conditions = List.copyOf(conditions);
     }
 
+    /** Returns the same answer with its message replaced. */
+    public AdviceAnswer withMessage(String text) {
+        return new AdviceAnswer(text, move, players, claims, comparisons, plan, conditions);
+    }
+
     /** @param evidence the ids of the evidence items the claim rests on */
     public record Claim(String text, List<String> evidence) {
 
