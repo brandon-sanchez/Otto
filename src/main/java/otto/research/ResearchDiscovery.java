@@ -11,6 +11,9 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
+import otto.followed.FollowedLeague;
+import otto.followed.FollowedLeagues;
+import otto.sleeper.LeagueScope;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.RosterSnapshot;
@@ -23,7 +26,8 @@ import otto.watchlist.WatchlistStore;
  * an Alert or a board needs it. A scheduled job runs it.
  *
  * <p>The players it reads are every rostered player in the latest
- * Snapshot, every Watchlist player, and Sleeper's most-added players.
+ * Snapshot of each followed league, every Watchlist player, and
+ * Sleeper's most-added players.
  * One run reads at most {@link #BATCH} of them, least recently read
  * first, so a run stays a few seconds long and the whole set comes
  * round over a few runs.
@@ -44,16 +48,18 @@ public class ResearchDiscovery {
     private final WatchlistStore watchlist;
     private final SleeperAdapter sleeper;
     private final JsonStore store;
+    private final FollowedLeagues leagues;
     private final Clock clock;
 
     public ResearchDiscovery(ResearchCache cache, SnapshotStore snapshots,
             WatchlistStore watchlist, SleeperAdapter sleeper, JsonStore store,
-            Clock clock) {
+            FollowedLeagues leagues, Clock clock) {
         this.cache = cache;
         this.snapshots = snapshots;
         this.watchlist = watchlist;
         this.sleeper = sleeper;
         this.store = store;
+        this.leagues = leagues;
         this.clock = clock;
     }
 
@@ -114,9 +120,12 @@ public class ResearchDiscovery {
 
     private Set<String> playersWorthReading() {
         Set<String> players = new LinkedHashSet<>();
-        snapshots.current().ifPresent(snapshot -> snapshot.rosters().stream()
-                .map(RosterSnapshot::players)
-                .forEach(players::addAll));
+        for (FollowedLeague league : leagues.followed()) {
+            LeagueScope.call(league.leagueId(), snapshots::current)
+                    .ifPresent(snapshot -> snapshot.rosters().stream()
+                            .map(RosterSnapshot::players)
+                            .forEach(players::addAll));
+        }
         players.addAll(watchlist.playerIds());
         // A trending list that cannot be read costs this run its trending
         // players and nothing else; the next run asks again.

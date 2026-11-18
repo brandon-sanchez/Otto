@@ -249,7 +249,12 @@ public final class OutboundStubs {
                 """.formatted(jsonString(phrase));
     }
 
-    static String toolCallBody(String... calls) {
+    /**
+     * A chat completion that calls tools.
+     *
+     * @param calls each tool's name, then its JSON arguments, in turn
+     */
+    public static String toolCallBody(String... calls) {
         StringBuilder toolCalls = new StringBuilder();
         for (int index = 0; index < calls.length; index += 2) {
             toolCalls.append(index == 0 ? "" : ",").append("""
