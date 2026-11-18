@@ -84,8 +84,7 @@ public class AlertDeliveryOutbox {
      *        Done, Ignore and Mute buttons
      * @param leagueId the league the Alert is about, the config league's
      *        when it was sent with no league bound; null in a delivery
-     *        stored before deliveries named their league, which was about
-     *        the config league
+     *        written without a league, which reads as the config league
      */
     private record Delivery(long alertId, Status status, String text, String basis,
             List<Event> events, List<String> parts, int partsSent, boolean viewAllOptions,
@@ -263,12 +262,12 @@ public class AlertDeliveryOutbox {
 
     /**
      * Returns the league the Alert with this id is about, so a tap on
-     * its buttons acts there. Empty when no delivery has this id, or
-     * when it was stored before deliveries named their league, which
-     * makes it the config league's.
+     * its buttons acts there, or empty when no delivery has this id. A
+     * delivery written without a league is the config league's.
      */
     public Optional<String> leagueOf(long alertId) {
-        return readById(alertId).map(Delivery::leagueId);
+        return readById(alertId).map(delivery -> delivery.leagueId() == null
+                ? configLeagueId : delivery.leagueId());
     }
 
     private boolean lease(String key) {

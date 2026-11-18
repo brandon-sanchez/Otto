@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import otto.alerts.SelfReportService;
 import otto.lineup.LeagueScoring;
 import otto.sleeper.SleeperAdapter;
+import otto.sleeper.SleeperSources;
 import otto.sleeper.SourceResult;
 
 /**
@@ -67,7 +68,7 @@ public class DefenseVersusPositionBuilder {
         }
         LeagueScoring scoring = new LeagueScoring(leagueOk.value().scoringSettings());
         if (scoring.isEmpty()) {
-            selfReport.report("sleeper:league-settings",
+            selfReport.report(SleeperSources.LEAGUE_SETTINGS,
                     "league document lacks scoring_settings, so points allowed cannot be priced");
             return Optional.empty();
         }

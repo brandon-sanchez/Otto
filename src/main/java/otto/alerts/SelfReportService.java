@@ -10,6 +10,7 @@ import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.scope.LeagueScope;
+import otto.sleeper.SleeperSources;
 import otto.sleeper.SourceResult;
 import otto.telegram.TelegramClient;
 
@@ -25,12 +26,6 @@ import otto.telegram.TelegramClient;
  */
 @Component
 public class SelfReportService {
-
-    /** The source names of one league's own Sleeper data, which name the league's path. */
-    private static final String LEAGUE_SOURCE_PREFIX = "sleeper:/v1/league/";
-
-    /** The source name of a league document missing its roster or scoring settings. */
-    private static final String LEAGUE_SETTINGS_SOURCE = "sleeper:league-settings";
 
     private final EventLog eventLog;
     private final TelegramClient telegram;
@@ -49,8 +44,19 @@ public class SelfReportService {
         }
     }
 
+    /**
+     * Tells the user a source is down, once per source.
+     *
+     * <p>Side effects: one Event Log append and one Telegram message
+     * the first time a source is reported. A league's own Sleeper data
+     * is reported for the league in scope; any other source is reported
+     * with no league bound, so it names no league and dedups in the
+     * config league's Event Log.
+     *
+     * @param reason the error in plain words; null reads as "no detail"
+     */
     public void report(String source, String reason) {
-        if (belongsToOneLeague(source)) {
+        if (SleeperSources.isLeagueOwned(source)) {
             send(source, reason);
         } else {
             LeagueScope.runForNoLeague(() -> send(source, reason));
@@ -72,7 +78,4 @@ public class SelfReportService {
         }
     }
 
-    private static boolean belongsToOneLeague(String source) {
-        return source.startsWith(LEAGUE_SOURCE_PREFIX) || source.equals(LEAGUE_SETTINGS_SOURCE);
-    }
 }

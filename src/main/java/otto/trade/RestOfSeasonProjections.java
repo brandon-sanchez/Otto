@@ -16,6 +16,7 @@ import otto.lineup.GameWeek;
 import otto.lineup.LeagueScoring;
 import otto.lineup.ProjectionTable;
 import otto.sleeper.SleeperAdapter;
+import otto.sleeper.SleeperSources;
 import otto.sleeper.SourceResult;
 
 /**
@@ -63,13 +64,13 @@ public class RestOfSeasonProjections {
                             + "season");
         }
         if (league.lastRegularWeek().isEmpty()) {
-            return new SourceResult.Unavailable<>("sleeper:league",
+            return new SourceResult.Unavailable<>(SleeperSources.LEAGUE,
                     "the league document does not say when the playoffs start, so I cannot "
                             + "tell how much of the regular season is left");
         }
         LeagueScoring scoring = new LeagueScoring(league.league().scoringSettings());
         if (scoring.isEmpty()) {
-            return new SourceResult.Unavailable<>("sleeper:league-settings",
+            return new SourceResult.Unavailable<>(SleeperSources.LEAGUE_SETTINGS,
                     "the league document carries no scoring settings, so I can price nothing");
         }
 

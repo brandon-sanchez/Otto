@@ -17,13 +17,17 @@ import java.util.function.Supplier;
  */
 public final class LeagueScope {
 
-    /** The league bound for the work; empty inside {@link #runForNoLeague}. */
+    /** The league bound for the work; empty when a block is unbound from every league. */
     private static final ScopedValue<Optional<String>> LEAGUE = ScopedValue.newInstance();
 
     private LeagueScope() {
     }
 
-    /** Returns the league bound for this work, or empty when it is the config league's. */
+    /**
+     * Returns the league bound for this work, or empty when none is.
+     * With none bound, documents that belong to a league are the config
+     * league's and a message names no league.
+     */
     public static Optional<String> bound() {
         return LEAGUE.orElse(Optional.empty());
     }

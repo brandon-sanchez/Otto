@@ -14,6 +14,7 @@ import otto.lineup.LeagueScoring;
 import otto.lineup.ProjectionTable;
 import otto.lineup.Slot;
 import otto.sleeper.SleeperAdapter;
+import otto.sleeper.SleeperSources;
 import otto.sleeper.SourceResult;
 
 /**
@@ -71,7 +72,7 @@ public class WeekFactsBuilder {
         List<Slot> slots = Slot.startingSlots(league.rosterPositions());
         LeagueScoring scoring = new LeagueScoring(league.scoringSettings());
         if (slots.isEmpty() || scoring.isEmpty()) {
-            selfReport.report("sleeper:league-settings",
+            selfReport.report(SleeperSources.LEAGUE_SETTINGS,
                     "league document lacks roster_positions or scoring_settings");
         }
 
