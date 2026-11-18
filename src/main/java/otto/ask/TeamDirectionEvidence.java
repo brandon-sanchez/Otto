@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
+import otto.advice.Ordinal;
 import otto.team.LeagueDirections;
 import otto.team.TeamDirection;
 
@@ -32,7 +33,7 @@ final class TeamDirectionEvidence {
         List<EvidenceItem> evidence = new ArrayList<>();
         evidence.add(item("summary", now, summary(leagueName, league)));
         league.teams().forEach(team -> evidence.add(item("team-" + team.rosterId(), now,
-                facts(team, league.market()))));
+                facts(team, league.market(), league.teams().size()))));
         return new EvidenceBundle(
                 "Tell the user which teams in his league are contending, in the middle or "
                         + "rebuilding, and why.",
@@ -40,9 +41,14 @@ final class TeamDirectionEvidence {
                 Optional.empty(), List.of(), List.of());
     }
 
-    /** Returns the evidence item that carries the user's own direction in another answer. */
-    static EvidenceItem userItem(TeamDirection user, Optional<String> market, Instant now) {
-        return item("direction", now, facts(user, market));
+    /**
+     * Returns the evidence item that carries the user's own direction in another answer.
+     *
+     * @param teams how many teams his ranks in points and roster value run over
+     */
+    static EvidenceItem userItem(TeamDirection user, Optional<String> market, int teams,
+            Instant now) {
+        return item("direction", now, facts(user, market, teams));
     }
 
     private static Map<String, String> summary(String leagueName, LeagueDirections league) {
@@ -59,7 +65,13 @@ final class TeamDirectionEvidence {
         return summary;
     }
 
-    private static Map<String, String> facts(TeamDirection team, Optional<String> market) {
+    /**
+     * Writes each rank as a standing, such as "2nd of 12", beside the
+     * reason's "the 2nd-most points", so the fact check finds the rank
+     * the reason words.
+     */
+    private static Map<String, String> facts(TeamDirection team, Optional<String> market,
+            int teams) {
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("manager", team.userTeam() ? "you" : team.manager());
         facts.put("direction", switch (team.basis()) {
@@ -74,8 +86,13 @@ final class TeamDirectionEvidence {
         facts.put("reason", team.reason());
         facts.put("pointsFor", "%s points scored".formatted(
                 String.format(Locale.ROOT, "%.1f", team.record().pointsFor())));
+        facts.put("pointsRank", "%s in points scored, 1st being the most".formatted(
+                Ordinal.standing(team.pointsRank(), teams)));
         team.marketValue().ifPresent(value -> market.ifPresent(list -> facts.put("marketValue",
                 "%d in market value for a %s league".formatted(value, list))));
+        team.valueRank().ifPresent(rank -> facts.put("rosterValueRank",
+                "%s in roster market value, 1st being the most valuable".formatted(
+                        Ordinal.standing(rank, teams))));
         if (team.basis() == TeamDirection.Basis.AWAITING_CONFIRMATION) {
             facts.put("question", QUESTION);
         }
