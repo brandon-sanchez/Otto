@@ -1,0 +1,2800 @@
+{
+ "recordedAt": "2026-11-18T02:00:28.515307097Z",
+ "activeRosterSpots": 15,
+ "budgetLeft": 59,
+ "minimumBid": 0,
+ "roster": {
+  "players": [
+   "10229",
+   "11584",
+   "11625",
+   "1166",
+   "12490",
+   "13279",
+   "13286",
+   "13296",
+   "13337",
+   "3198",
+   "4866",
+   "4892",
+   "6794",
+   "7002",
+   "8183",
+   "8210"
+  ],
+  "reserve": [
+   "13279"
+  ],
+  "taxi": [],
+  "playerNames": {
+   "12490": "Bhayshul Tuten",
+   "7002": "Juwan Johnson",
+   "8210": "Chig Okonkwo",
+   "13286": "Jadarian Price",
+   "4892": "Baker Mayfield",
+   "6794": "Justin Jefferson",
+   "13296": "Caleb Douglas",
+   "3198": "Derrick Henry",
+   "8183": "Brock Purdy",
+   "11625": "Adonai Mitchell",
+   "10229": "Rashee Rice",
+   "1166": "Kirk Cousins",
+   "11584": "Bucky Irving",
+   "13279": "Carnell Tate",
+   "4866": "Saquon Barkley",
+   "13337": "Emmett Johnson"
+  }
+ },
+ "candidates": {
+  "5995": {
+   "fullName": "Justice Hill",
+   "position": "RB",
+   "team": "BAL"
+  },
+  "9482": {
+   "fullName": "Michael Mayer",
+   "position": "TE",
+   "team": "LV"
+  },
+  "12499": {
+   "fullName": "Elic Ayomanor",
+   "position": "WR",
+   "team": "TEN"
+  },
+  "4147": {
+   "fullName": "Samaje Perine",
+   "position": "RB",
+   "team": "CIN"
+  },
+  "5012": {
+   "fullName": "Mark Andrews",
+   "position": "TE",
+   "team": "BAL"
+  },
+  "13425": {
+   "fullName": "Jalon Daniels",
+   "position": "QB",
+   "team": "TB"
+  },
+  "11593": {
+   "fullName": "Brevyn Spann-Ford",
+   "position": "TE",
+   "team": "DAL"
+  },
+  "12492": {
+   "fullName": "Pat Bryant",
+   "position": "WR",
+   "team": "DEN"
+  }
+ },
+ "directoryNames": [
+  "Adonai Mitchell",
+  "Baker Mayfield",
+  "Ben Sinnott",
+  "Bhayshul Tuten",
+  "Brevyn Spann-Ford",
+  "Brock Bowers",
+  "Brock Purdy",
+  "Bucky Irving",
+  "Cade Klubnik",
+  "Caleb Douglas",
+  "Carnell Tate",
+  "Carson Beck",
+  "Chig Okonkwo",
+  "Chimere Dike",
+  "Chris Brooks",
+  "Derrick Henry",
+  "Elic Ayomanor",
+  "Emari Demercado",
+  "Emmett Johnson",
+  "Gavin Bartholomew",
+  "Gunnar Helm",
+  "Jacoby Brissett",
+  "Jadarian Price",
+  "Jalon Daniels",
+  "Joe Milton",
+  "Josh Cameron",
+  "Justice Hill",
+  "Justin Jefferson",
+  "Juwan Johnson",
+  "Kaelon Black",
+  "Kirk Cousins",
+  "Lan Larison",
+  "Mark Andrews",
+  "Michael Mayer",
+  "Myles Price",
+  "Noah Gray",
+  "Pat Bryant",
+  "Rashee Rice",
+  "Samaje Perine",
+  "Saquon Barkley",
+  "Tommy DeVito",
+  "Tre' Harris",
+  "Wan'Dale Robinson",
+  "Zonovan Knight"
+ ],
+ "bundle": {
+  "task": "Rank this week's waiver candidates against the user's roster needs and write the waiver board.",
+  "evidence": [
+   {
+    "id": "board",
+    "source": "otto:waiver-board",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "the claim round this board is for",
+    "facts": {
+     "claimDeadline": "2026-11-18T03:00-05:00[America/New_York]",
+     "missingData": "the FTN charting lack week 10's LAC at BAL game",
+     "leagueFormat": "redraft",
+     "week": "11",
+     "startingSlots": "QB, RB, RB, WR, WR, TE, FLEX, FLEX, SUPER_FLEX"
+    }
+   },
+   {
+    "id": "needs",
+    "source": "otto:roster-needs",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "where the user's roster needs help, slot by slot against the league",
+    "facts": {
+     "sidelined": "Carnell Tate (designation), Jadarian Price (bye)",
+     "pastStarterScoring": "QB: 25.6 points per week from his starters over 10 completed weeks, 2nd of 12, league median 20.7; RB: 14.4 points per week from his starters over 10 completed weeks, 8th of 12, league median 16.5; RB: 17.4 points per week from his starters over 10 completed weeks, 2nd of 12, league median 14.4; WR: 13.6 points per week from his starters over 10 completed weeks, 9th of 12, league median 14.5; WR: 10.6 points per week from his starters over 10 completed weeks, 11th of 12, league median 13.3; TE: 8.1 points per week from his starters over 10 completed weeks, 12th of 12, league median 12.2; FLEX: 13.2 points per week from his starters over 10 completed weeks, 2nd of 12, league median 9.5; FLEX: 12.4 points per week from his starters over 10 completed weeks, 6th of 12, league median 11.9; SUPER_FLEX: 15.8 points per week from his starters over 10 completed weeks, 8th of 12, league median 16.2",
+     "openSlots": "none",
+     "weaknessThisWeek": "QB: 18.9 points projected, 10th of 12, league median 21.1; RB: 17.0 points projected, 6th of 12, league median 16.1; RB: 15.4 points projected, 3rd of 11, league median 12.2; WR: 18.5 points projected, 5th of 12, league median 15.6; WR: 15.0 points projected, 3rd of 11, league median 13.2; TE: 14.4 points projected, 7th of 10, league median 16.0; FLEX: 15.4 points projected, 3rd of 10, league median 12.4; FLEX: 12.7 points projected, 1st of 8, league median 9.1; SUPER_FLEX: 18.8 points projected, 3rd of 10, league median 16.8"
+    }
+   },
+   {
+    "id": "roster",
+    "source": "sleeper:rosters",
+    "publishedAt": "2026-11-18T02:00:28.515307097Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "the user's roster, for roster fit",
+    "facts": {
+     "Brock Purdy": "QB, SF, starting, active",
+     "Derrick Henry": "RB, BAL, starting, active",
+     "Emmett Johnson": "RB, KC, starting, active",
+     "Bhayshul Tuten": "RB, JAX, starting, active",
+     "Jadarian Price": "RB, SEA, on the bench, active",
+     "Juwan Johnson": "TE, NO, on the bench, active",
+     "Adonai Mitchell": "WR, NYJ, on the bench, active",
+     "Justin Jefferson": "WR, MIN, starting, active",
+     "Baker Mayfield": "QB, TB, on the bench, questionable",
+     "Kirk Cousins": "QB, MIN, starting, active",
+     "Saquon Barkley": "RB, PHI, on the bench, active",
+     "Bucky Irving": "RB, TB, on the bench, active",
+     "Rashee Rice": "WR, KC, starting, active",
+     "Carnell Tate": "WR, TEN, on IR, out",
+     "Caleb Douglas": "WR, MIA, starting, active",
+     "Chig Okonkwo": "TE, WAS, starting, questionable"
+    }
+   },
+   {
+    "id": "faab",
+    "source": "otto:faab-bounds",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "the bounds every bid must stay inside",
+    "facts": {
+     "minimumBid": "$0",
+     "bidLimit": "none set by the user",
+     "bids": "allowed, in whole dollars",
+     "highestLegalBid": "$59",
+     "budgetLeft": "$59",
+     "leagueBudget": "$100"
+    }
+   },
+   {
+    "id": "competition",
+    "source": "sleeper:transactions",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "the league's own bidding, won and lost claims, and every rival's budget left: read this before any published consensus",
+    "facts": {
+     "bidHistory": "week 10: Braelon Allen (RB) went to rivalF for $5; week 10: Jordyn Tyson (WR) drew only lost bids, $6 (rivalH); week 9: Fernando Mendoza (QB) went to rivalI for $14, lost bids $5 (rivalD), $5 (the user); week 9: Corey Kiner (RB) went to rivalH for $1; week 9: Kyle McCord (QB) went to rivalK for $0, lost bids $0 (rivalE); week 9: Chig Okonkwo (TE) went to the user for $0; week 8: Seth McGowan (RB) went to rivalF for $5, lost bids $0 (rivalI); week 8: Mike Gesicki (TE) went to rivalF for $10, lost bids $3 (rivalG); week 8: Adonai Mitchell (WR) went to the user for $15; week 7: Seth McGowan (RB) went to rivalI for $0; week 7: Makai Lemon (WR) went to rivalI for $8, lost bids $0 (rivalF); week 7: Caleb Douglas (WR) went to the user for $11, lost bids $2 (rivalG); week 7: Antonio Williams (WR) went to rivalG for $3; week 7: Kimani Vidal (RB) drew only lost bids, $0 (rivalH); week 7: Samaje Perine (RB) drew only lost bids, $0 (rivalH); week 7: Zonovan Knight (RB) went to rivalH for $2; week 7: Ryan Flournoy (WR) went to rivalF for $0, lost bids $0 (rivalG); week 7: Kenyon Sadiq (TE) drew only lost bids, $0 (rivalG); week 7: Chig Okonkwo (TE) went to the user for $1; week 6: Michael Mayer (TE) went to rivalD for $10, lost bids $5 (the user); week 6: Konata Mumpfield (WR) went to rivalD for $17; week 6: Tyrone Tracy Jr. (RB) went to rivalH for $0, lost bids $0 (rivalH); week 6: Tanner McKee (QB) drew only lost bids, $0 (rivalH); week 6: DeMario Douglas (WR) went to rivalH for $0, lost bids $0 (rivalH); week 6: Tre Tucker (WR) went to rivalD for $25, lost bids $6 (rivalF), $2 (rivalG), $2 (rivalH); week 5: MarShawn Lloyd (RB) went to rivalC for $17, lost bids $13 (rivalF), $9 (rivalI), $0 (rivalE), $0 (the user); week 5: Germie Bernard (WR) went to rivalI for $15; week 5: Efton Chism III (WR) went to rivalF for $0; week 5: Kendrick Bourne (WR) went to the user for $0; week 5: Chuba Hubbard (RB) drew only lost bids, $0 (rivalK), $0 (rivalK)",
+     "claimsRead": "85 FAAB claims this season, 47 won and 38 lost",
+     "rivalBudgetsLeft": "rivalI $0, rivalJ $90, rivalC $55, rivalD $48, rivalB $100, rivalE $99, rivalF $80, rivalG $82, rivalA $100, rivalH $97, rivalK $100"
+    }
+   },
+   {
+    "id": "candidate-5995",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Justice Hill",
+     "position": "RB",
+     "designation": "active",
+     "whyOnTheBoard": "among the free agents at RB with the largest snap share in the latest week; among the highest-projected free agents at RB this week; a trending free agent with a news report from the past week",
+     "nflTeam": "BAL"
+    }
+   },
+   {
+    "id": "usage-5995",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "48% of offensive snaps (33 snaps); 7 targets of 47 team targets, a target share of 15%; 3 carries of 15 team carries, a carry share of 20%; air-yards share -2%; 1 red-zone targets, 1 red-zone carries, 0 end-zone targets; first-read targets unknown; 9.6 expected full-PPR points",
+     "week 9": "52% of offensive snaps (29 snaps); 3 targets of 16 team targets, a target share of 19%; 9 carries of 34 team carries, a carry share of 26%; air-yards share -56%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 0 first-read targets; 9.0 expected full-PPR points",
+     "week 8": "49% of offensive snaps (25 snaps); 8 targets of 26 team targets, a target share of 31%; 3 carries of 19 team carries, a carry share of 16%; air-yards share -6%; 2 red-zone targets, 0 red-zone carries, 1 end-zone targets; 1 first-read targets; 12.9 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-5995",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "8.8 points in league scoring against LAC: 3 carries, 4 rushing yards, 7 targets, 5 receptions, 34 receiving yards",
+     "week 9": "18.2 points in league scoring against JAX: 9 carries, 85 rushing yards, 1 rushing touchdowns, 3 targets, 3 receptions, 7 receiving yards",
+     "week 8": "7.5 points in league scoring against BUF: 3 carries, 15 rushing yards, 8 targets, 4 receptions, 20 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-5995",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "7.3"
+    }
+   },
+   {
+    "id": "news-5995-1",
+    "source": "research-cache:rotowire",
+    "publishedAt": "2026-11-18T00:33:34Z",
+    "retrievedAt": "2026-11-18T01:17:23.570004238Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports on": "availability",
+     "analysis": "Hill also had a 14-yard carry midway through the first quarter, but the play was nullified by an offensive holding call. The veteran running back connected on a 17-yard catch with Jacoby Brissett late in the third, which set up a 36-yard field goal by Riley Patterson four plays later. Hill's five catches were a season high, and even with the Ravens' quarterback carousel over the last three weeks, the 2019 fourth-rounder has hauled in at least three passes in each of his last five outings. Losers of five straight games, the Ravens will look to turn their fortunes around in a Week 11 road tilt against the Panthers on Sunday.",
+     "report": "Justice Hill - Churns out 37 yards in Week 10 loss: Hill turned three carries into four yards and added five catches on seven targets for 34 yards during the Ravens' 23-20 loss to the Chargers on Monday.",
+     "source": "rotowire"
+    }
+   },
+   {
+    "id": "news-5995-2",
+    "source": "research-cache:fantasy_pros",
+    "publishedAt": "2026-11-17T13:10:45.079Z",
+    "retrievedAt": "2026-11-17T14:07:22.727770326Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports on": "availability",
+     "analysis": "Hill was a non-factor in the rushing game on Monday night, but he was able to get involved as a pass catcher, finishing with five catches for 34 yards. Those are high-value touches, but fantasy managers still shouldn't expect him to be a reliable fantasy asset for the foreseeable future given his lack of consistent work in the rushing game.",
+     "report": "Justice Hill active as receiver in win Monday: Justice Hill rushed the ball three times for four yards and hauled in 5-of-7 targets for 34 yards in Monday night's 23-20 loss to the Los Angeles Chargers.",
+     "source": "fantasy_pros"
+    }
+   },
+   {
+    "id": "news-5995-3",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-17T11:38:16Z",
+    "retrievedAt": "2026-11-17T17:07:22.234242873Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "report": "Justice Hill Offers PPR Depth and Backfield Insurance: Baltimore Ravens running back Justice Hill has caught at least three passes in five straight games. He set season highs with five catches and 34 receiving yards on seven targets in Monday night's loss to the Los Angeles Chargers. On third-and-eight, he turned a short pass from Jacoby Brissett into a 25-yard gain to the Chargers' 17-yard line. Hill is rostered in 13% of Yahoo leagues and is worth a Week 11 bench spot in 14-team PPR formats. The Carolina Panthers host Baltimore on Sunday and have allowed 29.4 receiving yards per game to running backs, below the league average of 32.9. He also offers insurance for Derrick Henry managers after playing 33 offensive snaps to Henry's 38 on Monday. They were the only Baltimore running backs with carries, and Henry took 10 of their 13 attempts and scored both Ravens touchdowns. Hill's only game with more than six carries this season came in Week 9 against Jacksonville. He ran nine times for 85 yards that night, with 65 coming on his touchdown.",
+     "source": "rotoballer"
+    }
+   },
+   {
+    "id": "trending-5995",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "209538"
+    }
+   },
+   {
+    "id": "matchup-opponent-5995",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "CAR",
+     "team": "BAL",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-5995",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to running backs",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "27.3",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for running backs",
+     "subject": "CAR defense",
+     "rankFromBottom": "3rd from the bottom",
+     "rank": "30th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defense-rushing-yards-allowed-5995",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest rushing yards allowed per game; the last is the easiest",
+     "stat": "rushing yards allowed per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "124.0",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for running backs",
+     "subject": "CAR defense",
+     "rankFromBottom": "10th from the bottom",
+     "rank": "23rd",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defense-yards-before-contact-allowed-5995",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest yards before contact allowed per carry; the last is the easiest",
+     "stat": "yards before contact allowed per carry",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "2.5",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for running backs",
+     "subject": "CAR defense",
+     "rankFromBottom": "12th from the bottom",
+     "rank": "21st",
+     "sample": "8 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-5995",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "5 of 24",
+     "defense": "CAR",
+     "startersOutOrDoubtful": "Jaycee Horn (NB2, ir); Will Lee III (RCB1, out); Mike Jackson (RCB2, ir); Bobby Okereke (RILB1, out)"
+    }
+   },
+   {
+    "id": "matchup-player-carry-share-5995",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Justice Hill ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest carry share; a higher value is better for his fantasy output",
+     "stat": "carry share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "13%",
+     "population": "of 156 running backs",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Justice Hill",
+     "rankFromBottom": "72nd from the bottom",
+     "rank": "85th",
+     "sample": "36 carries"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-5995",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Justice Hill ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "12%",
+     "population": "of 156 running backs",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Justice Hill",
+     "rankFromBottom": "142nd from the bottom",
+     "rank": "15th",
+     "sample": "35 targets"
+    }
+   },
+   {
+    "id": "matchup-player-yards-before-contact-per-carry-5995",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Justice Hill ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest yards before contact per carry; a higher value is better for his fantasy output",
+     "stat": "yards before contact per carry",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "4.3",
+     "population": "of 123 running backs",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Justice Hill",
+     "rankFromBottom": "120th from the bottom",
+     "rank": "4th",
+     "sample": "33 carries"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-5995",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Justice Hill",
+     "targetsWhenBlitzed": "8 of his team's 79",
+     "sample": "100 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "10%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-5995",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Justice Hill",
+     "dropbackShare": "BAL 53%",
+     "sample": "on the field for 173 of 328 team dropbacks in 10 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-rushing-contact-5995",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "what he makes after first contact this season",
+    "facts": {
+     "subject": "Justice Hill",
+     "brokenTackles": "0",
+     "sample": "33 carries",
+     "yardsAfterContactPerCarry": "3.0",
+     "weeks": "weeks 1 to 9 of 2026"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-5995",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for running backs, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for running backs, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to running backs",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "21.7",
+     "population": "of 32 teams",
+     "matchup": "neutral: neither a hard nor an easy remaining schedule for running backs",
+     "subject": "BAL",
+     "rankFromBottom": "21st from the bottom",
+     "rank": "12th",
+     "sample": "7 remaining games"
+    }
+   },
+   {
+    "id": "consensus-5995",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-9482",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Michael Mayer",
+     "position": "TE",
+     "designation": "active",
+     "whyOnTheBoard": "among the free agents at TE with the largest snap share in the latest week; among the highest-projected free agents at TE this week; a trending free agent with a news report from the past week; among the free agents most added on Sleeper in the last day",
+     "nflTeam": "LV"
+    }
+   },
+   {
+    "id": "usage-9482",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "83% of offensive snaps (49 snaps); 3 targets of 27 team targets, a target share of 11%; 1 carries of 24 team carries, a carry share of 4%; air-yards share 4%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 1 first-read targets; 4.4 expected full-PPR points",
+     "week 9": "76% of offensive snaps (38 snaps); 3 targets of 32 team targets, a target share of 9%; 0 carries of 15 team carries, a carry share of 0%; air-yards share 8%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 2 first-read targets; 5.1 expected full-PPR points",
+     "week 8": "79% of offensive snaps (50 snaps); 6 targets of 25 team targets, a target share of 24%; 0 carries of 33 team carries, a carry share of 0%; air-yards share 20%; 1 red-zone targets, 0 red-zone carries, 1 end-zone targets; 3 first-read targets; 11.7 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-9482",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "4.8 points in league scoring against SEA: 1 carries, 2 rushing yards, 3 targets, 2 receptions, 16 receiving yards",
+     "week 9": "6.2 points in league scoring against SF: 3 targets, 3 receptions, 37 receiving yards",
+     "week 8": "12.8 points in league scoring against NYJ: 6 targets, 5 receptions, 53 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-9482",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "12.8"
+    }
+   },
+   {
+    "id": "news-9482-1",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-16T16:35:31Z",
+    "retrievedAt": "2026-11-16T22:17:22.102347040Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "rotoballer",
+     "report": "Michael Mayer a Waiver-Wire Target Amid Potential Role Expansion: Across 10 games so far in 2026, Las Vegas Raiders tight end Michael Mayer has recorded 41 catches for 404 yards and a touchdown on 49 targets. While the 25-year-old has already set career-highs in both receptions and receiving yards, his production has been capped while sharing the field with Raiders superstar tight end Brock Bowers (ankle). However, Bowers suffered an ankle injury during the team's Week 10 loss to the Seattle Seahawks and could now be facing missed time. If Bowers is sidelined, Mayer could emerge as the top short-area target for Raiders rookie quarterback Fernando Mendoza. While fantasy managers should not expect explosive upside from Mayer, he may be a very valuable player in PPR-scoring formats and could be worth a look on the waiver wire heading into Week 11.",
+     "reports on": "injury"
+    }
+   },
+   {
+    "id": "news-9482-2",
+    "source": "research-cache:fantasy_pros",
+    "publishedAt": "2026-11-16T07:55:35.910Z",
+    "retrievedAt": "2026-11-16T10:17:25.006943450Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports on": "injury",
+     "analysis": "Mayer could be a streaming option moving forward if Brock Bowers (ankle) is set to miss time. ",
+     "report": "Michael Mayer catches two passes Sunday : Michael Mayer caught 2-of-3 targets for 16 yards in the Raiders 21-13 loss against the Seahawks. ",
+     "source": "fantasy_pros"
+    }
+   },
+   {
+    "id": "news-9482-3",
+    "source": "research-cache:rotowire",
+    "publishedAt": "2026-11-16T05:24:08Z",
+    "retrievedAt": "2026-11-16T10:17:25.006943450Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports on": "injury",
+     "analysis": "Jack Bech (seven targets) was the only Las Vegas player to see more than four targets in Fernando Mendoza's first career start. The rookie quarterback targeted 10 different players on his 29 attempts. With Kirk Cousins' efficiency off to Minnesota, Mayer is a low-floor TE2 for fantasy, but he could get a bit of a boost if Brock Bowers' ankle injury causes him to miss time.",
+     "report": "Michael Mayer - Two catches in loss: Mayer caught two of three targets for 16 yards in Sunday's 21-13 loss to the Seahawks.",
+     "source": "rotowire"
+    }
+   },
+   {
+    "id": "trending-9482",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "1558494"
+    }
+   },
+   {
+    "id": "matchup-opponent-9482",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "DEN",
+     "team": "LV",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-9482",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against tight ends",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for tight ends to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to tight ends",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "22.8",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for tight ends",
+     "subject": "DEN defense",
+     "rankFromBottom": "3rd from the bottom",
+     "rank": "30th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-9482",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "0 of 24",
+     "defense": "DEN",
+     "startersOutOrDoubtful": "Kris Abrams-Draine (RCB2, out); Brandon Jones (FS1, out); Talanoa Hufanga (SS1, out); Levelle Bailey (RILB2, ir)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-9482",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "55%",
+     "mostUsedShells": "COVER_1 31%, COVER_3 23%",
+     "manCoverageRate": "45%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "DEN",
+     "weeks": "last season (2025)",
+     "sample": "745 dropbacks",
+     "pressureRate": "34%"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-9482",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Michael Mayer ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "14%",
+     "population": "of 143 tight ends",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Michael Mayer",
+     "rankFromBottom": "123rd from the bottom",
+     "rank": "21st",
+     "sample": "49 targets"
+    }
+   },
+   {
+    "id": "matchup-player-targets-per-game-9482",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Michael Mayer ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest targets per game; a higher value is better for his fantasy output",
+     "stat": "targets per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "4.9",
+     "population": "of 143 tight ends",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Michael Mayer",
+     "rankFromBottom": "128th from the bottom",
+     "rank": "16th",
+     "sample": "49 targets"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-9482",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Michael Mayer",
+     "targetsWhenBlitzed": "16 of his team's 97",
+     "sample": "107 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "16%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-9482",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Michael Mayer",
+     "dropbackShare": "LV 55%",
+     "sample": "on the field for 278 of 501 team dropbacks in 13 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-next-gen-9482",
+    "source": "nflverse:nextgen_stats",
+    "publishedAt": "2026-11-17T16:36:32Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his Next Gen Stats tracking figures this season",
+    "facts": {
+     "population": "Next Gen Stats lists only players who clear its qualifying minimum; no rank is given",
+     "averageCushionYards": "5.01",
+     "averageSeparationYards": "3.49",
+     "subject": "Michael Mayer",
+     "yardsAfterCatchAboveExpectedPerReception": "-0.18",
+     "sample": "49 targets",
+     "weeks": "2026 season to date"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-9482",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for tight ends, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for tight ends, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to tight ends",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "18.4",
+     "population": "of 32 teams",
+     "matchup": "green: an easy remaining schedule for tight ends",
+     "subject": "LV",
+     "rankFromBottom": "1st from the bottom",
+     "rank": "32nd",
+     "sample": "7 remaining games"
+    }
+   },
+   {
+    "id": "consensus-9482",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-12499",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Elic Ayomanor",
+     "position": "WR",
+     "designation": "active",
+     "whyOnTheBoard": "among the free agents at WR with the largest snap share in the latest week; among the highest-projected free agents at WR this week; a trending free agent with a news report from the past week; among the free agents most added on Sleeper in the last day",
+     "nflTeam": "TEN"
+    }
+   },
+   {
+    "id": "usage-12499",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "95% of offensive snaps (54 snaps); 10 targets of 37 team targets, a target share of 27%; 0 carries of 17 team carries, a carry share of 0%; air-yards share 44%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 6 first-read targets; 15.2 expected full-PPR points",
+     "week 8": "65% of offensive snaps (50 snaps); 5 targets of 39 team targets, a target share of 13%; 0 carries of 28 team carries, a carry share of 0%; air-yards share 16%; 1 red-zone targets, 0 red-zone carries, 0 end-zone targets; 4 first-read targets; 8.5 expected full-PPR points",
+     "week 7": "89% of offensive snaps (56 snaps); 7 targets of 30 team targets, a target share of 23%; 0 carries of 30 team carries, a carry share of 0%; air-yards share 29%; 2 red-zone targets, 0 red-zone carries, 0 end-zone targets; 6 first-read targets; 9.5 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-12499",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "12.9 points in league scoring against JAX: 10 targets, 5 receptions, 79 receiving yards",
+     "week 8": "6.4 points in league scoring against CIN: 5 targets, 3 receptions, 34 receiving yards",
+     "week 7": "7.4 points in league scoring against CLE: 7 targets, 3 receptions, 44 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-12499",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "10.1"
+    }
+   },
+   {
+    "id": "news-12499-1",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-16T10:39:10Z",
+    "retrievedAt": "2026-11-16T16:17:22.025914212Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "rotoballer",
+     "report": "Elic Ayomanor Drawing Interest After Increased Workload: Tennessee Titans wide receiver Elic Ayomanor caught five passes for 79 yards in Sunday's 40-23 loss to Jacksonville. He was targeted 10 times, setting season highs in all three categories. With Carnell Tate (shoulder) sidelined, Ayomanor played nearly 95% of Tennessee's offensive snaps and led the team in receiving. Wan'Dale Robinson also left Sunday's game with an ankle injury, leaving the Titans potentially short-handed at receiver heading into Week 11 against Dallas. Ayomanor saw just five targets in his previous game against Cincinnati, so Sunday's workload was a big jump. He's worth a look in 12-team leagues and deeper, particularly if Tate or Robinson misses additional time.",
+     "reports on": "injury"
+    }
+   },
+   {
+    "id": "news-12499-2",
+    "source": "research-cache:fantasy_pros",
+    "publishedAt": "2026-11-16T02:20:34.027Z",
+    "retrievedAt": "2026-11-16T10:17:25.228853315Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "fantasy_pros",
+     "analysis": "Ayomanor has seen 7, 5, and 10 targets in the last three weeks, with 44, 34, and now 79 yards to show for it. It's a bit inefficient; he's caught only 50% of his targets in that span, but nothing terrible in terms of yardage. He's a flex play at best, but only in deep formats.",
+     "report": "Elic Ayomanor goes for 79 yards in loss to Jags: Elic Ayomanor caught 5 of 10 targets for 79 yards in the Titans' 40-23 loss to the Jaguars on Sunday."
+    }
+   },
+   {
+    "id": "news-12499-3",
+    "source": "research-cache:rotowire",
+    "publishedAt": "2026-11-16T02:17:53Z",
+    "retrievedAt": "2026-11-16T10:17:25.228853315Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports on": "injury",
+     "analysis": "While he wasn't particularly efficient with the volume, Ayomanor led the Titans in targets and receiving yards on the afternoon, , and the receptions and yardage were both career highs, with Carnell Tate (shoulder) sidelined and Wan'Dale Robinson (ankle) exiting the contest early. If they both remain on the shelf in Week 11 against the Cowboys, Ayomanor figures to handle an increased role once again. The second-year WR sports an 18-290-1 line on 36 targets through nine games on the year.",
+     "report": "Elic Ayomanor - Leading receiver in loss to Jags: Ayomanor caught five of 10 targets for 79 yards in Sunday's 40-23 loss to the Jaguars.",
+     "source": "rotowire"
+    }
+   },
+   {
+    "id": "trending-12499",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "425756"
+    }
+   },
+   {
+    "id": "matchup-opponent-12499",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "DAL",
+     "team": "TEN",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-12499",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for wide receivers to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to wide receivers",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "35.7",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for wide receivers",
+     "subject": "DAL defense",
+     "rankFromBottom": "6th from the bottom",
+     "rank": "27th",
+     "sample": "10 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-12499",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "1 of 23",
+     "defense": "DAL",
+     "startersOutOrDoubtful": "DaRon Bland (RCB1, out); P.J. Locke (SS1, out); Donovan Ezeiruaku (SLB1, out)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-12499",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "74%",
+     "mostUsedShells": "COVER_3 28%, COVER_2 24%",
+     "manCoverageRate": "26%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "DAL",
+     "weeks": "last season (2025)",
+     "sample": "680 dropbacks",
+     "pressureRate": "32%"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-12499",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Elic Ayomanor ranks among wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "13%",
+     "population": "of 238 wide receivers",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Elic Ayomanor",
+     "rankFromBottom": "167th from the bottom",
+     "rank": "72nd",
+     "sample": "36 targets"
+    }
+   },
+   {
+    "id": "matchup-player-targets-per-game-12499",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Elic Ayomanor ranks among wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the highest targets per game; a higher value is better for his fantasy output",
+     "stat": "targets per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "4.0",
+     "population": "of 238 wide receivers",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Elic Ayomanor",
+     "rankFromBottom": "164th from the bottom",
+     "rank": "68th",
+     "sample": "36 targets"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-12499",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Elic Ayomanor",
+     "targetsWhenBlitzed": "7 of his team's 60",
+     "sample": "74 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "12%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-12499",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Elic Ayomanor",
+     "dropbackShare": "TEN 84%",
+     "sample": "on the field for 529 of 631 team dropbacks in 16 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-next-gen-12499",
+    "source": "nflverse:nextgen_stats",
+    "publishedAt": "2026-11-17T16:36:32Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his Next Gen Stats tracking figures this season",
+    "facts": {
+     "population": "Next Gen Stats lists only players who clear its qualifying minimum; no rank is given",
+     "averageCushionYards": "5.54",
+     "averageSeparationYards": "2.97",
+     "subject": "Elic Ayomanor",
+     "yardsAfterCatchAboveExpectedPerReception": "1.32",
+     "sample": "36 targets",
+     "weeks": "2026 season to date"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-12499",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for wide receivers, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for wide receivers, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to wide receivers",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "33.4",
+     "population": "of 32 teams",
+     "matchup": "green: an easy remaining schedule for wide receivers",
+     "subject": "TEN",
+     "rankFromBottom": "6th from the bottom",
+     "rank": "27th",
+     "sample": "8 remaining games"
+    }
+   },
+   {
+    "id": "consensus-12499",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-4147",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Samaje Perine",
+     "position": "RB",
+     "designation": "active",
+     "whyOnTheBoard": "among the free agents at RB who scored the most in the latest week; among the highest-projected free agents at RB this week",
+     "nflTeam": "CIN"
+    }
+   },
+   {
+    "id": "usage-4147",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "snaps unknown; 4 targets of 42 team targets, a target share of 10%; 6 carries of 20 team carries, a carry share of 30%; air-yards share -3%; 1 red-zone targets, 2 red-zone carries, 0 end-zone targets; 0 first-read targets; 12.3 expected full-PPR points",
+     "week 9": "snaps unknown; 0 targets of 28 team targets, a target share of 0%; 11 carries of 24 team carries, a carry share of 46%; air-yards share 0%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 0 first-read targets; 5.3 expected full-PPR points",
+     "week 8": "snaps unknown; 1 targets of 47 team targets, a target share of 2%; 4 carries of 19 team carries, a carry share of 21%; air-yards share 0%; 0 red-zone targets, 3 red-zone carries, 0 end-zone targets; 0 first-read targets; 3.8 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-4147",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "13.9 points in league scoring against PIT: 6 carries, 14 rushing yards, 1 rushing touchdowns, 4 targets, 4 receptions, 25 receiving yards",
+     "week 9": "4.3 points in league scoring against ATL: 11 carries, 43 rushing yards",
+     "week 8": "2.9 points in league scoring against TEN: 4 carries, 10 rushing yards, 1 targets, 1 receptions, 9 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-4147",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "7.5"
+    }
+   },
+   {
+    "id": "news-4147",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports": "no report about him in the research cache from the past week"
+    }
+   },
+   {
+    "id": "trending-4147",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "not among the 25 players most added on Sleeper"
+    }
+   },
+   {
+    "id": "matchup-opponent-4147",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "WAS",
+     "team": "CIN",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-4147",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to running backs",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "20.5",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for running backs",
+     "subject": "WAS defense",
+     "rankFromBottom": "19th from the bottom",
+     "rank": "14th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defense-rushing-yards-allowed-4147",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest rushing yards allowed per game; the last is the easiest",
+     "stat": "rushing yards allowed per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "103.8",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for running backs",
+     "subject": "WAS defense",
+     "rankFromBottom": "21st from the bottom",
+     "rank": "12th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defense-yards-before-contact-allowed-4147",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against running backs",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for running backs to face, the one with the lowest yards before contact allowed per carry; the last is the easiest",
+     "stat": "yards before contact allowed per carry",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "2.4",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for running backs",
+     "subject": "WAS defense",
+     "rankFromBottom": "15th from the bottom",
+     "rank": "18th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-4147",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "1 of 23",
+     "defense": "WAS",
+     "startersOutOrDoubtful": "Ricky Barber (NT2, out); Javon Kinlaw (RDE2, ir)"
+    }
+   },
+   {
+    "id": "matchup-player-carry-share-4147",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Samaje Perine ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest carry share; a higher value is better for his fantasy output",
+     "stat": "carry share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "26%",
+     "population": "of 156 running backs",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Samaje Perine",
+     "rankFromBottom": "102nd from the bottom",
+     "rank": "55th",
+     "sample": "52 carries"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-4147",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Samaje Perine ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "5%",
+     "population": "of 156 running backs",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Samaje Perine",
+     "rankFromBottom": "91st from the bottom",
+     "rank": "66th",
+     "sample": "15 targets"
+    }
+   },
+   {
+    "id": "matchup-player-yards-before-contact-per-carry-4147",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Samaje Perine ranks among running backs",
+    "facts": {
+     "rankMeaning": "1st is the highest yards before contact per carry; a higher value is better for his fantasy output",
+     "stat": "yards before contact per carry",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "2.2",
+     "population": "of 123 running backs",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Samaje Perine",
+     "rankFromBottom": "74th from the bottom",
+     "rank": "50th",
+     "sample": "46 carries"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-4147",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Samaje Perine",
+     "targetsWhenBlitzed": "4 of his team's 88",
+     "sample": "100 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "5%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-4147",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Samaje Perine",
+     "dropbackShare": "CIN 40%",
+     "sample": "on the field for 238 of 592 team dropbacks in 14 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-rushing-contact-4147",
+    "source": "nflverse:pfr_advstats",
+    "publishedAt": "2026-11-16T12:03:25Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "what he makes after first contact this season",
+    "facts": {
+     "subject": "Samaje Perine",
+     "brokenTackles": "0",
+     "sample": "46 carries",
+     "yardsAfterContactPerCarry": "1.7",
+     "weeks": "weeks 1 to 9 of 2026"
+    }
+   },
+   {
+    "id": "matchup-next-gen-4147",
+    "source": "nflverse:nextgen_stats",
+    "publishedAt": "2026-11-17T16:36:23Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his Next Gen Stats tracking figures this season",
+    "facts": {
+     "weeks": "2026 season to date",
+     "sample": "52 attempts",
+     "rushingYardsOverExpectedPerCarry": "0.46",
+     "population": "Next Gen Stats lists only players who clear its qualifying minimum; no rank is given",
+     "percentOfCarriesAgainstEightOrMoreInTheBox": "23.08",
+     "subject": "Samaje Perine"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-4147",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for running backs, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for running backs, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to running backs",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "22.8",
+     "population": "of 32 teams",
+     "matchup": "green: an easy remaining schedule for running backs",
+     "subject": "CIN",
+     "rankFromBottom": "5th from the bottom",
+     "rank": "28th",
+     "sample": "8 remaining games"
+    }
+   },
+   {
+    "id": "consensus-4147",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-5012",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Mark Andrews",
+     "position": "TE",
+     "designation": "active",
+     "whyOnTheBoard": "among the free agents at TE who scored the most in the latest week; among the highest-projected free agents at TE this week; a trending free agent with a news report from the past week; among the free agents most added on Sleeper in the last day",
+     "nflTeam": "BAL"
+    }
+   },
+   {
+    "id": "usage-5012",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "58% of offensive snaps (40 snaps); 8 targets of 47 team targets, a target share of 17%; 0 carries of 15 team carries, a carry share of 0%; air-yards share 16%; 1 red-zone targets, 0 red-zone carries, 0 end-zone targets; first-read targets unknown; 10.7 expected full-PPR points",
+     "week 9": "57% of offensive snaps (32 snaps); 2 targets of 16 team targets, a target share of 13%; 2 carries of 34 team carries, a carry share of 6%; air-yards share 44%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 1 first-read targets; 3.0 expected full-PPR points",
+     "week 8": "57% of offensive snaps (29 snaps); 4 targets of 26 team targets, a target share of 15%; 0 carries of 19 team carries, a carry share of 0%; air-yards share 12%; 2 red-zone targets, 0 red-zone carries, 0 end-zone targets; 2 first-read targets; 5.9 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-5012",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "20.2 points in league scoring against LAC: 8 targets, 8 receptions, 82 receiving yards",
+     "week 9": "4.9 points in league scoring against JAX: 2 carries, 2 targets, 2 receptions, 19 receiving yards",
+     "week 8": "5.9 points in league scoring against BUF: 4 targets, 3 receptions, 14 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-5012",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "11.0"
+    }
+   },
+   {
+    "id": "news-5012-1",
+    "source": "research-cache:fantasy_pros",
+    "publishedAt": "2026-11-17T13:15:45.314Z",
+    "retrievedAt": "2026-11-17T13:27:51.083539630Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "fantasy_pros",
+     "analysis": "Andrews had a good game on Monday night. He led the team in receptions and receiving yards in this loss to the Chargers, although he wasn't able to get into the end zone at all to cap it off. We saw QB Jacoby Brissett hyper-target the TE position when he was in Arizona earlier in the year, so Andrews could be a worthwhile streaming option if that trend now continues in Baltimore, as it did on Monday.",
+     "report": "Mark Andrews leads team in receiving Monday: Mark Andrews caught eight passes for 82 yards in Monday night's 23-20 loss to the Los Angeles Chargers."
+    }
+   },
+   {
+    "id": "news-5012-2",
+    "source": "research-cache:rotowire",
+    "publishedAt": "2026-11-17T05:48:00Z",
+    "retrievedAt": "2026-11-17T06:27:22.034944254Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "rotowire",
+     "analysis": "Andrews eased Jacoby Brissett into his team debut by putting on a pretty convincing Trey McBride impression, as the former mustered season-best totals across all three components of his receiving line. Andrews' instant chemistry with Brissett was certainly encouraging after the Ravens' passing attack's moribund state over the prior two contests, and the veteran tight end could continue thriving in a Week 11 road matchup against the Panthers on Sunday.",
+     "report": "Mark Andrews - Season-best effort in Brissett's debut: Andrews brought in all eight targets for 82 yards in the Ravens' 23-20 loss to the Chargers on Monday night."
+    }
+   },
+   {
+    "id": "news-5012-3",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-17T01:05:14Z",
+    "retrievedAt": "2026-11-17T06:27:22.034944254Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "report": "Mark Andrews Comes Alive in Narrow Defeat: Baltimore Ravens tight end Mark Andrews reeled in all eight of his targets for 82 yards in his team's 23-20 loss to the visiting Los Angeles Chargers. Andrews didn't receive his first look of the night until late in the first quarter, though he'd end up leading Baltimore in receptions and receiving yards in quarterback Jacoby Brissett's first start. Only rookie wide receiver Ja'Kobi Lane finished the night with more targets (11). It's an encouraging effort for the 31-year-old, as his production marked season highs across the board in what's been his second straight underwhelming campaign. Whether Andrews will be as often targeted the next time he takes the field with his new QB remains to be seen, but at the very least, there's a little life here as the Ravens continue fighting for a playoff spot. The team will square off with the Carolina Panthers at Bank of America Stadium in Week 11.",
+     "source": "rotoballer"
+    }
+   },
+   {
+    "id": "trending-5012",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "795978"
+    }
+   },
+   {
+    "id": "matchup-opponent-5012",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "CAR",
+     "team": "BAL",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-5012",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against tight ends",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for tight ends to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to tight ends",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "14.9",
+     "population": "of 32 defenses",
+     "matchup": "red: a hard matchup for tight ends",
+     "subject": "CAR defense",
+     "rankFromBottom": "22nd from the bottom",
+     "rank": "11th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-5012",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "5 of 24",
+     "defense": "CAR",
+     "startersOutOrDoubtful": "Jaycee Horn (NB2, ir); Will Lee III (RCB1, out); Mike Jackson (RCB2, ir); Bobby Okereke (RILB1, out)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-5012",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "78%",
+     "mostUsedShells": "COVER_3 34%, COVER_2 22%",
+     "manCoverageRate": "22%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "CAR",
+     "weeks": "last season (2025)",
+     "sample": "589 dropbacks",
+     "pressureRate": "22%"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-5012",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Mark Andrews ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "18%",
+     "population": "of 143 tight ends",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Mark Andrews",
+     "rankFromBottom": "133rd from the bottom",
+     "rank": "11th",
+     "sample": "51 targets"
+    }
+   },
+   {
+    "id": "matchup-player-targets-per-game-5012",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Mark Andrews ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest targets per game; a higher value is better for his fantasy output",
+     "stat": "targets per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "5.1",
+     "population": "of 143 tight ends",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Mark Andrews",
+     "rankFromBottom": "129th from the bottom",
+     "rank": "15th",
+     "sample": "51 targets"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-5012",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Mark Andrews",
+     "targetsWhenBlitzed": "19 of his team's 79",
+     "sample": "100 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "24%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-5012",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Mark Andrews",
+     "dropbackShare": "BAL 73%",
+     "sample": "on the field for 388 of 533 team dropbacks in 17 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-next-gen-5012",
+    "source": "nflverse:nextgen_stats",
+    "publishedAt": "2026-11-17T16:36:32Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his Next Gen Stats tracking figures this season",
+    "facts": {
+     "population": "Next Gen Stats lists only players who clear its qualifying minimum; no rank is given",
+     "averageCushionYards": "6.01",
+     "averageSeparationYards": "3.29",
+     "subject": "Mark Andrews",
+     "yardsAfterCatchAboveExpectedPerReception": "-0.13",
+     "sample": "51 targets",
+     "weeks": "2026 season to date"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-5012",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for tight ends, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for tight ends, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to tight ends",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "15.9",
+     "population": "of 32 teams",
+     "matchup": "neutral: neither a hard nor an easy remaining schedule for tight ends",
+     "subject": "BAL",
+     "rankFromBottom": "20th from the bottom",
+     "rank": "13th",
+     "sample": "7 remaining games"
+    }
+   },
+   {
+    "id": "consensus-5012",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-13425",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Jalon Daniels",
+     "position": "QB",
+     "designation": "active",
+     "whyOnTheBoard": "among the highest-projected free agents at QB this week",
+     "nflTeam": "TB"
+    }
+   },
+   {
+    "id": "usage-13425",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 5": "100% of offensive snaps (72 snaps); 0 targets of 25 team targets, a target share of 0%; 7 carries of 39 team carries, a carry share of 18%; air-yards share 0%; 0 red-zone targets, 1 red-zone carries, 0 end-zone targets; 0 first-read targets; 16.5 expected full-PPR points",
+     "week 7": "10% of offensive snaps (6 snaps); 0 targets of 11 team targets, a target share of 0%; 2 carries of 49 team carries, a carry share of 4%; air-yards share 0%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 0 first-read targets; -0.2 expected full-PPR points",
+     "season": "2026",
+     "week 6": "100% of offensive snaps (74 snaps); 1 targets of 41 team targets, a target share of 2%; 4 carries of 25 team carries, a carry share of 16%; air-yards share -2%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 0 first-read targets; 18.6 expected full-PPR points"
+    }
+   },
+   {
+    "id": "production-13425",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 5": "14.9 points in league scoring against DAL: 189 passing yards, 1 passing touchdowns, 7 carries, 23 rushing yards",
+     "week 7": "-0.3 points in league scoring against CAR: 2 carries, -3 rushing yards",
+     "season": "2026",
+     "week 6": "14.2 points in league scoring against PIT: 164 passing yards, 1 passing touchdowns, 2 interceptions, 4 carries, 39 rushing yards, 1 targets, 1 receptions, -3 receiving yards"
+    }
+   },
+   {
+    "id": "projection-13425",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "14.2"
+    }
+   },
+   {
+    "id": "news-13425",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "reports": "no report about him in the research cache from the past week"
+    }
+   },
+   {
+    "id": "trending-13425",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "not among the 25 players most added on Sleeper"
+    }
+   },
+   {
+    "id": "matchup-opponent-13425",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "away",
+     "opponent": "DET",
+     "team": "TB",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-13425",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against quarterbacks",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for quarterbacks to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to quarterbacks",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "23.7",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for quarterbacks",
+     "subject": "DET defense",
+     "rankFromBottom": "1st from the bottom",
+     "rank": "32nd",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defense-pressure-rate-13425",
+    "source": "nflverse:pfr_advstats+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against quarterbacks",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for quarterbacks to face, the one with the highest pressure rate; the last is the easiest",
+     "stat": "pressure rate",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "28%",
+     "population": "of 32 defenses",
+     "matchup": "red: a hard matchup for quarterbacks",
+     "subject": "DET defense",
+     "rankFromBottom": "24th from the bottom",
+     "rank": "9th",
+     "sample": "8 games"
+    }
+   },
+   {
+    "id": "matchup-defense-blitz-rate-13425",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against quarterbacks",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for quarterbacks to face, the one with the highest blitz rate; the last is the easiest",
+     "stat": "blitz rate",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "28%",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for quarterbacks",
+     "subject": "DET defense",
+     "rankFromBottom": "15th from the bottom",
+     "rank": "18th",
+     "sample": "384 dropbacks"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-13425",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "1 of 24",
+     "defense": "DET",
+     "startersOutOrDoubtful": "D.J. Reed (LCB1, out); Amen Ogbongbemiga (SLB2, out)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-13425",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "57%",
+     "mostUsedShells": "COVER_1 29%, COVER_3 27%",
+     "manCoverageRate": "43%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "DET",
+     "weeks": "last season (2025)",
+     "sample": "685 dropbacks",
+     "pressureRate": "32%"
+    }
+   },
+   {
+    "id": "matchup-player-pressured-rate-13425",
+    "source": "nflverse:pfr_advstats+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Jalon Daniels ranks among quarterbacks",
+    "facts": {
+     "rankMeaning": "1st is the highest pressured rate; a higher value is worse for his fantasy output",
+     "stat": "pressured rate",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "25%",
+     "population": "of 61 quarterbacks",
+     "matchup": "red: bad news for his fantasy output",
+     "subject": "Jalon Daniels",
+     "rankFromBottom": "41st from the bottom",
+     "rank": "21st",
+     "sample": "107 dropbacks"
+    }
+   },
+   {
+    "id": "matchup-next-gen-13425",
+    "source": "nflverse:nextgen_stats",
+    "publishedAt": "2026-11-17T16:36:14Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his Next Gen Stats tracking figures this season",
+    "facts": {
+     "population": "Next Gen Stats lists only players who clear its qualifying minimum; no rank is given",
+     "percentOfThrowsIntoTightWindows": "13.27",
+     "averageTimeToThrowSeconds": "2.84",
+     "subject": "Jalon Daniels",
+     "sample": "98 attempts",
+     "completionPercentAboveExpected": "-5.75",
+     "weeks": "2026 season to date"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-13425",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for quarterbacks, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for quarterbacks, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to quarterbacks",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "19.2",
+     "population": "of 32 teams",
+     "matchup": "neutral: neither a hard nor an easy remaining schedule for quarterbacks",
+     "subject": "TB",
+     "rankFromBottom": "13th from the bottom",
+     "rank": "20th",
+     "sample": "8 remaining games"
+    }
+   },
+   {
+    "id": "consensus-13425",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-11593",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Brevyn Spann-Ford",
+     "position": "TE",
+     "designation": "active",
+     "whyOnTheBoard": "among the highest-projected free agents at TE this week",
+     "nflTeam": "DAL"
+    }
+   },
+   {
+    "id": "usage-11593",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 10": "66% of offensive snaps (55 snaps); 3 targets of 49 team targets, a target share of 6%; 0 carries of 24 team carries, a carry share of 0%; air-yards share 4%; 1 red-zone targets, 0 red-zone carries, 0 end-zone targets; 2 first-read targets; 5.0 expected full-PPR points",
+     "week 9": "70% of offensive snaps (55 snaps); 3 targets of 34 team targets, a target share of 9%; 0 carries of 34 team carries, a carry share of 0%; air-yards share 3%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 2 first-read targets; 5.1 expected full-PPR points",
+     "week 8": "88% of offensive snaps (65 snaps); 5 targets of 28 team targets, a target share of 18%; 0 carries of 39 team carries, a carry share of 0%; air-yards share 13%; 1 red-zone targets, 0 red-zone carries, 0 end-zone targets; 4 first-read targets; 9.4 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-11593",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 10": "4.1 points in league scoring against SF: 3 targets, 1 receptions, 26 receiving yards",
+     "week 9": "5.0 points in league scoring against IND: 3 targets, 2 receptions, 20 receiving yards",
+     "week 8": "9.1 points in league scoring against ARI: 5 targets, 4 receptions, 31 receiving yards",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-11593",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "11.6"
+    }
+   },
+   {
+    "id": "news-11593-1",
+    "source": "research-cache:dallascowboys.com",
+    "publishedAt": "2026-11-14T21:20:00Z",
+    "retrievedAt": "2026-11-16T14:35:44.389664496Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "dallascowboys.com",
+     "report": "Cowboys injury report, Week 10: Brevyn Spann-Ford practice participation: Injury: Shoulder. Practice: Wed full, Thu full.",
+     "reports on": "injury"
+    }
+   },
+   {
+    "id": "trending-11593",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "not among the 25 players most added on Sleeper"
+    }
+   },
+   {
+    "id": "matchup-opponent-11593",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "home",
+     "opponent": "TEN",
+     "team": "DAL",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-11593",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against tight ends",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for tight ends to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to tight ends",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "14.9",
+     "population": "of 32 defenses",
+     "matchup": "neutral: neither a hard nor an easy matchup for tight ends",
+     "subject": "TEN defense",
+     "rankFromBottom": "21st from the bottom",
+     "rank": "12th",
+     "sample": "9 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-11593",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "1 of 23",
+     "defense": "TEN",
+     "startersOutOrDoubtful": "Jaylon Jones (LCB2, out); Anthony Hill Jr. (MLB1, out); Cody Barton (SLB1, out)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-11593",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "73%",
+     "mostUsedShells": "COVER_2 29%, COVER_3 26%",
+     "manCoverageRate": "27%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "TEN",
+     "weeks": "last season (2025)",
+     "sample": "634 dropbacks",
+     "pressureRate": "29%"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-11593",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Brevyn Spann-Ford ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "6%",
+     "population": "of 143 tight ends",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Brevyn Spann-Ford",
+     "rankFromBottom": "95th from the bottom",
+     "rank": "49th",
+     "sample": "24 targets"
+    }
+   },
+   {
+    "id": "matchup-player-targets-per-game-11593",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Brevyn Spann-Ford ranks among tight ends",
+    "facts": {
+     "rankMeaning": "1st is the highest targets per game; a higher value is better for his fantasy output",
+     "stat": "targets per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "2.4",
+     "population": "of 143 tight ends",
+     "matchup": "green: good news for his fantasy output",
+     "subject": "Brevyn Spann-Ford",
+     "rankFromBottom": "100th from the bottom",
+     "rank": "44th",
+     "sample": "24 targets"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-11593",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Brevyn Spann-Ford",
+     "targetsWhenBlitzed": "6 of his team's 120",
+     "sample": "129 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "5%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-11593",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Brevyn Spann-Ford",
+     "dropbackShare": "DAL 14%",
+     "sample": "on the field for 106 of 737 team dropbacks in 17 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-11593",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for tight ends, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for tight ends, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to tight ends",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "15.2",
+     "population": "of 32 teams",
+     "matchup": "red: a hard remaining schedule for tight ends",
+     "subject": "DAL",
+     "rankFromBottom": "25th from the bottom",
+     "rank": "8th",
+     "sample": "7 remaining games"
+    }
+   },
+   {
+    "id": "consensus-11593",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   },
+   {
+    "id": "candidate-12492",
+    "source": "sleeper:players",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "a free agent the user may claim",
+    "facts": {
+     "fullName": "Pat Bryant",
+     "position": "WR",
+     "designation": "active",
+     "whyOnTheBoard": "among the highest-projected free agents at WR this week; a trending free agent with a news report from the past week; among the free agents most added on Sleeper in the last day",
+     "nflTeam": "DEN"
+    }
+   },
+   {
+    "id": "usage-12492",
+    "source": "nflverse:usage",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "role and opportunity in his most recent games",
+    "facts": {
+     "week 4": "36% of offensive snaps (24 snaps); 3 targets of 38 team targets, a target share of 8%; 0 carries of 22 team carries, a carry share of 0%; air-yards share 17%; 0 red-zone targets, 0 red-zone carries, 0 end-zone targets; 1 first-read targets; 4.4 expected full-PPR points",
+     "week 3": "70% of offensive snaps (47 snaps); 2 targets of 31 team targets, a target share of 6%; 0 carries of 25 team carries, a carry share of 0%; air-yards share 10%; 1 red-zone targets, 0 red-zone carries, 1 end-zone targets; 1 first-read targets; 5.8 expected full-PPR points",
+     "week 9": "68% of offensive snaps (51 snaps); 5 targets of 34 team targets, a target share of 15%; 0 carries of 27 team carries, a carry share of 0%; air-yards share 18%; 1 red-zone targets, 0 red-zone carries, 1 end-zone targets; 4 first-read targets; 10.8 expected full-PPR points",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "production-12492",
+    "source": "nflverse:stats_player_week",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T01:04:22.744529536Z",
+    "scoringBasis": "actual points in league scoring in his most recent games",
+    "facts": {
+     "week 4": "7.7 points in league scoring against SF: 3 targets, 3 receptions, 47 receiving yards",
+     "week 3": "14.4 points in league scoring against LAR: 2 targets, 2 receptions, 44 receiving yards, 1 receiving touchdowns",
+     "week 9": "15.6 points in league scoring against CAR: 5 targets, 4 receptions, 56 receiving yards, 1 receiving touchdowns",
+     "season": "2026"
+    }
+   },
+   {
+    "id": "projection-12492",
+    "source": "sleeper:projections",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "projected points this week in league scoring",
+    "facts": {
+     "projectedPoints": "8.5"
+    }
+   },
+   {
+    "id": "news-12492-1",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-16T10:16:11Z",
+    "retrievedAt": "2026-11-16T15:57:22.293345923Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "rotoballer",
+     "report": "Pat Bryant Worth Adding in More Fantasy Leagues Before Week 11: Denver wide receiver Pat Bryant is on the rise as a fantasy asset after getting back on the field in Week 9. He went for 56 yards and a touchdown across four receptions and five targets. That was his first game since Week 4 after dealing with an ankle injury. Bryant has 189 yards and two scores over 13 catches and 17 targets in five games played overall this year. He played 68% of the team's offensive snaps in Week 9, and after a bye in Week 10, Bryant should be ready to go for Week 11 and beyond. The Broncos have Jaylen Waddle (concussion), but he's dealing with an injury, and Courtland Sutton has struggled to get rolling this season as well. That gives Bryant some upside down the stretch of the fantasy season. He could be added and started in some more deeper leagues for Week 11, and he could work into standard leagues with more positive results in the weeks to come.",
+     "reports on": "injury"
+    }
+   },
+   {
+    "id": "news-12492-2",
+    "source": "research-cache:rotoballer",
+    "publishedAt": "2026-11-14T15:16:29Z",
+    "retrievedAt": "2026-11-16T11:57:21.998220389Z",
+    "scoringBasis": "news from the past week",
+    "facts": {
+     "source": "rotoballer",
+     "report": "Stash Pat Bryant Before Denver Hosts Las Vegas: Denver Broncos wide receiver Pat Bryant started alongside Courtland Sutton and Jaylen Waddle in his first game back from an ankle injury. Denver activated Bryant from injured reserve after he practiced fully three straight days before Week 9. He caught four of five targets for a team-high 56 yards in the win over the Carolina Panthers. Waddle left with a concussion in the first half. Bryant played 51 offensive snaps to Troy Franklin's 41, and each drew three targets after halftime. Bryant is worth carrying through Denver's Week 10 bye in 12-team PPR formats with three starting receivers. Yahoo lists him at four percent rostered. If Waddle sits in Week 11, Bryant is a flex option in those leagues against the Las Vegas Raiders. Bryant drew six targets in the opener with Waddle in the lineup and six total over his next three games before the injury. Against Carolina, Bo Nix went to Bryant on third-and-five in both halves, finding him for 12 yards in the second quarter and a 26-yard touchdown in the fourth.",
+     "reports on": "injury, roster"
+    }
+   },
+   {
+    "id": "trending-12492",
+    "source": "sleeper:trending-add",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "attention: how many Sleeper leagues added him in the last 24 hours",
+    "facts": {
+     "addsLastDay": "779640"
+    }
+   },
+   {
+    "id": "matchup-opponent-12492",
+    "source": "nflverse:schedules",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "who his team plays this week, from the stored schedule",
+    "facts": {
+     "site": "home",
+     "opponent": "LV",
+     "team": "DEN",
+     "week": "11"
+    }
+   },
+   {
+    "id": "matchup-defense-points-allowed-12492",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense ranks against wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the toughest defense for wide receivers to face, the one with the lowest fantasy points allowed per game; the last is the easiest",
+     "stat": "fantasy points allowed per game to wide receivers",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "34.6",
+     "population": "of 32 defenses",
+     "matchup": "green: an easy matchup for wide receivers",
+     "subject": "LV defense",
+     "rankFromBottom": "9th from the bottom",
+     "rank": "24th",
+     "sample": "10 games"
+    }
+   },
+   {
+    "id": "matchup-defensive-starters-12492",
+    "source": "nflverse:depth_charts+sleeper:players",
+    "publishedAt": "2026-11-17T16:52:03Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "which of his opponent's defensive starters cannot play",
+    "facts": {
+     "startersWithUnknownDesignation": "3 of 22",
+     "defense": "LV",
+     "startersOutOrDoubtful": "Patrick Johnson (SLB2, ir); Thomas Booker IV (RDE2, out)"
+    }
+   },
+   {
+    "id": "matchup-last-season-coverage-12492",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how his opponent's defense covered last season; last season's figures, not this season's",
+    "facts": {
+     "zoneCoverageRate": "78%",
+     "mostUsedShells": "COVER_3 37%, COVER_2 21%",
+     "manCoverageRate": "22%",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "defense": "LV",
+     "weeks": "last season (2025)",
+     "sample": "629 dropbacks",
+     "pressureRate": "28%"
+    }
+   },
+   {
+    "id": "matchup-player-target-share-12492",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Pat Bryant ranks among wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the highest target share; a higher value is better for his fantasy output",
+     "stat": "target share",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "11%",
+     "population": "of 238 wide receivers",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Pat Bryant",
+     "rankFromBottom": "151st from the bottom",
+     "rank": "88th",
+     "sample": "17 targets"
+    }
+   },
+   {
+    "id": "matchup-player-targets-per-game-12492",
+    "source": "nflverse:stats_player",
+    "publishedAt": "2026-11-17T18:31:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how Pat Bryant ranks among wide receivers",
+    "facts": {
+     "rankMeaning": "1st is the highest targets per game; a higher value is better for his fantasy output",
+     "stat": "targets per game",
+     "weeks": "weeks 1 to 10 of 2026",
+     "value": "3.4",
+     "population": "of 238 wide receivers",
+     "matchup": "neutral: the middle of his position",
+     "subject": "Pat Bryant",
+     "rankFromBottom": "151st from the bottom",
+     "rank": "88th",
+     "sample": "17 targets"
+    }
+   },
+   {
+    "id": "matchup-targets-against-blitz-12492",
+    "source": "nflverse:ftn_charting+pbp",
+    "publishedAt": "2026-11-17T20:00:22Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how often he is targeted when his team is blitzed",
+    "facts": {
+     "subject": "Pat Bryant",
+     "targetsWhenBlitzed": "7 of his team's 77",
+     "sample": "93 blitzed dropbacks",
+     "shareOfTargetsWhenBlitzed": "9%",
+     "weeks": "weeks 1 to 10 of 2026"
+    }
+   },
+   {
+    "id": "matchup-last-season-dropback-share-12492",
+    "source": "nflverse:pbp_participation",
+    "publishedAt": "2026-02-10T18:54:08Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "his share of his team's dropbacks last season; last season's figures, not this season's",
+    "facts": {
+     "subject": "Pat Bryant",
+     "dropbackShare": "DEN 51%",
+     "sample": "on the field for 319 of 627 team dropbacks in 15 games",
+     "seasonProgress": "beside 10 completed weeks of 2026",
+     "weeks": "last season (2025)"
+    }
+   },
+   {
+    "id": "matchup-rest-of-season-12492",
+    "source": "nflverse:schedules+stats_player",
+    "publishedAt": "2026-11-18T00:46:27Z",
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "how hard the rest of his team's schedule is for wide receivers, its opponents rated on 2026 season to date through week 10",
+    "facts": {
+     "rankMeaning": "1st is the hardest remaining schedule for wide receivers, the one whose opponents allow the fewest fantasy points; the last is the easiest",
+     "stat": "fantasy points per game the remaining opponents allow to wide receivers",
+     "weeks": "weeks 11 to 18 of 2026",
+     "value": "32.8",
+     "population": "of 32 teams",
+     "matchup": "green: an easy remaining schedule for wide receivers",
+     "subject": "DEN",
+     "rankFromBottom": "9th from the bottom",
+     "rank": "24th",
+     "sample": "8 remaining games"
+    }
+   },
+   {
+    "id": "consensus-12492",
+    "source": "research-cache",
+    "publishedAt": null,
+    "retrievedAt": "2026-11-18T02:00:28.515307097Z",
+    "scoringBasis": "published FAAB suggestions, one per independent source, converted to this league's budget; a cross-check behind the league's own bidding",
+    "facts": {
+     "publishedConsensus": "no published FAAB suggestion in the research cache"
+    }
+   }
+  ],
+  "players": [
+   {
+    "playerId": "8122",
+    "fullName": "Zonovan Knight",
+    "projectedPoints": "7.2"
+   },
+   {
+    "playerId": "5995",
+    "fullName": "Justice Hill",
+    "projectedPoints": "7.3"
+   },
+   {
+    "playerId": "11370",
+    "fullName": "Chris Brooks",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "13272",
+    "fullName": "Carson Beck",
+    "projectedPoints": "9.4"
+   },
+   {
+    "playerId": "11292",
+    "fullName": "Tommy DeVito",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "13303",
+    "fullName": "Cade Klubnik",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "7828",
+    "fullName": "Noah Gray",
+    "projectedPoints": "5.6"
+   },
+   {
+    "playerId": "9482",
+    "fullName": "Michael Mayer",
+    "projectedPoints": "12.8"
+   },
+   {
+    "playerId": "12502",
+    "fullName": "Gunnar Helm",
+    "projectedPoints": "8.7"
+   },
+   {
+    "playerId": "12509",
+    "fullName": "Tre' Harris",
+    "projectedPoints": "5.1"
+   },
+   {
+    "playerId": "12499",
+    "fullName": "Elic Ayomanor",
+    "projectedPoints": "10.1"
+   },
+   {
+    "playerId": "12540",
+    "fullName": "Chimere Dike",
+    "projectedPoints": "9.9"
+   },
+   {
+    "playerId": "13414",
+    "fullName": "Kaelon Black",
+    "projectedPoints": "4.6"
+   },
+   {
+    "playerId": "4147",
+    "fullName": "Samaje Perine",
+    "projectedPoints": "7.5"
+   },
+   {
+    "playerId": "12969",
+    "fullName": "Lan Larison",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "5012",
+    "fullName": "Mark Andrews",
+    "projectedPoints": "11.0"
+   },
+   {
+    "playerId": "11596",
+    "fullName": "Ben Sinnott",
+    "projectedPoints": "1.7"
+   },
+   {
+    "playerId": "12700",
+    "fullName": "Gavin Bartholomew",
+    "projectedPoints": "3.2"
+   },
+   {
+    "playerId": "13075",
+    "fullName": "Myles Price",
+    "projectedPoints": "5.5"
+   },
+   {
+    "playerId": "13394",
+    "fullName": "Josh Cameron",
+    "projectedPoints": "3.7"
+   },
+   {
+    "playerId": "11199",
+    "fullName": "Emari Demercado",
+    "projectedPoints": "7.5"
+   },
+   {
+    "playerId": "13425",
+    "fullName": "Jalon Daniels",
+    "projectedPoints": "14.2"
+   },
+   {
+    "playerId": "11557",
+    "fullName": "Joe Milton",
+    "projectedPoints": "12.8"
+   },
+   {
+    "playerId": "11593",
+    "fullName": "Brevyn Spann-Ford",
+    "projectedPoints": "11.6"
+   },
+   {
+    "playerId": "12492",
+    "fullName": "Pat Bryant",
+    "projectedPoints": "8.5"
+   },
+   {
+    "playerId": "10229",
+    "fullName": "Rashee Rice",
+    "projectedPoints": "15.0"
+   },
+   {
+    "playerId": "11584",
+    "fullName": "Bucky Irving",
+    "projectedPoints": "17.0"
+   },
+   {
+    "playerId": "11625",
+    "fullName": "Adonai Mitchell",
+    "projectedPoints": "8.3"
+   },
+   {
+    "playerId": "1166",
+    "fullName": "Kirk Cousins",
+    "projectedPoints": "18.8"
+   },
+   {
+    "playerId": "12490",
+    "fullName": "Bhayshul Tuten",
+    "projectedPoints": "15.4"
+   },
+   {
+    "playerId": "13279",
+    "fullName": "Carnell Tate",
+    "projectedPoints": "13.0"
+   },
+   {
+    "playerId": "13286",
+    "fullName": "Jadarian Price",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "13296",
+    "fullName": "Caleb Douglas",
+    "projectedPoints": "8.9"
+   },
+   {
+    "playerId": "13337",
+    "fullName": "Emmett Johnson",
+    "projectedPoints": "10.7"
+   },
+   {
+    "playerId": "3198",
+    "fullName": "Derrick Henry",
+    "projectedPoints": "15.4"
+   },
+   {
+    "playerId": "4866",
+    "fullName": "Saquon Barkley",
+    "projectedPoints": "12.7"
+   },
+   {
+    "playerId": "4892",
+    "fullName": "Baker Mayfield",
+    "projectedPoints": null
+   },
+   {
+    "playerId": "6794",
+    "fullName": "Justin Jefferson",
+    "projectedPoints": "18.5"
+   },
+   {
+    "playerId": "7002",
+    "fullName": "Juwan Johnson",
+    "projectedPoints": "12.1"
+   },
+   {
+    "playerId": "8183",
+    "fullName": "Brock Purdy",
+    "projectedPoints": "18.9"
+   },
+   {
+    "playerId": "8210",
+    "fullName": "Chig Okonkwo",
+    "projectedPoints": "14.4"
+   }
+  ],
+  "legalMoves": [],
+  "noChangeAllowed": true,
+  "kickoffPhrase": null,
+  "maxLength": 28600,
+  "budget": 59,
+  "rosterPlans": [],
+  "unknowns": []
+ },
+ "attempts": [
+  {
+   "response": {
+    "hold": false,
+    "opening": "I'd prioritize the tight end and wide receiver upgrades. Your TE spot has been the weakest over 10 completed weeks, and the weaker WR spot also needs help, while the best available players have real roles rather than just favorable matchups. With no open slot, each claim needs a drop, so I’d use Michael Mayer first and Elic Ayomanor second.",
+    "picks": [
+     {
+      "playerId": "9482",
+      "reasoning": "I'd make Michael Mayer the top claim. He played 83% of Las Vegas' snaps in week 10 and has a 14% target share, 49 targets, and a 12.8 projection, while Brock Bowers' ankle injury could expand Mayer's role. He also gets Denver's green matchup, ranked 30th against tight ends, and would directly address your weakest starting position. [usage-9482, news-9482-1, matchup-defense-points-allowed-9482, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 13,
+       "target": 18,
+       "high": 24
+      },
+      "limit": "Stop at $24 because his larger role still depends on Brock Bowers missing time, and the league has previously paid $10 for Michael Gesicki and $10 for Michael Mayer. [news-9482-1, competition]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "12499",
+      "reasoning": "I'd claim Elic Ayomanor next. He played 95% of the snaps, drew 10 targets with six first-read targets, and produced 12.9 points in week 10, with Carnell Tate sidelined and Wan'Dale Robinson leaving that game. Dallas is a green matchup ranked 27th against wide receivers, and this is a strong upgrade path for your weaker WR spot. [usage-12499, production-12499, news-12499-1, matchup-defense-points-allowed-12499, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 8,
+       "target": 12,
+       "high": 17
+      },
+      "limit": "Stop at $17 because his workload may fall if Carnell Tate and Wan'Dale Robinson return, and his recent jump came after only 5 targets in week 8. [news-12499-1, usage-12499]",
+      "drop": "11625"
+     },
+     {
+      "playerId": "5012",
+      "reasoning": "I'd use Mark Andrews as the next tight end alternative. He turned 8 targets into 20.2 points in week 10, owns an 18% target share and 51 targets, and Jacoby Brissett's arrival gives him a verified recent usage boost. Carolina is a red matchup ranked 11th against tight ends, so the role matters more than the matchup, and he would be a large upgrade over your tight end depth. [production-5012, usage-5012, news-5012-1, matchup-defense-points-allowed-5012, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 8,
+       "target": 12,
+       "high": 16
+      },
+      "limit": "Stop at $16 because week 10 was a season-best game, his role with Jacoby Brissett is still uncertain, and the matchup is red. [production-5012, news-5012-3, matchup-defense-points-allowed-5012]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "13425",
+      "reasoning": "I'd keep Jalon Daniels as a superflex-only alternative. His 14.2 projection is the highest on the board, and his earlier starts included 100% snap shares plus 7 carries in week 5 and 4 carries in week 6, but his week 11 role is uncertain because his recent usage is not current. Detroit is easy for quarterback fantasy points but red for pressure, so the opportunity question is the main issue. [projection-13425, usage-13425, matchup-defense-points-allowed-13425, matchup-defense-pressure-rate-13425, needs]",
+      "outsideFocus": "He is outside the TE and WR focus, but the superflex slot is a roster weakness and his 14.2 projection beats every focused-position option. His recent starting workload gives him more upside than the other quarterback alternatives, though his week 11 role is uncertain. [projection-13425, usage-13425, needs]",
+      "bid": {
+       "low": 2,
+       "target": 4,
+       "high": 7
+      },
+      "limit": "Stop at $7 because his most recent listed action was week 7, his week 11 role is uncertain, and you already have Brock Purdy, Kirk Cousins, and Baker Mayfield. [usage-13425, roster]",
+      "drop": "11625"
+     },
+     {
+      "playerId": "11593",
+      "reasoning": "I'd keep Brevyn Spann-Ford as a cheaper tight end alternative. He has played 66% or more of the snaps in each of his last three listed games and has an 11.6 projection, but his targets fell to 3 in week 10 and his rest-of-season schedule is red. He is still a better roster fit than the low-volume tight ends because your TE position needs help. [usage-11593, projection-11593, matchup-rest-of-season-11593, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 1,
+       "target": 3,
+       "high": 5
+      },
+      "limit": "Stop at $5 because his recent production is only 4.1, 5.0, and 9.1 points, and his rest-of-season schedule ranks 8th. [production-11593, matchup-rest-of-season-11593]",
+      "drop": "7002"
+     }
+    ],
+    "optional": [
+     {
+      "playerId": "5995",
+      "reasoning": "Justice Hill is a useful Derrick Henry handcuff and PPR bench stash. He played 48% of the snaps and earned 7 targets in week 10, has caught at least 3 passes in each of his last 5 outings, and has a green Carolina matchup, but his 13% carry share keeps him behind the tight end and wide receiver upgrades. [usage-5995, news-5995-1, matchup-player-target-share-5995, matchup-defense-points-allowed-5995]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 2,
+       "target": 4,
+       "high": 7
+      },
+      "limit": "Stop at $7 because his rushing role is inconsistent and his recent projection is only 7.3, making him more of a handcuff than a lineup upgrade. [usage-5995, projection-5995]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "4147",
+      "reasoning": "Samaje Perine has a usable role, with 6 carries, 4 targets, 2 red-zone carries, and 12.3 expected points in week 10, plus an easy remaining schedule ranked 28th. His snaps are unknown and he has only a 7.5 projection, so he is a depth play rather than a priority claim. [usage-4147, matchup-rest-of-season-4147, projection-4147]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 1,
+       "target": 2,
+       "high": 4
+      },
+      "limit": "Stop at $4 because his snaps are unknown, his recent production was 13.9 after 4.3 and 2.9, and his role is not secure. [usage-4147, production-4147]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "12492",
+      "reasoning": "Pat Bryant is a speculative WR add after returning from an ankle injury to play 68% of the snaps and score 15.6 points in week 9. His matchup with Las Vegas is green, but his target share is only 11% and his week 11 usage is uncertain after the bye, so he trails Elic Ayomanor. [news-12492-1, usage-12492, production-12492, matchup-defense-points-allowed-12492]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 1,
+       "target": 2,
+       "high": 4
+      },
+      "limit": "Stop at $4 because he has only 17 targets this season and his week 11 usage is uncertain after the bye. [matchup-player-target-share-12492, usage-12492]",
+      "drop": "11625"
+     }
+    ],
+    "together": [],
+    "claims": [
+     {
+      "text": "Michael Mayer played 83% of the snaps in week 10, has 49 targets, and is projected for 12.8 points. [usage-9482, matchup-player-target-share-9482, projection-9482]",
+      "evidence": [
+       "usage-9482",
+       "matchup-player-target-share-9482",
+       "projection-9482"
+      ]
+     },
+     {
+      "text": "Elic Ayomanor played 95% of the snaps and received 10 targets in week 10 while Carnell Tate was sidelined. [usage-12499, news-12499-1]",
+      "evidence": [
+       "usage-12499",
+       "news-12499-1"
+      ]
+     },
+     {
+      "text": "Mark Andrews caught 8 passes for 82 yards and scored 20.2 points in week 10. [production-5012]",
+      "evidence": [
+       "production-5012"
+      ]
+     },
+     {
+      "text": "Your roster has no open slots, and tight end has scored 8.1 points per week over 10 completed weeks, 12th of 12. [needs]",
+      "evidence": [
+       "needs"
+      ]
+     }
+    ]
+   },
+   "recordedFailures": [
+    "Only a holding board lists optional moves.",
+    "There is no focus this round: leave \"outsideFocus\" empty for Jalon Daniels."
+   ]
+  },
+  {
+   "response": {
+    "hold": false,
+    "opening": "I'd prioritize the tight end and wide receiver upgrades. Your TE spot has been the weakest over 10 completed weeks, and the weaker WR spot also needs help, while the best available players have real roles rather than just favorable matchups. With no open slot, each claim needs a drop, so I’d use Michael Mayer first and Elic Ayomanor second.",
+    "picks": [
+     {
+      "playerId": "9482",
+      "reasoning": "I'd make Michael Mayer the top claim. He played 83% of Las Vegas' snaps in week 10 and has a 14% target share, 49 targets, and a 12.8 projection, while Brock Bowers' ankle injury could expand Mayer's role. He also gets Denver's green matchup, ranked 30th against tight ends, and would directly address your weakest starting position. [usage-9482, news-9482-1, matchup-defense-points-allowed-9482, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 13,
+       "target": 18,
+       "high": 24
+      },
+      "limit": "Stop at $24 because his larger role still depends on Brock Bowers missing time, and the league has previously paid $10 for Michael Gesicki and $10 for Michael Mayer. [news-9482-1, competition]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "12499",
+      "reasoning": "I'd claim Elic Ayomanor next. He played 95% of the snaps, drew 10 targets with six first-read targets, and produced 12.9 points in week 10, with Carnell Tate sidelined and Wan'Dale Robinson leaving that game. Dallas is a green matchup ranked 27th against wide receivers, and this is a strong upgrade path for your weaker WR spot. [usage-12499, production-12499, news-12499-1, matchup-defense-points-allowed-12499, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 8,
+       "target": 12,
+       "high": 17
+      },
+      "limit": "Stop at $17 because his workload may fall if Carnell Tate and Wan'Dale Robinson return, and his recent jump came after only 5 targets in week 8. [news-12499-1, usage-12499]",
+      "drop": "11625"
+     },
+     {
+      "playerId": "5012",
+      "reasoning": "I'd use Mark Andrews as the next tight end alternative. He turned 8 targets into 20.2 points in week 10, owns an 18% target share and 51 targets, and Jacoby Brissett's arrival gives him a verified recent usage boost. Carolina is a red matchup ranked 11th against tight ends, so the role matters more than the matchup, and he would be a large upgrade over your tight end depth. [production-5012, usage-5012, news-5012-1, matchup-defense-points-allowed-5012, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 8,
+       "target": 12,
+       "high": 16
+      },
+      "limit": "Stop at $16 because week 10 was a season-best game, his role with Jacoby Brissett is still uncertain, and the matchup is red. [production-5012, news-5012-3, matchup-defense-points-allowed-5012]",
+      "drop": "7002"
+     },
+     {
+      "playerId": "13425",
+      "reasoning": "I'd keep Jalon Daniels as a superflex-only alternative. His 14.2 projection is the highest on the board, and his earlier starts included 100% snap shares plus 7 carries in week 5 and 4 carries in week 6, but his week 11 role is uncertain because his recent usage is not current. Detroit is easy for quarterback fantasy points but red for pressure, so the opportunity question is the main issue. [projection-13425, usage-13425, matchup-defense-points-allowed-13425, matchup-defense-pressure-rate-13425, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 2,
+       "target": 4,
+       "high": 7
+      },
+      "limit": "Stop at $7 because his most recent listed action was week 7, his week 11 role is uncertain, and you already have Brock Purdy, Kirk Cousins, and Baker Mayfield. [usage-13425, roster]",
+      "drop": "11625"
+     },
+     {
+      "playerId": "11593",
+      "reasoning": "I'd keep Brevyn Spann-Ford as a cheaper tight end alternative. He has played 66% or more of the snaps in each of his last three listed games and has an 11.6 projection, but his targets fell to 3 in week 10 and his rest-of-season schedule is red. He is still a better roster fit than the low-volume tight ends because your TE position needs help. [usage-11593, projection-11593, matchup-rest-of-season-11593, needs]",
+      "outsideFocus": "",
+      "bid": {
+       "low": 1,
+       "target": 3,
+       "high": 5
+      },
+      "limit": "Stop at $5 because his recent production is only 4.1, 5.0, and 9.1 points, and his rest-of-season schedule ranks 8th. [production-11593, matchup-rest-of-season-11593]",
+      "drop": "7002"
+     }
+    ],
+    "optional": [],
+    "together": [],
+    "claims": [
+     {
+      "text": "Michael Mayer played 83% of the snaps in week 10, has 49 targets, and is projected for 12.8 points. [usage-9482, matchup-player-target-share-9482, projection-9482]",
+      "evidence": [
+       "usage-9482",
+       "matchup-player-target-share-9482",
+       "projection-9482"
+      ]
+     },
+     {
+      "text": "Elic Ayomanor played 95% of the snaps and received 10 targets in week 10 while Carnell Tate was sidelined. [usage-12499, news-12499-1]",
+      "evidence": [
+       "usage-12499",
+       "news-12499-1"
+      ]
+     },
+     {
+      "text": "Mark Andrews caught 8 passes for 82 yards and scored 20.2 points in week 10. [production-5012]",
+      "evidence": [
+       "production-5012"
+      ]
+     },
+     {
+      "text": "Your roster has no open slots, and tight end has scored 8.1 points per week over 10 completed weeks, 12th of 12. [needs]",
+      "evidence": [
+       "needs"
+      ]
+     }
+    ]
+   },
+   "recordedFailures": [
+    "The message names Brock Bowers, who is not in the evidence.",
+    "The message names Jacoby Brissett, who is not in the evidence.",
+    "The message names Wan'Dale Robinson, who is not in the evidence.",
+    "The number 9482 is not in the evidence.",
+    "The number 12499 is not in the evidence.",
+    "The number 5012 is not in the evidence.",
+    "The number 13425 is not in the evidence.",
+    "The number 11593 is not in the evidence.",
+    "The number 12.9 is not in the evidence about Carnell Tate.",
+    "The number 7 is not in the evidence about Kirk Cousins or Baker Mayfield or Brock Purdy.",
+    "The claim \"Michael Mayer played 83% of the snaps in week 10, has 49 targets, and is projected for 12.8 points. [usage-9482, matchup-player-target-share-9482, projection-9482]\" states the number 9482, which its cited evidence does not.",
+    "The claim \"Elic Ayomanor played 95% of the snaps and received 10 targets in week 10 while Carnell Tate was sidelined. [usage-12499, news-12499-1]\" states the number 12499, which its cited evidence does not.",
+    "The claim \"Mark Andrews caught 8 passes for 82 yards and scored 20.2 points in week 10. [production-5012]\" states the number 10, which its cited evidence does not.",
+    "The claim \"Mark Andrews caught 8 passes for 82 yards and scored 20.2 points in week 10. [production-5012]\" states the number 5012, which its cited evidence does not."
+   ]
+  }
+ ]
+}

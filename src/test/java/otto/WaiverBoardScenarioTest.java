@@ -11,6 +11,7 @@ import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,6 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
+import otto.claims.ClaimRound;
+import otto.delivery.AlertDeliveryOutbox;
+import otto.delivery.DeliveryBasis;
+import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.harness.NflverseStubs;
@@ -120,6 +125,9 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
+
+    @Autowired
+    private AlertDeliveryOutbox outbox;
 
     private static String board(boolean hold, String opening, List<String> picks,
             List<String> optional) {
@@ -386,18 +394,39 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aBoardThatFailsItsChecksTwiceIsWithheldAndNeverReplacedByTheScoredBoard() {
+    void aBoardThatKeepsFailingItsChecksIsTriedAgainEachHourAndWithheldAfterTheLastTry() {
         String cook = entry("8138", "James Cook is a strong add.");
         tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(cook), List.of()));
 
-        DecisionRecord record = onlyBoardRecord();
-        assertThat(record.exchanges()).hasSize(2)
-                .allSatisfy(exchange -> assertThat(exchange.checkFailures())
-                        .anySatisfy(failure -> assertThat(failure)
-                                .contains("8138 is not a free agent")));
-        assertThat(record.outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
-        assertThat(((Outcome.WithheldWithNotice) record.outcome()).reason())
-                .startsWith("The board failed its checks twice");
+        assertThat(boardRecords()).hasSize(1);
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+
+        clock.set(TUESDAY_EVENING.plus(Duration.ofMinutes(5)));
+        checkRunner.runCheck();
+        boardWasAskedOfTheModel(2);
+
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(1)));
+        checkRunner.runCheck();
+        boardWasAskedOfTheModel(4);
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(2)));
+        checkRunner.runCheck();
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(2)).plus(Duration.ofMinutes(5)));
+        checkRunner.runCheck();
+        clock.set(FALLBACK);
+        checkRunner.runCheck();
+
+        boardWasAskedOfTheModel(2 * ClaimRound.BOARD_TRIES);
+        assertThat(boardRecords()).hasSize(ClaimRound.BOARD_TRIES).allSatisfy(record -> {
+            assertThat(record.exchanges()).hasSize(2)
+                    .allSatisfy(exchange -> assertThat(exchange.checkFailures())
+                            .anySatisfy(failure -> assertThat(failure)
+                                    .contains("8138 is not a free agent")));
+            assertThat(record.outcome()).isInstanceOf(Outcome.WithheldWithNotice.class);
+            assertThat(((Outcome.WithheldWithNotice) record.outcome()).reason())
+                    .startsWith("The board failed its checks twice");
+        });
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
@@ -405,6 +434,84 @@ class WaiverBoardScenarioTest extends WireSeamTest {
                 .withRequestBody(matchingJsonPath("$.text", containing("past my fact checks"))));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("James Cook")));
+    }
+
+    @Test
+    void aBoardThatPassesOnALaterTryIsSentAndNoNoticeIs() {
+        String cook = board(false, OPENING, List.of(entry("8138", "James Cook is a strong add.")),
+                List.of());
+        tuesdayEveningWithTheModelAnswering(cook, cook,
+                board(false, OPENING, List.of(IRVING), List.of()));
+
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(1)));
+        checkRunner.runCheck();
+        checkRunner.runCheck();
+
+        List<DecisionRecord> records = boardRecords();
+        assertThat(records).hasSize(2);
+        assertThat(records.getLast().outcome()).isInstanceOf(Outcome.SentBoard.class);
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB")))
+                .withRequestBody(matchingJsonPath(BUTTONS + "[0][0].callback_data",
+                        equalTo("done:" + boardAlertId()))));
+        assertThat(eventLog.all())
+                .filteredOn(event -> event.key().startsWith("alert:waiver:"))
+                .singleElement()
+                .satisfies(event -> assertThat(event.facts())
+                        .containsEntry("runId", records.getLast().runId()));
+    }
+
+    @Test
+    void aRoundAlreadyToldNoBoardIsComingStillGetsTheBoardALaterTryPasses() {
+        String cook = board(false, OPENING, List.of(entry("8138", "James Cook is a strong add.")),
+                List.of());
+        tuesdayEveningWithTheModelAnswering(cook, cook,
+                board(false, OPENING, List.of(IRVING), List.of()));
+        Outcome.WithheldWithNotice withheld =
+                (Outcome.WithheldWithNotice) onlyBoardRecord().outcome();
+        outbox.deliver(List.of(withheld.notice()), false,
+                DeliveryBasis.of(onlyBoardRecord().runId()),
+                List.of(new Event("alert:waiver:2026-09-15", EventType.ALERT_SENT,
+                        TUESDAY_EVENING, Map.of("trigger", "waiver board"))));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("past my fact checks"))));
+
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(2)));
+        checkRunner.runCheck();
+        checkRunner.runCheck();
+
+        telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB"))));
+    }
+
+    @Test
+    void slipsThatChangeNoFactArePutRightAndTheBoardIsSentOnTheFirstAttempt() {
+        String irving = """
+                {"playerId": "Bucky Irving", "reasoning": "Bucky Irving played 71% of offensive \
+                snaps in Week 1, and his coach named him the starter. He projects 19.0 points \
+                this week. [usage-10001, projection-10001]", "outsideFocus": "He is the best \
+                back here.", "bid": {"low": 7, "target": 9, "high": 12}, "limit": "Past that \
+                you pay for more than a lead role. [usage-10001]"}""";
+        tuesdayEveningWithTheModelAnswering(board(false, OPENING, List.of(irving),
+                List.of(ROBINSON)));
+
+        assertThat(onlyBoardRecord().exchanges()).singleElement()
+                .satisfies(exchange -> assertThat(exchange.checkFailures()).isEmpty());
+        assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
+                .contains("1. Bucky Irving · RB, TB")
+                .contains("in Week 1, and his coach named him the starter. He projects 19.0 "
+                        + "points this week.\nPast that you pay for more than a lead role.")
+                .doesNotContain("usage-10001")
+                .doesNotContain("[")
+                .doesNotContain("He is the best back here")
+                .doesNotContain("Wandale Robinson"));
+    }
+
+    private void boardWasAskedOfTheModel(int times) {
+        llm.verify(times, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST)));
     }
 
     @Test

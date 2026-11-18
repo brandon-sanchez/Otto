@@ -34,9 +34,22 @@ public class BoardDelivery {
         this.roleSlips = roleSlips;
     }
 
-    /** True once Telegram has accepted a board for this round. */
+    /**
+     * True once Telegram has accepted a board for this round, from any
+     * try, or the notice that none is coming.
+     */
     public boolean alreadySent(ClaimRound round) {
-        return outbox.alreadySent(round.alertKey());
+        return round.alertKeys().stream().anyMatch(outbox::alreadySent);
+    }
+
+    /**
+     * True once Telegram has accepted what one try of the round's board
+     * sends.
+     *
+     * @param boardTry which try, from 1 to {@link ClaimRound#BOARD_TRIES}
+     */
+    public boolean alreadySent(ClaimRound round, int boardTry) {
+        return outbox.alreadySent(round.alertKey(boardTry));
     }
 
     /**
@@ -45,6 +58,8 @@ public class BoardDelivery {
      * <p>Side effects: the outbox's writes and Telegram sends, the Event
      * Log append, and a role-slip ledger write when held advice went out.
      *
+     * @param boardTry which try of the round's board this is, which
+     *        picks the Alert key it is sent under
      * @param basis what the board's messages were written from
      * @param withHeldAdvice lays out the board's messages with the held
      *        advice messages under them
@@ -53,13 +68,13 @@ public class BoardDelivery {
      *        added here and the sent text by the outbox
      * @return the Event recorded when Telegram accepted the board
      */
-    public Optional<Event> deliver(ClaimRound round, DeliveryBasis basis,
+    public Optional<Event> deliver(ClaimRound round, int boardTry, DeliveryBasis basis,
             Function<List<String>, List<String>> withHeldAdvice, boolean viewAllOptions,
             Map<String, String> facts) {
         List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
         List<String> parts = withHeldAdvice.apply(messages(held));
         return delivered(held, outbox.deliver(parts, viewAllOptions, withHeld(basis, held),
-                templates(round, facts, held)));
+                templates(round, round.alertKey(boardTry), facts, held)));
     }
 
     /**
@@ -78,16 +93,16 @@ public class BoardDelivery {
         List<RoleSlipLedger.Held> held = roleSlips.heldForBoard();
         return delivered(held, outbox.deliver(withHeld(basis, held),
                 () -> withHeldAdvice(phrase.get(), messages(held)),
-                templates(round, facts, held)));
+                templates(round, round.alertKey(), facts, held)));
     }
 
-    private static List<Event> templates(ClaimRound round, Map<String, String> facts,
-            List<RoleSlipLedger.Held> held) {
+    private static List<Event> templates(ClaimRound round, String alertKey,
+            Map<String, String> facts, List<RoleSlipLedger.Held> held) {
         Map<String, String> recorded = new HashMap<>(facts);
         if (!held.isEmpty()) {
             recorded.put("heldAdviceRuns", String.join(",", runs(held)));
         }
-        return List.of(new Event(round.alertKey(), EventType.ALERT_SENT, round.now(),
+        return List.of(new Event(alertKey, EventType.ALERT_SENT, round.now(),
                 Map.copyOf(recorded)));
     }
 
