@@ -996,7 +996,8 @@ public class WaiverScorer {
                     recommendedDrop(projected),
                     gains,
                     gains == null ? null : candidate.beatsSomebodyNamed(),
-                    List.copyOf(reasons));
+                    List.copyOf(reasons),
+                    news.report());
         }
 
         private WaiverCandidate.DropRecommendation recommendedDrop(
@@ -1070,7 +1071,7 @@ public class WaiverScorer {
                 case SourceResult.Unavailable<List<SleeperAdapter.NewsItem>> down ->
                     new News(0.0, Optional.of(("I cannot reach %s's news feed right now (%s), "
                             + "so his news scores nothing")
-                                    .formatted(player.fullName(), down.reason())));
+                                    .formatted(player.fullName(), down.reason())), null);
                 case SourceResult.Ok<List<SleeperAdapter.NewsItem>> ok -> toneOf(ok.value());
             };
         }
@@ -1083,20 +1084,23 @@ public class WaiverScorer {
                     .toList();
             if (items.isEmpty()) {
                 return new News(0.0, Optional.of("nothing in his news feed in the last %d days"
-                        .formatted(NEWS_WINDOW.toDays())));
+                        .formatted(NEWS_WINDOW.toDays())), null);
             }
             NewsTone tone = NewsTone.overall(items.stream()
                     .map(item -> NewsTone.of(item.headline(), item.detail(), item.analysis()))
                     .toList());
-            String headline = items.getFirst().headline();
+            SleeperAdapter.NewsItem latest = items.getFirst();
+            String headline = latest.headline();
+            WaiverCandidate.RecentNews report = new WaiverCandidate.RecentNews(
+                    headline, latest.detail(), latest.source());
             return switch (tone) {
                 case POSITIVE -> new News(NEWS_POSITIVE_POINTS,
                         Optional.of("his news reads as positive role news: \"%s\""
-                                .formatted(headline)));
+                                .formatted(headline)), report);
                 case NEUTRAL -> new News(NEWS_NEUTRAL_POINTS,
-                        Optional.of("his news is a neutral mention: \"%s\"".formatted(headline)));
+                        Optional.of("his news is a neutral mention: \"%s\"".formatted(headline)), report);
                 case NEGATIVE -> new News(0.0,
-                        Optional.of("his news reads as negative: \"%s\"".formatted(headline)));
+                        Optional.of("his news reads as negative: \"%s\"".formatted(headline)), report);
             };
         }
 
@@ -1340,7 +1344,7 @@ public class WaiverScorer {
     }
 
     /** What one candidate's news is worth, and why. */
-    private record News(double points, Optional<String> reason) {
+    private record News(double points, Optional<String> reason, WaiverCandidate.RecentNews report) {
 
         /**
          * A feed the board never opened. It says so rather than
@@ -1349,7 +1353,7 @@ public class WaiverScorer {
          */
         static News notRead() {
             return new News(0.0, Optional.of("I did not read his news feed for this board, so "
-                    + "his news scores nothing either way"));
+                    + "his news scores nothing either way"), null);
         }
     }
 

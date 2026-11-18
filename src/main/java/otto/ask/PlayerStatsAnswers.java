@@ -2,8 +2,10 @@ package otto.ask;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -51,12 +53,18 @@ public class PlayerStatsAnswers {
             Lead with exactly what he asked, in a layout he can scan, one fact to a line.
             When he asks for a stat, the first line is one short sentence with that number
             in bold and its sample, in the shape: He played <b>N%%</b> of snaps in week W
-            (S snaps). Then add at most two of his season ranks that say the most
-            about that stat or his role, each as its rank item's "line" fact, word for word.
-            When he asks for ranks, the first line is a rank item's "header" fact, then the
-            "line" fact of every rank he asked about, word for word, the ones he named
-            first; with no stat named, give the lines that say the most about his role.
-            When a rank item has an "amongAllPlayers" fact, add it as one short sentence.
+            (S snaps). When adding season ranks for context, leave a blank line, show the
+            rank item's "header" fact to name the comparison group, then add at most two
+            "line" facts that describe that stat or his role. Copy those facts word for word.
+            When he asks for ranks, stats among a position group, or general season stats,
+            the first line is a rank item's "header" fact, word for word. Leave a blank
+            line after it, then use the "line" fact of every rank he asked about, word for
+            word, the ones he named first. With no stat named, give up to four lines that
+            best show his fantasy role. Do not repeat the same values in prose. A brief note
+            can explain what the usage means, such as whether he owns most of the backfield
+            work or gets involved as a receiver, when the evidence supports it.
+            The header names exactly the group used for every rank line. Never relabel the
+            group or add another group unless he explicitly asks for it.
             A rank is season to date: when the stats he asked about are for a single week
             or a few weeks, the header or a short sentence says so.
             When he asks what stats you can see, say what the evidence holds for this player
@@ -118,6 +126,8 @@ public class PlayerStatsAnswers {
      * @param asked what the user asked about, in his words, or null
      * @param fantasyPoints true when he asked for fantasy points, which the
      *        answer then gives in the bound league's own scoring
+     * @param rankPositions the positions the user wants ranked against each other, or
+     *        null or empty to use the player's own position
      * @param delivery how a checked message reaches the user, which the
      *        Decision Record keeps as its outcome
      * @return the checked message, or why there is none in words fit to
@@ -126,23 +136,45 @@ public class PlayerStatsAnswers {
      *         his games, or the answer failed its checks
      */
     public ToolAnswer<Answer> answer(String reference, StatsSpan span, String asked,
-            boolean fantasyPoints, Instant now, AnswerDelivery delivery) {
+            boolean fantasyPoints, List<String> rankPositions, Instant now,
+            AnswerDelivery delivery) {
         return switch (lookup.find(reference)) {
             case PlayerLookup.Match.NotFound notFound -> ToolAnswer.unavailable(notFound.reason());
             case PlayerLookup.Match.Found found -> ToolAnswer.from(loader.league(),
-                    league -> read(found.player(), league, span, asked, fantasyPoints, now,
-                            delivery));
+                    league -> read(found.player(), league, span, asked, fantasyPoints, rankPositions,
+                            now, delivery));
         };
     }
 
     private ToolAnswer<Answer> read(DirectoryPlayer player, SleeperAdapter.League league,
-            StatsSpan span, String asked, boolean fantasyPoints, Instant now,
-            AnswerDelivery delivery) {
+            StatsSpan span, String asked, boolean fantasyPoints, List<String> rankPositions,
+            Instant now, AnswerDelivery delivery) {
         Optional<Position> position = Position.of(player.position());
         if (position.isEmpty()) {
             return ToolAnswer.unavailable(("I keep usage stats for quarterbacks, running backs, "
                     + "receivers and tight ends, and %s plays %s").formatted(player.fullName(),
                     player.position()));
+        }
+        Set<Position> comparison = EnumSet.noneOf(Position.class);
+        if (rankPositions == null || rankPositions.isEmpty()) {
+            comparison.add(position.get());
+        } else {
+            for (String code : rankPositions) {
+                Optional<Position> parsed = Position.parse(code);
+                if (parsed.isEmpty()) {
+                    return ToolAnswer.unavailable("I can rank QB, RB, WR and TE together or "
+                            + "in any combination.");
+                }
+                comparison.add(parsed.get());
+            }
+        }
+        if (!comparison.contains(position.get())) {
+            return ToolAnswer.unavailable("%s plays %s and is outside that comparison group."
+                    .formatted(player.fullName(), position.get().name()));
+        }
+        if (fantasyPoints && comparison.size() > 1) {
+            return ToolAnswer.unavailable("I rank fantasy points within one position. "
+                    + "I can compare usage stats across positions.");
         }
         MatchupSources opened = sources.open();
         Optional<PlayerUsage> usage = opened.usage();
@@ -168,7 +200,7 @@ public class PlayerStatsAnswers {
             return ToolAnswer.unavailable(window.unavailable());
         }
         PlayerStatsEvidence.Subject subject = subject(player, gsisId.get(), position.get(),
-                team, window.facts(), usage.get(), games, asked);
+                team, window.facts(), usage.get(), games, asked, comparison);
         if (subject.games().isEmpty()) {
             return ToolAnswer.unavailable(nothingPlayed(subject));
         }
@@ -192,7 +224,7 @@ public class PlayerStatsAnswers {
 
     private static PlayerStatsEvidence.Subject subject(DirectoryPlayer player, String gsisId,
             Position position, String team, StatsSpan.Window window, PlayerUsage usage,
-            List<PlayerUsage.Game> games, String asked) {
+            List<PlayerUsage.Game> games, String asked, Set<Position> comparison) {
         List<PlayerUsage.Game> played = new ArrayList<>();
         List<Integer> didNotPlay = new ArrayList<>();
         List<Integer> notPublished = new ArrayList<>();
@@ -209,7 +241,7 @@ public class PlayerStatsAnswers {
             }
         }
         return new PlayerStatsEvidence.Subject(player, gsisId, position, team, window, played,
-                didNotPlay, notPublished, asked);
+                didNotPlay, notPublished, asked, comparison);
     }
 
     private ToolAnswer<Answer> written(PlayerStatsEvidence.Subject subject,

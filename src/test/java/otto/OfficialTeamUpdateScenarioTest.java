@@ -235,6 +235,7 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo("""
                         🔴 <b>Christian McCaffrey</b> won't play, his team says
+
                         <b>Replace him in your RB slot</b>: the 49ers announced it, but Sleeper \
                         still lists him as Active.
                         Best bench option: Josh Jacobs, projected 12.5."""))));
@@ -257,6 +258,7 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", equalTo("""
                         🔴 <b>Christian McCaffrey</b> is now Out
+
                         <b>Fill your RB slot</b>: it scores zero with him in it.
                         Best bench option: Josh Jacobs, projected 12.5.
                         The 49ers said earlier that he will play."""))));

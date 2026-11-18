@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
@@ -67,15 +68,17 @@ final class PlayerStatsEvidence {
      * @param notPublished the span's weeks nflverse has not published his
      *        team's stats for yet
      * @param asked what the user asked about, in his words, or null
+     * @param rankPositions the comparison group used for usage ranks
      */
     record Subject(DirectoryPlayer player, String gsisId, Position position, String team,
             StatsSpan.Window window, List<PlayerUsage.Game> games, List<Integer> didNotPlay,
-            List<Integer> notPublished, String asked) {
+            List<Integer> notPublished, String asked, Set<Position> rankPositions) {
 
         Subject {
             games = List.copyOf(games);
             didNotPlay = List.copyOf(didNotPlay);
             notPublished = List.copyOf(notPublished);
+            rankPositions = Set.copyOf(rankPositions);
         }
 
         String id() {
@@ -361,13 +364,13 @@ final class PlayerStatsEvidence {
             stats.add(PlayerStat.CARRIES_PER_GAME);
         }
         return stats.stream()
-                .flatMap(stat -> sources.rankings().players(stat, subject.position())
-                        .map(ranking -> rankItem(subject, ranking, sources, now)).stream())
+                .flatMap(stat -> sources.rankings().players(stat, subject.rankPositions())
+                        .map(ranking -> rankItem(subject, ranking, now)).stream())
                 .toList();
     }
 
-    private static EvidenceItem rankItem(Subject subject, Ranking ranking,
-            MatchupSources sources, Instant now) {
+    private static EvidenceItem rankItem(Subject subject, Ranking ranking, Instant now) {
+        String group = RankWords.group(subject.rankPositions());
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("subject", subject.name());
         facts.put("stat", RankWords.stat(ranking.stat(), subject.position()) + ", season to date");
@@ -384,11 +387,8 @@ final class PlayerStatsEvidence {
                     ranking.stat().sampleUnit()));
             PlayerStat stat = (PlayerStat) ranking.stat();
             facts.put("quoted", RankWords.placed(stat, placement.get()));
-            facts.put("header", RankWords.header(subject.name(), subject.position(),
-                    ranking.weeks()));
+            facts.put("header", RankWords.header(subject.name(), group, ranking.weeks()));
             facts.put("line", RankWords.line(ranking, placement.get()));
-            sources.rankings().notableOverall(stat, subject.gsisId(), subject.position())
-                    .ifPresent(overall -> facts.put("amongAllPlayers", overall));
         } else {
             facts.put("noRank", ranking.unranked().stream()
                     .filter(entry -> entry.id().equals(subject.gsisId()))
@@ -398,7 +398,7 @@ final class PlayerStatsEvidence {
         }
         return new EvidenceItem(PREFIX + "rank-" + slug(ranking) + "-" + subject.id(),
                 ranking.stat().source(), Optional.empty(), now,
-                "where he ranks among %s this season".formatted(subject.position().plural()),
+                "where he ranks among %s this season".formatted(group),
                 facts);
     }
 

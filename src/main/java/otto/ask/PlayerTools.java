@@ -1,6 +1,7 @@
 package otto.ask;
 
 import java.time.Clock;
+import java.util.List;
 
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -81,7 +82,8 @@ public class PlayerTools {
             none for the season so far. Call it for "what was his snap %
             last week", "how many targets did he get", "how many points
             did he score last week", "what about the week before" and
-            "what advanced stats can you see".""")
+            "what advanced stats can you see". Use it for player stats
+            among one position, multiple positions or all skill players.""")
     public ToolAnswer<PlayerStatsAnswers.Answer> getPlayerStats(
             @ToolParam(description = "The player, by name or Sleeper player id")
             String player,
@@ -107,13 +109,18 @@ public class PlayerTools {
                     player scored, his points per game or where he ranks
                     in points. They come in his league's own scoring.
                     Leave it out for usage and advanced stats.""")
-            Boolean fantasyPoints, ToolContext context) {
+            Boolean fantasyPoints,
+            @ToolParam(required = false, description = """
+                    Usage rank comparison group explicitly requested by the user.
+                    Use an array of QB, RB, WR and/or TE. For all skill positions
+                    give all four. Omit when no group is named.""")
+            List<String> rankPositions, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
         return switch (StatsSpan.parse(week, weeksAgo, lastGames)) {
             case StatsSpan.Parsed.Rejected rejected -> ToolAnswer.unavailable(rejected.reason());
             case StatsSpan.Parsed.Ok parsed -> checked.offer(playerStats.answer(player,
-                    parsed.span(), asked, Boolean.TRUE.equals(fantasyPoints), clock.instant(),
-                    checked.delivery()), PlayerStatsAnswers.Answer::message);
+                    parsed.span(), asked, Boolean.TRUE.equals(fantasyPoints), rankPositions,
+                    clock.instant(), checked.delivery()), PlayerStatsAnswers.Answer::message);
         };
     }
 
@@ -148,7 +155,10 @@ public class PlayerTools {
             + RankConvention.TONE + """
              Quote ranks as written, such as 3rd or 5th from the bottom.
             For a player, quote his rank as "quoted" writes it, sample
-            included, and add "askedOverall" when it is there. Call this
+            included, and name which position he ranks among. Keep a separate
+            "askedOverall" comparison explicitly labeled as across skill positions.
+            Use get_player_stats for one player's stats across an explicitly named
+            group of multiple positions. Call this
             for "where does he
             rank in target share", "best pass rush in the league",
             "toughest run defense" or "easiest schedule the rest of the

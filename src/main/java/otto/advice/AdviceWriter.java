@@ -48,8 +48,8 @@ public class AdviceWriter {
 
             Decide what the user should do. Choose one of "legalMoves", or no change
             when "noChangeAllowed" is true. Put the recommendation on the first line,
-            in bold, such as <b>Start one player over another</b>. Then give the
-            reason that matters most in one short line, and at most one more short
+            in bold, such as <b>Start one player over another</b>. Leave a blank
+            line, then give the main reason in one short line and at most one more short
             line for what is uncertain or what would change the call.
 
             """;
@@ -58,7 +58,9 @@ public class AdviceWriter {
             Also decide what to do with the player the decision is about: choose
             exactly one of "rosterPlans" by its "id", lead with it in bold, and explain
             it in two or three short lines that connect his news, the league's format
-            and rules, and the roster. Name every player the plan drops or adds. Weigh the
+            and rules, and the roster. Focus on what the news changes for the user's
+            roster or lineup. Mention the status again only when the label itself matters,
+            such as when a team says he is Out but Sleeper still shows Questionable. Name every player the plan drops or adds. Weigh the
             league's format: redraft is about this season, dynasty and keeper leagues
             also value the seasons after it. A missing projection or report is
             unknown, never zero. When "unknowns" lists evidence ids, the decision
