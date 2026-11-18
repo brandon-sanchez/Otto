@@ -123,7 +123,7 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo(HOLD_UNTIL_SLEEPER_CATCHES_UP))));
+                        OutboundStubs.underHeadline(HOLD_UNTIL_SLEEPER_CATCHES_UP))));
         DecisionRecord record = onlyRecord();
         assertThat(record.exchanges()).hasSize(2);
         assertThat(record.exchanges().getFirst().checkFailures())
@@ -168,7 +168,7 @@ class OfficialTeamUpdateScenarioTest extends WireSeamTest {
         nextCheckWithSleeperOut(answer(IR_NOW, "ir", ""));
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(IR_NOW))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(IR_NOW))));
         DecisionRecord record = records().getLast();
         assertThat(record.outcome()).isEqualTo(new Outcome.Sent(IR_NOW));
         assertThat(record.evidence()).extracting(Evidence::id)

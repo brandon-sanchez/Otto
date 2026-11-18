@@ -302,16 +302,19 @@ public class AlertService {
                             EventType.ALERT_SENT, now,
                             alertFacts(candidate, research, written.get())))
                     .toList();
-            sent.addAll(outbox.deliver(written.get().basis(), compose(written.get()), templates));
+            sent.addAll(outbox.deliver(written.get().basis(),
+                    compose(AlertHeadline.of(leading(primary, unalerted, userRoster)),
+                            written.get()), templates));
         }
         return sent;
     }
 
-    private Supplier<String> compose(AlertText written) {
+    /** The Alert as sent: its headline, then the checked or phrased advice. */
+    private Supplier<String> compose(String headline, AlertText written) {
         return switch (written) {
-            case AlertText.Advised advised -> advised::text;
-            case AlertText.Phrased phrased ->
-                    () -> phraser.phrase(phrased.facts(), phrased.recommendation());
+            case AlertText.Advised advised -> () -> headline + "\n" + advised.text();
+            case AlertText.Phrased phrased -> () -> headline + "\n"
+                    + phraser.phrase(phrased.facts(), phrased.recommendation());
         };
     }
 
@@ -334,6 +337,22 @@ public class AlertService {
         LINEUP_PROBLEM,
         /** Anything else: the phrasing model words the Recommendation. */
         PHRASED
+    }
+
+    /**
+     * The candidate whose advice the Alert carries, which its headline
+     * names: the role slip when the group holds one, since the role-slip
+     * route writes the text, and otherwise the most confident one.
+     */
+    private static AlertCandidate leading(AlertCandidate primary, List<AlertCandidate> group,
+            Optional<RosterSnapshot> userRoster) {
+        if (route(primary, group, userRoster) != Route.ROLE_SLIP) {
+            return primary;
+        }
+        return group.stream()
+                .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
+                .findFirst()
+                .orElseThrow();
     }
 
     private static Route route(AlertCandidate primary, List<AlertCandidate> group,

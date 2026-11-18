@@ -173,7 +173,8 @@ public final class TelegramHtml {
     /**
      * Writes one tag the message keeps, or drops it, and tracks what is
      * open. A close with no matching open tag is dropped; one that
-     * matches an outer tag first closes the tags opened inside it.
+     * matches an outer tag first closes the tags opened inside it. A quote
+     * inside a quote is dropped, because Telegram refuses one.
      *
      * @return false when the tag is one to show as text instead
      */
@@ -202,6 +203,10 @@ public final class TelegramHtml {
                     html.append("</").append(closed.name()).append('>');
                 } while (!closed.name().equals(name));
             }
+            return true;
+        }
+        if (name.equals("blockquote")
+                && open.stream().anyMatch(each -> each.name().equals("blockquote"))) {
             return true;
         }
         String attributes = attributes(name, tag.group(3));

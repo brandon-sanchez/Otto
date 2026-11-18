@@ -69,7 +69,7 @@ class AlertScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.chat_id", equalTo("4242")))
                 .withRequestBody(matchingJsonPath("$.text",
-                        equalTo(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE))));
+                        OutboundStubs.underHeadline(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE))));
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Christian McCaffrey"))
@@ -115,7 +115,7 @@ class AlertScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("the league does not allow Questionable players "
                         + "on IR")));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(message))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(message))));
     }
 
     @Test
@@ -144,7 +144,7 @@ class AlertScenarioTest extends WireSeamTest {
                 .withRequestBody(containing("Move Josh Jacobs off IR into the open roster spot."))
                 .withRequestBody(containing("the league does not allow Active players on IR")));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(message))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(message))));
         assertThat(eventLog.all()).anySatisfy(event -> {
             assertThat(event.key()).isEqualTo("alert:snapshot-diff:status:5850:IR->ACTIVE");
             assertThat(event.facts()).containsEntry("confidence", "HIGH");
@@ -207,7 +207,7 @@ class AlertScenarioTest extends WireSeamTest {
         SleeperStubs.stubNotModified(sleeper, SleeperStubs.PLAYERS_PATH, "players-v2");
         checkRunner.runCheck();
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE)))
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE)))
                 .withRequestBody(matchingJsonPath(
                         "$.reply_markup.inline_keyboard[0][0].callback_data",
                         equalTo("done:1"))));
@@ -292,7 +292,7 @@ class AlertScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", equalTo(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE))));
+                .withRequestBody(matchingJsonPath("$.text", OutboundStubs.underHeadline(AdviceStubs.MCCAFFREY_OUT_HOLD_MESSAGE))));
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
     }
 
