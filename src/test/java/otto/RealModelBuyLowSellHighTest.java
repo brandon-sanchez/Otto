@@ -91,7 +91,7 @@ class RealModelBuyLowSellHighTest extends RealModelScenario {
         DecisionRecord answer = sentAfterPassingItsCheck(RunKind.BUY_LOW_SELL_HIGH);
         assertThat(answer.candidates()).extracting(candidate -> candidate.reason())
                 .containsExactly("ROLE_DECLINE");
-        assertThat(namedPlayers(answer)).contains(BARKLEY);
+        assertThat(sentMessage(answer)).contains("Saquon Barkley");
     }
 
     @Test

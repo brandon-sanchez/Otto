@@ -106,7 +106,7 @@ class RealModelTeamAnalysisTest extends RealModelScenario {
         DecisionRecord answer = sentAfterPassingItsCheck(RunKind.TEAM_WEAKNESSES);
         assertThat(evidence(answer).get("lean")).containsEntry("weighDepthAt", "TE");
         assertThat(firstWaiverClaim(answer)).isEqualTo("TE Depth 04");
-        assertThat(namedPlayers(answer)).contains(TE_DEPTH_04);
+        assertThat(sentMessage(answer)).contains("TE Depth 04");
     }
 
     @Test

@@ -57,4 +57,18 @@ class AdviceCheckSurnameTest {
         assertThat(surnameFailures("Robinson drew 13 targets. Wandale Robinson is the add.",
                 "Wandale Robinson")).singleElement().asString().contains("Wandale Robinson");
     }
+
+    @Test
+    void aNameThatEndsInANumberHasNoSurnameToUseAlone() {
+        assertThat(surnameFailures("Your lineup gains 27.0 points over weeks 12 to 14 if you "
+                + "get RB Depth 12.", "RB Depth 12")).isEmpty();
+    }
+
+    @Test
+    void aSharedSurnameBelongsToThePlayerAlreadyIntroduced() {
+        assertThat(surnameFailures("Claim Wandale Robinson first. Robinson brings the clearest "
+                + "upgrade.", "Wandale Robinson", "Bijan Robinson")).isEmpty();
+        assertThat(surnameFailures("Robinson brings the clearest upgrade. Claim Wandale "
+                + "Robinson first.", "Wandale Robinson", "Bijan Robinson")).hasSize(2);
+    }
 }
