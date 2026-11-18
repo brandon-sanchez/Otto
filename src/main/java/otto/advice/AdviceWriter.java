@@ -89,13 +89,14 @@ public class AdviceWriter {
                     + "\"basis\": \"projection\"}]");
 
     private static final String LINEUP_SHAPE = "Answer with only this JSON object:\n{\n"
-            + ANSWER_FIELDS + "\n}\nUse null for \"move\" to recommend no change.\n";
+            + ANSWER_FIELDS + "\n}\nUse null for \"move\" to recommend no change.\n"
+            + Citations.RULE;
 
     private static final String DECISION_SHAPE = "Answer with only this JSON object:\n{\n"
             + ANSWER_FIELDS + ",\n"
             + "  \"plan\": \"<id of the chosen roster plan>\",\n"
             + "  \"conditions\": [\"<id of each unknown the advice is conditional on>\"]\n"
-            + "}\nUse null for \"move\" to recommend no lineup change.\n";
+            + "}\nUse null for \"move\" to recommend no lineup change.\n" + Citations.RULE;
 
     /** One answer, then one correction carrying its failures. */
     private static final int ATTEMPTS = 2;

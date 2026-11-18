@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import otto.advice.NamedIds;
 import otto.directory.DirectoryPlayer;
 import otto.snapshot.RosterSnapshot;
 
@@ -56,6 +57,17 @@ final class BidCheck {
         }
         checkTogether(answer, failures);
         return failures;
+    }
+
+    /**
+     * Returns the id of the rostered player a "drop" stands for: the
+     * value itself, or the id of the one player on the user's roster
+     * whose full name it is exactly. A name nobody or more than one
+     * player on the roster has comes back unchanged and fails
+     * {@link #check}.
+     */
+    String rostered(String drop) {
+        return NamedIds.resolve(drop, user.playerNames());
     }
 
     private void checkBid(BoardAnswer.Entry entry, List<String> failures) {
