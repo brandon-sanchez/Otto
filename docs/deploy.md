@@ -10,7 +10,18 @@ is the role Actions deploys as, and only a human deploys that.
 
 You need the AWS CLI signed in, Node, JDK 25 and Maven.
 
-## 1. Store the secrets
+## 1. Point Otto at your Sleeper account
+
+Set `otto.user-id` in `src/main/resources/application.yml` to your
+Sleeper user id. Otto follows every league that account is in this
+season. Set `otto.league-id` to the league it follows first. Both are
+built into the Lambda zip, so a change takes effect on the next deploy.
+
+```sh
+curl -s "https://api.sleeper.app/v1/user/YOUR_SLEEPER_USERNAME" | jq -r '.user_id'
+```
+
+## 2. Store the secrets
 
 CloudFormation cannot create encrypted parameters, so these are set once
 by hand. The name after the path is the property it sets, so the
@@ -57,7 +68,7 @@ change publishes. The models, timeouts, retries, circuit breaker and
 time budgets are under `otto.models` in
 `src/main/resources/application.yml`.
 
-## 2. Deploy
+## 3. Deploy
 
 ```sh
 mvn package                                          # builds the Lambda zip
@@ -96,7 +107,7 @@ Until then, two Checks can overlap. Each Alert still goes out once,
 because only the Check that holds the Alert's lease in DynamoDB sends
 it, but both Checks can pay for the same model call.
 
-## 3. Hand the deploys to GitHub Actions
+## 4. Hand the deploys to GitHub Actions
 
 Once, so the workflow can reach AWS without a stored key. `alertEmail`
 is needed here too, because the app synthesizes both stacks.
@@ -126,7 +137,7 @@ The ids come from GitHub, not from guesswork:
 gh api repos/OWNER/REPO/actions/oidc/customization/sub
 ```
 
-## 4. Point Telegram at the webhook
+## 5. Point Telegram at the webhook
 
 The deploy prints `WebhookUrl`.
 
@@ -141,18 +152,21 @@ Telegram delivers to a webhook or to `getUpdates`, never both, so this
 stops a local run from reading messages. To go back to running locally,
 call `deleteWebhook`.
 
-## 5. Check it works
+## 6. Check it works
 
 - **The Check loop.** Tail the scheduled function's log group.
   `heartbeat check-completed` should appear once a minute.
 - **The Ask loop.** Text the bot. A reply exercises the function URL, the
   secret token, the chat gate and the model.
+- **The leagues.** Send `/leagues`. Otto lists every league it follows
+  and any you left out. The answer is code, so it works even when every
+  model is down.
 - **The alarm.** Disable `CheckSchedule` in the EventBridge Scheduler
   console and wait fifteen minutes. An alarm email should arrive.
   Re-enable it afterwards. Until it has fired once, you do
   not know the assistant can tell you it has stopped.
 
-## 6. Roll back the waiver board
+## 7. Roll back the waiver board
 
 The evidence-based waiver board is the one sent. The scored board is
 still built every round, so it can take over at once:
