@@ -1,5 +1,7 @@
 # Otto
 
+[![Build and deploy](https://github.com/brandon-sanchez/Otto/actions/workflows/deploy.yml/badge.svg)](https://github.com/brandon-sanchez/Otto/actions/workflows/deploy.yml)
+
 A fantasy football assistant for every Sleeper league you play in. It watches your teams, texts you on Telegram when something needs doing, and answers questions in plain language.
 
 Sleeper tells you a starter is out when you remember to open the app. Otto tells you before kickoff.
@@ -40,7 +42,7 @@ When OpenAI is down, Otto asks Anthropic Claude, then Google Gemini. When all th
 | It is the evening before waiver claims are due | Yes, the waiver board |
 | Another manager claims a player you are watching | Yes, always |
 | Anyone in the league trades | Yes |
-| A top-24 running back or receiver, or a top-12 quarterback or tight end, is dropped | Yes |
+| A top-24 running back or receiver, or a top-12 quarterback or tight end, is dropped (cutoffs you can change) | Yes |
 | The same problem, an hour later | No, once on detect and once before lock |
 | You already tapped Done | No |
 | Anything you muted | No |
@@ -51,11 +53,11 @@ Every alert has **Done**, **Ignore** and **Mute** buttons.
 
 > **you:** who do I start at flex
 >
-> **otto:** Start Kamara over Pollard, +2.4 projected. Pollard draws the toughest run defense left on your bench.
+> **otto:** Start Kamara over Pollard. Kamara projects 14.2 to Pollard's 11.8, and Pollard faces the 3rd-toughest run defense this week.
 
 > **you:** best wide receivers on waivers
 >
-> **otto:** Nacua, 100. Breakout, bid $40-60. Kupp is on IR and Nacua saw 15 targets.
+> **otto:** Nacua is the one to chase. Kupp is on IR and Nacua saw 15 targets last week. I'd bid $40-60 of the $112 you have left.
 
 The chat model picks from 28 tools, each one a piece of Java that computes the answer. You can ask about:
 
