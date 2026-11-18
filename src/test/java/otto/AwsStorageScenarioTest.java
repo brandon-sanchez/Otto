@@ -406,4 +406,55 @@ class AwsStorageScenarioTest {
 
         assertThat(read).contains(List.of("Nacua"));
     }
+
+    @Test
+    void aDeletedSmallRecordIsGoneAtOnce() {
+        store.write("account-deletion-request", Map.of("token", "abc"));
+
+        store.delete("account-deletion-request");
+
+        assertThat(dynamo.holds("account-deletion-request")).isFalse();
+        assertThat(new JsonStore(backend()).read("account-deletion-request", Map.class))
+                .isEmpty();
+    }
+
+    @Test
+    void aDeletedBigDocumentReadsEmptyAndStaysGoneAfterTheRun() {
+        store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
+        store.flush();
+        JsonStore run = new JsonStore(backend());
+
+        run.delete("snapshot-current");
+
+        assertThat(run.read("snapshot-current", Snapshot.class)).isEmpty();
+        run.flush();
+        assertThat(s3.storedAsText(KEY)).doesNotContain("snapshot-current");
+        assertThat(new JsonStore(backend()).read("snapshot-current", Snapshot.class)).isEmpty();
+    }
+
+    @Test
+    void aBigDocumentWrittenAgainAfterItsDeleteIsKept() {
+        store.write("snapshot-current", new Snapshot("2", List.of("Kamara")));
+        store.flush();
+
+        store.delete("snapshot-current");
+        store.write("snapshot-current", new Snapshot("3", List.of("Nacua")));
+
+        assertThat(store.read("snapshot-current", Snapshot.class))
+                .contains(new Snapshot("3", List.of("Nacua")));
+        store.flush();
+        assertThat(new JsonStore(backend()).read("snapshot-current", Snapshot.class))
+                .contains(new Snapshot("3", List.of("Nacua")));
+    }
+
+    @Test
+    void aDeletedFeedLeavesNoObjectBehind() {
+        store.write(PLAY_BY_PLAY, new Feed("2026", List.of("pass")));
+        store.flush();
+
+        store.delete(PLAY_BY_PLAY);
+
+        assertThat(s3.keys()).doesNotContain(PLAY_BY_PLAY_KEY);
+        assertThat(new JsonStore(backend()).read(PLAY_BY_PLAY, Feed.class)).isEmpty();
+    }
 }

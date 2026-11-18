@@ -3,7 +3,6 @@ package otto.infra;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
@@ -22,8 +21,6 @@ import software.amazon.awscdk.services.dynamodb.BillingMode;
 import software.amazon.awscdk.services.dynamodb.PointInTimeRecoverySpecification;
 import software.amazon.awscdk.services.dynamodb.Table;
 import software.amazon.awscdk.services.dynamodb.TableEncryption;
-import software.amazon.awscdk.services.iam.AccountRootPrincipal;
-import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
@@ -124,15 +121,6 @@ public class OttoStack extends Stack {
      */
     private static final String TEAM_REPORTS_PREFIX = "team-reports/";
 
-    /**
-     * The three key prefixes of the Decision Records bucket. The app
-     * spells these too, in {@code DecisionRecords}; a drift shows up as
-     * a denied write on the first run that saves a record.
-     */
-    private static final String RECORDS_PREFIX = "records/";
-    private static final String ARTICLE_TEXT_PREFIX = "article-text/";
-    private static final String OUTCOMES_PREFIX = "outcomes/";
-
     private static final int DAYS_PER_SEASON = 365;
 
     /** The values {@code otto.sent-waiver-board} accepts; mirrors the app's SentWaiverBoard. */
@@ -175,11 +163,9 @@ public class OttoStack extends Stack {
 
         readWriteStorage(documents, records, scheduled);
         readWriteStorage(documents, records, webhook);
-        writeDecisionRecords(decisionRecords, scheduled);
-        writeDecisionRecords(decisionRecords, webhook);
-        deleteDecisionRecords(decisionRecords, accountDeletion);
+        new DecisionRecordsAccess(this, "DecisionRecordsAccess", decisionRecords,
+                List.of(scheduled, webhook), accountDeletion, recordReaderArns());
         accountDeletion.grantInvoke(webhook);
-        guardDecisionRecords(decisionRecords, List.of(scheduled, webhook), accountDeletion);
         readSecrets(scheduled, parameterPath);
         readSecrets(webhook, parameterPath);
 
@@ -332,14 +318,14 @@ public class OttoStack extends Stack {
                 .lifecycleRules(List.of(
                         LifecycleRule.builder()
                                 .id("expire-article-text")
-                                .prefix(ARTICLE_TEXT_PREFIX)
+                                .prefix(DecisionRecordsAccess.ARTICLE_TEXT_PREFIX)
                                 .expiration(Duration.days(articleTextDays))
                                 .noncurrentVersionExpiration(Duration.days(1))
                                 .abortIncompleteMultipartUploadAfter(Duration.days(1))
                                 .build(),
                         LifecycleRule.builder()
                                 .id("remove-expired-article-text-markers")
-                                .prefix(ARTICLE_TEXT_PREFIX)
+                                .prefix(DecisionRecordsAccess.ARTICLE_TEXT_PREFIX)
                                 .expiredObjectDeleteMarker(true)
                                 .build()))
                 .removalPolicy(RemovalPolicy.RETAIN)
@@ -421,105 +407,15 @@ public class OttoStack extends Stack {
     }
 
     /**
-     * {@code s3:ListBucket} is here only for what S3 answers about a
-     * missing key. Without it S3 says 403 rather than 404, and article
-     * text that has expired would read as an access failure instead of
-     * as gone.
+     * The IAM users or roles the owner signs in as, from the
+     * {@code recordReaderArns} context value: comma-separated ARNs that
+     * may read Decision Records beside the account root.
      */
-    private void writeDecisionRecords(Bucket bucket, Function function) {
-        function.addToRolePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.ALLOW)
-                .actions(List.of("s3:PutObject", "s3:GetObject"))
-                .resources(List.of(
-                        bucket.arnForObjects(RECORDS_PREFIX + "*"),
-                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*"),
-                        bucket.arnForObjects(OUTCOMES_PREFIX + "*")))
-                .build());
-        function.addToRolePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.ALLOW)
-                .actions(List.of("s3:ListBucket"))
-                .resources(List.of(bucket.getBucketArn()))
-                .build());
-    }
-
-    private void deleteDecisionRecords(Bucket bucket, Function function) {
-        function.addToRolePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.ALLOW)
-                .actions(List.of("s3:ListBucketVersions"))
-                .resources(List.of(bucket.getBucketArn()))
-                .build());
-        function.addToRolePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.ALLOW)
-                .actions(List.of("s3:DeleteObject", "s3:DeleteObjectVersion",
-                        "s3:BypassGovernanceRetention"))
-                .resources(List.of(
-                        bucket.arnForObjects(RECORDS_PREFIX + "*"),
-                        bucket.arnForObjects(ARTICLE_TEXT_PREFIX + "*"),
-                        bucket.arnForObjects(OUTCOMES_PREFIX + "*")))
-                .build());
-    }
-
-    /**
-     * The bucket enforces what a record is, whatever any IAM policy in
-     * the account grants, so a role given {@code s3:*} for some other
-     * job still cannot read, replace or delete one.
-     *
-     * <p>Only the backend and the owner read or list. The owner is the
-     * account root plus any ARN in the {@code recordReaderArns} context
-     * value, for the IAM user or role the owner actually signs in as.
-     *
-     * <p>A record is only ever created: a put that does not carry
-     * {@code If-None-Match} is refused, so nobody writes over a key.
-     */
-    private void guardDecisionRecords(Bucket bucket, List<Function> backend,
-            Function accountDeletion) {
-        String root = new AccountRootPrincipal().getArn();
-        List<String> readers = Stream.of(
-                        backend.stream().map(function -> function.getRole().getRoleArn()),
-                        Stream.of(root),
-                        Arrays.stream(context("recordReaderArns", "").split(","))
-                                .map(String::trim)
-                                .filter(arn -> !arn.isEmpty()))
-                .flatMap(arns -> arns)
+    private List<String> recordReaderArns() {
+        return Arrays.stream(context("recordReaderArns", "").split(","))
+                .map(String::trim)
+                .filter(arn -> !arn.isEmpty())
                 .toList();
-        String deleter = accountDeletion.getRole().getRoleArn();
-        List<String> listers = Stream.concat(readers.stream(), Stream.of(deleter)).toList();
-        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.DENY)
-                .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:GetObject*"))
-                .resources(List.of(bucket.arnForObjects("*")))
-                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", readers)))
-                .build());
-        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.DENY)
-                .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:ListBucket*"))
-                .resources(List.of(bucket.getBucketArn()))
-                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", listers)))
-                .build());
-        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.DENY)
-                .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:PutObject"))
-                .resources(List.of(bucket.arnForObjects("*")))
-                .conditions(Map.of("Null", Map.of("s3:if-none-match", "true")))
-                .build());
-        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.DENY)
-                .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:DeleteObject*", "s3:BypassGovernanceRetention"))
-                .resources(List.of(bucket.arnForObjects("*")))
-                .conditions(Map.of("ArnNotLike",
-                        Map.of("aws:PrincipalArn", List.of(root, deleter))))
-                .build());
-        bucket.addToResourcePolicy(PolicyStatement.Builder.create()
-                .effect(Effect.DENY)
-                .principals(List.of(new AnyPrincipal()))
-                .actions(List.of("s3:PutObjectRetention", "s3:PutObjectLegalHold"))
-                .resources(List.of(bucket.arnForObjects("*")))
-                .conditions(Map.of("ArnNotLike", Map.of("aws:PrincipalArn", List.of(root))))
-                .build());
     }
 
     /**

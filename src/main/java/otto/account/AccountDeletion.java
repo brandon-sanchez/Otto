@@ -180,13 +180,13 @@ public class AccountDeletion {
             log.error("Could not delete the user's advice history", e);
             return Answer.ack("I couldn't finish deleting. Tap Confirm again in a minute.");
         }
-        store.write(DOCUMENT, Request.NONE);
+        store.delete(DOCUMENT);
         log.info("Deleted the user's advice history on request");
         return new Answer("Deleted.", Optional.of(DELETED));
     }
 
     private Answer cancel() {
-        store.write(DOCUMENT, Request.NONE);
+        store.delete(DOCUMENT);
         return Answer.ack("Cancelled. Your advice history is still saved.");
     }
 

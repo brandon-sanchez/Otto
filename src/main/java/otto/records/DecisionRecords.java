@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -64,6 +65,9 @@ public class DecisionRecords {
     private static final String RECORDS = "records";
     private static final String ARTICLE_TEXT = "article-text";
     private static final String OUTCOMES = "outcomes";
+
+    /** Every key root a user's objects live under, which {@link RecordsPurge} empties. */
+    static final List<String> ROOTS = List.of(RECORDS, ARTICLE_TEXT, OUTCOMES);
 
     /** Ids become key segments, so nothing in one may reshape a key. */
     private static final Pattern KEY_SEGMENT = Pattern.compile("[A-Za-z0-9_-]+");
@@ -167,23 +171,6 @@ public class DecisionRecords {
                 .map(bytes -> parse(bytes, OttoJson.MAPPER.constructType(type)));
     }
 
-    /**
-     * Deletes every record, outcome record and article text one user
-     * has, in every league, every stored version included.
-     *
-     * <p>The bucket holds objects under governance-mode retention, so a
-     * deployed caller needs {@code s3:ListBucketVersions},
-     * {@code s3:DeleteObjectVersion} and
-     * {@code s3:BypassGovernanceRetention} on the records bucket, and
-     * the bucket policy must let its role delete. A save already in
-     * flight when this runs can land after it and leave that one record.
-     */
-    public void deleteUser(String userId) {
-        objects.deleteAll(userPrefix(RECORDS, userId));
-        objects.deleteAll(userPrefix(ARTICLE_TEXT, userId));
-        objects.deleteAll(userPrefix(OUTCOMES, userId));
-    }
-
     private void writeOnce(String key, Object value) {
         byte[] bytes = json(redacted(OttoJson.MAPPER.valueToTree(value)));
         if (objects.putIfAbsent(key, bytes)) {
@@ -224,7 +211,7 @@ public class DecisionRecords {
      * Ends in a slash, so one user's prefix never matches another user
      * whose id merely starts the same way.
      */
-    private static String userPrefix(String root, String userId) {
+    static String userPrefix(String root, String userId) {
         return root + "/user=" + segment(userId) + "/";
     }
 

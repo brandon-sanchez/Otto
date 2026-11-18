@@ -93,6 +93,13 @@ public class JsonStore {
         }
     }
 
+    /** Removes the named document, see {@link DocumentBackend#delete}. */
+    public void delete(String given) {
+        String name = naming.stored(given);
+        parsed.remove(name);
+        backend.delete(name);
+    }
+
     /**
      * Takes the named lease, see {@link DocumentBackend#lease}.
      *
@@ -132,7 +139,7 @@ public class JsonStore {
      * because it never sees a later write.
      *
      * <p>The view is not safe for use by more than one thread at a time.
-     * Its {@link #write} and {@link #flush} throw
+     * Its {@link #write}, {@link #delete} and {@link #flush} throw
      * {@link UnsupportedOperationException}: a view holds no writes, and
      * flushing through it would push the real store's batched writes
      * from the middle of someone else's run.
@@ -165,6 +172,11 @@ public class JsonStore {
 
         @Override
         public void write(String name, Object value) {
+            throw new UnsupportedOperationException("A snapshot is read-only: " + name);
+        }
+
+        @Override
+        public void delete(String name) {
             throw new UnsupportedOperationException("A snapshot is read-only: " + name);
         }
 

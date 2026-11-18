@@ -19,6 +19,7 @@ import otto.harness.OutboundStubs;
 import otto.harness.SampleRecords;
 import otto.harness.WireSeamTest;
 import otto.records.DecisionRecords;
+import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramWebhook;
 
@@ -39,6 +40,7 @@ class AccountDeletionScenarioTest extends WireSeamTest {
     private static final String OWNER = "777001";
     private static final String SOMEONE_ELSE = "777002";
     private static final String LEAGUE = "league-1";
+    private static final String REQUEST = "account-deletion-request";
     private static final List<String> RUNS = List.of(
             "20261010T153000Z-3f9a1c2e", "20261017T153000Z-4b5c6d7e");
 
@@ -50,6 +52,9 @@ class AccountDeletionScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
+
+    @Autowired
+    private JsonStore store;
 
     @BeforeEach
     void ownerHasAdviceHistory() {
@@ -172,6 +177,32 @@ class AccountDeletionScenarioTest extends WireSeamTest {
         webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(9999, button("Confirm")));
 
         assertOwnerHistoryKept();
+    }
+
+    @Test
+    void anAnsweredQuestionLeavesNoRequestStored() {
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("/deleteaccount"));
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(button("Cancel")));
+
+        assertThat(store.read(REQUEST, JsonNode.class)).as("after Cancel").isEmpty();
+
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage("/deleteaccount"));
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap(button("Confirm")));
+
+        assertThat(store.read(REQUEST, JsonNode.class)).as("after Confirm").isEmpty();
+    }
+
+    @Test
+    void aClosedRequestStoredAsABlankPlaceholderDeletesNothing() {
+        store.write(REQUEST, Map.of("token", "", "expiresAt", "1970-01-01T00:00:00Z"));
+
+        webhook.handle(WEBHOOK_SECRET, OutboundStubs.callbackTap("account:confirm:"));
+
+        assertOwnerHistoryKept();
+        telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.ANSWER_CALLBACK_PATH))
+                .withRequestBody(matchingJsonPath("$.text", equalTo(
+                        "That request is no longer open, so nothing was deleted."
+                                + " Send /deleteaccount to start again."))));
     }
 
     @Test

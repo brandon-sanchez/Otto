@@ -30,6 +30,11 @@ class AdviceCheckRankTest {
                 public void store(String name, byte[] json) {
                     throw new UnsupportedOperationException();
                 }
+
+                @Override
+                public void delete(String name) {
+                    throw new UnsupportedOperationException();
+                }
             })));
 
     private static EvidenceBundle bundle(int rank, int fromBottom) {

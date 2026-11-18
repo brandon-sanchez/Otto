@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
@@ -77,6 +78,9 @@ public class S3BundleBackend implements DocumentBackend {
     /** Documents stored elsewhere, to drop from the bundle at the flush. */
     private final Set<String> forgotten = new LinkedHashSet<>();
 
+    /** This run's deleted documents, to drop from the bundle at the flush. */
+    private final Set<String> deleted = new LinkedHashSet<>();
+
     private ObjectNode bundle;
     private String etag;
 
@@ -90,7 +94,7 @@ public class S3BundleBackend implements DocumentBackend {
 
     @Override
     public synchronized Optional<byte[]> load(String name) {
-        if (forgotten.contains(name)) {
+        if (forgotten.contains(name) || deleted.contains(name)) {
             return Optional.empty();
         }
         JsonNode written = pending.get(name);
@@ -104,7 +108,20 @@ public class S3BundleBackend implements DocumentBackend {
     @Override
     public synchronized void store(String name, byte[] json) {
         base.putIfAbsent(name, held(loaded(), name));
+        deleted.remove(name);
         pending.put(name, parse(name, json));
+    }
+
+    /**
+     * Drops the document from the bundle at the next flush, and reads it
+     * as absent until then. Like a write, the drop is refused at the
+     * flush when the other writer changed the document in the meantime.
+     */
+    @Override
+    public synchronized void delete(String name) {
+        base.putIfAbsent(name, held(loaded(), name));
+        pending.remove(name);
+        deleted.add(name);
     }
 
     /**
@@ -126,8 +143,8 @@ public class S3BundleBackend implements DocumentBackend {
     @Override
     public synchronized void flush() {
         try {
-            if (!pending.isEmpty()
-                    || forgotten.stream().anyMatch(name -> loaded().has(name))) {
+            if (!pending.isEmpty() || Stream.concat(forgotten.stream(), deleted.stream())
+                    .anyMatch(name -> loaded().has(name))) {
                 writePending();
             }
         } finally {
@@ -137,6 +154,7 @@ public class S3BundleBackend implements DocumentBackend {
             pending.clear();
             base.clear();
             forgotten.clear();
+            deleted.clear();
             stale = true;
         }
     }
@@ -146,6 +164,7 @@ public class S3BundleBackend implements DocumentBackend {
             ObjectNode merged = loaded().deepCopy();
             pending.forEach(merged::set);
             merged.remove(forgotten);
+            merged.remove(deleted);
             try {
                 put(merged);
                 return;
@@ -169,7 +188,7 @@ public class S3BundleBackend implements DocumentBackend {
      */
     private void refuseWhereTheOtherWriterTouchedTheSameDocument() {
         ObjectNode stored = loaded();
-        for (String name : pending.keySet()) {
+        for (String name : Stream.concat(pending.keySet().stream(), deleted.stream()).toList()) {
             if (!base.get(name).equals(held(stored, name))) {
                 throw new ConcurrentDocumentChange(name);
             }

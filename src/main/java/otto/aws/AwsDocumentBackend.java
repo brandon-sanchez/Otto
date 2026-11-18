@@ -46,6 +46,11 @@ public class AwsDocumentBackend implements DocumentBackend {
     }
 
     @Override
+    public void delete(String name) {
+        backendFor(name).delete(name);
+    }
+
+    @Override
     public boolean lease(String name, Lease lease, Instant now) {
         return backendFor(name).lease(name, lease, now);
     }

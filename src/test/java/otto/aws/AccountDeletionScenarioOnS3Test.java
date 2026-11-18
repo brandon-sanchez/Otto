@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.lambda.model.InvokeResponse;
 import otto.harness.FakeS3;
 import otto.harness.SampleRecords;
 import otto.records.DecisionRecords;
+import otto.records.RecordsPurge;
 import otto.records.RedactedCredentials;
 import otto.storage.OttoJson;
 
@@ -41,7 +42,8 @@ class AccountDeletionScenarioOnS3Test {
         s3 = new FakeS3().withGovernanceRetention();
         records = new DecisionRecords(new S3RecordObjects(s3, "records-bucket"),
                 new RedactedCredentials(List.of()));
-        deleter = new AccountDeletionHandler(records);
+        deleter = new AccountDeletionHandler(
+                new RecordsPurge(new S3RecordObjects(s3, "records-bucket")));
         SampleRecords.storeRun(records, OWNER, "league-1", "20261010T153000Z-3f9a1c2e");
         SampleRecords.storeRun(records, OWNER, "league-1", "20261017T153000Z-4b5c6d7e");
         SampleRecords.storeRun(records, OWNER, "league-2", "20261011T090000Z-0b1c2d3e");
