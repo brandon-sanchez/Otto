@@ -1,15 +1,18 @@
 package otto.lineup;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Reads a player's lineup position, including kickers and team defenses,
- * which the Player Directory does not keep. Sleeper's own conventions
- * stand in for the directory: a defense's player id is its team's code,
- * and only a kicker's stat line carries kick attempts.
+ * The lineup positions Otto knows, and how it reads a player's,
+ * including kickers and team defenses, which the Player Directory does
+ * not keep. Sleeper's own conventions stand in for the directory: a
+ * defense's player id is its team's code, and only a kicker's stat line
+ * carries kick attempts.
  */
 public final class PlayerPositions {
 
@@ -18,6 +21,22 @@ public final class PlayerPositions {
 
     /** The position a team defense fills. */
     public static final String DEFENSE = "DEF";
+
+    /**
+     * The positions that score from offensive skill plays, in the order
+     * a lineup lists them. They are the positions the Player Directory
+     * keeps and a Superflex slot takes.
+     */
+    public static final List<String> SKILL = List.of("QB", "RB", "WR", "TE");
+
+    /** The positions a FLEX slot takes, in lineup order. */
+    public static final List<String> FLEX = List.of("RB", "WR", "TE");
+
+    /** Every position a lineup slot Otto models takes, in the order a lineup lists them. */
+    public static final List<String> LINEUP = List.of("QB", "RB", "WR", "TE", KICKER, DEFENSE);
+
+    /** Orders positions of {@link #LINEUP} as it lists them. */
+    public static final Comparator<String> LINEUP_ORDER = Comparator.comparingInt(LINEUP::indexOf);
 
     /** Sleeper's id for a team defense is the team's code, such as {@code KC}. */
     private static final Pattern TEAM_CODE = Pattern.compile("[A-Z]{2,3}");

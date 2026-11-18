@@ -3,6 +3,8 @@ package otto.team;
 import java.util.List;
 import java.util.Optional;
 
+import otto.lineup.PlayerPositions;
+
 /**
  * Every team with players in the league, profiled the same way so each
  * position can be ranked across them.
@@ -12,7 +14,7 @@ import java.util.Optional;
 public record LeagueProfile(List<TeamProfile> teams) {
 
     /** The positions a team profile covers, in the order an answer reads them. */
-    public static final List<String> POSITIONS = List.of("QB", "RB", "WR", "TE");
+    public static final List<String> POSITIONS = PlayerPositions.SKILL;
 
     public LeagueProfile {
         teams = List.copyOf(teams);

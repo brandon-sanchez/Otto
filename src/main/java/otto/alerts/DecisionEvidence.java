@@ -228,8 +228,8 @@ final class DecisionEvidence {
                         replacement.map(DirectoryPlayer::playerId),
                         listed.flatMap(DirectoryPlayer::yearsInLeague)),
                 id -> names.getOrDefault(id, id));
-        return new Planned(droppingOnlyTheLeastValuable(plans, playerId, roster, drops, names),
-                replacement, listed);
+        return new Planned(droppingOnlyTheLeastValuable(plans, playerId, roster, drops, names,
+                week), replacement, listed);
     }
 
     /**
@@ -239,8 +239,8 @@ final class DecisionEvidence {
      */
     private static RosterPlans.Plans droppingOnlyTheLeastValuable(RosterPlans.Plans plans,
             String playerId, RosterSnapshot roster, DropRanking drops,
-            Map<String, String> names) {
-        Map<String, String> positions = roster.playerPositions();
+            Map<String, String> names, WeekFacts week) {
+        Map<String, String> positions = week.positions(roster);
         Map<String, String> ruledOut = new LinkedHashMap<>(plans.ruledOut());
         List<RosterPlan> legal = new ArrayList<>();
         for (RosterPlan plan : plans.legal()) {
@@ -325,7 +325,8 @@ final class DecisionEvidence {
             return false;
         }
         boolean tempting = week.projections()
-                .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)))
+                .flatMap(table -> table.points(playerId,
+                        week.positionOf(roster, playerId).orElse(null)))
                 .map(his -> free.get() >= his * TEMPTING_REPLACEMENT)
                 .orElse(true);
         return tempting && drops.likeliest().stream()
@@ -388,8 +389,8 @@ final class DecisionEvidence {
 
     private static Optional<DirectoryPlayer> bestProjectedFreeAgent(String playerId, RosterSnapshot roster,
             LeagueWeek leagueWeek, Collection<DirectoryPlayer> directory) {
-        String position = roster.playerPositions().get(playerId);
         WeekFacts week = leagueWeek.week();
+        String position = week.positionOf(roster, playerId).orElse(null);
         Set<String> rostered = new HashSet<>();
         leagueWeek.rosters().forEach(team -> rostered.addAll(team.players()));
         return directory.stream()

@@ -6,7 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import otto.lineup.PlayerPositions;
 
 /**
  * What a caller asked the waiver board for: which positions, how many
@@ -57,7 +58,7 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
     }
 
     /** The positions the Player Directory keeps, in board order. */
-    public static final List<String> ALL_POSITIONS = List.of("QB", "RB", "WR", "TE");
+    public static final List<String> ALL_POSITIONS = PlayerPositions.SKILL;
 
     public static final int ALERT_COUNT = 5;
 
@@ -75,8 +76,6 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
      * pickup.
      */
     private static final int MOST_DROPS = 5;
-
-    private static final Set<String> FLEX = Set.of("RB", "WR", "TE");
 
     /** One position group a user can ask for, or the reason he cannot. */
     public sealed interface Parsed {
@@ -131,9 +130,8 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
         String normalized = position.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         Set<String> positions = switch (normalized) {
             case "ALL", "ANY", "SUPER_FLEX", "SUPERFLEX" -> new LinkedHashSet<>(ALL_POSITIONS);
-            case "FLEX" -> ordered(FLEX);
-            case "QB", "RB", "WR", "TE" -> Set.of(normalized);
-            default -> Set.of();
+            case "FLEX" -> new LinkedHashSet<>(PlayerPositions.FLEX);
+            default -> ALL_POSITIONS.contains(normalized) ? Set.of(normalized) : Set.of();
         };
         if (positions.isEmpty()) {
             return new Parsed.Rejected(
@@ -141,13 +139,6 @@ public record WaiverQuery(Set<String> positions, int count, List<String> replaci
                             + "\"%s\" is none of those").formatted(position));
         }
         return new Parsed.Ok(new WaiverQuery(positions, wanted, drops, needs, note));
-    }
-
-    /** Keeps board order, so two identical questions read the same way. */
-    private static Set<String> ordered(Set<String> positions) {
-        return ALL_POSITIONS.stream()
-                .filter(positions::contains)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public boolean covers(String position) {

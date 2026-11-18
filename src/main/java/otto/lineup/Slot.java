@@ -20,13 +20,13 @@ import java.util.Set;
  */
 public record Slot(String name, Set<String> eligible) {
 
-    private static final Set<String> ALL_POSITIONS = Set.of("QB", "RB", "WR", "TE");
+    private static final Set<String> ALL_POSITIONS = Set.copyOf(PlayerPositions.SKILL);
     private static final Map<String, Set<String>> ELIGIBILITY = Map.of(
             "QB", Set.of("QB"),
             "RB", Set.of("RB"),
             "WR", Set.of("WR"),
             "TE", Set.of("TE"),
-            "FLEX", Set.of("RB", "WR", "TE"),
+            "FLEX", Set.copyOf(PlayerPositions.FLEX),
             "SUPER_FLEX", ALL_POSITIONS,
             PlayerPositions.KICKER, Set.of(PlayerPositions.KICKER),
             PlayerPositions.DEFENSE, Set.of(PlayerPositions.DEFENSE));

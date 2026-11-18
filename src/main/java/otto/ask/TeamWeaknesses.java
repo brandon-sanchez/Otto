@@ -284,7 +284,7 @@ public class TeamWeaknesses {
         Map<String, String> positions = new HashMap<>();
         Map<String, String> teams = new HashMap<>();
         league.rosters().forEach(roster -> {
-            positions.putAll(roster.playerPositions());
+            positions.putAll(league.week().positions(roster));
             teams.putAll(roster.playerTeams());
         });
         freeAgents.values().forEach(player -> {

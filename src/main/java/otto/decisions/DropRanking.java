@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
+import otto.lineup.PlayerPositions;
+
 /**
  * The user's droppable players ranked by what each is worth in his
  * league's format, least valuable first. A drop Otto suggests comes
@@ -28,7 +30,7 @@ public record DropRanking(String basis, List<Ranked> lowestFirst) {
      * has no market value by design, so the ranking leaves him out and
      * has no say in whether he is dropped.
      */
-    public static final Set<String> PRICED_POSITIONS = Set.of("QB", "RB", "WR", "TE");
+    public static final List<String> PRICED_POSITIONS = PlayerPositions.SKILL;
 
     /** The ranking of a roster that could not be ranked: it allows and forbids no drop. */
     public static final DropRanking UNKNOWN = new DropRanking("", List.of());
