@@ -236,6 +236,23 @@ class TeamDirectionScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void aRankTheReasonWordsPassesTheFactCheck() {
+        redraftLeague();
+        String ranked = "EndZoneEnvy is contending at 6-5 with the 2nd-most points, and "
+                + "WaiverWizard is in the middle at 5-6 with the 3rd-most points.";
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_directions", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer(ranked));
+
+        ask("who's contending in my league?");
+
+        assertThat(evidence(RunKind.TEAM_DIRECTIONS).get("team-4"))
+                .containsEntry("pointsRank", "2nd of 4 in points scored, 1st being the most")
+                .containsEntry("rosterValueRank",
+                        "1st of 4 in roster market value, 1st being the most valuable");
+        theUserReads(ranked);
+    }
+
+    @Test
     void aWrongRecordIsCorrectedBeforeTheUserSeesIt() {
         redraftLeague();
         OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_directions", "{}", NARRATION);

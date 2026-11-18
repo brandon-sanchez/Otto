@@ -70,6 +70,25 @@ public final class Citations {
         return new Stripped(stripped.toString().strip(), cited);
     }
 
+    /**
+     * Returns the evidence id a cited id names. An id that matches no
+     * item exactly names the one item whose id continues it after a
+     * hyphen, so "news-10005" reads as "news-10005-1" when that is the
+     * only such item. Any other id comes back unchanged, including one
+     * that could continue into several items, so the check still
+     * rejects it.
+     */
+    public static String resolve(String cited, EvidenceBundle bundle) {
+        Set<String> ids = ids(bundle);
+        if (ids.contains(cited)) {
+            return cited;
+        }
+        List<String> continued = ids.stream()
+                .filter(id -> id.startsWith(cited + "-"))
+                .toList();
+        return continued.size() == 1 ? continued.getFirst() : cited;
+    }
+
     /** Returns the claims with every citation list taken out of their text. */
     public static List<AdviceAnswer.Claim> strip(List<AdviceAnswer.Claim> claims,
             EvidenceBundle bundle) {
