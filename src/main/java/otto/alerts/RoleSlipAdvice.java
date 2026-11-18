@@ -16,6 +16,7 @@ import otto.advice.LineupMove;
 import otto.claims.BoardDelivery;
 import otto.claims.ClaimRound;
 import otto.claims.RoleSlipLedger;
+import otto.decisions.DropRankings;
 import otto.decisions.RosterPlans;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectoryStore;
@@ -41,16 +42,18 @@ public class RoleSlipAdvice {
     private final SettingsStore settings;
     private final MuteStore muteStore;
     private final BoardDelivery boards;
+    private final DropRankings dropRankings;
 
     public RoleSlipAdvice(LineupAdvice lineupAdvice, RoleSlipLedger ledger,
             PlayerDirectoryStore directory, SettingsStore settings, MuteStore muteStore,
-            BoardDelivery boards) {
+            BoardDelivery boards, DropRankings dropRankings) {
         this.lineupAdvice = lineupAdvice;
         this.ledger = ledger;
         this.directory = directory;
         this.settings = settings;
         this.muteStore = muteStore;
         this.boards = boards;
+        this.dropRankings = dropRankings;
     }
 
     /**
@@ -62,13 +65,16 @@ public class RoleSlipAdvice {
      * board could cost the user a move: no board will come before this
      * round's claim deadline, or a lineup change is due before the
      * board. Otherwise it is held for that board. A hold with no lineup
-     * change goes out only when a mistaken drop is plausible, and advice
+     * change goes out only when a mistaken drop is plausible, which takes
+     * him being among the roster's likeliest drops as {@link DropRankings}
+     * ranks them, and advice
      * whose action and reasons match the last advice about him is not
      * sent again. Every outcome but a sent Alert settles the slip, so
      * the same evidence is never evaluated twice.
      *
      * <p>Side effects: may call the model, saves a Decision Record for a
-     * new run, and writes the role-slip ledger.
+     * new run, writes the role-slip ledger, and makes the reads of
+     * {@link DropRankings#rank}.
      *
      * @param research the facts read for him right before sending
      * @return the checked advice to send now; empty when it is held for
@@ -84,7 +90,8 @@ public class RoleSlipAdvice {
                 .map(stored -> stored.players().values())
                 .orElse(List.of());
         Optional<LineupEvidence.Draft> draft = DecisionEvidence.roleSlip(slip, leagueWeek, roster,
-                players, lineupAdvice::profile, lineupAdvice.matchups(leagueWeek, now), now);
+                players, lineupAdvice::profile, lineupAdvice.matchups(leagueWeek, now),
+                dropRankings.rank(leagueWeek, roster, now), now);
         if (draft.isEmpty()) {
             ledger.settle(slip.key());
             return Optional.empty();

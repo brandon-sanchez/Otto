@@ -24,6 +24,8 @@ import otto.advice.BundlePlayer;
 import otto.advice.EvidenceBundle;
 import otto.advice.EvidenceItem;
 import otto.advice.Ordinal;
+import otto.decisions.DropRanking;
+import otto.decisions.DropRankings;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
@@ -81,13 +83,15 @@ public class WaiverEvidence {
     private final RosterNeedsService needs;
     private final List<EvidenceLane> lanes;
     private final FaabEvidence faab;
+    private final DropRankings dropRankings;
 
     WaiverEvidence(PlayerDirectoryStore directory, RosterNeedsService needs,
-            List<EvidenceLane> lanes, FaabEvidence faab) {
+            List<EvidenceLane> lanes, FaabEvidence faab, DropRankings dropRankings) {
         this.directory = directory;
         this.needs = needs;
         this.lanes = List.copyOf(lanes);
         this.faab = faab;
+        this.dropRankings = dropRankings;
     }
 
     /**
@@ -105,10 +109,14 @@ public class WaiverEvidence {
      * @param trendingOnly the candidates only popularity lanes name while
      *        a required feed lacks the latest week, by player id; each is
      *        labelled {@link #TRENDING_ONLY}
+     * @param drops the user's droppable players by value, as the "drops"
+     *        evidence lists them; {@link DropRanking#UNKNOWN} when the
+     *        roster could not be ranked, in which case any legal drop
+     *        stands
      */
     public record Screen(EvidenceBundle bundle, Map<String, DirectoryPlayer> candidates,
             List<Candidate> screened, JsonNode comparisons, RosterSnapshot user,
-            FaabEvidence.Bidding bidding, Set<String> trendingOnly) {
+            FaabEvidence.Bidding bidding, Set<String> trendingOnly, DropRanking drops) {
 
         public Screen {
             candidates = Collections.unmodifiableMap(new LinkedHashMap<>(candidates));
@@ -184,6 +192,10 @@ public class WaiverEvidence {
             evidence.add(needsItem(league, ok.value(), now));
         }
         evidence.add(rosterItem(league, user.get(), now));
+        DropRanking drops = dropRankings.rank(league, user.get(), now);
+        if (drops.known()) {
+            evidence.add(dropsItem(drops, now));
+        }
         evidence.addAll(bidding.league());
         for (DirectoryPlayer player : candidates.values()) {
             evidence.add(candidateItem(player, reasons.get(player.playerId()),
@@ -203,7 +215,8 @@ public class WaiverEvidence {
                 ? ok.value() : null);
         comparisons.put("bidPolicy", bidding.policy().toString());
         return new SourceResult.Ok<>(new Screen(bundle, candidates, screened,
-                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding, trendingOnly));
+                OttoJson.MAPPER.valueToTree(comparisons), user.get(), bidding, trendingOnly,
+                drops));
     }
 
     /** One lane and what it read for this board. */
@@ -400,6 +413,27 @@ public class WaiverEvidence {
         return new EvidenceItem("roster", "sleeper:rosters",
                 Optional.of(league.snapshot().at()), league.snapshot().at(),
                 "the user's roster, for roster fit", facts);
+    }
+
+    /**
+     * The roster's droppable players by value, least valuable first, so
+     * the model drops one of the players a manager would give up.
+     */
+    private static EvidenceItem dropsItem(DropRanking ranking, Instant now) {
+        Map<String, String> facts = new LinkedHashMap<>();
+        facts.put("valuedBy", ranking.basis() + "; a player with no market value ranks below "
+                + "every player who has one");
+        facts.put("leastValuable", valued(ranking.likeliest()));
+        facts.put("everyDroppablePlayerLeastValuableFirst", valued(ranking.lowestFirst()));
+        return new EvidenceItem("drops", "otto:drop-ranking", Optional.empty(), now,
+                "which rostered players a claim may replace: the least valuable ones", facts);
+    }
+
+    private static String valued(List<DropRanking.Ranked> players) {
+        return players.stream()
+                .map(player -> "%s (%s, %s)".formatted(player.fullName(), player.position(),
+                        player.describe()))
+                .collect(Collectors.joining("; "));
     }
 
     private static EvidenceItem candidateItem(DirectoryPlayer player, List<String> reasons,

@@ -22,6 +22,7 @@ import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.harness.AdviceStubs;
+import otto.harness.MarketStubs;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
@@ -240,10 +241,53 @@ class RoleSlipScenarioTest extends WireSeamTest {
         assertThat(roleSlips.heldForBoard()).isEmpty();
     }
 
+    /** James Cook's value beside the rest of the roster, whose bench is worth 300 and 400. */
+    private static Map<String, Integer> rosterValuesWithCookAt(int cook) {
+        return Map.ofEntries(Map.entry(COOK, cook), Map.entry("6813", 300),
+                Map.entry("5850", 400), Map.entry("1466", 3000), Map.entry("8112", 4000),
+                Map.entry("8135", 5000), Map.entry("6786", 6000), Map.entry("6794", 7000),
+                Map.entry("9509", 8000), Map.entry("4034", 8500), Map.entry("4046", 9000));
+    }
+
     @Test
-    void aHoldIsSentWhenAFreeAgentProjectsCloseEnoughToTemptADrop() {
+    void aHoldIsNotSentForAPlayerTooValuableToBeAPlausibleDropInADynastyLeague() {
         usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
         muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        MarketStubs.fantasyCalcValues(fantasyCalc, true, rosterValuesWithCookAt(6500));
+        SleeperStubs.healthyInSeason(sleeper);
+        SleeperStubs.stubJson(sleeper, SleeperStubs.LEAGUE_PATH, "sleeper/league-dynasty.json",
+                "league-dynasty");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PLAYERS_PATH,
+                "sleeper/players-nfl-decisions.json", "players-v1");
+        SleeperStubs.stubJson(sleeper, SleeperStubs.PROJECTIONS_PATH,
+                "sleeper/projections-role-slip-tempting-drop.json", "projections-v1");
+        SleeperStubs.noNewsByDefault(sleeper);
+        OutboundStubs.llmPhrases(llm, "A lineup alert.");
+        OutboundStubs.llmAdvisesInOrderOn(llm, ROLE_SLIP_REQUEST, KEEP);
+
+        checkRunner.runCheck();
+
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("James Cook")));
+        assertThat(onlyRoleSlipRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+        assertThat(roleSlips.heldForBoard()).isEmpty();
+    }
+
+    @Test
+    void aHoldIsNotSentWhenTheRosterCannotBeRankedByValue() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+
+        checkWithProjections("sleeper/projections-role-slip-tempting-drop.json", KEEP);
+
+        assertThat(onlyRoleSlipRecord().outcome()).isInstanceOf(Outcome.Withheld.class);
+    }
+
+    @Test
+    void aHoldIsSentWhenAFreeAgentTemptsADropOfOneOfTheRostersLeastValuablePlayers() {
+        usageOnDisk(NflverseStubs::jamesCooksRoleSlips);
+        muteStore.mute(Trigger.WAIVER.muteTarget(), clock.instant());
+        MarketStubs.fantasyCalcValues(fantasyCalc, false, rosterValuesWithCookAt(350));
 
         checkWithProjections("sleeper/projections-role-slip-tempting-drop.json", KEEP);
 

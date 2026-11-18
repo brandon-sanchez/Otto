@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import otto.advice.AdviceCheck;
 import otto.advice.EvidenceBundle;
+import otto.decisions.DropRanking;
 import otto.directory.DirectoryPlayer;
 import otto.directory.PlayerDirectory;
 import otto.directory.PlayerDirectoryStore;
@@ -93,7 +94,7 @@ class RecordedBoardReplayTest {
                 fixture.path("minimumBid").asInt(), Optional.empty());
         return new BoardForm(checkKnowing(fixture.path("directoryNames")), candidates, Set.of(),
                 new BidCheck(policy, user, fixture.path("activeRosterSpots").asInt(),
-                        candidates));
+                        candidates, DropRanking.UNKNOWN));
     }
 
     private static List<String> strings(JsonNode array) {

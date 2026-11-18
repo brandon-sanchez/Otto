@@ -18,7 +18,9 @@ import java.util.stream.Collectors;
 import otto.advice.EvidenceItem;
 import otto.advice.LineupMove;
 import otto.advice.Ordinal;
+import otto.advice.RosterPlan;
 import otto.check.WeekFacts;
+import otto.decisions.DropRanking;
 import otto.decisions.PlayerAvailability;
 import otto.decisions.RosterPlans;
 import otto.decisions.TaxiSquad;
@@ -40,7 +42,9 @@ final class DecisionEvidence {
 
     /**
      * The share of a slipping player's projection the best free agent
-     * must reach before a user might drop him for that free agent.
+     * must reach before a user might drop him for that free agent. A
+     * slipping player with no projection this week, such as one on bye,
+     * is out-projected by any free agent who has one.
      */
     static final double TEMPTING_REPLACEMENT = 0.8;
 
@@ -56,9 +60,9 @@ final class DecisionEvidence {
             PlayerAvailability availability, LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
-            Instant now) {
+            DropRanking drops, Instant now) {
         StatusChange change = statusChange(transition, research, availability, leagueWeek,
-                roster, directory, profiles, matchups, now);
+                roster, directory, profiles, matchups, drops, now);
         String playerId = transition.playerId();
         if (change.announced() && availability.ruledOut()
                 && roster.starters().contains(playerId)) {
@@ -81,9 +85,9 @@ final class DecisionEvidence {
             LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
-            Instant now) {
+            DropRanking drops, Instant now) {
         StatusChange change = statusChange(transition, research, availability, leagueWeek,
-                roster, directory, profiles, matchups, now);
+                roster, directory, profiles, matchups, drops, now);
         return withSlotFix(change.builder(), legality, leagueWeek.week(), change.name(),
                 change.to(), change.task(), change.plans(), change.unknowns(), change.urgent());
     }
@@ -99,7 +103,7 @@ final class DecisionEvidence {
             LeagueWeek leagueWeek, RosterSnapshot roster,
             Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
-            Instant now) {
+            DropRanking drops, Instant now) {
         WeekFacts week = leagueWeek.week();
         LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now,
                 matchups);
@@ -126,7 +130,7 @@ final class DecisionEvidence {
                 : unknownRecovery(builder, research, name, now));
 
         Planned planned = plans(builder, playerId, to, reported, leagueWeek, roster, directory,
-                now);
+                drops, now);
         RosterPlans.Plans plans = planned.plans();
         addPlanEvidence(builder, planned, playerId, leagueWeek, roster, profiles, now);
         unknowns.addAll(AvailabilityEvidence.add(builder, name, availability, plans,
@@ -147,13 +151,15 @@ final class DecisionEvidence {
      * legal for him, and, when he starts in a game not yet kicked off,
      * the bench players who could take his slot.
      *
+     * @param drops the roster's droppable players by value; a hold is
+     *        worth sending unasked only for one of its likeliest drops
      * @return empty when no decision is open: he can only be kept where
      *         he is and no lineup change touches him
      */
     static Optional<LineupEvidence.Draft> roleSlip(AlertCandidate slip, LeagueWeek leagueWeek,
             RosterSnapshot roster, Collection<DirectoryPlayer> directory,
             Function<String, Optional<Players.Player>> profiles, MatchupFacts.Week matchups,
-            Instant now) {
+            DropRanking drops, Instant now) {
         WeekFacts week = leagueWeek.week();
         LineupEvidence builder = new LineupEvidence(roster, week, leagueWeek.snapshot().at(), now,
                 matchups);
@@ -164,7 +170,7 @@ final class DecisionEvidence {
 
         PlayerHealth health = roster.playerHealth().getOrDefault(playerId, PlayerHealth.ACTIVE);
         Planned planned = plans(builder, playerId, health, true, leagueWeek, roster, directory,
-                now);
+                drops, now);
         RosterPlans.Plans plans = planned.plans();
 
         int slotIndex = roster.starters().indexOf(playerId);
@@ -181,7 +187,7 @@ final class DecisionEvidence {
                 .formatted(name) + "rosterPlans"
                 + (moves.isEmpty() ? "." : ", and say whether to bench him this week for one "
                         + "of legalMoves or keep him in.");
-        boolean dropTempting = mistakenDropPlausible(planned, playerId, roster, week);
+        boolean dropTempting = mistakenDropPlausible(planned, playerId, roster, week, drops);
         return Optional.of(builder.decisionDraft(task, moves, true, plans.legal(), List.of(),
                 Optional.empty(), !dropTempting));
     }
@@ -197,10 +203,14 @@ final class DecisionEvidence {
             Optional<DirectoryPlayer> listed) {
     }
 
-    /** Works out the plans, adding the replacement free agent to the evidence. */
+    /**
+     * Works out the plans, adding the replacement free agent to the
+     * evidence. A plan that drops another player is legal only when he
+     * is one {@code drops} lets a claim at this position replace.
+     */
     private static Planned plans(LineupEvidence builder, String playerId, PlayerHealth health,
             boolean recoveryReported, LeagueWeek leagueWeek, RosterSnapshot roster,
-            Collection<DirectoryPlayer> directory, Instant now) {
+            Collection<DirectoryPlayer> directory, DropRanking drops, Instant now) {
         WeekFacts week = leagueWeek.week();
         Optional<DirectoryPlayer> replacement = bestProjectedFreeAgent(playerId, roster, leagueWeek,
                 directory);
@@ -218,7 +228,33 @@ final class DecisionEvidence {
                         replacement.map(DirectoryPlayer::playerId),
                         listed.flatMap(DirectoryPlayer::yearsInLeague)),
                 id -> names.getOrDefault(id, id));
-        return new Planned(plans, replacement, listed);
+        return new Planned(droppingOnlyTheLeastValuable(plans, playerId, roster, drops, names),
+                replacement, listed);
+    }
+
+    /**
+     * Returns the plans without those that drop a player other than the
+     * subject whom {@code drops} does not let a claim at the subject's
+     * position replace, each ruled out with the reason.
+     */
+    private static RosterPlans.Plans droppingOnlyTheLeastValuable(RosterPlans.Plans plans,
+            String playerId, RosterSnapshot roster, DropRanking drops,
+            Map<String, String> names) {
+        Map<String, String> positions = roster.playerPositions();
+        Map<String, String> ruledOut = new LinkedHashMap<>(plans.ruledOut());
+        List<RosterPlan> legal = new ArrayList<>();
+        for (RosterPlan plan : plans.legal()) {
+            Optional<String> other = plan.drop().filter(drop -> !drop.equals(playerId));
+            if (other.isPresent() && !drops.allowsDrop(other.get(), positions.get(other.get()),
+                    positions.getOrDefault(playerId, ""))) {
+                ruledOut.put(plan.id(), "%s is worth more than the least valuable players on "
+                        .formatted(names.getOrDefault(other.get(), other.get()))
+                        + "the roster, so he is not the one to drop");
+            } else {
+                legal.add(plan);
+            }
+        }
+        return new RosterPlans.Plans(legal, ruledOut);
     }
 
     /**
@@ -272,16 +308,28 @@ final class DecisionEvidence {
         }
     }
 
+    /**
+     * True when dropping him is a mistake the user could plausibly make:
+     * the league lets him be dropped, a free agent at his position
+     * projects close enough to tempt it, and he is among the roster's
+     * likeliest drops. A valuable player whose week looks weak is not
+     * one anybody drops, so advice to keep him says nothing.
+     */
     private static boolean mistakenDropPlausible(Planned planned, String playerId,
-            RosterSnapshot roster, WeekFacts week) {
+            RosterSnapshot roster, WeekFacts week, DropRanking drops) {
         boolean droppable = planned.plans().legal().stream()
                 .anyMatch(plan -> plan.id().equals(RosterPlans.DROP));
-        Optional<Double> his = week.projections()
-                .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)));
         Optional<Double> free = planned.replacement().flatMap(player -> week.projections()
                 .flatMap(table -> table.points(player.playerId(), player.position())));
-        return droppable && his.isPresent() && free.isPresent()
-                && free.get() >= his.get() * TEMPTING_REPLACEMENT;
+        if (!droppable || free.isEmpty()) {
+            return false;
+        }
+        boolean tempting = week.projections()
+                .flatMap(table -> table.points(playerId, roster.playerPositions().get(playerId)))
+                .map(his -> free.get() >= his * TEMPTING_REPLACEMENT)
+                .orElse(true);
+        return tempting && drops.likeliest().stream()
+                .anyMatch(player -> player.playerId().equals(playerId));
     }
 
     private static List<String> unknownRecovery(LineupEvidence builder,
