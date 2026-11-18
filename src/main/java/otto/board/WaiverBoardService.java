@@ -56,14 +56,22 @@ import otto.storage.OttoJson;
  * {@link WaiverEvidence#TRENDING_ONLY}.
  *
  * <p>A board that fails its checks twice is never replaced by the
- * scored board: the user is told no board is coming this round. When the
+ * scored board. It is written again on a later Check, each try
+ * {@link ClaimRound#BOARD_TRY_SPACING} after the one before was due and
+ * at most {@link ClaimRound#BOARD_TRIES} tries in all, each recorded
+ * under its own run id. No new try starts inside the fallback buffer.
+ * When the last try fails too, the user is told no board is coming
+ * this round. Every failed try records that notice, since it cannot
+ * know whether a later try passes; only the last one sends it. A board that passes on a later try goes out under that
+ * try's own Alert key, so it still reaches a user who was already sent
+ * the notice by a build that gave up after one try. When the
  * model cannot be reached, or no free agent can be screened because the
  * player directory or the user's roster is missing, each Check tries
  * again until the fallback buffer, and from then on the round is
  * withheld the same way. Each notice says which of the three it was.
  *
- * <p>The run id is {@link ClaimRound#boardRunId}, so every Check in the
- * window finds the round's record and builds nothing again; a board
+ * <p>The run ids are {@link ClaimRound#boardRunId(int)}, so every Check
+ * in the window finds the round's records and builds nothing again; a board
  * Telegram did not accept is sent again from that record, at no further
  * model call. Role-slip advice held for the board goes out under it,
  * through {@link BoardDelivery}.
@@ -84,7 +92,10 @@ public class WaiverBoardService {
     private static final String PLACE_CLAIMS_YOURSELF =
             "If you want to make claims, place them yourself in Sleeper.";
 
-    /** What the user reads in a round whose board failed its checks twice. */
+    /** How the recorded reason of a try that failed its checks begins. */
+    private static final String FAILED_CHECKS = "The board failed its checks twice";
+
+    /** What the user reads in a round whose board failed its checks on every try. */
     static final String FAILED_CHECKS_NOTICE = "I don't have a waiver board for you this "
             + "round. I couldn't get one past my fact checks before the claim deadline, and I "
             + "won't send you picks I haven't checked. " + PLACE_CLAIMS_YOURSELF;
@@ -98,6 +109,22 @@ public class WaiverBoardService {
 
     /** The messages a recorded round sends, and whether View all options hangs under them. */
     private record Sendable(List<String> messages, boolean viewAllOptions) {
+    }
+
+    /**
+     * Where a round stands after the tries made so far.
+     *
+     * @param boardTry the last try recorded
+     * @param outcome what that try recorded
+     * @param dryRun true when the round does not reach the user
+     */
+    private record Standing(int boardTry, Outcome outcome, boolean dryRun) {
+
+        /** True while a later try may still replace a board that failed its checks. */
+        boolean awaitsAnotherTry(ClaimRound round) {
+            return failedChecks(outcome) && boardTry < ClaimRound.BOARD_TRIES
+                    && !round.inFallbackBuffer();
+        }
     }
 
     private final WaiverEvidence evidence;
@@ -132,8 +159,9 @@ public class WaiverBoardService {
      * and not yet sent. Any other failure is logged, and the next Check tries
      * again, so the board can never stop the rest of the Check.
      *
-     * <p>Side effects: the screening's reads, up to two model calls, one
-     * Decision Record write, the Telegram messages and their outbox and
+     * <p>Side effects: a Decision Record read per try made so far and,
+     * when a try is due, the screening's reads, up to two model calls and
+     * one Decision Record write; the Telegram messages and their outbox and
      * Event Log writes, and a role-slip ledger write when held advice
      * went out under the board.
      *
@@ -157,12 +185,49 @@ public class WaiverBoardService {
         if (!round.open() || !settings.enabled(Trigger.WAIVER)) {
             return Optional.empty();
         }
-        boolean reachesUser = routing.evidenceBoardReachesUser();
-        Optional<Outcome> recorded = runs.earlierOrMade(userId, round.leagueId(),
-                round.boardRunId(), () -> build(round, league).map(record -> reachesUser
-                        ? record : record.withOutcome(unsent(record.outcome()))));
-        return recorded.filter(outcome -> reachesUser)
-                .flatMap(outcome -> deliver(round, outcome));
+        return standing(league, round)
+                .filter(standing -> !standing.dryRun() && !standing.awaitsAnotherTry(round))
+                .flatMap(standing -> deliver(round, standing.boardTry(), standing.outcome()));
+    }
+
+    /**
+     * Returns where the round stands, making the next try when it is
+     * due; empty while the first try waits. A round stays a dry run once
+     * one of its tries was recorded as one.
+     */
+    private Optional<Standing> standing(LeagueWeek league, ClaimRound round) {
+        boolean dryRun = !routing.evidenceBoardReachesUser();
+        Optional<Standing> standing = Optional.empty();
+        for (int number = 1; number <= ClaimRound.BOARD_TRIES; number++) {
+            int boardTry = number;
+            boolean unsent = dryRun;
+            boolean due = boardTry == 1
+                    || round.boardTryDue(boardTry) && !round.inFallbackBuffer();
+            Optional<Outcome> outcome = runs.earlierOrMade(userId, round.leagueId(),
+                    round.boardRunId(boardTry), () -> due
+                            ? build(round, league, boardTry).map(record -> unsent
+                                    ? record.withOutcome(unsent(record.outcome())) : record)
+                            : Optional.empty());
+            if (outcome.isEmpty()) {
+                break;
+            }
+            dryRun = dryRun || outcome.get() instanceof Outcome.Withheld
+                    || outcome.get() instanceof Outcome.DryRun;
+            standing = Optional.of(new Standing(boardTry, outcome.get(), dryRun));
+            if (!failedChecks(outcome.get())) {
+                break;
+            }
+        }
+        return standing;
+    }
+
+    /** True for the outcome of a try whose board failed its checks. */
+    private static boolean failedChecks(Outcome outcome) {
+        return switch (outcome) {
+            case Outcome.WithheldWithNotice withheld -> withheld.reason().startsWith(FAILED_CHECKS);
+            case Outcome.Withheld withheld -> withheld.reason().startsWith(FAILED_CHECKS);
+            default -> false;
+        };
     }
 
     /**
@@ -178,8 +243,8 @@ public class WaiverBoardService {
         };
     }
 
-    /** Returns the round's Decision Record, not yet saved, or empty while it waits. */
-    private Optional<DecisionRecord> build(ClaimRound round, LeagueWeek league) {
+    /** Returns the Decision Record of one try, not yet saved, or empty while it waits. */
+    private Optional<DecisionRecord> build(ClaimRound round, LeagueWeek league, int boardTry) {
         boolean inBuffer = round.inFallbackBuffer();
         LatestWeekData.Report data = inBuffer ? latestWeek.assessFillingFromSleeper(league)
                 : latestWeek.assess(league);
@@ -193,17 +258,17 @@ public class WaiverBoardService {
                 .orElseGet(RoundPreference::none);
         return switch (evidence.screen(league, round.deadline(), preference, round.now(), data)) {
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable when inBuffer ->
-                    Optional.of(unscreenable(round, league, unavailable.reason()));
+                    Optional.of(unscreenable(round, boardTry, league, unavailable.reason()));
             case SourceResult.Unavailable<WaiverEvidence.Screen> unavailable -> {
                 log.info("The waiver board waits: {}", unavailable.reason());
                 yield Optional.empty();
             }
             case SourceResult.Ok<WaiverEvidence.Screen> ok ->
-                    write(round, league, ok.value(), preference, data);
+                    write(round, boardTry, league, ok.value(), preference, data);
         };
     }
 
-    private Optional<DecisionRecord> write(ClaimRound round, LeagueWeek league,
+    private Optional<DecisionRecord> write(ClaimRound round, int boardTry, LeagueWeek league,
             WaiverEvidence.Screen screen, RoundPreference preference,
             LatestWeekData.Report data) {
         BoardForm form = new BoardForm(check, screen.candidates(), preference.focus(),
@@ -220,12 +285,12 @@ public class WaiverBoardService {
             case AdviceResult.Approved<BoardAnswer> approved -> approved(approved.answer(),
                     screen, budget, data.complete() ? List.of() : List.of(data.notice()));
             case AdviceResult.Rejected<BoardAnswer> rejected -> new Outcome.WithheldWithNotice(
-                    "The board failed its checks twice: " + String.join(" ", rejected.failures()),
+                    FAILED_CHECKS + ": " + String.join(" ", rejected.failures()),
                     FAILED_CHECKS_NOTICE);
             case AdviceResult.Unavailable<BoardAnswer> unavailable ->
                     new Outcome.WithheldWithNotice(unavailable.reason(), MODEL_UNAVAILABLE_NOTICE);
         };
-        return Optional.of(boardRecord(round, league)
+        return Optional.of(boardRecord(round, boardTry, league)
                 .roster(new RosterContext(OttoJson.MAPPER.valueToTree(screen.user()),
                         screen.bidding().policy().budget()))
                 .preferences(preferences(preference))
@@ -242,18 +307,20 @@ public class WaiverBoardService {
      * agent screenable, so the user hears why no board is coming
      * instead of nothing at all.
      */
-    private DecisionRecord unscreenable(ClaimRound round, LeagueWeek league, String reason) {
+    private DecisionRecord unscreenable(ClaimRound round, int boardTry, LeagueWeek league,
+            String reason) {
         String notice = "I don't have a waiver board for you this round. I couldn't look "
                 + "through the free agents before the claim deadline because " + reason + ". "
                 + PLACE_CLAIMS_YOURSELF;
-        return boardRecord(round, league)
+        return boardRecord(round, boardTry, league)
                 .preferences(preferences(RoundPreference.none()))
                 .outcome(new Outcome.WithheldWithNotice(
                         "The free agents could not be screened: " + reason, notice));
     }
 
-    private DecisionRecord.Builder boardRecord(ClaimRound round, LeagueWeek league) {
-        return DecisionRecord.forRun(round.boardRunId(), RunKind.WAIVER_BOARD, round.now(),
+    private DecisionRecord.Builder boardRecord(ClaimRound round, int boardTry,
+            LeagueWeek league) {
+        return DecisionRecord.forRun(round.boardRunId(boardTry), RunKind.WAIVER_BOARD, round.now(),
                 userId, round.leagueId(), OttoJson.MAPPER.valueToTree(league.league()));
     }
 
@@ -267,14 +334,18 @@ public class WaiverBoardService {
     }
 
     /**
-     * Sends a recorded round's board, or the notice that it was
-     * withheld, unless Telegram has accepted it already. A dry-run
-     * round, or a withheld round that recorded no notice, sends nothing.
+     * Sends a recorded try's board, or the notice that the round's
+     * board was withheld, unless Telegram has accepted it already. A
+     * board goes out under its own try's Alert key; a notice goes out
+     * under the round's, and never after anything else of the round.
      */
-    private Optional<Event> deliver(ClaimRound round, Outcome outcome) {
-        if (delivery.alreadySent(round)) {
+    private Optional<Event> deliver(ClaimRound round, int boardTry, Outcome outcome) {
+        boolean sent = outcome instanceof Outcome.SentBoard
+                ? delivery.alreadySent(round, boardTry) : delivery.alreadySent(round);
+        if (sent) {
             return Optional.empty();
         }
+        int sentAs = outcome instanceof Outcome.SentBoard ? boardTry : 1;
         Optional<Sendable> board = switch (outcome) {
             case Outcome.SentBoard sentBoard -> Optional.of(new Sendable(
                     sentBoard.messages(), !sentBoard.allOptions().isEmpty()));
@@ -282,16 +353,21 @@ public class WaiverBoardService {
                     Optional.of(new Sendable(List.of(withheld.notice()), false));
             default -> Optional.empty();
         };
-        return board.flatMap(messages -> send(round, messages));
+        return board.flatMap(messages -> send(round, sentAs, boardTry, messages));
     }
 
-    private Optional<Event> send(ClaimRound round, Sendable board) {
+    /**
+     * @param sentAs the try whose Alert key the messages go out under
+     * @param boardTry the try whose Decision Record the messages come from
+     */
+    private Optional<Event> send(ClaimRound round, int sentAs, int boardTry, Sendable board) {
+        String runId = round.boardRunId(boardTry);
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("trigger", TRIGGER);
-        facts.put("runId", round.boardRunId());
+        facts.put("runId", runId);
         facts.put("leagueId", round.leagueId());
         facts.put("claimDeadline", round.deadline().toString());
-        return delivery.deliver(round, DeliveryBasis.of(round.boardRunId()),
+        return delivery.deliver(round, sentAs, DeliveryBasis.of(runId),
                 held -> BoardMessage.withHeldAdvice(board.messages(), held),
                 board.viewAllOptions(), facts);
     }

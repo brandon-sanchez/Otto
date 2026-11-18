@@ -6,7 +6,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -30,10 +33,18 @@ import otto.storage.OttoJson;
  * budget, the chosen roster plan against the legal plans and the
  * players it moves, that the advice is conditional on every unknown,
  * that every claim cites evidence that supports it, and the message's
- * voice: no "lock", no confidence labels, the kickoff phrase when one
- * is required, and the length limit. It reads the words the user sees:
- * the message with its formatting tags and emoji removed, so bold or a
- * coloured dot never fails a check and never counts toward the length.
+ * voice: no "lock", no confidence labels, no evidence id written out,
+ * the kickoff phrase when one is required, and the length limit. It
+ * reads the words the user sees: the message with its formatting tags
+ * and emoji removed, so bold or a coloured dot never fails a check and
+ * never counts toward the length.
+ *
+ * <p>Three things a model writes are read for what they mean instead
+ * of failed. A player written by exact full name where an id belongs is
+ * read as that player ({@link NamedIds}). A bracketed list of evidence
+ * ids in the text is taken out as the citation it is ({@link Citations}).
+ * A week the evidence covers, as in "in Week 10", is a label and not a
+ * stated number ({@link WeekMentions}).
  *
  * <p>Each failure is written for the model to read, because the
  * correction attempt hands the failures back to it.
@@ -58,6 +69,23 @@ public class AdviceCheck {
             "One", "Two", "Three", "Four", "Five", "Six", "Love", "Hill", "Will", "Hope",
             "Long", "Little", "Young", "Strong", "Swift", "Rice", "Hunt", "Price", "Mark",
             "Bell", "Brown", "White", "Green", "Black", "Gray", "Rush", "Ward");
+
+    /**
+     * Where NFL teams play, for the teams called by one word. Advice
+     * calls a team by its place, as in "the matchup with Washington", so
+     * one of these alone is never read as a player's surname.
+     */
+    private static final Set<String> TEAM_PLACES = Set.of(
+            "Arizona", "Atlanta", "Baltimore", "Buffalo", "Carolina", "Chicago", "Cincinnati",
+            "Cleveland", "Dallas", "Denver", "Detroit", "Houston", "Indianapolis",
+            "Jacksonville", "Miami", "Minnesota", "Philadelphia", "Pittsburgh", "Seattle",
+            "Tennessee", "Washington");
+
+    /**
+     * A sentence whose subject is "He" or "His": it is about the player
+     * the text named last, whoever else it goes on to name.
+     */
+    private static final Pattern OPENS_WITH_PRONOUN = Pattern.compile("^\\s*(?:He|His)\\b");
 
     private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
 
@@ -127,7 +155,9 @@ public class AdviceCheck {
             return Verdict.unreadable("The answer is not the JSON object the instructions ask "
                     + "for, with a non-empty \"message\".");
         }
-        return Verdict.checked(parsed.get(), checkAnswer(bundle, parsed.get()));
+        Citations.Stripped message = Citations.strip(parsed.get().message(), bundle);
+        AdviceAnswer answer = read(bundle, parsed.get(), message.text());
+        return Verdict.checked(answer, checkAnswer(bundle, answer, message.cited()));
     }
 
     /**
@@ -137,11 +167,25 @@ public class AdviceCheck {
      * @return one failure per broken rule, written for the model; empty
      *         when the answer passed every check
      */
-    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer written) {
+    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer answer) {
+        return checkAnswer(bundle, answer, Set.of());
+    }
+
+    /**
+     * Checks an answer whose text had citation lists taken out of it.
+     *
+     * @param citedInText the evidence ids those lists named; a person
+     *        named in one of these items, or in an item a claim cites,
+     *        may be named in the message
+     * @return as {@link #checkAnswer(EvidenceBundle, AdviceAnswer)}
+     */
+    public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer written,
+            Set<String> citedInText) {
         AdviceAnswer answer = written.withMessage(TelegramHtml.words(written.message()));
         List<String> failures = new ArrayList<>();
-        checkPlayers(bundle, answer, failures);
-        checkQuantities(bundle, answer, failures);
+        List<BundlePlayer> outsiders = citedOutsiders(bundle, answer, citedInText);
+        checkPlayers(bundle, answer, outsiders, failures);
+        checkQuantities(bundle, answer, outsiders, failures);
         checkClaims(bundle, answer, failures);
         checkComparisons(bundle, answer, failures);
         checkMove(bundle, answer, failures);
@@ -152,7 +196,64 @@ public class AdviceCheck {
         return failures;
     }
 
-    private void checkPlayers(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
+    /**
+     * Returns the answer with its text replaced, every claim's citation
+     * lists taken out, and every player written by full name in an id
+     * field read as his id.
+     */
+    private static AdviceAnswer read(EvidenceBundle bundle, AdviceAnswer answer,
+            String message) {
+        Map<String, String> names = new LinkedHashMap<>();
+        bundle.players().forEach(player -> names.put(player.playerId(), player.fullName()));
+        return new AdviceAnswer(message,
+                answer.move().map(move -> new LineupMove(NamedIds.resolve(move.start(), names),
+                        NamedIds.resolve(move.bench(), names), move.slot())),
+                answer.players().stream().map(id -> NamedIds.resolve(id, names)).toList(),
+                withoutCitations(bundle, answer.claims()),
+                answer.comparisons().stream()
+                        .map(comparison -> new AdviceAnswer.Comparison(
+                                NamedIds.resolve(comparison.higher(), names),
+                                NamedIds.resolve(comparison.lower(), names), comparison.basis()))
+                        .toList(),
+                answer.plan(), answer.conditions());
+    }
+
+    /** Returns the claims with every citation list taken out of their text. */
+    public static List<AdviceAnswer.Claim> withoutCitations(EvidenceBundle bundle,
+            List<AdviceAnswer.Claim> claims) {
+        return claims.stream()
+                .map(claim -> new AdviceAnswer.Claim(
+                        Citations.strip(claim.text(), bundle).text(), claim.evidence()))
+                .toList();
+    }
+
+    /**
+     * Returns the people outside {@code players} the message may still
+     * name: those the Player Directory knows whose full name appears
+     * word for word in evidence the answer cites. Each is given an id no
+     * evidence item carries, so only an item that names him is about him.
+     */
+    private List<BundlePlayer> citedOutsiders(EvidenceBundle bundle, AdviceAnswer answer,
+            Set<String> citedInText) {
+        Set<String> cited = new LinkedHashSet<>(citedInText);
+        answer.claims().forEach(claim -> cited.addAll(claim.evidence()));
+        List<String> citedText = bundle.evidence().stream()
+                .filter(item -> cited.contains(item.id()))
+                .flatMap(item -> item.facts().values().stream())
+                .toList();
+        Set<String> inBundle = bundle.players().stream()
+                .map(BundlePlayer::fullName)
+                .collect(Collectors.toSet());
+        return directoryNames().stream()
+                .filter(name -> !inBundle.contains(name))
+                .filter(name -> citedText.stream().anyMatch(text -> text.contains(name)))
+                .sorted()
+                .map(name -> new BundlePlayer("outside:" + name, name, Optional.empty()))
+                .toList();
+    }
+
+    private void checkPlayers(EvidenceBundle bundle, AdviceAnswer answer,
+            List<BundlePlayer> outsiders, List<String> failures) {
         String message = answer.message();
         for (String playerId : answer.players()) {
             Optional<BundlePlayer> player = bundle.player(playerId);
@@ -171,11 +272,11 @@ public class AdviceCheck {
                         .formatted(player.fullName()));
             }
         }
-        Set<String> inBundle = bundle.players().stream()
+        Set<String> nameable = Stream.concat(bundle.players().stream(), outsiders.stream())
                 .map(BundlePlayer::fullName)
                 .collect(Collectors.toSet());
         directoryNames().stream()
-                .filter(name -> !inBundle.contains(name))
+                .filter(name -> !nameable.contains(name))
                 .filter(name -> message.contains(name) && word(name).matcher(message).find())
                 .forEach(name -> failures.add(
                         "The message names %s, who is not in the evidence.".formatted(name)));
@@ -187,12 +288,15 @@ public class AdviceCheck {
      * them, so a real stat or rank cannot be pinned on the wrong player.
      * The evidence about a player is every item that names him or his
      * id, every item that names no player, his projection, and the items
-     * cited by claims about him.
+     * cited by claims about him. A sentence that opens with "He" or "His"
+     * is also about whoever the text named last, and a person named from
+     * cited evidence is held to the items that name him.
      */
     private void checkQuantities(EvidenceBundle bundle, AdviceAnswer answer,
-            List<String> failures) {
+            List<BundlePlayer> outsiders, List<String> failures) {
         Set<Quantity> known = bundle.quantities();
-        Quantity.in(answer.message()).stream()
+        String message = quantityText(bundle, answer.message());
+        Quantity.in(message).stream()
                 .filter(stated -> !known.contains(stated.quantity()))
                 .map(Quantity.Stated::describe)
                 .distinct()
@@ -202,13 +306,20 @@ public class AdviceCheck {
                 .distinct()
                 .forEach(vague -> failures.add(("Write each rank as the evidence writes it, "
                         + "such as 3rd or 5th from the bottom, not \"%s\".").formatted(vague)));
-        for (String sentence : SENTENCE_END.split(answer.message())) {
-            List<BundlePlayer> named = bundle.players().stream()
+        List<BundlePlayer> nameable = Stream.concat(bundle.players().stream(),
+                outsiders.stream()).toList();
+        List<BundlePlayer> namedLast = List.of();
+        for (String sentence : SENTENCE_END.split(message)) {
+            List<BundlePlayer> inSentence = nameable.stream()
                     .filter(player -> names(sentence, player))
                     .toList();
-            if (named.isEmpty()) {
+            if (inSentence.isEmpty()) {
                 continue;
             }
+            List<BundlePlayer> named = OPENS_WITH_PRONOUN.matcher(sentence).find()
+                    ? Stream.concat(inSentence.stream(), namedLast.stream()).distinct().toList()
+                    : inSentence;
+            namedLast = named;
             Set<Quantity> about = quantitiesAbout(bundle, answer, named);
             Quantity.in(sentence).stream()
                     .filter(stated -> known.contains(stated.quantity()))
@@ -245,8 +356,18 @@ public class AdviceCheck {
     }
 
     private static boolean names(String text, BundlePlayer player) {
+        String lastName = lastName(player.fullName());
         return text.contains(player.fullName())
-                || word(lastName(player.fullName())).matcher(text).find();
+                || !TEAM_PLACES.contains(lastName) && word(lastName).matcher(text).find();
+    }
+
+    /**
+     * Returns the text as its numbers are read: evidence ids and the
+     * weeks the evidence covers blanked, since neither is a figure the
+     * text states.
+     */
+    private static String quantityText(EvidenceBundle bundle, String text) {
+        return WeekMentions.masked(Citations.masked(text, bundle), WeekMentions.covered(bundle));
     }
 
     private void checkClaims(EvidenceBundle bundle, AdviceAnswer answer, List<String> failures) {
@@ -262,7 +383,7 @@ public class AdviceCheck {
                                 .formatted(claim.text(), id)));
             }
             Set<Quantity> supported = Quantity.of(cited.stream());
-            Quantity.in(claim.text()).stream()
+            Quantity.in(quantityText(bundle, claim.text())).stream()
                     .filter(stated -> !supported.contains(stated.quantity()))
                     .map(Quantity.Stated::describe)
                     .distinct()
@@ -412,6 +533,9 @@ public class AdviceCheck {
         if (CONFIDENCE_LABEL.matcher(message).find()) {
             failures.add("Never write a confidence label; name the specific uncertainty.");
         }
+        Citations.quoted(message, bundle).forEach(id -> failures.add(("The message writes out "
+                + "evidence id %s: cite evidence only in \"claims\", never in the text the "
+                + "user reads.").formatted(id)));
         bundle.kickoffPhrase()
                 .filter(phrase -> !message.toLowerCase().contains(phrase.toLowerCase()))
                 .ifPresent(phrase -> failures.add(
@@ -482,6 +606,9 @@ public class AdviceCheck {
     private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
             String message) {
         String lastName = lastName(player.fullName());
+        if (TEAM_PLACES.contains(lastName)) {
+            return -1;
+        }
         boolean commonWord = COMMON_WORD_SURNAMES.contains(lastName);
         Matcher surname = word(lastName).matcher(message);
         while (surname.find()) {
