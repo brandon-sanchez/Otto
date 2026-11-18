@@ -5,7 +5,9 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import otto.records.RunIds;
 import otto.sleeper.LeagueRules;
@@ -15,7 +17,9 @@ import otto.sleeper.SleeperAdapter;
  * The league's next claim round as one Check sees it: the claim
  * deadline, when the round's waiver board is due and the latest it goes
  * out, the key its Alert is sent under, and the run ids its board and
- * baselines are recorded under. Both waiver boards, the baselines and
+ * baselines are recorded under. A board that fails its checks is tried
+ * again, up to {@link #BOARD_TRIES} times in all, and each try has its
+ * own run id and Alert key. Both waiver boards, the baselines and
  * the role-slip advice held for a board read the round here, so none of
  * them depends on another.
  *
@@ -35,6 +39,18 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
      * out even though the latest week's data is late.
      */
     public static final Duration FALLBACK_BUFFER = Duration.ofHours(3);
+
+    /**
+     * How many times a round's board is written when it keeps failing
+     * its checks. Each try is up to two model calls over the whole
+     * evidence bundle, so the cap bounds what one round can cost.
+     */
+    public static final int BOARD_TRIES = 3;
+
+    /** How long after one try was due the next one is. */
+    public static final Duration BOARD_TRY_SPACING = Duration.ofHours(1);
+
+    private static final String TRY_SUFFIX = "-try-";
 
     private static final String BOARD_RUN_PREFIX = "waiver-board-";
     private static final String BASELINES_RUN_PREFIX = "waiver-baselines-";
@@ -78,9 +94,41 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
         return !now.isBefore(latest());
     }
 
-    /** Returns the Alert key the round's waiver board is sent under. */
+    /**
+     * True once a try of the round's board is due: the first as soon as
+     * the round is open, each later one {@link #BOARD_TRY_SPACING} after
+     * the one before it was due.
+     *
+     * @param boardTry which try, from 1 to {@link #BOARD_TRIES}
+     */
+    public boolean boardTryDue(int boardTry) {
+        return !now.isBefore(due().toInstant()
+                .plus(BOARD_TRY_SPACING.multipliedBy(boardTry - 1L)));
+    }
+
+    /**
+     * Returns the Alert key the round's waiver board, or the notice
+     * that none is coming, is sent under.
+     */
     public String alertKey() {
         return "alert:waiver:" + due().toLocalDate();
+    }
+
+    /**
+     * Returns the Alert key the board of one try is sent under: {@link
+     * #alertKey} for the first, and a key of its own for each later
+     * try, so a board that passes on a later try still goes out when a
+     * notice was already sent under the round's key.
+     *
+     * @param boardTry which try, from 1 to {@link #BOARD_TRIES}
+     */
+    public String alertKey(int boardTry) {
+        return boardTry == 1 ? alertKey() : alertKey() + ":try-" + boardTry;
+    }
+
+    /** Returns every Alert key a board of this round can be sent under, first try first. */
+    public List<String> alertKeys() {
+        return IntStream.rangeClosed(1, BOARD_TRIES).mapToObj(this::alertKey).toList();
     }
 
     /**
@@ -90,6 +138,27 @@ public record ClaimRound(String leagueId, ZonedDateTime deadline, Instant now) {
      */
     public String boardRunId() {
         return RunIds.stable(BOARD_RUN_PREFIX, leagueId, deadline.toInstant().toString());
+    }
+
+    /**
+     * Returns the run id one try of the round's board is recorded
+     * under: {@link #boardRunId()} for the first.
+     *
+     * @param boardTry which try, from 1 to {@link #BOARD_TRIES}
+     */
+    public String boardRunId(int boardTry) {
+        return boardRunIds(boardRunId()).get(boardTry - 1);
+    }
+
+    /**
+     * Returns the run id of every try of a round's board, first try
+     * first, from the run id of its first try.
+     */
+    public static List<String> boardRunIds(String firstTryRunId) {
+        return IntStream.rangeClosed(1, BOARD_TRIES)
+                .mapToObj(boardTry -> boardTry == 1 ? firstTryRunId
+                        : firstTryRunId + TRY_SUFFIX + boardTry)
+                .toList();
     }
 
     /** Returns the run id of the round's baselines, derived as {@link #boardRunId} is. */
