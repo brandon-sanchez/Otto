@@ -13,8 +13,13 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -82,6 +87,30 @@ class LockLadderScenarioTest extends WireSeamTest {
         clock.set(AFTER_LOCK);
         runUnchangedCheck("players-v2");
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
+    }
+
+    @Test
+    void aRetriedFinalWarningRefreshesTheCountdownWithoutAskingTheModelAgain() {
+        runHealthyBaselineCheck();
+        runPlayersFileCheck("sleeper/players-nfl-mccaffrey-out.json", "players-v2");
+        telegram.resetAll();
+        telegram.stubFor(post(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .willReturn(aResponse().withStatus(500)));
+
+        clock.set(INSIDE_WINDOW);
+        runUnchangedCheck("players-v2");
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Locks in 25 min"))));
+
+        telegram.resetAll();
+        OutboundStubs.telegramOk(telegram);
+        llm.resetRequests();
+        clock.advance(Duration.ofMinutes(10));
+        runUnchangedCheck("players-v2");
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing("Locks in 15 min"))));
+        llm.verify(0, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH)));
     }
 
     @Test

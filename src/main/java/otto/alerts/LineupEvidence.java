@@ -20,6 +20,7 @@ import otto.advice.RosterPlan;
 import otto.check.WeekFacts;
 import otto.decisions.RosterPlans;
 import otto.directory.PlayerHealth;
+import otto.format.TelegramHtml;
 import otto.lineup.Slot;
 import otto.matchup.MatchupFacts;
 import otto.snapshot.RosterSnapshot;
@@ -112,14 +113,14 @@ final class LineupEvidence {
         problem.put("slot", slot.name());
         builder.addProblem(problem);
         List<LineupMove> moves = builder.legalStarts(slotIndex);
-        String fact = playerId == null
-                ? "Your %s slot is empty.".formatted(slot.name())
+        String why = playerId == null
+                ? "it is empty"
                 : PlayerHealth.valueOf(candidate.facts().getOrDefault("playerHealth",
                                 PlayerHealth.ACTIVE.name())).rulesOutPlaying()
-                        ? "%s is %s and cannot play, but he is in your %s slot.".formatted(
-                                builder.name(playerId), builder.designation(playerId), slot.name())
-                        : "%s is on bye this week, but he is in your %s slot.".formatted(
-                                builder.name(playerId), slot.name());
+                        ? "%s is %s".formatted(TelegramHtml.escape(builder.name(playerId)),
+                                builder.designation(playerId))
+                        : "%s is on bye".formatted(TelegramHtml.escape(builder.name(playerId)));
+        String fact = fillSlot(slot) + ": " + why + ".";
         return builder.draft("Advise how to fill this starting slot, which scores zero as set.",
                 moves, moves.isEmpty(), kickoff, Optional.of(fact), false);
     }
@@ -134,8 +135,8 @@ final class LineupEvidence {
         problem.put("problem", "a starter has an uncertain designation as his game nears");
         problem.put("slot", slot.name());
         builder.addProblem(problem);
-        String fact = "%s is still %s in your %s slot.".formatted(
-                builder.name(playerId), builder.designation(playerId), slot.name());
+        String fact = "%s in your %s slot.".formatted(TelegramHtml.bold("%s is still %s"
+                .formatted(builder.name(playerId), builder.designation(playerId))), slot.name());
         return builder.draft("Advise whether to keep this starter in or replace him.",
                 builder.legalStarts(slotIndex), true, kickoff, Optional.of(fact),
                 false);
@@ -148,8 +149,7 @@ final class LineupEvidence {
                 moves, noChangeAllowed, kickoffPhrase,
                 kickoffPhrase.isPresent() ? PREGAME_MAX_LENGTH : MAX_LENGTH, Optional.empty(),
                 List.of(), List.of());
-        Optional<String> urgentFacts = fact.map(text -> text + " " + bestOption(moves)
-                + kickoffPhrase.map(phrase -> " His " + phrase + ".").orElse(""));
+        Optional<String> urgentFacts = fact.map(text -> text + "\n" + bestOption(moves));
         return new Draft(bundle, urgentFacts, holdStaysSilent, Map.copyOf(reasons));
     }
 
@@ -212,16 +212,22 @@ final class LineupEvidence {
         return moves;
     }
 
+    /**
+     * Returns the fallback's line on the slot's best playable bench
+     * option and his projection, the first of {@code moves}.
+     */
     String bestOption(List<LineupMove> moves) {
         if (moves.isEmpty()) {
-            return "No playable bench player fits that slot.";
+            return "No playable bench player fits it.";
         }
         String best = moves.getFirst().start();
-        return projection(best)
-                .map(points -> "%s is your best playable bench option there, projected %s points."
-                        .formatted(name(best), points))
-                .orElseGet(() -> "%s is your best playable bench option there; he has no "
-                        .formatted(name(best)) + "projection.");
+        return "Best bench option: %s, %s.".formatted(TelegramHtml.escape(name(best)),
+                projection(best).map(points -> "projected " + points)
+                        .orElse("with no projection"));
+    }
+
+    static String fillSlot(Slot slot) {
+        return TelegramHtml.bold("Fill your %s slot".formatted(slot.name()));
     }
 
     void addPlayer(String playerId, String reason) {
