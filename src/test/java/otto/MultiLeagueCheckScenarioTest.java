@@ -20,9 +20,9 @@ import otto.harness.SleeperStubs;
 import otto.harness.TwoLeagues;
 import otto.harness.WireSeamTest;
 import otto.market.MarketValueRefresh;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.storage.OttoJson;
-import otto.telegram.TelegramWebhook;
+import otto.webhook.TelegramWebhook;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;

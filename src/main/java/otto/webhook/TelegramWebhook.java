@@ -1,4 +1,4 @@
-package otto.telegram;
+package otto.webhook;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -17,8 +17,10 @@ import otto.account.AccountDeletion;
 import otto.alerts.AlertActions;
 import otto.ask.LeagueAsk;
 import otto.board.WaiverBoardOptions;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.storage.OttoJson;
+import otto.telegram.InlineButton;
+import otto.telegram.TelegramClient;
 
 /**
  * The Telegram webhook entry point. Telegram posts every update here

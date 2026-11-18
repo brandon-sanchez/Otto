@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClient;
 
 import otto.OttoProperties;
 import otto.http.OutboundHttp;
+import otto.scope.MessageHeading;
 
 /**
  * The outbound wire to the user's Telegram chat. Every message starts

@@ -20,7 +20,7 @@ import otto.harness.SampleRecords;
 import otto.harness.WireSeamTest;
 import otto.records.DecisionRecords;
 import otto.storage.OttoJson;
-import otto.telegram.TelegramWebhook;
+import otto.webhook.TelegramWebhook;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;

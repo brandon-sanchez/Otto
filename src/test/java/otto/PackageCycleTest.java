@@ -25,7 +25,8 @@ class PackageCycleTest {
 
     /** The packages whose references to each other must stay one-way. */
     private static final List<String> LAYERED = List.of(
-            "alerts", "aws", "board", "claims", "delivery", "records", "waivers");
+            "alerts", "ask", "aws", "board", "claims", "delivery", "followed", "records",
+            "scope", "sleeper", "telegram", "waivers", "webhook");
 
     /** A reference to a type in another otto package, by import or by full name. */
     private static final Pattern REFERENCE = Pattern.compile("\\botto\\.([a-z]+)\\.[A-Z]");

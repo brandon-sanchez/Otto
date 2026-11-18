@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.storage.JsonStore;
