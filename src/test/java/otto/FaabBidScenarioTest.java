@@ -380,7 +380,7 @@ class FaabBidScenarioTest extends WireSeamTest {
                 .contains("FantasyCalc %s market value".formatted(dynasty ? "dynasty" : "redraft"))
                 .contains("Dallas Goedert (TE, market value 300); Travis Kelce (TE, market "
                         + "value 500); Garrett Wilson (WR, market value 700)");
-        assertThat(onlyMessage(record)).contains("Drop Dallas Goedert to make room.")
+        assertThat(onlyMessage(record)).contains("➖ Drop: Dallas Goedert")
                 .doesNotContain("Josh Jacobs");
     }
 
