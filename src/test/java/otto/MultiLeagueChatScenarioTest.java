@@ -174,7 +174,8 @@ class MultiLeagueChatScenarioTest extends WireSeamTest {
     @Test
     void aQuestionThatNamesNoLeagueIsAskedAboutAndTheShortAnswerPicksTheLeague() {
         twoLeaguesInWeek12();
-        OutboundStubs.llmPhrases(llm, "Start your best lineup.");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "recommend_lineup", "{}",
+                "Start your best lineup.");
 
         say("who should I start this week?");
         assertThat(sent()).containsExactly("Which league is that about? "

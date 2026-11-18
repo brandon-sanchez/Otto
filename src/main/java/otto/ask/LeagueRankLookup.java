@@ -251,6 +251,22 @@ public class LeagueRankLookup {
                 stat instanceof PlayerStat player ? RankWords.placed(player, placement) : null);
     }
 
+    /**
+     * Returns whether a stat is counted in fantasy points, which each
+     * league scores its own way: what a defense allows a position, and
+     * the remaining schedule built from it. Every other ranked stat is
+     * the same in every league.
+     *
+     * @param stat a stat's name as {@link #lookup} takes it; a name this
+     *        class does not rank is not a fantasy-points stat
+     */
+    static boolean ranksFantasyPoints(String stat) {
+        return parse(stat)
+                .filter(ranked -> ranked == DefenseStat.POINTS_ALLOWED
+                        || ranked instanceof ScheduleStat)
+                .isPresent();
+    }
+
     private static Optional<RankedStat> parse(String stat) {
         if (stat == null) {
             return Optional.empty();
