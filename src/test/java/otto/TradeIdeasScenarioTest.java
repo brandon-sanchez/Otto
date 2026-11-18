@@ -628,8 +628,8 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                 starting lineup gains 30.6 points over weeks 12 to 14.
 
                 GridironGoblin's starting lineup gains 2.4 points over weeks 12 to 14. \
-                GridironGoblin is short at TE, where their starters rank 1st of 4 and their \
-                depth ranks 4th of 4.""";
+                GridironGoblin's TE starters are fine (1st of 4), but they have no depth \
+                behind them (4th of 4), so a TE gives them cover.""";
         telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", containing(firstOffer)))
                 .withRequestBody(matchingJsonPath("$.text",

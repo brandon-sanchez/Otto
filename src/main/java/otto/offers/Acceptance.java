@@ -125,10 +125,7 @@ record Acceptance(int points, List<String> reasons) {
                 .flatMap(position -> team.at(position).stream())
                 .filter(profile -> profile.strength() == PositionProfile.Strength.THIN)
                 .findFirst()
-                .map(profile -> ("%s is short at %s, where their starters rank %s and their "
-                        + "depth ranks %s").formatted(signals.partner(), profile.position(),
-                        Ordinal.standing(profile.starterRank(), profile.teams()),
-                        Ordinal.standing(profile.depthRank(), profile.teams())));
+                .map(profile -> thinAt(signals.partner(), profile));
         if (hole.isPresent()) {
             return hole;
         }
@@ -139,6 +136,23 @@ record Acceptance(int points, List<String> reasons) {
                 .map(profile -> "%s has %d startable %ss for %d %s, so they can spare one"
                         .formatted(signals.partner(), profile.startable(), profile.position(),
                                 profile.spots(), profile.spots() == 1 ? "spot" : "spots"));
+    }
+
+    /**
+     * Says which part of a thin position is weak. Starters in the top
+     * half of the league are fine, so the position is thin for its depth
+     * and the trade gives cover; otherwise the starters are the hole.
+     */
+    private static String thinAt(String partner, PositionProfile profile) {
+        String starters = Ordinal.standing(profile.starterRank(), profile.teams());
+        String depth = Ordinal.standing(profile.depthRank(), profile.teams());
+        boolean startersFine = 2 * profile.starterRank() <= profile.teams();
+        return startersFine
+                ? ("%s's %s starters are fine (%s), but they have no depth behind them (%s), "
+                        + "so a %s gives them cover").formatted(partner, profile.position(),
+                                starters, depth, profile.position())
+                : "%s is short at %s, where their starters rank %s and their depth ranks %s"
+                        .formatted(partner, profile.position(), starters, depth);
     }
 
     /**
