@@ -221,9 +221,8 @@ final class LineupMessage {
     }
 
     /**
-     * Writes one player as "Bucky Irving 14.2 🟡 Q": his projection and
-     * his status, a bye as "💤 BYE" and an injury as its dot and short
-     * tag.
+     * Writes one player as "Bucky Irving 14.2 🟡 Questionable": his projection and
+     * his status, a bye as "💤 BYE" and an injury as its dot and label.
      */
     private static String player(String name, String projection, String note) {
         String points = ProjectionTable.NO_PROJECTION.equals(projection)

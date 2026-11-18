@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ClassUtils;
 
 import otto.advice.FriendVoice;
 import otto.model.ModelChain;
@@ -76,14 +78,14 @@ public class AskService {
             ----- STARTERS -----
             QB: Player Name
             ----- BENCH -----
-            RB: Player Name 🟡 Q
+            RB: Player Name 🟡 Questionable
             ----- IR -----
             Empty
             Include IR or TAXI only when the tool returns that section. An empty
             returned section says Empty. Show nothing beside a healthy or probable
-            player; after anyone else put his status as a dot and short tag: 🟡 Q for
-            questionable, 🟠 D for doubtful, 🔴 O for out, 🔴 IR, 🔴 PUP, 🔴 SUS for
-            suspended, and NA with no dot. Use the same roster format for every manager.
+            player; after anyone else put his status in full: 🟡 Questionable,
+            🟠 Doubtful, 🔴 Out, 🔴 IR, 🔴 PUP, 🔴 Suspended, or Not active without a dot.
+            Use the same roster format for every manager.
 
             A lineup recommendation arrives already written in the
             recommend_lineup message; send it word for word. When you answer
@@ -99,10 +101,17 @@ public class AskService {
             A comparison uses ----- COMPARISON -----, one line per player with his
             projection in bold, then one short line on whom to start and by how much.
             Waiver answers default to the best three, numbered, each as
-            "1. <b>Player Name</b> · RB, TB", then a line "➖ Drop: Player Name", or
-            "No drop needed, you have an open spot", then one short line on what he
-            does better, such as consistency or an improving role when the tool
-            supplied it.
+            "1. <b>Player Name</b> · WR, TEN", with the role tag when useful. Group the
+            bid and drop on the next lines. Copy the tool's FAAB bid and drop recommendation.
+            Say "No drop needed" only when the tool says there's an open spot.
+            Leave a blank line, then say why he's worth a claim this week. Lead
+            with a real change when the tool supplies one: for example, say he's
+            moved up to WR2 with the starter on IR and is worth a waiver claim this
+            week. Name who's out if the tool identifies him, and only give a timeline
+            when the news explicitly supplies one. If no role change is known, give one
+            concrete reason from his snaps, carries, targets, projection or matchup.
+            Treat the news as reporting, and keep uncertain roles or timelines conditional.
+            Leave a blank line between pickups.
 
             A trade answer starts with the tool's "headline" word for word on its own
             line; with no headline, it gives no verdict. Then "You give" and "You get",
@@ -118,15 +127,17 @@ public class AskService {
             shows each team with its status: ✅ Clinched, 🟡 In the hunt or
             ❌ Eliminated. Lists of settings and watchlist entries use labeled
             headings. A team usage answer shows the tool's table line for line and adds
-            at most two lines. A ceiling answer sends the tool's message word for word
+            at most two lines. When quoting a stats ranking or leaderboard, keep
+            each computed colored dot and rank row. A ceiling answer sends the tool's
+            message word for word
             and adds nothing. A single setting change stays conversational, in plain
             words with no dots.
             """;
 
     private static final String BRIEF = """
             Keep ordinary answers short: the direct answer or recommendation on the
-            first line, then at most one or two short lines of reason, one fact to a
-            line. Never write a paragraph. Structured formats may use as many lines as
+            first line, followed by a blank line when there is a reason. Give at most
+            one or two short lines of reason, one fact to a line. Structured formats may use as many lines as
             their complete sections require. He will ask "why" or "more" when he wants
             the rest.
             """;
@@ -145,9 +156,9 @@ public class AskService {
             the same in every league, such as usage, stats, ranks and news: answer
             that from its tool as usual. Anything about his team or a league
             depends on the league, and so do fantasy points, which each league
-            scores its own way. For those, call the tool as usual, putting "fantasy
-            points" in what he asked about when the question is about them, and
-            Otto asks him which league. Never answer such a question without its
+            scores its own way. For those, call the tool as usual, setting
+            fantasyPoints to true on get_player_stats when the question is about
+            them, and Otto asks him which league. Never answer such a question without its
             tool, and never ask him which league yourself.
             """;
 
@@ -172,6 +183,7 @@ public class AskService {
 
     private final ModelChain chain;
     private final List<ToolCallback> toolCallbacks;
+    private final ToolLeagueNeed leagueNeed;
     private final ToolCallingManager toolCalling;
     private final ConversationStore conversation;
     private final Clock clock;
@@ -180,8 +192,11 @@ public class AskService {
             TradeTools tradeTools, TeamTools teamTools, SettingsTools settingsTools,
             ToolCallingManager toolCalling, ConversationStore conversation, Clock clock) {
         this.chain = chain;
-        this.toolCallbacks = List.of(ToolCallbacks.from(lineupTools, playerTools, tradeTools,
-                teamTools, settingsTools));
+        Object[] tools = {lineupTools, playerTools, tradeTools, teamTools, settingsTools};
+        this.toolCallbacks = List.of(ToolCallbacks.from(tools));
+        this.leagueNeed = ToolLeagueNeed.of(Stream.of(tools)
+                .map(ClassUtils::getUserClass)
+                .toArray(Class<?>[]::new));
         this.toolCalling = toolCalling;
         this.conversation = conversation;
         this.clock = clock;
@@ -359,7 +374,7 @@ public class AskService {
             }
             List<AssistantMessage.ToolCall> calls = toolCalls(response);
             boolean needsLeague = calls.stream()
-                    .anyMatch(call -> ToolLeagueNeed.of(call.name(), call.arguments()));
+                    .anyMatch(call -> leagueNeed.needsLeague(call.name(), call.arguments()));
             if (mode.stopsAt(needsLeague)) {
                 return new Loop.LeagueNeeded();
             }

@@ -247,9 +247,12 @@ final class OfferSearch {
 
     /** Builds every candidate trade with one partner in the shape the user asked for. */
     static List<Candidate> asked(League league, Needs needs, TradeShape shape,
-            RosterSnapshot partner, List<Asset> mine, List<Asset> theirs) {
+            RosterSnapshot partner, List<Asset> mine, List<Asset> theirs,
+            Optional<String> target) {
         List<Asset> wanted = theirs.stream()
-                .sorted(Comparator.comparing((Asset asset) -> !asset.buyTarget())
+                .sorted(Comparator.comparing((Asset asset) -> target.isPresent()
+                                && !asset.position().equals(target))
+                        .thenComparing(asset -> !asset.buyTarget())
                         .thenComparing(asset -> asset.position().filter(needs::any).isEmpty())
                         .thenComparing(Comparator.comparingDouble((Asset asset) ->
                                 league.longTerm() ? asset.market() : asset.unfitted())
@@ -260,6 +263,10 @@ final class OfferSearch {
                 shape.give()), shape.give());
         List<Candidate> candidates = new ArrayList<>();
         for (List<Asset> gets : combinations(wanted, shape.get())) {
+            if (target.isPresent() && gets.stream().noneMatch(asset ->
+                    asset.position().equals(target) && startsForUser(league, asset))) {
+                continue;
+            }
             Optional<String> helped = gets.stream()
                     .flatMap(asset -> asset.position().stream())
                     .filter(needs::any)

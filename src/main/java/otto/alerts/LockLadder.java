@@ -158,7 +158,8 @@ class LockLadder {
             facts.put("playerId", playerId);
             facts.put("runId", written.get().runId());
             sent.addAll(outbox.deliver(written.get().basis(),
-                    () -> AlertHeadline.finalWarning(kickoff, now) + "\n" + written.get().text(),
+                    () -> AlertHeadline.finalWarning(kickoff, now) + "\n\n" + written.get().text(),
+                    pending -> AlertHeadline.refreshFinalWarning(pending, kickoff, now),
                     List.of(new Event(key, EventType.ALERT_SENT, now, Map.copyOf(facts)))));
         }
         return sent;
@@ -214,8 +215,9 @@ class LockLadder {
                     "health", health.name(),
                     "irReminder", "true");
             sent.addAll(outbox.deliver(phraser.basis(facts, recommendation),
-                    () -> AlertHeadline.finalWarning(lock.get(), now) + "\n"
+                    () -> AlertHeadline.finalWarning(lock.get(), now) + "\n\n"
                             + phraser.phrase(facts, recommendation),
+                    pending -> AlertHeadline.refreshFinalWarning(pending, lock.get(), now),
                     List.of(new Event(
                             key, EventType.ALERT_SENT, now, AlertService.alertFacts(
                                     new AlertCandidate(AlertCandidate.Source.TRANSITION, key,

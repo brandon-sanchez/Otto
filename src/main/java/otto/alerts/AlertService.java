@@ -309,11 +309,11 @@ public class AlertService {
         return sent;
     }
 
-    /** The Alert as sent: its headline, then the checked or phrased advice. */
+    /** The Alert as sent: its headline above the checked or phrased advice. */
     private Supplier<String> compose(String headline, AlertText written) {
         return switch (written) {
-            case AlertText.Advised advised -> () -> headline + "\n" + advised.text();
-            case AlertText.Phrased phrased -> () -> headline + "\n"
+            case AlertText.Advised advised -> () -> headline + "\n\n" + advised.text();
+            case AlertText.Phrased phrased -> () -> headline + "\n\n"
                     + phraser.phrase(phrased.facts(), phrased.recommendation());
         };
     }

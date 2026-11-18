@@ -36,6 +36,9 @@ public class OfficialUpdateDetector {
     /** The candidate fact naming the research item the announcement came from. */
     static final String ANNOUNCEMENT = "officialUpdate";
 
+    /** The candidate fact saying whether the team announced he plays: "true" or "false". */
+    static final String TEAM_SAYS_PLAYS = "teamSaysPlays";
+
     /**
      * The candidate fact holding when Otto saw Sleeper change to the
      * designation the decision is built on. Status transitions carry it
@@ -92,6 +95,8 @@ public class OfficialUpdateDetector {
         facts.put("reserve", String.valueOf(roster.reserve().contains(playerId)));
         facts.put("userRoster", "true");
         facts.put(ANNOUNCEMENT, update.storyKey());
+        facts.put(TEAM_SAYS_PLAYS, String.valueOf(
+                update.availability() != OfficialUpdate.Availability.WILL_NOT_PLAY));
         availability.designatedSince()
                 .ifPresent(since -> facts.put(DESIGNATED_SINCE, since.toString()));
         boolean certain = starter && availability.ruledOut();

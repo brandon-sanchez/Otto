@@ -130,6 +130,26 @@ class TeamUsageScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void snapShareForOneWeekLeavesOutOtherWeeksAndOtherStats() {
+        OutboundStubs.llmCallsToolThenPhrases(llm, "get_team_usage",
+                """
+                {"team":"LAC","position":"RB","week":4,"snapShareOnly":true}
+                """, "Here is their usage.");
+
+        assertThat(webhook.handle(WEBHOOK_SECRET, OutboundStubs.textMessage(
+                "Compare Keaton Mitchell's week 4 snap share with the other Chargers RBs.")))
+                .isEqualTo(WebhookResult.OK);
+
+        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(containing("<b>Week 4</b>"))
+                .withRequestBody(containing("Keaton Mitchell · <b>37%</b> (26 snaps)")));
+        for (String unrelated : new String[] {"Week 3", "Week 5", "targets", "carries"}) {
+            telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                    .withRequestBody(containing(unrelated)));
+        }
+    }
+
+    @Test
     void aRunnerOnlyThePlayByPlayKnowsLeavesTheReportStanding() {
         TeamUsage.Report backs = report("LAC", "RB");
 

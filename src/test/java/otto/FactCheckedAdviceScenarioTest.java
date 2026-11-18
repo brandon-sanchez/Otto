@@ -260,10 +260,10 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         telegram.verify(3, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("Christian McCaffrey is Out and cannot play"))));
+                        containing(": Christian McCaffrey is Out.\n"))));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("Puka Nacua is on bye this week"))));
+                        containing(": Puka Nacua is on bye.\n"))));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text", containing("onfidence"))));
         assertThat(records()).hasSize(3).allSatisfy(record -> {
@@ -348,12 +348,11 @@ class FactCheckedAdviceScenarioTest extends WireSeamTest {
         runQuestionableStarterIntoTheFinalWindow(locks, locks);
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text",
-                        containing("Christian McCaffrey is still Questionable")))
-                .withRequestBody(matchingJsonPath("$.text",
-                        containing("game starts in roughly 25 minutes"))));
-        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("lock"))));
+                .withRequestBody(matchingJsonPath("$.text", equalTo("""
+                        ⏰ <b>Locks in 25 min</b>
+
+                        <b>Christian McCaffrey is still Questionable</b> in your RB slot.
+                        Best bench option: Josh Jacobs, projected 12.5."""))));
         DecisionRecord record = records().getLast();
         assertThat(record.exchanges()).hasSize(2);
         assertThat(record.outcome()).isInstanceOf(Outcome.Sent.class);
