@@ -56,6 +56,7 @@ public class AdviceCheck {
     private static final Pattern CONFIDENCE_LABEL =
             Pattern.compile("(?i:\\bconfidence\\b)|\\b(HIGH|MEDIUM|LOW)\\b");
     private static final Pattern DOLLARS = Pattern.compile("\\$\\s?(\\d+)");
+    private static final Pattern NUMBER = Pattern.compile("\\d+");
     private static final Pattern CODE_FENCE = Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
     private static final String PROJECTION = "projection";
     private static final String MATCHUP_PREFIX = "matchup-";
@@ -194,7 +195,8 @@ public class AdviceCheck {
      */
     public List<String> checkAnswer(EvidenceBundle bundle, AdviceAnswer written,
             Set<String> citedInText) {
-        AdviceAnswer answer = written.withMessage(TelegramHtml.words(written.message()));
+        AdviceAnswer answer = citingExactIds(bundle, written)
+                .withMessage(TelegramHtml.words(written.message()));
         List<String> failures = new ArrayList<>();
         List<BundlePlayer> outsiders = citedOutsiders(bundle, answer, citedInText);
         checkPlayers(bundle, answer, outsiders, failures);
@@ -209,10 +211,24 @@ public class AdviceCheck {
         return failures;
     }
 
+    /** Returns the answer with every claim's cited ids read by {@link Citations#resolve}. */
+    private static AdviceAnswer citingExactIds(EvidenceBundle bundle, AdviceAnswer answer) {
+        List<AdviceAnswer.Claim> claims = answer.claims().stream()
+                .map(claim -> new AdviceAnswer.Claim(claim.text(), claim.evidence().stream()
+                        .map(id -> Citations.resolve(id, bundle))
+                        .toList()))
+                .toList();
+        return new AdviceAnswer(answer.message(), answer.move(), answer.players(), claims,
+                answer.comparisons(), answer.plan(), answer.conditions());
+    }
+
     /**
      * Returns the answer with its text replaced, every claim's citation
-     * lists taken out, and every player written by full name in an id
-     * field read as his id.
+     * lists taken out, every player written by full name in an id field
+     * read as his id, and every bundle player the message names by full
+     * name listed in "players" whether or not the model listed him, so
+     * the list of who an answer is about never depends on the model
+     * remembering it.
      */
     private static AdviceAnswer read(EvidenceBundle bundle, AdviceAnswer answer,
             String message) {
@@ -221,7 +237,14 @@ public class AdviceCheck {
         return new AdviceAnswer(message,
                 answer.move().map(move -> new LineupMove(NamedIds.resolve(move.start(), names),
                         NamedIds.resolve(move.bench(), names), move.slot())),
-                answer.players().stream().map(id -> NamedIds.resolve(id, names)).toList(),
+                Stream.concat(
+                        answer.players().stream().map(id -> NamedIds.resolve(id, names)),
+                        bundle.players().stream()
+                                .filter(player -> word(player.fullName())
+                                        .matcher(TelegramHtml.words(message)).find())
+                                .map(BundlePlayer::playerId))
+                        .distinct()
+                        .toList(),
                 Citations.strip(answer.claims(), bundle),
                 answer.comparisons().stream()
                         .map(comparison -> new AdviceAnswer.Comparison(
@@ -313,9 +336,14 @@ public class AdviceCheck {
         List<BundlePlayer> nameable = Stream.concat(bundle.players().stream(),
                 outsiders.stream()).toList();
         List<BundlePlayer> namedLast = List.of();
+        Set<BundlePlayer> introduced = new HashSet<>();
         for (String sentence : SENTENCE_END.split(message)) {
+            nameable.stream()
+                    .filter(player -> sentence.contains(player.fullName()))
+                    .forEach(introduced::add);
             List<BundlePlayer> inSentence = nameable.stream()
                     .filter(player -> names(sentence, player))
+                    .filter(player -> !isNamesakesSurname(player, nameable, introduced))
                     .toList();
             if (inSentence.isEmpty()) {
                 continue;
@@ -359,9 +387,33 @@ public class AdviceCheck {
                         value.equals(player.playerId()) || value.contains(player.fullName()));
     }
 
+    /**
+     * Returns whether a surname in the text so far belongs to another
+     * player: this one has not been written by full name and a player
+     * who shares his surname has, so "Robinson" after "Wandale Robinson"
+     * is not Bijan Robinson and Bijan Robinson's numbers do not back it.
+     */
+    private static boolean isNamesakesSurname(BundlePlayer player, List<BundlePlayer> nameable,
+            Set<BundlePlayer> introduced) {
+        String lastName = lastName(player.fullName());
+        return !introduced.contains(player) && nameable.stream()
+                .anyMatch(other -> introduced.contains(other)
+                        && lastName(other.fullName()).equals(lastName));
+    }
+
     private static boolean names(String text, BundlePlayer player) {
         return text.contains(player.fullName())
-                || surname(lastName(player.fullName())).matcher(text).find();
+                || hasSurname(player)
+                        && surname(lastName(player.fullName())).matcher(text).find();
+    }
+
+    /**
+     * Returns whether the last word of his name can stand alone as his
+     * name. A number cannot, as in "RB Depth 12": the same digits written
+     * anywhere else are a figure, not him.
+     */
+    private static boolean hasSurname(BundlePlayer player) {
+        return !NUMBER.matcher(lastName(player.fullName())).matches();
     }
 
     /**
@@ -620,31 +672,46 @@ public class AdviceCheck {
 
     private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
             String message) {
+        if (!hasSurname(player)) {
+            return -1;
+        }
         String lastName = lastName(player.fullName());
         boolean commonWord = COMMON_WORD_SURNAMES.contains(lastName);
+        List<String> namesakes = bundle.players().stream()
+                .map(BundlePlayer::fullName)
+                .filter(name -> !name.equals(player.fullName())
+                        && lastName(name).equals(lastName))
+                .toList();
         Matcher surname = surname(lastName).matcher(message);
         while (surname.find()) {
             int at = surname.start();
             if (commonWord && opensASentence(message, at)) {
                 continue;
             }
-            boolean insideAnotherName = bundle.players().stream()
-                    .map(BundlePlayer::fullName)
-                    .filter(name -> !name.equals(player.fullName()))
-                    .anyMatch(name -> {
-                        Matcher other = word(name).matcher(message);
-                        while (other.find()) {
-                            if (other.start() <= at && at < other.end()) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
-            if (!insideAnotherName) {
+            if (namesakes.stream().anyMatch(name -> introducedBefore(message, name, at))) {
+                continue;
+            }
+            if (!insideAnotherName(player, bundle, message, at)) {
                 return at;
             }
         }
         return -1;
+    }
+
+    /** Returns whether the position falls inside another bundle player's full name. */
+    private static boolean insideAnotherName(BundlePlayer player, EvidenceBundle bundle,
+            String message, int at) {
+        return bundle.players().stream()
+                .map(BundlePlayer::fullName)
+                .filter(name -> !name.equals(player.fullName()))
+                .anyMatch(name -> word(name).matcher(message).results()
+                        .anyMatch(other -> other.start() <= at && at < other.end()));
+    }
+
+    /** Returns whether the full name is written before the position, so a surname there is his. */
+    private static boolean introducedBefore(String message, String fullName, int at) {
+        int introduced = message.indexOf(fullName);
+        return introduced >= 0 && introduced + fullName.length() <= at;
     }
 
     private static boolean opensASentence(String message, int at) {

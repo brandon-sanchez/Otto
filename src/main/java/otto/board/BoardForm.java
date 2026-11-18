@@ -147,8 +147,19 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
 
     private static final Pattern CODE_FENCE =
             Pattern.compile("(?s)^```(?:json)?\\s*(.*?)\\s*```$");
-    private static final Pattern SCORE =
-            Pattern.compile("(?i)\\bscore[sd]?\\s+(?:of\\s+)?\\d|\\b\\d+\\s*(?:/|out of)\\s*100\\b");
+
+    /**
+     * A candidate's 0 to 100 board score written out, such as "a score
+     * of 82", "scores 82" or "82/100". What a player scored on the field
+     * is a stat: "scored 10.0 points", "scored 2 rushing touchdowns",
+     * "scored 12.4 in week 3".
+     */
+    private static final Pattern SCORE = Pattern.compile(
+            "(?i)\\bscore\\s+of\\s+\\d"
+                    + "|\\bscore[sd]\\s+\\d+(?:\\.\\d+)?(?![\\d.]*\\d)"
+                    + "(?!\\s+(?:[\\w-]+\\s+){0,2}(?:points?|pts|touchdowns?|TDs?|times)\\b"
+                    + "|\\s+in\\s+week\\b)"
+                    + "|\\b\\d+\\s*(?:/|out of)\\s*100\\b");
     private static final Pattern CONS = Pattern.compile("(?i)\\bcons\\s*:");
 
     private final AdviceCheck check;

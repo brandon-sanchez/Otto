@@ -53,8 +53,9 @@ final class TeamWeaknessEvidence {
      * The user's own direction and the market list its values come from.
      *
      * @param market empty when no list could be read
+     * @param teams how many teams his ranks in points and roster value run over
      */
-    record Direction(TeamDirection user, Optional<String> market) {
+    record Direction(TeamDirection user, Optional<String> market, int teams) {
     }
 
     /**
@@ -89,7 +90,8 @@ final class TeamWeaknessEvidence {
                     + "this answer covers that league only").formatted(facts.leagueName()))));
         }
         facts.direction().ifPresent(direction -> evidence.add(
-                TeamDirectionEvidence.userItem(direction.user(), direction.market(), now)));
+                TeamDirectionEvidence.userItem(direction.user(), direction.market(),
+                        direction.teams(), now)));
         for (String position : LeagueProfile.POSITIONS) {
             facts.user().at(position).ifPresent(profile -> evidence.add(item(
                     "position-" + position, now, position(profile, facts.market()))));

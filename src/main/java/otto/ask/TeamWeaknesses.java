@@ -318,7 +318,8 @@ public class TeamWeaknesses {
     private Optional<TeamWeaknessEvidence.Direction> direction(LeagueWeek league, Instant now) {
         return switch (directions.read(league, now)) {
             case SourceResult.Ok<LeagueDirections> read -> read.value().user()
-                    .map(user -> new TeamWeaknessEvidence.Direction(user, read.value().market()));
+                    .map(user -> new TeamWeaknessEvidence.Direction(user, read.value().market(),
+                            read.value().teams().size()));
             case SourceResult.Unavailable<LeagueDirections> _ -> Optional.empty();
         };
     }
