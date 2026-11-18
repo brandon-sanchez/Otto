@@ -95,7 +95,7 @@ public class AdviceCheck {
      * A sentence whose subject is "He" or "His": it is about the player
      * the text named last, whoever else it goes on to name.
      */
-    private static final Pattern OPENS_WITH_PRONOUN = Pattern.compile("^\\s*(?:He|His)\\b");
+    private static final Pattern PRONOUN = Pattern.compile("(?i)\\b(?:he|his|him)\\b");
 
     private static final Pattern BEFORE_SENTENCE_START = Pattern.compile("(?:^|[.!?\\n])\\s*$");
 
@@ -315,9 +315,10 @@ public class AdviceCheck {
      * them, so a real stat or rank cannot be pinned on the wrong player.
      * The evidence about a player is every item that names him or his
      * id, every item that names no player, his projection, and the items
-     * cited by claims about him. A sentence that opens with "He" or "His"
-     * is also about whoever the text named last, and a person named from
-     * cited evidence is held to the items that name him.
+     * cited by claims about him. A sentence that says "he", "his" or
+     * "him" before any name is also about whoever the text named last,
+     * and a person named from cited evidence is held to the items that
+     * name him.
      */
     private void checkQuantities(EvidenceBundle bundle, AdviceAnswer answer,
             List<BundlePlayer> outsiders, List<String> failures) {
@@ -348,7 +349,7 @@ public class AdviceCheck {
             if (inSentence.isEmpty()) {
                 continue;
             }
-            List<BundlePlayer> named = OPENS_WITH_PRONOUN.matcher(sentence).find()
+            List<BundlePlayer> named = pronounBeforeAnyName(sentence, inSentence)
                     ? Stream.concat(inSentence.stream(), namedLast.stream()).distinct().toList()
                     : inSentence;
             namedLast = named;
@@ -385,6 +386,25 @@ public class AdviceCheck {
         return Arrays.asList(item.id().split("-")).contains(player.playerId())
                 || item.facts().values().stream().anyMatch(value ->
                         value.equals(player.playerId()) || value.contains(player.fullName()));
+    }
+
+    /**
+     * Returns whether the sentence says "he", "his" or "him" before it
+     * names any of its players, so the pronoun is whoever the text named
+     * last: "His 13 targets beat what Puka Nacua offers" is about that
+     * earlier player as well as Puka Nacua.
+     */
+    private static boolean pronounBeforeAnyName(String sentence, List<BundlePlayer> named) {
+        Matcher pronoun = PRONOUN.matcher(sentence);
+        if (!pronoun.find()) {
+            return false;
+        }
+        return named.stream().allMatch(player -> {
+            int fullName = sentence.indexOf(player.fullName());
+            Matcher surname = surname(lastName(player.fullName())).matcher(sentence);
+            int first = fullName >= 0 ? fullName : surname.find() ? surname.start() : -1;
+            return first < 0 || pronoun.start() < first;
+        });
     }
 
     /**
