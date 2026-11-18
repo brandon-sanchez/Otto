@@ -26,7 +26,8 @@ class AlertHeadlineTest {
             "QUESTIONABLE|🟡 <b>Bucky Irving</b> is now Questionable",
             "DOUBTFUL|🟠 <b>Bucky Irving</b> is now Doubtful",
             "ACTIVE|✅ <b>Bucky Irving</b> is now Active",
-            "NOT_ACTIVE|🔔 <b>Bucky Irving</b> is now Not active"})
+            "NOT_ACTIVE|🔔 <b>Bucky Irving</b> is now Not active",
+            "SOMETHING_NEW|🔔 <b>Bucky Irving</b> has news"})
     void aStatusChangeTakesTheDotOfItsNewStatus(String to, String headline) {
         assertThat(AlertHeadline.of(candidate(AlertCandidate.Source.TRANSITION, "Bucky Irving",
                 Map.of("to", to)))).isEqualTo(headline);
@@ -52,12 +53,12 @@ class AlertHeadlineTest {
     }
 
     @Test
-    void theFinalWarningRoundsTheMinutesLeftUp() {
+    void theFinalWarningCountsTheWholeMinutesLeft() {
         Instant kickoff = Instant.parse("2026-09-13T17:00:00Z");
 
         assertThat(AlertHeadline.finalWarning(kickoff, kickoff.minusSeconds(30 * 60)))
                 .isEqualTo("⏰ <b>Locks in 30 min</b>");
-        assertThat(AlertHeadline.finalWarning(kickoff, kickoff.minusSeconds(61)))
+        assertThat(AlertHeadline.finalWarning(kickoff, kickoff.minusSeconds(150)))
                 .isEqualTo("⏰ <b>Locks in 2 min</b>");
         assertThat(AlertHeadline.finalWarning(kickoff, kickoff))
                 .isEqualTo("⏰ <b>Locks in 1 min</b>");

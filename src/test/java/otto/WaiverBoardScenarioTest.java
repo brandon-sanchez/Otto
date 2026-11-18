@@ -452,7 +452,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(records.getLast().outcome()).isInstanceOf(Outcome.SentBoard.class);
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB")))
+                .withRequestBody(matchingJsonPath("$.text", containing("<b>Bucky Irving</b> · RB, TB")))
                 .withRequestBody(matchingJsonPath(BUTTONS + "[0][0].callback_data",
                         equalTo("done:" + boardAlertId()))));
         assertThat(eventLog.all())
@@ -483,7 +483,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
         telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB"))));
+                .withRequestBody(matchingJsonPath("$.text", containing("<b>Bucky Irving</b> · RB, TB"))));
     }
 
     @Test
@@ -500,7 +500,7 @@ class WaiverBoardScenarioTest extends WireSeamTest {
         assertThat(onlyBoardRecord().exchanges()).singleElement()
                 .satisfies(exchange -> assertThat(exchange.checkFailures()).isEmpty());
         assertThat(boardMessages()).singleElement().satisfies(message -> assertThat(message)
-                .contains("1. Bucky Irving · RB, TB")
+                .contains("1. <b>Bucky Irving</b> · RB, TB")
                 .contains("in Week 1, and his coach named him the starter. He projects 19.0 "
                         + "points this week.\nPast that you pay for more than a lead role.")
                 .doesNotContain("usage-10001")

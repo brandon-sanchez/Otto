@@ -2,6 +2,7 @@ package otto.alerts;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Optional;
 
 import otto.decisions.RosterPlans;
@@ -17,28 +18,26 @@ import otto.format.TelegramHtml;
  */
 final class AlertHeadline {
 
-    private static final long SECONDS_PER_MINUTE = 60;
-
     private AlertHeadline() {
     }
 
     /**
      * Returns the first line of the final warning before a player's game
-     * starts, with the whole minutes left rounded up: "⏰ <b>Locks in 30
-     * min</b>".
+     * starts, with the whole minutes left and at least one: "⏰ <b>Locks
+     * in 30 min</b>".
      */
     static String finalWarning(Instant kickoff, Instant now) {
-        long seconds = Math.max(0, Duration.between(now, kickoff).toSeconds());
-        long minutes = Math.max(1, (seconds + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE);
+        long minutes = Math.max(1, Duration.between(now, kickoff).toMinutes());
         return "⏰ <b>Locks in %d min</b>".formatted(minutes);
     }
 
     /**
      * Returns the headline for an Alert led by the candidate: for a
      * status change the injury dot of the new status, ✅ when he is
-     * cleared, or 🔔 for a status with no dot such as not active; 📉 for a role slip or a notable drop; 🔁 for a trade in the
-     * league; 👀 for a Watchlist player; ⚠️ for a lineup that can't score;
-     * ⬆️ for a better lineup.
+     * cleared, or 🔔 for a status with no dot such as not active, or one
+     * this code doesn't know; 📉 for a role slip or a notable drop; 🔁 for
+     * a trade in the league; 👀 for a Watchlist player; ⚠️ for a lineup
+     * that can't score; ⬆️ for a better lineup.
      */
     static String of(AlertCandidate candidate) {
         String player = Optional.ofNullable(candidate.recommendation().player())
@@ -58,11 +57,16 @@ final class AlertHeadline {
 
     private static String status(String player, AlertCandidate candidate) {
         String to = candidate.facts().get("to");
-        if (to == null) {
+        Optional<PlayerHealth> known = Arrays.stream(PlayerHealth.values())
+                .filter(each -> each.name().equals(to))
+                .findFirst();
+        if (known.isEmpty()) {
             return "🔔 %s has news".formatted(player);
         }
-        PlayerHealth health = PlayerHealth.valueOf(to);
-        String designation = health == PlayerHealth.IR ? "on IR" : RosterPlans.designation(health);
+        PlayerHealth health = known.get();
+        String designation = health == PlayerHealth.IR
+                ? "on IR"
+                : RosterPlans.designation(health);
         String icon = Dot.injury(health).map(Dot::emoji)
                 .orElse(health == PlayerHealth.ACTIVE || health == PlayerHealth.PROBABLE
                         ? "✅"

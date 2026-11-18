@@ -266,7 +266,7 @@ class RoleSlipScenarioTest extends WireSeamTest {
         assertThat(alertsSent()).filteredOn(event -> event.key().startsWith("alert:edge"))
                 .singleElement()
                 .satisfies(edge -> assertThat(edge.facts())
-                        .containsEntry("text", "⬆️ <b>Your lineup can score more</b>\n"
+                        .containsEntry("text", "📉 <b>James Cook</b>'s role is slipping\n"
                                 + BENCH_AND_KEEP_MESSAGE));
     }
 

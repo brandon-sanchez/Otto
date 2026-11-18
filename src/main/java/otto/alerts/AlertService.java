@@ -303,7 +303,8 @@ public class AlertService {
                             alertFacts(candidate, research, written.get())))
                     .toList();
             sent.addAll(outbox.deliver(written.get().basis(),
-                    compose(AlertHeadline.of(primary), written.get()), templates));
+                    compose(AlertHeadline.of(leading(primary, unalerted, userRoster)),
+                            written.get()), templates));
         }
         return sent;
     }
@@ -336,6 +337,22 @@ public class AlertService {
         LINEUP_PROBLEM,
         /** Anything else: the phrasing model words the Recommendation. */
         PHRASED
+    }
+
+    /**
+     * The candidate whose advice the Alert carries, which its headline
+     * names: the role slip when the group holds one, since the role-slip
+     * route writes the text, and otherwise the most confident one.
+     */
+    private static AlertCandidate leading(AlertCandidate primary, List<AlertCandidate> group,
+            Optional<RosterSnapshot> userRoster) {
+        if (route(primary, group, userRoster) != Route.ROLE_SLIP) {
+            return primary;
+        }
+        return group.stream()
+                .filter(candidate -> candidate.source() == AlertCandidate.Source.ROLE_SLIP)
+                .findFirst()
+                .orElseThrow();
     }
 
     private static Route route(AlertCandidate primary, List<AlertCandidate> group,

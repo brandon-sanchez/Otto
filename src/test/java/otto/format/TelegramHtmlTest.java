@@ -46,6 +46,7 @@ class TelegramHtmlTest {
             "<a href=\"https://sleeper.com\">Sleeper</a>|<a href=\"https://sleeper.com\">Sleeper</a>",
             "Team <b/> rest|Team  rest",
             "bad &#xD800; and &#0; entities|bad &amp;#xD800; and &amp;#0; entities",
+            "<blockquote>a <blockquote>b</blockquote> c</blockquote>|<blockquote>a b</blockquote> c",
             "<a>no link</a>|&lt;a&gt;no link"})
     void onlyBalancedSupportedTagsSurvive(String text, String html) {
         assertThat(TelegramHtml.normalize(text)).isEqualTo(html);
