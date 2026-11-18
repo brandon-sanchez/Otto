@@ -62,6 +62,7 @@ class TradeNarration {
         TradeMath.Pricing pricing = priced.pricing();
         TradeCall call = priced.call();
         return new TradeEvaluator.TradeEvaluation(
+                call.headline(),
                 deadline.map(TradeDeadline::message).orElse(null),
                 leagueWeek.week().weekKey().orElse(null),
                 partner.manager(),

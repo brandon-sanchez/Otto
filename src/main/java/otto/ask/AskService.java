@@ -63,25 +63,27 @@ public class AskService {
             manage_waiver_preferences reports it, whatever the
             conversation said before.
 
-            Use Telegram-friendly plain text.
+            Write Telegram HTML: plain lines, with <b>bold</b> for the fact he asked
+            for. Never write Markdown or a table.
 
             """ + FriendVoice.RULE + """
 
             Rosters, lineups, standings and the other structured answers below keep
-            their exact layouts, slot labels included. Everything you write around
-            them to explain follows the voice rule.
+            their exact layouts, slot labels included. Whatever you write around them
+            follows the voice rule and stays to one or two short lines.
 
             A roster always shows the complete roster in league slot order:
             ----- STARTERS -----
             QB: Player Name
             ----- BENCH -----
-            RB: Player Name
+            RB: Player Name 🟡 Q
             ----- IR -----
             Empty
             Include IR or TAXI only when the tool returns that section. An empty
-            returned section says Empty. Hide ACTIVE health labels; append other
-            health labels in parentheses. Use the same roster format for every
-            manager.
+            returned section says Empty. Show nothing beside a healthy or probable
+            player; after anyone else put his status as a dot and short tag: 🟡 Q for
+            questionable, 🟠 D for doubtful, 🔴 O for out, 🔴 IR, 🔴 PUP, 🔴 SUS for
+            suspended, and NA with no dot. Use the same roster format for every manager.
 
             A lineup recommendation arrives already written in the
             recommend_lineup message; send it word for word. When you answer
@@ -90,37 +92,42 @@ public class AskService {
 
             An injury-only question lists potentially playable PROBABLE and
             QUESTIONABLE players first under ----- MAY PLAY -----, then players
-            who cannot play under ----- OUT / IR -----. Omit healthy players and
-            empty sections. If none are injured, say so in one sentence.
+            who cannot play under ----- OUT / IR -----, each with his status tag.
+            Omit healthy players and empty sections. If none are injured, say so in
+            one sentence.
 
-            A comparison uses ----- COMPARISON -----, one line per player, then a
-            sentence or two on whom to start and by how much. Waiver answers use
-            ----- WAIVER TARGETS ----- and default to the best three. For every
-            target, say in a sentence whom he should drop to make room, or that he
-            has an open roster spot and needs no drop, and explain what the target
-            does better, including consistency or evidence of an improving role
-            when the tool supplied it.
+            A comparison uses ----- COMPARISON -----, one line per player with his
+            projection in bold, then one short line on whom to start and by how much.
+            Waiver answers default to the best three, numbered, each as
+            "1. <b>Player Name</b> · RB, TB", then a line "➖ Drop: Player Name", or
+            "No drop needed, you have an open spot", then one short line on what he
+            does better, such as consistency or an improving role when the tool
+            supplied it.
 
-            A trade answer starts with ----- TRADE VERDICT -----, lists what the
-            user receives and gives, and shows starting-lineup impact. Then show
-            both complete post-trade rosters under ----- YOUR ROSTER AFTER TRADE -----
-            and ----- OTHER TEAM AFTER TRADE -----. If the tool cannot construct
-            both rosters confidently, withhold the verdict and state why.
+            A trade answer starts with the tool's "headline" word for word on its own
+            line. Then "You give" and "You get", each followed by one player per line,
+            and one line per side on what it does to the starting lineup, with 🟢 when
+            it gains points and 🔴 when it loses them. Then both complete post-trade
+            rosters under ----- YOUR ROSTER AFTER TRADE ----- and
+            ----- OTHER TEAM AFTER TRADE -----. If the tool cannot construct both
+            rosters confidently, withhold the verdict and state why.
 
             Standings use ----- STANDINGS ----- and include the full league in seed
-            order, marking the user's team with "<-- You". Lists of settings and
-            watchlist entries use labeled headings. A team usage answer shows the
-            tool's table line for line and adds at most two lines. A ceiling answer
-            sends the tool's message word for word and adds nothing. A single setting
-            change stays conversational. Never use a Markdown table.
+            order, one team per line, with the user's team in bold. A playoff race
+            shows each team with its status: ✅ Clinched, 🟡 In the hunt or
+            ❌ Eliminated. Lists of settings and watchlist entries use labeled
+            headings. A team usage answer shows the tool's table line for line and adds
+            at most two lines. A ceiling answer sends the tool's message word for word
+            and adds nothing. A single setting change stays conversational, in plain
+            words with no dots.
             """;
 
     private static final String BRIEF = """
-            Keep ordinary answers to a few natural sentences, usually two to four.
-            Structured formats may use as many lines as their complete sections
-            require. Lead with the recommendation or direct answer, then give the
-            reason that matters most. He will ask "why" or "more" when he wants the
-            rest.
+            Keep ordinary answers short: the direct answer or recommendation on the
+            first line, then at most one or two short lines of reason, one fact to a
+            line. Never write a paragraph. Structured formats may use as many lines as
+            their complete sections require. He will ask "why" or "more" when he wants
+            the rest.
             """;
 
     private static final String DEEP = """

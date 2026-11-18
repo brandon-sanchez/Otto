@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class VoiceScenarioTest extends WireSeamTest {
 
-    private static final String REASON_RULE = "give every recommendation a short reason";
+    private static final String REASON_RULE = "Give every recommendation a reason";
 
     private static final String FIRST_PERSON = "in the first person";
 

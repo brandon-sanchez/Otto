@@ -52,8 +52,11 @@ public class BuyLowSellHigh {
             "about buy-low and sell-high players", AdvicePrompt.Naming.LISTED_BY_FULL_NAME)
             + """
 
-            For each player, lead with his call as the evidence names it, then explain why
-            in one or two natural sentences. A buy-low is a player whose usage held while
+            Give each player his own line that leads with his call: "📉 Buy low:
+            <b>Player Name</b>" for a buy-low, partial bounce-back or market buy-low, and
+            "📈 Sell high: <b>Player Name</b>" for a sell-high, followed on the same line
+            by the one number that makes the call, such as "4.6 pts/game below his usage".
+            Then one short line on why. A buy-low is a player whose usage held while
             his points slumped; say how his usage held and how far below it he scored. For
             a partial bounce-back, say his usage slipped too, so only part of his old level
             should come back. A role decline is never a buy-low: say his role shrank. For a

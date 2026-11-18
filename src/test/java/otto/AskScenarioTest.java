@@ -77,8 +77,8 @@ class AskScenarioTest extends WireSeamTest {
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("Here's your week 2 lineup."))
                 .withRequestBody(containing(
-                        "I'd start Josh Jacobs over James Cook, a gain of 3.5 points."))
-                .withRequestBody(containing("projects 145.0 points, and this one projects 148.5"))
+                        "⬆️ Start <b>Josh Jacobs</b> over James Cook, +3.5 points"))
+                .withRequestBody(containing("Projected <b>145.0 → 148.5</b>"))
                 .withRequestBody(containing("----- BENCH -----"))
                 .withRequestBody(notContaining(LINEUP_PHRASE))
                 .withRequestBody(notContaining("99.9")));
@@ -109,8 +109,8 @@ class AskScenarioTest extends WireSeamTest {
         ask("lineup");
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(containing("I'd start Dallas Goedert over Travis Kelce"))
-                .withRequestBody(notContaining("I'd start Josh Jacobs over James Cook")));
+                .withRequestBody(containing("Start <b>Dallas Goedert</b> over Travis Kelce"))
+                .withRequestBody(notContaining("Start <b>Josh Jacobs</b> over James Cook")));
     }
 
     /**
@@ -351,7 +351,7 @@ class AskScenarioTest extends WireSeamTest {
         // Short by default; "why" and a short "more" open the answer up.
         // A long question that merely says "more" is a fresh question.
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("a few natural sentences"))
+                .withRequestBody(containing("Never write a paragraph"))
                 .withRequestBody(notContaining("Give the full reasoning")));
         llm.verify(2, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
                 .withRequestBody(containing("Give the full reasoning")));
@@ -366,7 +366,7 @@ class AskScenarioTest extends WireSeamTest {
         ask("how does my roster look?");
 
         llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("Use Telegram-friendly plain text"))
+                .withRequestBody(containing("Write Telegram HTML"))
                 .withRequestBody(containing("----- STARTERS -----"))
                 .withRequestBody(containing("----- BENCH -----"))
                 .withRequestBody(containing("recommend_lineup message"))
