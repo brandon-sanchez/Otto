@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 import otto.storage.ConcurrentDocumentChange;
 import otto.storage.JsonStore;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 /**
  * The Telegram entry point: a Lambda function URL, which speaks the

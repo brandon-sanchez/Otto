@@ -14,8 +14,8 @@ import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.storage.OttoJson;
 import otto.telegram.TelegramClient;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;

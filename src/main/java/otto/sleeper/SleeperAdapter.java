@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
+import otto.scope.LeagueScope;
 
 /**
  * Typed, schema-validated access to the Sleeper league endpoints.

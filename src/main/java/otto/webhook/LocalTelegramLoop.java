@@ -1,4 +1,4 @@
-package otto.telegram;
+package otto.webhook;
 
 import java.time.Duration;
 import java.util.Optional;
