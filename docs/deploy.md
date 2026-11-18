@@ -39,7 +39,8 @@ do
 done
 ```
 
-Choose the webhook secret yourself - any string of `A-Z a-z 0-9 _ -`.
+Choose the webhook secret yourself. It can be any string of
+`A-Z a-z 0-9 _ -`.
 Telegram echoes it on every call, and the assistant refuses a call
 without it.
 
@@ -86,7 +87,7 @@ Two optional values shape the Decision Records bucket:
 - `articleTextSeasons` (default `3`). How many seasons of 365 days copied
   article text is kept. It also sets how long every record is locked
   against deletion. A change to the expiry applies to all stored article
-  text at once; a change to the lock applies only to objects written
+  text at once. A change to the lock applies only to objects written
   afterwards. So lowering the value hides older article text at the new
   age, but each hidden version stays in the bucket until its original
   lock ends, and only then is it removed.
@@ -100,7 +101,7 @@ Confirm the subscription email AWS sends, or no alarm will reach you.
 
 **On a new AWS account**, add `-c scheduledReservedConcurrency=0`. New
 accounts are capped at 10 concurrent Lambda executions, and AWS refuses
-a reservation that would leave fewer than 10 unreserved - so none can be
+a reservation that would leave fewer than 10 unreserved, so none can be
 made. Request a quota increase for Lambda concurrent executions, then
 redeploy without the flag to limit the Check to one run at a time.
 Until then, two Checks can overlap. Each Alert still goes out once,
@@ -125,7 +126,7 @@ gh secret set ALERT_EMAIL --body 'you@example.com'
 
 The role trusts one repository and one branch, spelled two ways.
 GitHub sends a subject carrying the numeric ids of the owner and the
-repository, so a rename does not break the trust; the readable
+repository, so a rename does not break the trust. The readable
 spelling is listed beside it in case GitHub goes back to sending that
 one. Moving the repo to another account means new ids, and so means
 editing `SUBJECTS` in `DeployRoleStack` and deploying it again by
@@ -179,7 +180,7 @@ still built every round, so it can take over at once:
    with `-c sentWaiverBoard=SCORED`. Merge the `cdk.json` change as well,
    or the next deploy on merge sets the board back to `EVIDENCE`.
 
-A round already decided keeps its board: a switch mid-round never sends
+A round already decided keeps its board. A switch mid-round never sends
 the other board's notice for that round.
 
 Set `sentWaiverBoard` back to `EVIDENCE` to send the evidence-based board

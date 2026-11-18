@@ -141,7 +141,7 @@ The tools fall into two kinds:
 
 Code picks the league before the model runs, so the choice costs nothing and works when every model is down. A message that names a league ("my dynasty league") is about that league. "All my leagues" answers once per league, with the answers written at the same time on separate threads. Otherwise the question goes to the league the chat was last about, within 24 hours. If none of those apply and Otto follows more than one league, it asks which one ([ADR-0012](adr/0012-follow-every-league.md)).
 
-The league is bound for the length of the work as a Java `ScopedValue`. Every Sleeper read and every stored document takes its league from that binding. This change touched four places in the code instead of the signature of nearly every service.
+The league is bound for the length of the work as a Java `ScopedValue`. Every Sleeper read and every stored document takes its league from that binding, so services don't pass a league id through every call.
 
 ## The Advice Check
 
