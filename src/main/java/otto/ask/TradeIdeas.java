@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import otto.advice.AdviceAnswer;
 import otto.advice.AdviceCheck;
@@ -173,10 +174,13 @@ public class TradeIdeas {
     private ToolAnswer<Answer> answer(LeagueWeek league, TradeOffers.Request request,
             Instant now, AnswerDelivery delivery) {
         Optional<TradeDeadline> deadline = deadlines.assess(league);
-        if (deadline.filter(TradeDeadline::closed).isPresent()) {
+        Optional<String> closed = deadline.flatMap(TradeDeadline::closedBecause);
+        if (closed.isPresent()) {
             ToolAnswer<TeamWeaknesses.Answer> read = weaknesses.answer(null, now, delivery);
-            return read.facts() == null ? ToolAnswer.unavailable(read.unavailable())
-                    : ToolAnswer.of(new Answer(read.facts().message()));
+            String message = read.facts() == null
+                    ? StringUtils.capitalize(closed.get()) + "."
+                    : read.facts().message();
+            return ToolAnswer.of(new Answer(message));
         }
         HabitLean lean = habits.lean(league.league(), league.snapshot(), league.week(), now);
         return switch (offers.find(league, new TradeOffers.Request(request.count(),
@@ -184,11 +188,11 @@ public class TradeIdeas {
             case SourceResult.Unavailable<TradeOffers.Ideas> unavailable ->
                 ToolAnswer.unavailable(unavailable.reason());
             case SourceResult.Ok<TradeOffers.Ideas> ideas when ideas.value().offers().isEmpty() ->
-                ToolAnswer.unavailable(request.skip() > 0
-                        ? "there are no more trades that are a win for him and that the other "
-                                + "manager would plausibly accept"
-                        : "no trade I could build is a win for him that the other manager "
-                                + "would plausibly accept right now");
+                ToolAnswer.of(new Answer(request.skip() > 0
+                        ? "I couldn't find any more deals that help your team and give the "
+                                + "other manager a reason to say yes."
+                        : "I couldn't find a deal that helps your team and gives the "
+                                + "other manager a reason to say yes right now."));
             case SourceResult.Ok<TradeOffers.Ideas> ideas -> explain(league, request,
                     ideas.value().offers(), deadline, lean, now, delivery);
         };
@@ -198,13 +202,15 @@ public class TradeIdeas {
             List<Offer> found, Optional<TradeDeadline> deadline, HabitLean lean, Instant now,
             AnswerDelivery delivery) {
         int maxLength = Math.min(LONGEST, INTRO_LENGTH + LENGTH_PER_OFFER * found.size());
-        EvidenceBundle bundle = QuietHabits.add(TradeIdeaEvidence.bundle(
-                new TradeIdeaEvidence.Facts(league.league().name(), found, request.count(),
-                        request.skip(), request.shape().map(TradeShape::words),
-                        deadline.map(TradeDeadline::message)), maxLength, now), lean, now);
+        TradeIdeaEvidence.Facts facts = new TradeIdeaEvidence.Facts(league.league().name(),
+                found, request.count(), request.skip(), request.shape().map(TradeShape::words),
+                deadline.map(TradeDeadline::message));
+        EvidenceBundle bundle = QuietHabits.add(
+                TradeIdeaEvidence.bundle(facts, maxLength, now), lean, now);
         return advice.write(bundle, form(found), new CheckedAdvice.Run(RUN_ID_PREFIX,
                         List.of(league.league().leagueId()), RunKind.TRADE_IDEAS,
-                        league.league(), candidates(found), "explanation"), now, delivery)
+                        league.league(), candidates(found), "explanation"), now, delivery,
+                        () -> TradeIdeaEvidence.verifiedMessage(facts))
                 .answer(Answer::new, FALLBACKS);
     }
 

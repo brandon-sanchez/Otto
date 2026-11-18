@@ -37,6 +37,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -567,6 +568,21 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     }
 
     @Test
+    void theDeadlineStillGetsAnAnswerWhenTheWaiverExplanationFailsItsCheck() {
+        leagueInWeek("sleeper/league-in-season.json", "sleeper/rosters-offers.json",
+                "sleeper/state-nfl-week14.json", 14);
+        fantasyCalcAnswers("false", "fantasycalc/values-offers-redraft.json");
+        OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
+        OutboundStubs.llmAdvises(llm, answer("Your team scores 999999 points."));
+
+        ask("what trades should I make?");
+
+        theUserReads("The trade deadline passed after week 13, so trades are "
+                + "closed and only waiver moves are left.");
+        assertThat(records(RunKind.TRADE_IDEAS)).isEmpty();
+    }
+
+    @Test
     void aReplyThatPutsAPlayerInTheWrongOfferIsCorrectedBeforeTheUserSeesIt() {
         redraftLeague("sleeper/rosters-offers.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
@@ -581,7 +597,7 @@ class TradeIdeasScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aReplyNamingAPlayerFromAnotherRosterIsWithheld() {
+    void rejectedModelWordingFallsBackToTheVerifiedOffers() {
         redraftLeague("sleeper/rosters-offers.json");
         OutboundStubs.llmCallsToolThenPhrases(llm, "suggest_trades", "{}", NARRATION);
         OutboundStubs.llmAdvises(llm, answer(NOT_ON_HIS_ROSTER, GOEDERT, JEFFERSON));
@@ -593,8 +609,20 @@ class TradeIdeasScenarioTest extends WireSeamTest {
                         + "evidence")));
         telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(containing("Christian McCaffrey")));
-        assertThat(records(RunKind.TRADE_IDEAS)).singleElement().satisfies(record ->
-                assertThat(record.outcome()).isInstanceOf(Outcome.Withheld.class));
+        String firstOffer = """
+                1. Send to <b>GridironGoblin</b>
+                You give: Dallas Goedert and Justin Jefferson
+                You get: Saquon Barkley
+
+                Your side: a slight edge for you on rest-of-season fit, a gap of 8.2%.
+                On market value GridironGoblin gets 9500 for the 8200 he gives.""";
+        telegram.verify(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
+                .withRequestBody(matchingJsonPath("$.text", containing(firstOffer))));
+        assertThat(records(RunKind.TRADE_IDEAS)).singleElement().satisfies(record -> {
+            assertThat(record.exchanges().getLast().checkFailures()).isNotEmpty();
+            assertThat(record.outcome()).isInstanceOfSatisfying(Outcome.Sent.class, sent ->
+                    assertThat(sent.message()).startsWith(firstOffer));
+        });
     }
 
     private void tightEndPointsLeftOnTheBench() {

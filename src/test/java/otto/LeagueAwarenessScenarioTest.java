@@ -335,8 +335,8 @@ class LeagueAwarenessScenarioTest extends WireSeamTest {
         checkAfterTheDrops();
 
         assertThat(sentTexts()).singleElement().asString()
-                .startsWith("📉 <b>Saquon Barkley</b> was dropped in your league\n"
-                        + "<b>GridironGoblin dropped Saquon Barkley, and he's worth a claim.</b>\n"
+                .startsWith("📉 <b>Saquon Barkley</b> was dropped in your league\n\n"
+                        + "<b>GridironGoblin dropped Saquon Barkley, and he's worth a claim.</b>\n\n"
                         + "Saquon Barkley is the 1st RB in this week's projections at ")
                 .contains(" points. That puts him inside the top 24 at RB, the cutoff this "
                         + "league treats as notable.\n")

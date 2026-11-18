@@ -134,7 +134,7 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
         assertThat(alertsSent()).singleElement().satisfies(alert ->
                 assertThat(alert.path("text").asText())
-                        .startsWith("🔴 <b>Christian McCaffrey</b> is now Out\n" + NEWS));
+                        .startsWith("🔴 <b>Christian McCaffrey</b> is now Out\n\n" + NEWS));
     }
 
     @Test

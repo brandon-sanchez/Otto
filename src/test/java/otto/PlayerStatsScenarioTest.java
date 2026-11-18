@@ -46,7 +46,7 @@ class PlayerStatsScenarioTest extends WireSeamTest {
             + "Next Gen Stats has him at 3.1 yards of separation on 22 targets, and he's scored "
             + "46.9 PPR points against 37.8 expected.";
 
-    private static final String RANKS = "Isaiah Likely's season ranks among TEs (weeks 1–5)\n"
+    private static final String RANKS = "Isaiah Likely's rankings among TEs this season (weeks 1–5)\n\n"
             + "🟡 Snap share: <b>2nd</b> of 3 (66%)";
 
     private static final String RAMBLING = (LAST_WEEK + " ").repeat(3).strip();
@@ -270,11 +270,37 @@ class PlayerStatsScenarioTest extends WireSeamTest {
         askAndAnswer("where does Likely rank in snap share?",
                 "{\"player\":\"Isaiah Likely\",\"asked\":\"snap share rank\"}", RANKS);
 
-        theEvidenceHolds(fact("header", "Isaiah Likely's season ranks among TEs (weeks 1–5)"),
+        theEvidenceHolds(fact("header", "Isaiah Likely's rankings among TEs this season (weeks 1–5)"),
                 "Snap share: <b>2nd</b> of 3 (66%)");
         llm.verify(postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
-                .withRequestBody(containing("When he asks for ranks, the first line is")));
+                .withRequestBody(containing("When he asks for ranks, stats among a position group")));
         theUserReadsOnly(RANKS);
+    }
+
+    @Test
+    void anExplicitCombinedGroupRanksOnlyThosePositions() {
+        String header = "Isaiah Likely's rankings among WRs and TEs this season (weeks 1–5)";
+        String message = header + "\n\n🟠 Snap share: <b>5th</b> of 6 (66%)";
+        askAndAnswer("Where does Likely rank in snap share among TEs and WRs?",
+                """
+                {"player":"Isaiah Likely","asked":"snap share rank","rankPositions":["TE","WR"]}
+                """, message);
+
+        theEvidenceHolds(fact("header", header), "Snap share: <b>5th</b> of 6 (66%)");
+        theUserReadsOnly(message);
+    }
+
+    @Test
+    void allSkillPositionsUseTheFullComparisonPool() {
+        String header = "Isaiah Likely's rankings among all skill positions this season (weeks 1–5)";
+        String message = header + "\n\n🟠 Snap share: <b>7th</b> of 9 (66%)";
+        askAndAnswer("Where does Likely rank in snap share across all skill positions?",
+                """
+                {"player":"Isaiah Likely","asked":"snap share rank","rankPositions":["QB","RB","WR","TE"]}
+                """, message);
+
+        theEvidenceHolds(fact("header", header), "Snap share: <b>7th</b> of 9 (66%)");
+        theUserReadsOnly(message);
     }
 
     @Test
