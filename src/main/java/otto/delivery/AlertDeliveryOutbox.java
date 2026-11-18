@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import otto.OttoProperties;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.scope.LeagueScope;
@@ -80,9 +81,10 @@ public class AlertDeliveryOutbox {
      *        retry never sends a part twice
      * @param viewAllOptions whether a View all options button joins the
      *        Done, Ignore and Mute buttons
-     * @param leagueId the league the Alert is about; null in a delivery
-     *        stored before Otto followed more than one league, which was
-     *        about the config league
+     * @param leagueId the league the Alert is about, the config league's
+     *        when it was sent with no league bound; null in a delivery
+     *        stored before deliveries named their league, which was about
+     *        the config league
      */
     private record Delivery(long alertId, Status status, String text, String basis,
             List<Event> events, List<String> parts, int partsSent, boolean viewAllOptions,
@@ -112,17 +114,20 @@ public class AlertDeliveryOutbox {
     private final TelegramClient telegram;
     private final EventLog eventLog;
     private final Clock clock;
+    private final String configLeagueId;
 
     /** This outbox's lease holder id: one per container. */
     private final String holder = UUID.randomUUID().toString();
 
     public AlertDeliveryOutbox(JsonStore store, AlertIdSequence ids,
-            TelegramClient telegram, EventLog eventLog, Clock clock) {
+            TelegramClient telegram, EventLog eventLog, Clock clock,
+            OttoProperties properties) {
         this.store = store;
         this.ids = ids;
         this.telegram = telegram;
         this.eventLog = eventLog;
         this.clock = clock;
+        this.configLeagueId = properties.leagueId();
     }
 
     /**
@@ -206,7 +211,7 @@ public class AlertDeliveryOutbox {
                 .toList();
         int partsSent = waiting.isEmpty() ? 0 : unchangedPartsSent(waiting.getFirst(), parts);
         Delivery delivery = new Delivery(alertId, Status.PENDING, text, basis, events, parts,
-                partsSent, viewAllOptions, LeagueScope.bound().orElse(null));
+                partsSent, viewAllOptions, LeagueScope.bound().orElse(configLeagueId));
         if (!waiting.isEmpty()) {
             Delivery earlier = waiting.getFirst();
             log.info("Re-checked delayed Alert {}: {}", alertId,

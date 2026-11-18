@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
@@ -12,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
+import otto.delivery.AlertDeliveryOutbox;
+import otto.delivery.DeliveryBasis;
+import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.followed.FollowedLeagues;
@@ -24,7 +28,9 @@ import otto.scope.LeagueScope;
 import otto.storage.OttoJson;
 import otto.webhook.TelegramWebhook;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -59,6 +65,9 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
 
     @Autowired
     private MarketValueRefresh marketValues;
+
+    @Autowired
+    private AlertDeliveryOutbox outbox;
 
     private void baselineCheck() {
         TwoLeagues.healthyInSeason(sleeper);
@@ -147,6 +156,58 @@ class MultiLeagueCheckScenarioTest extends WireSeamTest {
                 .withQueryParam("isDynasty", equalTo("false")));
         fantasyCalc.verify(getRequestedFor(urlPathEqualTo("/values/current"))
                 .withQueryParam("isDynasty", equalTo("true")));
+    }
+
+    @Test
+    void aFeedEveryLeagueSharesIsReportedDownOnceWithNoLeagueName() {
+        TwoLeagues.healthyInSeason(sleeper);
+        sleeper.stubFor(get(urlEqualTo(SleeperStubs.PROJECTIONS_PATH))
+                .willReturn(aResponse().withStatus(500)));
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, PHRASE);
+
+        checkRunner.runCheck();
+
+        assertThat(headsUps()).singleElement().satisfies(text ->
+                assertThat(text).startsWith("Heads up, I can't read sleeper:"
+                        + SleeperStubs.PROJECTIONS_PATH));
+    }
+
+    @Test
+    void aLeaguesOwnFeedIsReportedDownUnderThatLeaguesName() {
+        TwoLeagues.healthyInSeason(sleeper);
+        sleeper.stubFor(get(urlEqualTo("/v1/league/" + TwoLeagues.DYNASTY_LEAGUE + "/rosters"))
+                .willReturn(aResponse().withStatus(500)));
+        OutboundStubs.telegramOk(telegram);
+        OutboundStubs.llmPhrases(llm, PHRASE);
+
+        checkRunner.runCheck();
+
+        assertThat(headsUps()).singleElement().satisfies(text ->
+                assertThat(text).startsWith("🏈 <b>" + TwoLeagues.DYNASTY_LEAGUE_NAME
+                        + "</b>\n\nHeads up, I can't read sleeper:/v1/league/"
+                        + TwoLeagues.DYNASTY_LEAGUE + "/rosters"));
+    }
+
+    @Test
+    void aDeliveryMadeWithNoLeagueBoundIsStoredForTheConfigLeague() {
+        OutboundStubs.telegramOk(telegram);
+        Event alert = new Event("alert:unbound", EventType.ALERT_SENT, clock.instant(),
+                Map.of());
+
+        List<Event> delivered = outbox.deliver(DeliveryBasis.of("basis"),
+                () -> "Start Josh Jacobs.", List.of(alert));
+
+        long alertId = Long.parseLong(delivered.getFirst().facts().get("alertId"));
+        assertThat(outbox.leagueOf(alertId)).contains(TwoLeagues.CONFIG_LEAGUE);
+    }
+
+    private static List<String> headsUps() {
+        return telegram.findAll(postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)))
+                .stream()
+                .map(request -> json(request.getBodyAsString()).path("text").asText())
+                .filter(text -> text.contains("Heads up, I can't read"))
+                .toList();
     }
 
     private static JsonNode json(String body) {
