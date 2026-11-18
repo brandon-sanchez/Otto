@@ -83,7 +83,7 @@ public class AdviceWriter {
     private static final String ANSWER_FIELDS = String.join(",\n",
             "  \"message\": \"the text the user receives\"",
             "  \"move\": {\"start\": \"<playerId>\", \"bench\": \"<playerId or null>\", "
-                    + "\"slot\": \"<slot>\"}",
+                    + "\"slot\": \"<slot, copied exactly from legalMoves>\"}",
             "  \"players\": [\"<playerId of every player the message names>\"]",
             "  \"claims\": [{\"text\": \"<one factual statement>\", "
                     + "\"evidence\": [\"<evidence id>\"]}]",

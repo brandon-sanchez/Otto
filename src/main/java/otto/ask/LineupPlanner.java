@@ -234,7 +234,7 @@ public class LineupPlanner {
         List<String> notes = new ArrayList<>();
         if (!fits) {
             notes.add("Sleeper will not take %s in the %s slot"
-                    .formatted(aPlayerAt(startPosition), slot.name()));
+                    .formatted(aPlayerAt(startPosition), slot.label()));
         }
         if (startLocked) {
             notes.add("%s has already locked this week".formatted(team.name(startId)));

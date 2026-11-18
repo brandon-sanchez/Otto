@@ -64,8 +64,8 @@ public class LineupLegalityDetector {
         String replacement = bestReplacement(roster, week, slot);
         Recommendation recommendation = new Recommendation(
                 null,
-                "your %s slot".formatted(slot.name()),
-                "Fill your empty %s slot before lock".formatted(slot.name()),
+                "your %s slot".formatted(slot.label()),
+                "Fill your empty %s slot before lock".formatted(slot.label()),
                 Confidence.HIGH,
                 List.of("An empty slot always scores zero", bestFill(replacement)),
                 List.of());
@@ -86,7 +86,7 @@ public class LineupLegalityDetector {
                 playerId,
                 player,
                 "Replace %s in your %s slot, because he's %s and can't play"
-                        .formatted(player, slot.name(), health),
+                        .formatted(player, slot.label(), health),
                 Confidence.HIGH,
                 List.of("%s is %s, so this slot scores zero as it's set".formatted(player,
                                 health),
@@ -113,7 +113,7 @@ public class LineupLegalityDetector {
                 playerId,
                 player,
                 "Replace %s in your %s slot, because he's on bye this week"
-                        .formatted(player, slot.name()),
+                        .formatted(player, slot.label()),
                 Confidence.HIGH,
                 List.of("A starter on bye scores zero", bestFill(replacement)),
                 List.of());
