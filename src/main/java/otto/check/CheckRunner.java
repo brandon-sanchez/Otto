@@ -29,7 +29,7 @@ import otto.followed.FollowedLeagues;
 import otto.habits.HabitLedger;
 import otto.league.LeagueWeek;
 import otto.model.ModelChain;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 import otto.snapshot.LeagueStatus;

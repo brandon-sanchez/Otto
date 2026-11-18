@@ -56,8 +56,8 @@ import otto.records.RunKind;
 import otto.research.ResearchCache;
 import otto.storage.DocumentBackend;
 import otto.storage.OttoJson;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 /**
  * The habits answer end to end: the weekly capture, the habits Otto

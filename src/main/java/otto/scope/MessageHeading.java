@@ -1,4 +1,4 @@
-package otto.telegram;
+package otto.scope;
 
 import java.util.Optional;
 

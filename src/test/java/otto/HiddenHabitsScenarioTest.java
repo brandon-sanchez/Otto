@@ -38,8 +38,8 @@ import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
 import otto.storage.OttoJson;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 class HiddenHabitsScenarioTest extends WireSeamTest {
 

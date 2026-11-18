@@ -5,8 +5,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import otto.format.TelegramHtml;
-import otto.sleeper.LeagueScope;
-import otto.telegram.MessageHeading;
+import otto.scope.LeagueScope;
+import otto.scope.MessageHeading;
 
 /**
  * Names the league at the top of every message sent for one, once Otto

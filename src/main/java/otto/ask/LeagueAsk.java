@@ -19,7 +19,7 @@ import otto.followed.FollowedLeague;
 import otto.followed.FollowedLeagues;
 import otto.followed.LeagueListChat;
 import otto.followed.LeagueMentions;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 
 /**
  * The chat's front door: decides which league a message is about, then

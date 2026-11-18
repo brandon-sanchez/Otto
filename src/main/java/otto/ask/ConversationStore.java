@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import org.springframework.stereotype.Component;
 
 import otto.OttoProperties;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.storage.JsonStore;
 import otto.storage.OttoJson;
 

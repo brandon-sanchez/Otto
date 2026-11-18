@@ -1,4 +1,4 @@
-package otto.telegram;
+package otto.webhook;
 
 /**
  * The outcome the webhook entry point reports to its HTTP wrapper.

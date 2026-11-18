@@ -13,10 +13,10 @@ import org.springframework.test.context.TestPropertySource;
 
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
+import otto.directory.PlayerDirectoryStore;
 import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
-import otto.directory.PlayerDirectoryStore;
 import otto.harness.NflverseStubs;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
@@ -27,8 +27,8 @@ import otto.nflverse.NflverseStore;
 import otto.nflverse.PlayerIdMap;
 import otto.settings.SettingsStore;
 import otto.settings.Trigger;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;

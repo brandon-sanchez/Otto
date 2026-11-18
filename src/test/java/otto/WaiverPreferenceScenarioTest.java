@@ -25,8 +25,8 @@ import otto.records.DecisionRecords;
 import otto.records.Outcome;
 import otto.records.RunKind;
 import otto.research.ResearchDiscovery;
-import otto.telegram.TelegramWebhook;
-import otto.telegram.WebhookResult;
+import otto.webhook.TelegramWebhook;
+import otto.webhook.WebhookResult;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.notContaining;

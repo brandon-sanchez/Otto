@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import otto.followed.FollowedLeague;
 import otto.followed.FollowedLeagues;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.sleeper.SleeperAdapter;
 import otto.sleeper.SourceResult;
 

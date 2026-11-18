@@ -9,7 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import otto.harness.MutableClock;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 import otto.events.Event;
 import otto.events.EventLog;
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 import otto.storage.JsonStore;
 import otto.storage.Lease;
 import otto.telegram.TelegramClient;

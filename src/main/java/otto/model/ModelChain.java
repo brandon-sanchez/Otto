@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import otto.sleeper.LeagueScope;
+import otto.scope.LeagueScope;
 
 /**
  * The one way Otto asks a model for anything. Providers are tried one

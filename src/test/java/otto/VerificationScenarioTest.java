@@ -12,7 +12,7 @@ import otto.events.EventType;
 import otto.harness.OutboundStubs;
 import otto.harness.SleeperStubs;
 import otto.harness.WireSeamTest;
-import otto.telegram.TelegramWebhook;
+import otto.webhook.TelegramWebhook;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
