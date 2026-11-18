@@ -217,7 +217,7 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
                 .withRequestBody(matchingJsonPath("$.text",
-                        containing("Christian McCaffrey went from Active to Out.")))
+                        containing("<b>Fill your RB slot</b>")))
                 .withRequestBody(matchingJsonPath("$.text", notContaining("IR"))));
         DecisionRecord record = onlyRecord();
         assertThat(record.exchanges()).allSatisfy(exchange -> assertThat(
@@ -286,10 +286,10 @@ class PlayerDecisionScenarioTest extends WireSeamTest {
         checkRunner.runCheck();
 
         telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text",
-                        containing("Christian McCaffrey went from Active to Out.")))
-                .withRequestBody(matchingJsonPath("$.text",
-                        containing("Josh Jacobs is your best playable bench option there"))));
+                .withRequestBody(matchingJsonPath("$.text", equalTo("""
+                        🔴 <b>Christian McCaffrey</b> is now Out
+                        <b>Fill your RB slot</b>: it scores zero with him in it.
+                        Best bench option: Josh Jacobs, projected 12.5."""))));
         assertThat(onlyRecord().outcome()).isInstanceOf(Outcome.Sent.class);
     }
 
