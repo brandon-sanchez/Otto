@@ -1,13 +1,19 @@
 package otto.telegram;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import otto.format.TelegramHtml;
+
 /**
- * Lays out text for Telegram: tidied of the Markdown a plain-text
- * message would show as stray symbols, and split into messages that each
- * fit Telegram's length limit.
+ * Lays out text for Telegram's HTML parse mode: normalised by
+ * {@link TelegramHtml#normalize}, so Markdown shows as real bold and
+ * never as stray symbols, and split into messages that each fit
+ * Telegram's length limit with every tag closed inside its own message.
  */
 public final class TelegramText {
 
@@ -23,8 +29,7 @@ public final class TelegramText {
      */
     private static final String SECTION_HEADING = "-----";
 
-    private static final Pattern HEADING_MARKS = Pattern.compile("(?m)^#{1,6}[ \\t]+");
-    private static final Pattern EMPHASIS_MARKS = Pattern.compile("\\*\\*|__");
+    private static final Pattern TAG = Pattern.compile("<(/?)([a-z]+)[^<>]*>");
     private static final Pattern TRAILING_SPACE = Pattern.compile("(?m)[ \\t]+$");
     private static final Pattern EXTRA_BLANK_LINES = Pattern.compile("\\n{3,}");
 
@@ -32,22 +37,22 @@ public final class TelegramText {
     }
 
     private static String tidy(String text) {
-        String tidied = text.replace("\r\n", "\n");
-        tidied = HEADING_MARKS.matcher(tidied).replaceAll("");
-        tidied = EMPHASIS_MARKS.matcher(tidied).replaceAll("");
+        String tidied = TelegramHtml.normalize(text);
         tidied = TRAILING_SPACE.matcher(tidied).replaceAll("");
         tidied = EXTRA_BLANK_LINES.matcher(tidied).replaceAll(PARAGRAPH);
         return tidied.strip();
     }
 
     /**
-     * Returns the text as the messages it goes out as, in order, with
-     * Markdown heading and bold marks, spaces at line ends and extra
-     * blank lines removed. Each message fits {@link #LIMIT}. Splits fall
+     * Returns the text as the HTML messages it goes out as, in order:
+     * normalised, with spaces at line ends and extra blank lines removed.
+     * Each message's visible text fits {@link #LIMIT}. Splits fall
      * between paragraphs, and never between the sections of one roster
      * or lineup list. A block too long for one message is split between
      * lines, and a line too long for one is split at its last space
-     * within the limit.
+     * within the limit, never inside a tag or an entity. A tag open
+     * where one message ends is closed there and opened again at the
+     * start of the next.
      *
      * @return one message for text that fits, including blank text
      */
@@ -73,7 +78,15 @@ public final class TelegramText {
             }
         }
         parts.add(current.toString());
-        return List.copyOf(parts);
+        return balanced(parts);
+    }
+
+    /**
+     * Returns one message as plain text, for a resend without a parse
+     * mode when Telegram refuses its formatting.
+     */
+    public static String plain(String part) {
+        return TelegramHtml.visible(part);
     }
 
     /** The paragraphs, with the sections of one list joined into a single block. */
@@ -128,17 +141,71 @@ public final class TelegramText {
         return fitted;
     }
 
-    /** The line cut at its last space within the limit, as often as it needs. */
+    /** The line cut where {@link #cut} says, as often as it needs. */
     private static List<String> chunks(String line) {
         List<String> chunks = new ArrayList<>();
         String rest = line;
         while (rest.length() > LIMIT) {
-            int cut = rest.lastIndexOf(' ', LIMIT);
-            int end = cut > 0 ? cut : LIMIT;
+            int end = cut(rest);
             chunks.add(rest.substring(0, end));
             rest = rest.substring(end).stripLeading();
         }
         chunks.add(rest);
         return chunks;
+    }
+
+    /**
+     * Where a line too long for one message is cut: its last space
+     * within the limit outside a tag, else at the limit, moved back to
+     * the start of any tag or entity it would land in.
+     */
+    private static int cut(String line) {
+        for (int at = line.lastIndexOf(' ', LIMIT); at > 0; at = line.lastIndexOf(' ', at - 1)) {
+            if (!insideTag(line, at)) {
+                return at;
+            }
+        }
+        int end = LIMIT;
+        if (insideTag(line, end)) {
+            end = line.lastIndexOf('<', end - 1);
+        }
+        int entity = line.lastIndexOf('&', end - 1);
+        if (entity >= 0 && line.indexOf(';', entity) >= end) {
+            end = entity;
+        }
+        return end > 0 ? end : LIMIT;
+    }
+
+    private static boolean insideTag(String line, int at) {
+        return line.lastIndexOf('<', at - 1) > line.lastIndexOf('>', at - 1);
+    }
+
+    /** An opening tag a part leaves open: its name and its text as written. */
+    private record OpenTag(String name, String text) {
+    }
+
+    /** The parts with each tag left open closed at the part's end and reopened in the next. */
+    private static List<String> balanced(List<String> parts) {
+        List<String> balanced = new ArrayList<>();
+        String reopened = "";
+        for (String part : parts) {
+            String text = reopened + part;
+            Deque<OpenTag> open = new ArrayDeque<>();
+            Matcher tag = TAG.matcher(text);
+            while (tag.find()) {
+                if (tag.group(1).isEmpty()) {
+                    open.push(new OpenTag(tag.group(2), tag.group()));
+                } else if (!open.isEmpty()) {
+                    open.pop();
+                }
+            }
+            StringBuilder closed = new StringBuilder(text);
+            open.forEach(each -> closed.append("</").append(each.name()).append('>'));
+            StringBuilder opening = new StringBuilder();
+            open.descendingIterator().forEachRemaining(each -> opening.append(each.text()));
+            balanced.add(closed.toString());
+            reopened = opening.toString();
+        }
+        return List.copyOf(balanced);
     }
 }
