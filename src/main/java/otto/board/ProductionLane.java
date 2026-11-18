@@ -1,12 +1,10 @@
 package otto.board;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -14,19 +12,16 @@ import org.springframework.stereotype.Component;
 import otto.advice.EvidenceItem;
 import otto.directory.DirectoryPlayer;
 import otto.lineup.LeagueScoring;
-import otto.nflverse.NflverseStore;
-import otto.nflverse.PlayerIdMap;
 import otto.nflverse.WeeklyStats;
 
 /**
  * Actual production: what each candidate scored in his most recent
- * games in the league's own scoring, and the box score behind it. A
- * stat the line did not record is left out of the box score, never
- * written as zero.
+ * games in the league's own scoring, and the box score behind it, read
+ * from {@link RecentGames}. A stat the line did not record is left out
+ * of the box score, never written as zero.
  *
- * <p>When Sleeper fills the latest week's weekly stats for his team and
- * nflverse has no line of his that week, Sleeper's line is that week,
- * in its own evidence item labelled as Sleeper's.
+ * <p>A week whose line is Sleeper's is its own evidence item, labelled
+ * as Sleeper's.
  */
 @Component
 @Order(2)
@@ -34,12 +29,6 @@ class ProductionLane implements EvidenceLane {
 
     /** The stats a box score names, in the order it names them. */
     private static final Map<String, String> BOX_SCORE = boxScore();
-
-    private final NflverseStore nflverse;
-
-    ProductionLane(NflverseStore nflverse) {
-        this.nflverse = nflverse;
-    }
 
     private static Map<String, String> boxScore() {
         Map<String, String> stats = new LinkedHashMap<>();
@@ -63,18 +52,9 @@ class ProductionLane implements EvidenceLane {
 
     @Override
     public Read read(Inputs inputs) {
-        Optional<WeeklyStats> stats = nflverse.weeklyStats();
-        Optional<PlayerIdMap> ids = nflverse.playerIds();
+        RecentGames recent = inputs.recent();
+        Optional<WeeklyStats> stats = recent.weeklyStats();
         LeagueScoring scoring = inputs.league().week().scoring();
-        SleeperFill sleeper = inputs.sleeper();
-        Map<String, List<WeeklyStats.StatLine>> lines = stats
-                .map(feed -> feed.rows().stream()
-                        .collect(Collectors.groupingBy(WeeklyStats.StatLine::gsisId)))
-                .orElse(Map.of());
-        int latestWeek = Math.max(sleeper.week(), stats.flatMap(feed -> feed.rows().stream()
-                        .map(WeeklyStats.StatLine::week)
-                        .max(Integer::compare))
-                .orElse(0));
         boolean lastSeason = stats.filter(WeeklyStats::priorSeasonFinal).isPresent();
         return new Read() {
             @Override
@@ -82,8 +62,10 @@ class ProductionLane implements EvidenceLane {
                 if (lastSeason) {
                     return Map.of();
                 }
-                return Facts.leaders(freeAgents, player -> latestStats(player)
-                                .flatMap(line -> scoring.price(line, player.position())),
+                return Facts.leaders(freeAgents, player -> recent.production(player).stream()
+                                .filter(game -> game.week() == recent.latestWeek())
+                                .findFirst()
+                                .flatMap(game -> scoring.price(game.stats(), player.position())),
                         player -> "among the free agents at %s who scored the most in the "
                                 .formatted(player.position()) + "latest week");
             }
@@ -93,16 +75,16 @@ class ProductionLane implements EvidenceLane {
                 if (stats.isEmpty()) {
                     return List.of();
                 }
-                Optional<Map<String, Double>> filled = sleeperStats(player);
-                List<WeeklyStats.StatLine> recent = linesOf(player,
-                        filled.isPresent() ? UsageLane.RECENT_GAMES - 1 : UsageLane.RECENT_GAMES);
+                List<RecentGames.Production> games = recent.production(player);
                 Map<String, String> facts = new LinkedHashMap<>();
                 facts.put("season", stats.get().season());
-                if (recent.isEmpty() && filled.isEmpty()) {
+                if (games.isEmpty()) {
                     facts.put("games", "no stat line of his is recorded this season");
                 }
-                recent.forEach(line -> facts.put("week " + line.week(),
-                        describe(line.stats(), line.opponent(), scoring, player.position())));
+                games.stream()
+                        .filter(game -> !game.fromSleeper())
+                        .forEach(game -> facts.put("week " + game.week(),
+                                describe(game, scoring, player.position())));
                 List<EvidenceItem> items = new ArrayList<>();
                 items.add(new EvidenceItem("production-" + player.playerId(),
                         "nflverse:stats_player_week", Optional.of(stats.get().assetUpdatedAt()),
@@ -110,15 +92,16 @@ class ProductionLane implements EvidenceLane {
                         lastSeason ? "production last season, early-season context only"
                                 : "actual points in league scoring in his most recent games",
                         facts));
-                filled.ifPresent(line -> items.add(new EvidenceItem(
-                        "production-sleeper-" + player.playerId(), SleeperFill.SOURCE,
-                        Optional.empty(), inputs.now(),
-                        "actual points in league scoring in week %d, from Sleeper's stats "
-                                .formatted(sleeper.week())
-                                + "because nflverse had not published his team's week",
-                        Map.of("season", stats.get().season(), "week " + sleeper.week(),
-                                describe(line, sleeper.opponent(player), scoring,
-                                        player.position())))));
+                games.stream()
+                        .filter(RecentGames.Production::fromSleeper)
+                        .forEach(game -> items.add(new EvidenceItem(
+                                "production-sleeper-" + player.playerId(), SleeperFill.SOURCE,
+                                Optional.empty(), inputs.now(),
+                                "actual points in league scoring in week %d, from Sleeper's "
+                                        .formatted(game.week()) + "stats because nflverse had "
+                                        + "not published his team's week",
+                                Map.of("season", stats.get().season(), "week " + game.week(),
+                                        describe(game, scoring, player.position())))));
                 return items;
             }
 
@@ -127,48 +110,22 @@ class ProductionLane implements EvidenceLane {
                 return stats.isPresent() ? List.of()
                         : List.of("no weekly stats are stored, so no production is known");
             }
-
-            private Optional<Map<String, Double>> latestStats(DirectoryPlayer player) {
-                return linesOf(player, UsageLane.RECENT_GAMES).stream()
-                        .filter(line -> line.week() == latestWeek)
-                        .findFirst()
-                        .map(WeeklyStats.StatLine::stats)
-                        .or(() -> sleeper.week() == latestWeek ? sleeperStats(player)
-                                : Optional.empty());
-            }
-
-            /** Returns Sleeper's line for the player, unless nflverse has his line that week. */
-            private Optional<Map<String, Double>> sleeperStats(DirectoryPlayer player) {
-                boolean held = linesOf(player, UsageLane.RECENT_GAMES).stream()
-                        .anyMatch(line -> line.week() == sleeper.week());
-                return held ? Optional.empty() : sleeper.stats(player);
-            }
-
-            private List<WeeklyStats.StatLine> linesOf(DirectoryPlayer player, int games) {
-                List<WeeklyStats.StatLine> all = ids.flatMap(map -> map.gsisFor(player.playerId()))
-                        .map(gsis -> lines.getOrDefault(gsis, List.of()))
-                        .orElse(List.of())
-                        .stream()
-                        .sorted(Comparator.comparingInt(WeeklyStats.StatLine::week))
-                        .toList();
-                return all.subList(Math.max(0, all.size() - games), all.size());
-            }
         };
     }
 
-    private static String describe(Map<String, Double> stats, String opponent,
-            LeagueScoring scoring, String position) {
-        String points = scoring.price(stats, position)
+    private static String describe(RecentGames.Production game, LeagueScoring scoring,
+            String position) {
+        String points = scoring.price(game.stats(), position)
                 .map(value -> Facts.points(value) + " points in league scoring")
                 .orElse("points unknown");
         List<String> box = new ArrayList<>();
         BOX_SCORE.forEach((key, words) -> {
-            Double value = stats.get(key);
+            Double value = game.stats().get(key);
             if (value != null) {
                 box.add("%d %s".formatted(Math.round(value), words));
             }
         });
-        String against = opponent == null ? "" : " against " + opponent;
+        String against = game.opponent() == null ? "" : " against " + game.opponent();
         return points + against + (box.isEmpty() ? "" : ": " + String.join(", ", box));
     }
 }

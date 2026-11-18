@@ -50,10 +50,10 @@ public interface EvidenceLane {
      * What one board is built for.
      *
      * @param user the user's roster in the league's latest Snapshot
-     * @param sleeper the teams Sleeper's stats fill for the latest week
-     *        nflverse lacks, {@link SleeperFill#NONE} when none
+     * @param recent each player's most recent games, nflverse's with
+     *        Sleeper's stats filling the latest week where nflverse lacks it
      */
-    record Inputs(LeagueWeek league, RosterSnapshot user, Instant now, SleeperFill sleeper) {
+    record Inputs(LeagueWeek league, RosterSnapshot user, Instant now, RecentGames recent) {
     }
 
     /** One lane's sources, as read for one board. */

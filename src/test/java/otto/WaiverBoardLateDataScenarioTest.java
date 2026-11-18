@@ -36,6 +36,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * The waiver board when the latest completed week is late: 2026 week 2
@@ -311,6 +312,26 @@ class WaiverBoardLateDataScenarioTest extends WireSeamTest {
                 .withRequestBody(containing(BOARD_REQUEST))
                 .withRequestBody(containing("against TB: 231 passing yards, 2 passing "
                         + "touchdowns, 1 interceptions, 3 carries, 12 rushing yards")));
+    }
+
+    @Test
+    void theRoleAndProductionEvidenceAgreeOnWhichWeekSleeperFilled() {
+        aWaiverWeekOnDisk(() -> NflverseStubs.waiverWeekMissingAGameAndThreeTeamsStats(nflverse));
+        sleeperHasWeekOne(SLEEPER_WEEK_ONE);
+
+        checkAt(FALLBACK);
+
+        assertThat(onlyBoardRecord().evidence())
+                .filteredOn(item -> item.id().endsWith("-sleeper-10006"))
+                .extracting(Evidence::id, Evidence::source)
+                .containsExactlyInAnyOrder(
+                        tuple("usage-sleeper-10006", "sleeper:stats"),
+                        tuple("production-sleeper-10006", "sleeper:stats"));
+        llm.verify(1, postRequestedFor(urlPathMatching(OutboundStubs.CHAT_COMPLETIONS_PATH))
+                .withRequestBody(containing(BOARD_REQUEST))
+                .withRequestBody(containing("0 targets of 33 team targets, a target share of "
+                        + "0%; 3 carries of 24 team carries"))
+                .withRequestBody(containing("snaps, and everything else shown")));
     }
 
     @Test
