@@ -32,6 +32,8 @@ public enum Dot {
 
     private static final int QUARTERS = 4;
 
+    private static final int STANDARD_FANTASY_TEAMS = 12;
+
     private final String emoji;
 
     Dot(String emoji) {
@@ -117,6 +119,17 @@ public enum Dot {
     }
 
     /**
+     * Colors a positional usage rank by 12-team fantasy tiers. In a shallow ranking
+     * the rank's quarter can make the color less favorable, so a lower rank in a
+     * small sample does not appear top-tier.
+     */
+    public static Dot positionStat(int rank, int size) {
+        Dot tier = tier(rank, STANDARD_FANTASY_TEAMS);
+        Dot quarter = quarter(rank, size);
+        return tier.ordinal() >= quarter.ordinal() ? tier : quarter;
+    }
+
+    /**
      * Returns the dot for a player's game status: questionable yellow,
      * doubtful orange, and red for every status that means he can't play
      * (out, IR, PUP, suspended, did not report). Healthy, probable, not
@@ -155,21 +168,20 @@ public enum Dot {
     }
 
     /**
-     * Returns the short status shown beside a player's name: his
-     * {@link #injury(PlayerHealth) dot} and the abbreviation Sleeper
-     * uses, such as "🟡 Q", "🔴 O" or "🔴 IR"; "NA" for not active, with
-     * no dot; and empty for a healthy or probable player.
+     * Returns the status shown beside a player's name, such as "🟡 Questionable",
+     * "🔴 Out" or "🔴 IR". Not active has no dot. Healthy and probable players
+     * get an empty label.
      */
     public static String healthTag(PlayerHealth health) {
         String label = switch (health) {
             case ACTIVE, PROBABLE -> "";
-            case QUESTIONABLE -> "Q";
-            case DOUBTFUL -> "D";
+            case QUESTIONABLE -> "Questionable";
+            case DOUBTFUL -> "Doubtful";
             case UNKNOWN -> "status unclear";
-            case OUT -> "O";
-            case NOT_ACTIVE -> "NA";
-            case DID_NOT_REPORT -> "DNR";
-            case SUSPENDED -> "SUS";
+            case OUT -> "Out";
+            case NOT_ACTIVE -> "Not active";
+            case DID_NOT_REPORT -> "Did not report";
+            case SUSPENDED -> "Suspended";
             case PUP -> "PUP";
             case IR -> "IR";
         };

@@ -140,9 +140,10 @@ public sealed interface Outcome {
 
     /**
      * Nothing the run produced reached the user, and a notice goes out
-     * in its place to say nothing is coming. A waiver board try that
-     * failed its checks records the notice its round ends on; when a
-     * later try of the round passes, that board goes out instead.
+     * in its place to say nothing is coming, unless a later run for the
+     * same thing takes its place first: a waiver board try that failed
+     * its checks records the notice its round ends on, and the notice is
+     * sent only when no later try of the round passes.
      *
      * @param reason why, for whoever reads the record
      * @param notice the message sent in its place

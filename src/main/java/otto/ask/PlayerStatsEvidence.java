@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
@@ -67,15 +68,17 @@ final class PlayerStatsEvidence {
      * @param notPublished the span's weeks nflverse has not published his
      *        team's stats for yet
      * @param asked what the user asked about, in his words, or null
+     * @param rankPositions the comparison group used for usage ranks
      */
     record Subject(DirectoryPlayer player, String gsisId, Position position, String team,
             StatsSpan.Window window, List<PlayerUsage.Game> games, List<Integer> didNotPlay,
-            List<Integer> notPublished, String asked) {
+            List<Integer> notPublished, String asked, Set<Position> rankPositions) {
 
         Subject {
             games = List.copyOf(games);
             didNotPlay = List.copyOf(didNotPlay);
             notPublished = List.copyOf(notPublished);
+            rankPositions = Set.copyOf(rankPositions);
         }
 
         String id() {
@@ -87,16 +90,22 @@ final class PlayerStatsEvidence {
         }
     }
 
-    static EvidenceBundle bundle(Subject subject, MatchupSources sources, String season,
-            Instant now) {
+    /**
+     * @param leaguePoints what he scored in the league's own scoring, when
+     *        the user asked for fantasy points; ffopportunity's full-PPR
+     *        points are then left out so they cannot pass for his
+     */
+    static EvidenceBundle bundle(Subject subject, Optional<EvidenceItem> leaguePoints,
+            MatchupSources sources, String season, Instant now) {
         UsageTotals totals = UsageTotals.of(subject.games());
         List<EvidenceItem> items = new ArrayList<>();
         items.add(span(subject, now));
+        leaguePoints.ifPresent(items::add);
         items.add(snaps(subject, totals, now));
         items.add(volume(subject, totals, now));
         items.add(airYards(subject, totals, now));
         items.add(looks(subject, totals, now));
-        items.add(expected(subject, totals, now));
+        items.add(expected(subject, totals, leaguePoints.isEmpty(), now));
         items.addAll(nextGen(subject, sources, season, now));
         if (subject.position() == Position.RB) {
             items.add(contact(subject, sources, now));
@@ -107,8 +116,10 @@ final class PlayerStatsEvidence {
                 "notInFreeData", NOT_IN_FREE_DATA)));
         String asked = subject.asked() == null || subject.asked().isBlank() ? ""
                 : " He asked about: %s.".formatted(subject.asked().strip());
-        return new EvidenceBundle("Tell the user %s's stats for %s.%s".formatted(subject.name(),
-                subject.window().label(), asked), items,
+        String what = leaguePoints.isPresent() ? "fantasy points in his league's scoring"
+                : "stats";
+        return new EvidenceBundle("Tell the user %s's %s for %s.%s".formatted(subject.name(),
+                what, subject.window().label(), asked), items,
                 List.of(new BundlePlayer(subject.id(), subject.name(), Optional.empty())),
                 List.of(), true, Optional.empty(), MAX_LENGTH, Optional.empty(), List.of(),
                 List.of());
@@ -222,7 +233,8 @@ final class PlayerStatsEvidence {
         return item("looks", subject, "where his work comes", now, facts);
     }
 
-    private static EvidenceItem expected(Subject subject, UsageTotals totals, Instant now) {
+    private static EvidenceItem expected(Subject subject, UsageTotals totals, boolean withFullPprPoints,
+            Instant now) {
         Map<String, String> facts = new LinkedHashMap<>();
         UsageTotals.Part<UsageTotals.Expected> part = totals.expected();
         if (part.value() == null) {
@@ -238,6 +250,10 @@ final class PlayerStatsEvidence {
                     decimal(Math.abs(points - expected), 1), points >= expected ? "more"
                             : "fewer"));
             missingWeeks(facts, part);
+        }
+        if (!withFullPprPoints) {
+            facts.remove("fantasyPoints");
+            facts.remove("difference");
         }
         facts.put("scoring", "full PPR as ffopportunity scores it, which may differ from his "
                 + "league's scoring");
@@ -348,13 +364,13 @@ final class PlayerStatsEvidence {
             stats.add(PlayerStat.CARRIES_PER_GAME);
         }
         return stats.stream()
-                .flatMap(stat -> sources.rankings().players(stat, subject.position())
-                        .map(ranking -> rankItem(subject, ranking, sources, now)).stream())
+                .flatMap(stat -> sources.rankings().players(stat, subject.rankPositions())
+                        .map(ranking -> rankItem(subject, ranking, now)).stream())
                 .toList();
     }
 
-    private static EvidenceItem rankItem(Subject subject, Ranking ranking,
-            MatchupSources sources, Instant now) {
+    private static EvidenceItem rankItem(Subject subject, Ranking ranking, Instant now) {
+        String group = RankWords.group(subject.rankPositions());
         Map<String, String> facts = new LinkedHashMap<>();
         facts.put("subject", subject.name());
         facts.put("stat", RankWords.stat(ranking.stat(), subject.position()) + ", season to date");
@@ -371,11 +387,8 @@ final class PlayerStatsEvidence {
                     ranking.stat().sampleUnit()));
             PlayerStat stat = (PlayerStat) ranking.stat();
             facts.put("quoted", RankWords.placed(stat, placement.get()));
-            facts.put("header", RankWords.header(subject.name(), subject.position(),
-                    ranking.weeks()));
+            facts.put("header", RankWords.header(subject.name(), group, ranking.weeks()));
             facts.put("line", RankWords.line(ranking, placement.get()));
-            sources.rankings().notableOverall(stat, subject.gsisId(), subject.position())
-                    .ifPresent(overall -> facts.put("amongAllPlayers", overall));
         } else {
             facts.put("noRank", ranking.unranked().stream()
                     .filter(entry -> entry.id().equals(subject.gsisId()))
@@ -385,7 +398,7 @@ final class PlayerStatsEvidence {
         }
         return new EvidenceItem(PREFIX + "rank-" + slug(ranking) + "-" + subject.id(),
                 ranking.stat().source(), Optional.empty(), now,
-                "where he ranks among %s this season".formatted(subject.position().plural()),
+                "where he ranks among %s this season".formatted(group),
                 facts);
     }
 

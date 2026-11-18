@@ -1,6 +1,8 @@
 package otto.matchup;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import otto.advice.Ordinal;
 
@@ -151,16 +153,34 @@ public final class RankWords {
 
     /**
      * Returns the line above a player's {@link #line ranks}, naming who
-     * he is ranked among and over which weeks: "Bucky Irving's season
-     * ranks among RBs (weeks 1–10)".
+     * he is ranked among and over which weeks: "Bucky Irving's rankings
+     * among RBs this season (weeks 1–10)".
      */
     public static String header(String name, Position position, Ranking.Weeks weeks) {
+        return header(name, group(Set.of(position)), weeks);
+    }
+
+    /** Returns the heading for either a positional or cross-position rank. */
+    public static String header(String name, String group, Ranking.Weeks weeks) {
         String span = weeks.firstWeek() == weeks.lastWeek()
                 ? "week %d".formatted(weeks.firstWeek())
                 : "weeks %d–%d".formatted(weeks.firstWeek(), weeks.lastWeek());
-        return weeks.priorSeasonFinal()
-                ? "%s's ranks among %ss last season (%s)".formatted(name, position.name(), span)
-                : "%s's season ranks among %ss (%s)".formatted(name, position.name(), span);
+        String season = weeks.priorSeasonFinal() ? "last season" : "this season";
+        return "%s's rankings among %s %s (%s)".formatted(name, group, season, span);
+    }
+
+    /** Names exactly the positions in a chat ranking. */
+    public static String group(Set<Position> positions) {
+        if (positions.size() == Position.values().length) {
+            return "all skill positions";
+        }
+        List<String> labels = positions.stream().sorted()
+                .map(position -> position.name() + "s").toList();
+        if (labels.size() == 1) {
+            return labels.getFirst();
+        }
+        String first = String.join(", ", labels.subList(0, labels.size() - 1));
+        return first + " and " + labels.getLast();
     }
 
     /** Returns one player of the position in words, such as "running back". */

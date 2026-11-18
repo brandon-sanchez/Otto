@@ -46,6 +46,7 @@ public class LineupTools {
         this.clock = clock;
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_roster_status", description = """
             The user's current roster this week: every starting slot with
             who fills it, their projected points and what stops them
@@ -57,6 +58,7 @@ public class LineupTools {
                 team -> ToolAnswer.of(planner.rosterStatus(team, clock.instant())));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "recommend_lineup", description = """
             The recommended lineup for one week, already written and
             checked: it names the week, says which games are left and
@@ -72,6 +74,7 @@ public class LineupTools {
                 LineupPlanner.LineupPlan::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "whatif_lineup", description = """
             Prices one hypothetical lineup change before the user acts:
             the projected total with the change, the delta against the
@@ -89,6 +92,7 @@ public class LineupTools {
         return lineups.whatIf(week, clock.instant(), start, sit);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "compare_players", description = """
             Weighs two players against each other for this week:
             projections in league scoring, the matchup each faces from
@@ -106,6 +110,7 @@ public class LineupTools {
                 week -> players.compare(week, clock.instant(), first, second));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "rank_waiver_targets", description = """
             The best free agents in the league right now, ranked by a
             waiver score out of 100 built from projection above
@@ -148,6 +153,7 @@ public class LineupTools {
         };
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "manage_waiver_preferences", description = """
             The user's preference for his next waiver board, the one Otto
             builds before the league's next claim deadline. A preference

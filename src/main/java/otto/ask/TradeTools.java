@@ -2,6 +2,8 @@ package otto.ask;
 
 import java.time.Clock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -17,6 +19,8 @@ import otto.trade.TradeEvaluator;
  */
 @Component
 public class TradeTools {
+
+    private static final Logger log = LoggerFactory.getLogger(TradeTools.class);
 
     private final UserWeekLoader loader;
     private final TradeEvaluator trades;
@@ -38,6 +42,7 @@ public class TradeTools {
         this.clock = clock;
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "evaluate_trade", description = """
             Prices a proposed trade with one league mate two ways: what
             the players do for each team's roster over the rest of the
@@ -67,6 +72,7 @@ public class TradeTools {
                 partner -> trades.evaluate(league, partner, gets, gives)));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "suggest_trades", description = """
             Named trade offers for the user: for each, which manager to
             send it to, what he gives, what he gets, and why the other
@@ -74,7 +80,9 @@ public class TradeTools {
             evaluate_trade prices it, already written and fact-checked.
             Send its message word for word. Call this only when he asks,
             for "what trades should I make", "show me 5 trades" or "find
-            me a 3-for-2". When he asks for more ideas, call it with shown
+            me a 3-for-2". A general request needs no trade shape. A request
+            to upgrade a position uses position, never shape. When he asks for
+            more ideas, call it with shown
             set to how many he has seen, and with count only when he said
             how many; without a count it says to ask him how many more he
             wants, so ask him that. Otto never sends or accepts a trade.""")
@@ -90,14 +98,27 @@ public class TradeTools {
             Integer shown,
             @ToolParam(required = false, description = """
                     The shape he asked for, as how many he gives for how
-                    many he gets, such as 3-for-2, however large. Leave it
-                    out when he named none.""")
-            String shape, ToolContext context) {
+                    many he gets, such as 3-for-2. Omit it unless the user
+                    specifies how many pieces each side sends.""")
+            String shape,
+            @ToolParam(required = false, description = """
+                    The starting position to upgrade: QB, RB, WR or TE.
+                    Omit it for general trade suggestions.""")
+            String position, ToolContext context) {
         CheckedAnswers checked = CheckedAnswers.of(context);
-        return checked.offer(tradeIdeas.answer(count, shown, shape, clock.instant(),
-                checked.delivery()), TradeIdeas.Answer::message);
+        ToolAnswer<TradeIdeas.Answer> result;
+        try {
+            result = tradeIdeas.answer(count, shown, shape, position, clock.instant(),
+                    checked.delivery());
+        } catch (RuntimeException failure) {
+            log.error("Trade suggestion search failed", failure);
+            result = ToolAnswer.of(new TradeIdeas.Answer(
+                    "I hit an unexpected error while building trade offers. Try again later."));
+        }
+        return checked.offer(result, TradeIdeas.Answer::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "get_market_value", description = """
             What one player or future draft pick is worth on the trade
             market in this league's format (redraft or dynasty, 1QB or
@@ -117,6 +138,7 @@ public class TradeTools {
                 MarketValueAnswers.Reply::message);
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "find_buy_low_sell_high", description = """
             Buy-low and sell-high players, judged from usage: a buy-low
             is a proven player whose usage held while his points slumped
@@ -148,6 +170,7 @@ public class TradeTools {
                         "side must be buy, sell or both, not \"%s\"".formatted(side)));
     }
 
+    @LeagueNeed(LeagueNeed.When.ALWAYS)
     @Tool(name = "judge_injured_player", description = """
             Whether to trade for one injured player while he is hurt:
             his return timeline exactly as cited news gives it, the games

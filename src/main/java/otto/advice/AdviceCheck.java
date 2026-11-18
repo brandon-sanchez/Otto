@@ -39,7 +39,7 @@ import otto.storage.OttoJson;
  * and emoji removed, so bold or a coloured dot never fails a check and
  * never counts toward the length.
  *
- * <p>Three things a model writes are read for what they mean instead
+ * <p>Some things a model writes are read for what they mean instead
  * of failed. A player written by exact full name where an id belongs is
  * read as that player ({@link NamedIds}). A bracketed list of evidence
  * ids in the text is taken out as the citation it is ({@link Citations}).
@@ -70,16 +70,25 @@ public class AdviceCheck {
             "Long", "Little", "Young", "Strong", "Swift", "Rice", "Hunt", "Price", "Mark",
             "Bell", "Brown", "White", "Green", "Black", "Gray", "Rush", "Ward");
 
+    /** Starts the id of a person named from cited evidence, which no evidence item carries. */
+    private static final String OUTSIDER_ID_PREFIX = "outside:";
+
     /**
      * Where NFL teams play, for the teams called by one word. Advice
      * calls a team by its place, as in "the matchup with Washington", so
-     * one of these alone is never read as a player's surname.
+     * one of these right after {@link #BEFORE_A_TEAM} is the team and not
+     * a player's surname. Anywhere else it is still the surname, so
+     * "Washington saw 11 targets" is held to Parker Washington's evidence.
      */
     private static final Set<String> TEAM_PLACES = Set.of(
             "Arizona", "Atlanta", "Baltimore", "Buffalo", "Carolina", "Chicago", "Cincinnati",
             "Cleveland", "Dallas", "Denver", "Detroit", "Houston", "Indianapolis",
             "Jacksonville", "Miami", "Minnesota", "Philadelphia", "Pittsburgh", "Seattle",
             "Tennessee", "Washington");
+
+    /** The words that put a team, not a player, after them. */
+    private static final String BEFORE_A_TEAM = "against|at|vs|vs\\.|versus|with|facing|faces|"
+            + "plays|playing|visits|hosts|in|to|from|of";
 
     /**
      * A sentence whose subject is "He" or "His": it is about the player
@@ -213,22 +222,13 @@ public class AdviceCheck {
                 answer.move().map(move -> new LineupMove(NamedIds.resolve(move.start(), names),
                         NamedIds.resolve(move.bench(), names), move.slot())),
                 answer.players().stream().map(id -> NamedIds.resolve(id, names)).toList(),
-                withoutCitations(bundle, answer.claims()),
+                Citations.strip(answer.claims(), bundle),
                 answer.comparisons().stream()
                         .map(comparison -> new AdviceAnswer.Comparison(
                                 NamedIds.resolve(comparison.higher(), names),
                                 NamedIds.resolve(comparison.lower(), names), comparison.basis()))
                         .toList(),
                 answer.plan(), answer.conditions());
-    }
-
-    /** Returns the claims with every citation list taken out of their text. */
-    public static List<AdviceAnswer.Claim> withoutCitations(EvidenceBundle bundle,
-            List<AdviceAnswer.Claim> claims) {
-        return claims.stream()
-                .map(claim -> new AdviceAnswer.Claim(
-                        Citations.strip(claim.text(), bundle).text(), claim.evidence()))
-                .toList();
     }
 
     /**
@@ -252,7 +252,7 @@ public class AdviceCheck {
                 .filter(name -> !inBundle.contains(name))
                 .filter(name -> citedText.stream().anyMatch(text -> text.contains(name)))
                 .sorted()
-                .map(name -> new BundlePlayer("outside:" + name, name, Optional.empty()))
+                .map(name -> new BundlePlayer(OUTSIDER_ID_PREFIX + name, name, Optional.empty()))
                 .toList();
     }
 
@@ -360,9 +360,20 @@ public class AdviceCheck {
     }
 
     private static boolean names(String text, BundlePlayer player) {
-        String lastName = lastName(player.fullName());
         return text.contains(player.fullName())
-                || !TEAM_PLACES.contains(lastName) && word(lastName).matcher(text).find();
+                || surname(lastName(player.fullName())).matcher(text).find();
+    }
+
+    /**
+     * Returns the pattern for a surname used as a name: the whole word,
+     * and for a surname that is also where a team plays, not right
+     * after a word that puts a team there.
+     */
+    private static Pattern surname(String lastName) {
+        return TEAM_PLACES.contains(lastName)
+                ? Pattern.compile("(?<!\\b(?:" + BEFORE_A_TEAM + ") )\\b"
+                        + Pattern.quote(lastName) + "\\b")
+                : word(lastName);
     }
 
     /**
@@ -610,11 +621,8 @@ public class AdviceCheck {
     private static int firstSurnameOutsideOtherNames(BundlePlayer player, EvidenceBundle bundle,
             String message) {
         String lastName = lastName(player.fullName());
-        if (TEAM_PLACES.contains(lastName)) {
-            return -1;
-        }
         boolean commonWord = COMMON_WORD_SURNAMES.contains(lastName);
-        Matcher surname = word(lastName).matcher(message);
+        Matcher surname = surname(lastName).matcher(message);
         while (surname.find()) {
             int at = surname.start();
             if (commonWord && opensASentence(message, at)) {

@@ -756,7 +756,9 @@ class WaiverScenarioTest extends WireSeamTest {
                 // beaters'. Bucky Irving still takes all 50 and scores
                 // 100, the number the Tuesday Alert gave him.
                 .withRequestBody(containing("score\\\":100"))
-                .withRequestBody(containing("scale to Bucky Irving")));
+                .withRequestBody(containing("scale to Bucky Irving"))
+                .withRequestBody(containing("latestNews"))
+                .withRequestBody(containing("Todd Bowles said Bucky Irving will start at running back")));
     }
 
     @Test

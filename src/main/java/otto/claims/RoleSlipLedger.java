@@ -150,6 +150,22 @@ public class RoleSlipLedger {
     }
 
     /**
+     * Forgets held advice that no board is to carry, without recording
+     * it as the last advice about anybody.
+     *
+     * <p>Side effects: one document write.
+     *
+     * @param runIds the run ids of the held advice to forget
+     */
+    public void discardHeld(List<String> runIds) {
+        Document document = read();
+        store.write(DOCUMENT, new Document(document.usageScannedAt(), document.usageDrops(),
+                document.settled(), document.lastAdvice(), document.held().stream()
+                        .filter(advice -> !runIds.contains(advice.runId()))
+                        .toList()));
+    }
+
+    /**
      * Forgets held advice once a board carrying it was delivered, and
      * records it as the last advice about each of its players.
      *

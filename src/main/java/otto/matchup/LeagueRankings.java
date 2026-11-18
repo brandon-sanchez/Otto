@@ -111,6 +111,22 @@ public final class LeagueRankings {
                         .withUnmatched(measured.unmatched())));
     }
 
+    /** Ranks only the requested positions together, season to date. */
+    public Optional<Ranking> players(PlayerStat stat, Set<Position> positions) {
+        if (positions.isEmpty()) {
+            return Optional.empty();
+        }
+        if (positions.size() == 1) {
+            return players(stat, positions.iterator().next());
+        }
+        if (positions.size() == Position.values().length) {
+            return allPlayers(stat);
+        }
+        return measured(stat, WeekSpan.SEASON).map(measured -> Ranking.rankGroup(stat,
+                RankWords.group(positions), measured.weeks(), measured.at(positions))
+                .withUnmatched(measured.unmatched()));
+    }
+
     /**
      * Returns the position each measured player plays, by gsis id, so an
      * all-players ranking can say who plays where.
