@@ -34,6 +34,13 @@ import otto.research.PreSendResearch;
 import otto.sleeper.LeagueRules;
 import otto.snapshot.RosterSnapshot;
 
+/**
+ * Builds the evidence for a decision about one rostered player: a
+ * status change, his team's announcement, or a role that may have
+ * slipped. Each bundle carries the roster plans legal for him, what
+ * they rest on, and the lineup moves that fill his slot when it needs
+ * filling.
+ */
 final class DecisionEvidence {
 
     static final String UNKNOWN_RECOVERY = "unknown-recovery";

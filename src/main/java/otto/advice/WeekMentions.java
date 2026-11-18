@@ -16,10 +16,15 @@ final class WeekMentions {
 
     /** "week 10", "Weeks 1 to 10" or "weeks 11-18", with each number captured. */
     private static final Pattern MENTION = Pattern.compile(
-            "(?i)\\bweeks?\\s+(\\d{1,2})(?:\\s*(?:to|through|and|-)\\s*(\\d{1,2}))?(?!\\w)");
+            "(?i)\\bweeks?\\s+(\\d{1,2})(?:\\s*(?:to|through|-)\\s*(\\d{1,2}))?(?!\\w)");
 
-    /** A fact whose whole value is a week number, such as "week" or "playoffsStartWeek". */
-    private static final Pattern WEEK_FACT = Pattern.compile("(?i).*week");
+    /**
+     * The facts whose whole value is a week number. A fact such as
+     * "pointsPerWeek" ends the same way and holds a figure, so the names
+     * are listed and not matched by their ending.
+     */
+    private static final Set<String> WEEK_FACTS =
+            Set.of("week", "regularSeasonEndsWeek", "playoffsStartWeek");
 
     private static final Pattern WHOLE_NUMBER = Pattern.compile("\\d{1,2}");
 
@@ -32,7 +37,7 @@ final class WeekMentions {
         bundle.evidence().forEach(item -> item.facts().forEach((fact, value) -> {
             collect(fact, weeks);
             collect(value, weeks);
-            if (WEEK_FACT.matcher(fact).matches() && WHOLE_NUMBER.matcher(value).matches()) {
+            if (WEEK_FACTS.contains(fact) && WHOLE_NUMBER.matcher(value).matches()) {
                 weeks.add(Integer.parseInt(value));
             }
         }));

@@ -41,8 +41,10 @@ import otto.storage.OttoJson;
  * not failed: a player written by exact full name where an id belongs,
  * bracketed lists of evidence ids in the text, moves listed under
  * "optional" on a board that does not hold, and an "outsideFocus" in a
- * round with no focus. Every check then runs in one pass, so the one
- * correction attempt is handed every failure at once.
+ * round with no focus. The checks then run in one pass, so the one
+ * correction attempt is handed every failure at once; only the text
+ * checks wait when an entry names a player who is not a candidate,
+ * since his entry cannot be laid out.
  */
 final class BoardForm implements AdviceForm<BoardAnswer> {
 
@@ -220,7 +222,7 @@ final class BoardForm implements AdviceForm<BoardAnswer> {
                 answer.picks().stream().map(entry).toList(),
                 answer.hold() ? answer.optional().stream().map(entry).toList() : List.of(),
                 answer.together().stream().map(id -> NamedIds.resolve(id, names)).toList(),
-                AdviceCheck.withoutCitations(bundle, answer.claims()));
+                Citations.strip(answer.claims(), bundle));
         return new Read(read, cited);
     }
 

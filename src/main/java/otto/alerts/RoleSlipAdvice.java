@@ -65,11 +65,10 @@ public class RoleSlipAdvice {
      * board could cost the user a move: no board will come before this
      * round's claim deadline, or a lineup change is due before the
      * board. Otherwise it is held for that board. A hold with no lineup
-     * change goes out only when a mistaken drop is plausible, which takes
-     * him being among the roster's likeliest drops as {@link DropRankings}
-     * ranks them, and advice
-     * whose action and reasons match the last advice about him is not
-     * sent again. Every outcome but a sent Alert settles the slip, so
+     * change goes out only when a mistaken drop is plausible, meaning
+     * he is among the roster's likeliest drops as {@link DropRankings}
+     * ranks them, and advice whose action and reasons match the last
+     * advice about him is not sent again. Every outcome but a sent Alert settles the slip, so
      * the same evidence is never evaluated twice.
      *
      * <p>Side effects: may call the model, saves a Decision Record for a

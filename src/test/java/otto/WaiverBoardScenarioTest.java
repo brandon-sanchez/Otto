@@ -11,7 +11,6 @@ import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,9 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import otto.alerts.MuteStore;
 import otto.check.CheckRunner;
 import otto.claims.ClaimRound;
-import otto.delivery.AlertDeliveryOutbox;
-import otto.delivery.DeliveryBasis;
-import otto.events.Event;
 import otto.events.EventLog;
 import otto.events.EventType;
 import otto.harness.NflverseStubs;
@@ -125,9 +121,6 @@ class WaiverBoardScenarioTest extends WireSeamTest {
 
     @Autowired
     private OttoProperties properties;
-
-    @Autowired
-    private AlertDeliveryOutbox outbox;
 
     private static String board(boolean hold, String opening, List<String> picks,
             List<String> optional) {
@@ -463,27 +456,18 @@ class WaiverBoardScenarioTest extends WireSeamTest {
     }
 
     @Test
-    void aRoundAlreadyToldNoBoardIsComingStillGetsTheBoardALaterTryPasses() {
-        String cook = board(false, OPENING, List.of(entry("8138", "James Cook is a strong add.")),
-                List.of());
-        tuesdayEveningWithTheModelAnswering(cook, cook,
-                board(false, OPENING, List.of(IRVING), List.of()));
-        Outcome.WithheldWithNotice withheld =
-                (Outcome.WithheldWithNotice) onlyBoardRecord().outcome();
-        outbox.deliver(List.of(withheld.notice()), false,
-                DeliveryBasis.of(onlyBoardRecord().runId()),
-                List.of(new Event("alert:waiver:2026-09-15", EventType.ALERT_SENT,
-                        TUESDAY_EVENING, Map.of("trigger", "waiver board"))));
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("past my fact checks"))));
+    void aRoundWhoseFirstTryCameLateMakesOneTryACheck() {
+        aWaiverWeekOnDisk();
+        OutboundStubs.llmAdvisesInOrderOn(llm, BOARD_REQUEST, board(false, OPENING,
+                List.of(entry("8138", "James Cook is a strong add.")), List.of()));
+        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(2)).plus(Duration.ofMinutes(30)));
 
-        clock.set(TUESDAY_EVENING.plus(Duration.ofHours(2)));
         checkRunner.runCheck();
-        checkRunner.runCheck();
+        boardWasAskedOfTheModel(2);
+        telegram.verify(0, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
 
-        telegram.verify(2, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH)));
-        telegram.verify(1, postRequestedFor(urlEqualTo(OutboundStubs.SEND_MESSAGE_PATH))
-                .withRequestBody(matchingJsonPath("$.text", containing("Bucky Irving · RB, TB"))));
+        checkRunner.runCheck();
+        boardWasAskedOfTheModel(4);
     }
 
     @Test
